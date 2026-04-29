@@ -156,10 +156,10 @@ export default function LoginSimplePage() {
 
     const params = new URLSearchParams({
       response_type: "code",
-      client_id: "44ce2f9b-0ca4-4ad8-b8d4-bb775b61d68e",
-      redirect_uri: "https://dev-os.blocksdevelopers.com/oidc",
+      client_id: "44ce2f9b-0ca4-4ad8-b8d4-bb775b61d68f",
+      redirect_uri: "https://dev-deployment.blocksdevelopers.com/oidc",
       scope: "openId",
-      audience: "https://dev-os.blocksdevelopers.com",
+      audience: "https://dev-deployment.blocksdevelopers.com",
       state: "039849038",
       nonce: "35443",
       ...(blocksKey ? { "x-blocks-key": blocksKey } : {}),

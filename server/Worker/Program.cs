@@ -1,4 +1,7 @@
 using Blocks.Genesis;
+using Devops.DomainService;
+using Devops.DomainService.AnalyticsTool.Models;
+using Devops.DomainService.Shared.Models;
 using DomainService.Dtos;
 using DomainService.Migration;
 using DomainService.Projects;
@@ -23,6 +26,7 @@ const string _serviceName = "blocks-os-worker";
 var vaultType = ResolveVaultType();
 Console.WriteLine($"Using Genesis vault type: {vaultType}");
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(_serviceName, vaultType);
+var cloudBuildSecret = await CloudBuildSecret.ProcessBlocksSecret(vaultType);
 
 await CreateHostBuilder(args).Build().RunAsync();
 
@@ -54,8 +58,10 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.AddHostedService<PeriodicPingBackgroundService>();
 
             services.RegisterAllServices();
+            services.RegisterApplicationServices(cloudBuildSecret);
 
-           
+            services.AddSingleton<IConsumer<PostBuildQueue>, PostBuildConsumer>();
+            services.AddSingleton<IConsumer<LogNotificationQueue>, LogNotificationConsumer>();
 
             #region Identifier Service Consumers
             services.AddApplicationServices();

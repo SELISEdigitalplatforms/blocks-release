@@ -1,0 +1,109 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: uds-config-run-
+  namespace: tekton-pipelines
+spec:
+  serviceAccountName: default  # CRITICAL: Use the SA with SSH secret!
+  pipelineRef:
+    name: uds-config-generator
+  
+  timeouts:
+    pipeline: "1h0m0s"
+    tasks: "30m0s"
+  
+  podTemplate:
+    securityContext:
+      fsGroup: 65532  # Required for git-clone task
+    nodeSelector:
+      "kubernetes.azure.com/scalesetpriority": "spot"
+      "workload-type": "spot-eligible"
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: "kubernetes.azure.com/scalesetpriority"
+                  operator: In
+                  values:
+                    - "spot"
+                - key: "workload-type"
+                  operator: In
+                  values:
+                    - "spot-eligible"
+    tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+  
+  taskRunSpecs:
+  - pipelineTaskName: fetch-source
+    taskServiceAccountName: default
+    computeResources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+  - pipelineTaskName: generate-config
+    taskServiceAccountName: default
+    computeResources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+  - pipelineTaskName: git-commit-push
+    taskServiceAccountName: default
+    computeResources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+  
+  params:
+  - name: repo-url
+    # value: "git@github.com:SELISEdigitalplatforms/l0-argo-blocks-uds.git"
+    value: "https://@github.com/SELISEdigitalplatforms/l0-argo-blocks-uds.git"
+  
+  - name: revision
+    value: "dev"
+  
+  - name: version
+    value: "v1"  # CHANGE THIS: Your version (e.g., v1, v2, v3)
+  
+  - name: project-key
+    value: "igausg"  # CHANGE THIS: Your project key (e.g., igausg, demo)
+  
+  - name: tenant-id
+    value: "662809FAA90D4740BC0F524C26AE1DC1"  # CHANGE THIS: Your Azure AD Tenant ID
+
+  - name: cluster-names
+    value: "aks-blocks-dev,aks-blocks-stg"  # CHANGE THIS: Comma-separated list
+  
+  - name: git-user-name
+    value: "TektonPipelineBot"
+  
+  - name: git-user-email
+    value: "tekton-bot@selise.com"
+  
+  workspaces:
+  - name: shared-data
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        storageClassName: tekton-storage
+        resources:
+          requests:
+            storage: 1Gi
+            
+  - name: ssh-credentials
+    secret:
+      secretName: uds-git-deploy-key

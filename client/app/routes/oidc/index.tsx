@@ -24,13 +24,13 @@ export default function OidcIndexPage() {
     authService.verifyOidc({ code, state })
       .then((res) => {
         const isLocalhost = getRuntimeEnv("BLOCKS_API_BASE_URL")?.includes("localhost");
-        
+
         if (isLocalhost && res.access_token && res.refresh_token) {
           setTokens(res.access_token, res.refresh_token);
         }
         setAuthenticated();
 
-        window.location.href = `${window.location.origin}/console`;
+        window.location.href = `${window.location.origin}/devops`;
       })
       .catch(() => {
         navigate("/oidc/error");

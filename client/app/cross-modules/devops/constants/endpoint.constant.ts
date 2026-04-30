@@ -1,32 +1,40 @@
+import { API_BASES } from "@/constant/endpoint.constant";
+
+export const ALERT_ENDPOINTS = {
+  SAVE_MONITOR: `${API_BASES.ALERT}/Monitor/SaveMonitor`,
+  UPDATE_MONITOR: `${API_BASES.ALERT}/Monitor/UpdateMonitor`,
+  DELETE_MONITOR: `${API_BASES.ALERT}/Monitor/DeleteMonitor`,
+  GET_MONITOR_LIST: `${API_BASES.ALERT}/Monitor/GetMonitorList`,
+  GET_MONITOR_LIST_BY_REPO_ID: `${API_BASES.ALERT}/Monitor/GetMonitorListByRepoId`,
+  GET_MONITOR_DETAILS: `${API_BASES.ALERT}/Monitor/GetMonitorDetails`,
+  IS_EXTERNAL_SERVICE_CONFIGURED: `${API_BASES.ALERT}/Monitor/IsExternalServiceConfigured`,
+  GET_INCIDENT_LIST: `${API_BASES.ALERT}/Monitor/GetIncidentList`,
+  GET_MONITOR_BY_ID: `${API_BASES.ALERT}/Monitor/GetMonitorById`,
+  GET_MONITOR_RESPONSE_TIME: `${API_BASES.ALERT}/Monitor/GetMonitorResponseTime`,
+  GET_MONITOR_DOWN_TIME: `${API_BASES.ALERT}/Monitor/GetMonitorDownTime`,
+  SAVE_HEALTH: `${API_BASES.ALERT}/Health/SaveHealth`,
+  UPDATE_HEALTH: `${API_BASES.ALERT}/Health/UpdateHealth`,
+  DELETE_HEALTH: `${API_BASES.ALERT}/Health/DeleteHealth`,
+} as const;
+
 export const CLOUD_BUILD_ENDPOINTS = {
-  // Authentication & Authorization
-  ACCESS_TOKEN: "/api/auth/accessToken",
-  IS_AUTHORIZED: "/api/auth/isAuthorized",
-  REMOVE_AUTHORIZATION: "/api/auth/removeAuthorization",
-  REMOVE_ACCESS_TOKEN: "/api/auth/removeAccessToken",
-
-  // GitHub Repositories
-  GITHUB_REPOS: "/api/github/repos",
-  GITHUB_USER: "/api/github/user",
-  GITHUB_BRANCHES: "/api/github/branches",
-  GITHUB_BRANCH_EXISTS: "/api/github/branchExists",
-
-  // Build & Deployment
-  BUILD_BUILD: "/api/build/clone",
-  RUN_BUILD: "/api/build/run",
-  MANUAL: "/api/build/manual",
-  BUILD: "/api/build",
-
-  // Repository Management
-  REPOS: "/api/repos",
-  REPOS_LIST: "/api/repos/list",
-  REPO_DETAILS: "/api/repos/details",
-
-  // Build Settings
-  SETTINGS: "/api/settings",
-};
-
-export const MIGRATION_ENDPOINTS = {
-  GET_STATUS: "/api/identifier/migration/status",
-  START_MIGRATION: "/api/identifier/migration/start",
-};
+  ACCESS_TOKEN: `${API_BASES.CLOUD_BUILD}/auth/AccessToken`,
+  IS_AUTHORIZED: `${API_BASES.CLOUD_BUILD}/auth/isAuthorized`,
+  REMOVE_AUTHORIZATION: `${API_BASES.CLOUD_BUILD}/auth/RemoveAuthorization`,
+  REMOVE_ACCESS_TOKEN: `${API_BASES.CLOUD_BUILD}/auth/removeAccessToken`,
+  GITHUB_REPOS: `${API_BASES.CLOUD_BUILD}/github/repos`,
+  GITHUB_USER: `${API_BASES.CLOUD_BUILD}/github/user`,
+  GITHUB_BRANCHES: `${API_BASES.CLOUD_BUILD}/github/branches`,
+  GITHUB_BRANCH_EXISTS: `${API_BASES.CLOUD_BUILD}/github/GithubBranchExists`,
+  BUILD: `${API_BASES.CLOUD_BUILD}/build`,
+  BUILD_BUILD: `${API_BASES.CLOUD_BUILD}/build/build`,
+  REPOS: `${API_BASES.CLOUD_BUILD}/build/repos`,
+  REPOS_LIST: `${API_BASES.CLOUD_BUILD}/build/repos-list`,
+  REPO_DETAILS: `${API_BASES.CLOUD_BUILD}/build/repo-details`,
+  RUN_BUILD: `${API_BASES.CLOUD_BUILD}/build/run-build`,
+  MANUAL: `${API_BASES.CLOUD_BUILD}/build/manual`,
+  SETTINGS: `${API_BASES.CLOUD_BUILD}/build/settings`,
+  REPORTS: `${API_BASES.CLOUD_BUILD}/build/reports`,
+  PROCESS_DEPENDENCY_TRACK_USER: `${API_BASES.CLOUD_BUILD}/AnalyticsTool/ProcessDependencyTrackUser`,
+  PROCESS_SONARQUBE_USER: `${API_BASES.CLOUD_BUILD}/AnalyticsTool/ProcessSonarQubeUser`,
+} as const;

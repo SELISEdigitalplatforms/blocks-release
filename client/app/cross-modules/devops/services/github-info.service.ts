@@ -1,19 +1,19 @@
 import { http } from "@/lib/http-client";
-import { CLOUD_BUILD_ENDPOINTS } from "../constants/endpoint.constant";
-import { IBuildApiResponse } from "../models/deployed-logs";
+import { CLOUD_BUILD_ENDPOINTS } from "@blocks-devops/constants/endpoint.constant";
+import { IBuildApiResponse } from "@blocks-devops/models/deployed-logs";
 import {
   IRepository,
   IBranch,
   ICloneRepo,
   IRepositoryUser,
   IBranchMatchResponse,
-} from "../models/github-info";
+} from "@blocks-devops/models/github-info";
 import {
   CardRepoAndBranchesResponse,
   IChangeRepoSpecs,
   IChangeSettings,
   IManualDeploymentPayload,
-} from "../models/utils";
+} from "@blocks-devops/models/utils";
 
 export class GithubInfoService {
   async verifyAuthorization(code: string, projectKey: string): Promise<string> {
@@ -57,9 +57,8 @@ export class GithubInfoService {
     errors: unknown;
     isSuccess: boolean;
   }> {
-    const url = `${CLOUD_BUILD_ENDPOINTS.GITHUB_REPOS}?ProjectKey=${encodeURIComponent(projectKey)}${
-      search ? `&search=${encodeURIComponent(search)}` : ""
-    }${pageNumber ? `&pageNumber=${pageNumber}` : ""}${pageSize ? `&pageSize=${pageSize}` : ""}`;
+    const url = `${CLOUD_BUILD_ENDPOINTS.GITHUB_REPOS}?ProjectKey=${encodeURIComponent(projectKey)}${search ? `&search=${encodeURIComponent(search)}` : ""
+      }${pageNumber ? `&pageNumber=${pageNumber}` : ""}${pageSize ? `&pageSize=${pageSize}` : ""}`;
     return http.get(url);
   }
 

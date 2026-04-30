@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 9000",
+    "dev": "vite --port 4000",
     "local": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
@@ -57,6 +57,7 @@
     "react-qr-code": "^2.0.18",
     "react-router-dom": "^6.28.0",
     "react-syntax-highlighter": "^16.1.1",
+    "recharts": "^2.15.4",
     "sonner": "^1.5.0",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",

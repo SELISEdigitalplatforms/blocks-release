@@ -1,17 +1,26 @@
 import { Menu } from "@/models/menu-models";
-import { Home, Package, Users, BookMinus, Settings, Shield, Key, ShieldCheck, ScanFace, Lock, Zap, Gauge } from "lucide-react";
+import { Home, Package, Users, BookMinus, Settings, Shield, Key, ShieldCheck, ScanFace, Lock, Zap, Gauge, GitBranch } from "lucide-react";
 
 export const navigationMenus: Menu[] = [
+  {
+    id: "deployment",
+    type: "menu",
+    name: "Deployment",
+    path: "/devops",
+    icon: GitBranch,
+  },
+  {
+    type: "separator",
+    id: "separator-deployment",
+  },
+  // Hidden menus below - kept for backward compatibility but disabled
   {
     id: "overview-project",
     type: "menu",
     name: "Overview",
     path: "/dashboard",
     icon: Home,
-  },
-  {
-    type: "separator",
-    id: "separator-overview",
+    disabled: true,
   },
   {
     id: "environments",
@@ -19,6 +28,7 @@ export const navigationMenus: Menu[] = [
     name: "Environments",
     path: "/project-overview/environments",
     icon: Package,
+    disabled: true,
   },
   {
     id: "people",
@@ -26,6 +36,7 @@ export const navigationMenus: Menu[] = [
     name: "People",
     path: "/project-overview/people",
     icon: Users,
+    disabled: true,
   },
   {
     id: "repositories",
@@ -33,6 +44,7 @@ export const navigationMenus: Menu[] = [
     name: "Repositories",
     path: "/project-overview/repositories",
     icon: BookMinus,
+    disabled: true,
   },
   {
     id: "settings",
@@ -40,10 +52,7 @@ export const navigationMenus: Menu[] = [
     name: "Project Settings",
     path: "/project-overview/settings",
     icon: Settings,
-  },
-  {
-    type: "separator",
-    id: "separator-identity",
+    disabled: true,
   },
   {
     id: "service-identity__authentication",
@@ -51,34 +60,15 @@ export const navigationMenus: Menu[] = [
     name: "IDP",
     path: "/services/authentication",
     icon: Key,
+    disabled: true,
   },
-  // {
-  //   id: "service-identity__authorization",
-  //   type: "menu",
-  //   name: "Access Manager",
-  //   path: "/services/iam",
-  //   icon: Shield,
-  // },
-  // {
-  //   id: "service-identity__mfa",
-  //   type: "menu",
-  //   name: "MFA",
-  //   path: "/services/mfa",
-  //   icon: ShieldCheck,
-  // },
-  // {
-  //   id: "service-identity__captcha",
-  //   type: "menu",
-  //   name: "Captcha",
-  //   path: "/services/captcha",
-  //   icon: ScanFace,
-  // },
   {
     id: "service-identity__api-settings",
     type: "menu",
     name: "API Settings",
     path: "/services/api-settings",
     icon: Settings,
+    disabled: true,
   },
   {
     id: "service-identity__secret-management",
@@ -86,6 +76,7 @@ export const navigationMenus: Menu[] = [
     name: "Secrets & Configs",
     path: "/services/secret-management",
     icon: Lock,
+    disabled: true,
   },
   {
     id: "service-identity__lmt",
@@ -93,5 +84,6 @@ export const navigationMenus: Menu[] = [
     name: "LMT",
     path: "/services/lmt",
     icon: Zap,
+    disabled: true,
   },
 ];

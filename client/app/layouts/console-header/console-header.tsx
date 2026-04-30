@@ -7,6 +7,7 @@ import { Notification } from "@/components/notification/notification";
 import { ProjectList } from "@/components/project-list/project-list";
 import { UserDropdownMenu } from "@/components/user-dropdown-menu/user-dropdown-menu";
 import { EnvironmentList } from "@/components/environment-list/environment-list";
+import { LanguageSelector } from "@/components/language-selector/language-selector";
 import { SidebarMobileView } from "@/layouts/sidebar-mobile-view/sidebar-mobile-view";
 import { BackToConsoleNavigator } from "@/components/back-to-console-navigator/back-to-console-navigator";
 import { SidebarContext } from "@/contexts/dashboard-layout-provider";
@@ -63,21 +64,35 @@ export function ConsoleHeader() {
                   <BackToConsoleNavigator />
                 </div>
               )}
-              <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-3">
+              <div className="relative z-50 flex min-w-0 flex-1 flex-wrap items-center justify-end gap-3">
                 <ModeToggle />
-                <Notification />
+                <div className="pointer-events-auto flex items-center">
+                  <Notification />
+                </div>
+                <div className="pointer-events-auto flex items-center">
+                  <LanguageSelector />
+                </div>
                 <BlocksAppLauncher />
-                <UserDropdownMenu />
+                <div className="pointer-events-auto flex items-center">
+                  <UserDropdownMenu />
+                </div>
               </div>
             </SheetContent>
           </Sheet>
         </div>
-        <div className="hidden sm:flex sm:items-center sm:gap-4">
+        <div className="relative z-50 hidden sm:flex sm:items-center sm:gap-4">
           {isConsoleButtonVisible && <BackToConsoleNavigator />}
           <ModeToggle />
-          <Notification />
+          <div className="pointer-events-auto flex items-center">
+            <Notification />
+          </div>
+          <div className="pointer-events-auto flex items-center">
+            <LanguageSelector />
+          </div>
           <BlocksAppLauncher />
-          <UserDropdownMenu />
+          <div className="pointer-events-auto flex items-center">
+            <UserDropdownMenu />
+          </div>
         </div>
       </header>
     </div>

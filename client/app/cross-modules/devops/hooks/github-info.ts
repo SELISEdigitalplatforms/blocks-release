@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { githubInfoService } from "../services/github-info.service";
-import { IBuildApiResponse } from "../models/deployed-logs";
+import { IBuildApiResponse } from "@blocks-devops/models/deployed-logs";
 import {
   IChangeRepoSpecs,
   IChangeSettings,
   IManualDeploymentPayload,
-} from "../models/utils";
+} from "@blocks-devops/models/utils";
 import { useProjectStore } from "@/store/useProjectStore";
 
 export const useGithubVerification = (code: string) => {
@@ -14,10 +14,8 @@ export const useGithubVerification = (code: string) => {
   return useQuery({
     queryKey: ["github-verification", code],
     queryFn: () => githubInfoService.verifyAuthorization(code, projectKey),
-    enabled: !!code && !!projectKey,
   });
 };
-
 export const useValidateAuthorization = () => {
   return useQuery({
     queryKey: ["verify-auth"],
@@ -31,7 +29,6 @@ export const useRevokeAccess = () => {
     queryKey: ["revoke-access"],
     queryFn: () => githubInfoService.revokeAccess(),
     retry: false,
-    enabled: false, // Only run when explicitly called
   });
 };
 
@@ -45,7 +42,7 @@ export const useGetGithubRepos = (
   return useQuery({
     queryKey: ["github-repos", isVerificationSuccessful, search, page, perPage],
     queryFn: () => githubInfoService.getGithubRepos(projectKey, search, page, perPage),
-    enabled: isVerificationSuccessful && !!projectKey,
+    enabled: isVerificationSuccessful,
     retry: false,
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: true,
@@ -59,7 +56,7 @@ export const useGetRepositoryUser = (isVerificationSuccessful: boolean) => {
   return useQuery({
     queryKey: ["repository-user", isVerificationSuccessful],
     queryFn: () => githubInfoService.getRepositoryUser(projectKey),
-    enabled: isVerificationSuccessful && !!projectKey,
+    enabled: isVerificationSuccessful,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
@@ -72,6 +69,9 @@ export const useRemoveAuthorization = () => {
     mutationKey: ["remove-authorization"],
     mutationFn: githubInfoService.removeAuthorization,
     onSuccess: () => {
+      // queryClient.invalidateQueries({ queryKey: ["verify-auth"] });
+      // queryClient.invalidateQueries({ queryKey: ["github-repos"] });
+      // queryClient.invalidateQueries({ queryKey: ["repository-user"] });
       console.log("Authorization removed successfully");
       queryClient.setQueryData(["verify-auth"], () => undefined);
       queryClient.setQueryData(["github-repos"], () => []);
@@ -86,7 +86,7 @@ export const useGithubBranches = (repo: string) => {
   return useQuery({
     queryKey: ["github-branches", repo],
     queryFn: () => githubInfoService.getGithubBranches(repo, projectKey),
-    enabled: !!repo && !!projectKey,
+    enabled: !!repo,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
@@ -98,7 +98,7 @@ export const useRepoAndGitBranchMatch = (repoId: string, enabled: boolean = true
   return useQuery({
     queryKey: ["git-branch-match", repoId],
     queryFn: () => githubInfoService.getRepoAndGitBranchMatch(repoId, projectKey),
-    enabled: !!repoId && enabled && !!projectKey,
+    enabled: !!repoId && enabled,
     retry: false,
     refetchOnMount: true,
   });
@@ -199,6 +199,7 @@ export const useManualDeployment = () => {
     mutationFn: (options: IManualDeploymentPayload) => githubInfoService.manualDeploy(options),
     onSuccess: (data) => {
       queryClient.setQueryData(["repo-id"], data);
+
       queryClient.invalidateQueries({ queryKey: ["github-repos"] });
     },
     onError: (error) => {
@@ -206,11 +207,11 @@ export const useManualDeployment = () => {
     },
   });
 };
-
 export const useGetSpecs = () => {
   return useQuery({
     queryKey: ["specs"],
-    queryFn: () => githubInfoService.getSpecs(),
+    queryFn: () => githubInfoService.getSpecs(), // or whatever service contains getSpecs
+    // enabled: isVerificationSuccessful,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
@@ -227,7 +228,7 @@ export const useGetCardProjectAndBranch = (buildId: string) => {
       }
       return githubInfoService.getCardRepoAndBranches(buildId, projectKey);
     },
-    enabled: !!buildId && !!projectKey,
+    enabled: !!buildId,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
@@ -240,6 +241,7 @@ export const useChangeBuildSpecs = () => {
     mutationFn: (payload: IChangeSettings) => githubInfoService.changeBuildSpecs(payload),
     onSuccess: (data) => {
       queryClient.setQueryData(["build-specs"], data);
+
       queryClient.invalidateQueries({ queryKey: ["repo-specs"] });
       queryClient.invalidateQueries({ queryKey: ["repo-builds"] });
     },

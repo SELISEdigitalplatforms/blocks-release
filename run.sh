@@ -80,25 +80,32 @@ run_frontend() {
 
     if [ ! -d "$CLIENT_DIR/node_modules" ]; then
         echo "Installing dependencies..."
-        npm --prefix "$CLIENT_DIR" install
+        (cd "$CLIENT_DIR" && npm clean-install)
     fi
 
     free_port $FRONTEND_PORT
 
-    npm --prefix "$CLIENT_DIR" run dev
+    cd "$CLIENT_DIR" && npm run dev
 }
 
 build_frontend() {
     echo "Building frontend..."
 
-    npm --prefix "$CLIENT_DIR" install
-    npm --prefix "$CLIENT_DIR" run build
+    pushd "$CLIENT_DIR" > /dev/null
+    npm install
+    npm run build
+    popd > /dev/null
 
     mkdir -p "$WWWROOT_DIR"
 
     if [ -d "$CLIENT_DIR/dist" ]; then
         echo "Syncing dist → wwwroot..."
-        rsync -a --delete "$CLIENT_DIR/dist/" "$WWWROOT_DIR/"
+        if command -v rsync >/dev/null 2>&1; then
+            rsync -a --delete "$CLIENT_DIR/dist/" "$WWWROOT_DIR/"
+        else
+            rm -rf "$WWWROOT_DIR"/*
+            cp -r "$CLIENT_DIR/dist/"* "$WWWROOT_DIR/"
+        fi
     fi
 }
 
@@ -159,7 +166,7 @@ case "$1" in
     -n|--npm)
         shift
         [ $# -eq 0 ] && echo "Usage: $0 -n <args>" && exit 1
-        npm --prefix "$CLIENT_DIR" "$@"
+        (cd "$CLIENT_DIR" && npm "$@")
         ;;
 
     -h|--help)

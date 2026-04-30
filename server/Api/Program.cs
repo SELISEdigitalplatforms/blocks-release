@@ -1,6 +1,7 @@
 using BlocksTemplate.Api;
 using Blocks.Genesis;
 using Cloud.DomainService.Utilities;
+using Devops.DomainService;
 using DomainService.Utilities;
 using DomainService.Shared;
 using FluentValidation.AspNetCore;
@@ -15,6 +16,7 @@ var serviceName = "blocks-os-api";
 var vaultType = ResolveVaultType();
 Console.WriteLine($"Using Genesis vault type: {vaultType}");
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
+var cloudBuildSecret = await CloudBuildSecret.ProcessBlocksSecret(vaultType);
 var builder = WebApplication.CreateBuilder(args);
 
 ApplicationConfigurations.ConfigureServices(builder.Services, IdpConstants.GetMessageConfiguration(secret.MessageConnectionString));
@@ -40,13 +42,41 @@ Directory.CreateDirectory(wwwrootPath);
 
 ApplyFrontendRuntimeSettings(builder.Configuration, wwwrootPath);
 
+services.AddEndpointsApiExplorer();
+services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new() { Title = "Blocks Deployment API", Version = "v1" });
+    options.AddSecurityDefinition("Bearer", new()
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+    });
+    options.AddSecurityRequirement(new()
+    {
+        {
+            new() { Reference = new() { Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme, Id = "Bearer" } },
+            []
+        }
+    });
+    var xmlFile = Path.Combine(AppContext.BaseDirectory, "Blocks.Genesis.xml");
+    if (File.Exists(xmlFile))
+        options.IncludeXmlComments(xmlFile);
+});
+
 services.RegisterAllServices();
 services.AddApplicationServices();
+services.RegisterApplicationServices(cloudBuildSecret);
 services.AddCloudDomainServices();
 services.AddCloudLmtServices();
 services.AddCloudConfigurationServices();
 
 var app = builder.Build();
+
+app.UseSwagger();
+app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Blocks Deployment API v1"));
 
 app.UseDefaultFiles();
 app.UseStaticFiles();

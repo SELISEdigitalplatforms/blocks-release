@@ -54,6 +54,14 @@ import AiModelSelectedRoute from "./routes/dashboard/ai-model-selected";
 import ManagedServicesPage from "./routes/dashboard/managed-services";
 import ProfilePage from "./routes/dashboard/profile";
 
+// Deployment routes (cross-module devops)
+import DeploymentPage from "./routes/deployment/deployment";
+import DeploymentRepoDetailsPage from "./routes/deployment/deployment-repo-details";
+import DeploymentLogsPage from "./routes/deployment/deployment-logs";
+import DeploymentLivePage from "./routes/deployment/deployment-live";
+
+
+
 // Console pages
 import { Console } from "./pages/console/console";
 import { DashboardOverview } from "./pages/dashboard/dashboard-overview";
@@ -157,11 +165,15 @@ export const router = createBrowserRouter([
       { path: "/project-overview/people", element: <PeopleManagement /> },
       { path: "/project-overview/repositories", element: <RepositoriesPage /> },
       { path: "/project-overview/settings", element: <SettingsPage /> },
+      { path: "/devops", element: <DeploymentPage /> },
+      { path: "/devops/repo/:repoId", element: <DeploymentRepoDetailsPage /> },
+      { path: "/devops/repo/:repoId/deployment-logs/:buildId", element: <DeploymentLogsPage /> },
+      { path: "/devops/repo/:repoId/deployment-live/:buildId", element: <DeploymentLivePage /> },
     ],
   },
 
   // ── Root redirect: authenticated users go to console ──
-  { path: "/", element: <Navigate to="/console" replace /> },
+  { path: "/", element: <Navigate to="/devops" replace /> },
 
   // ── Catch-all: redirect to login ──
   { path: "*", element: <Navigate to="/login" replace /> },

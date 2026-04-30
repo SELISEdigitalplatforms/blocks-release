@@ -35,6 +35,10 @@ export default defineConfig(({ mode }) => {
           "./app/cross-modules/utilities",
         ),
         "@blocks-ai": path.resolve(__dirname, "./app/cross-modules/ai"),
+        "@blocks-devops": path.resolve(
+          __dirname,
+          "./app/cross-modules/devops",
+        ),
       },
     },
     build: {

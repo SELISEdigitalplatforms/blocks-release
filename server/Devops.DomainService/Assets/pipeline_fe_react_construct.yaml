@@ -1,0 +1,228 @@
+# Enhanced PipelineRun with deployment capabilities, Dockerfile support, and advanced configuration
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  namespace: tekton-pipelines
+  name: clone-build-push-deploy-run-01
+spec:
+  pipelineRef:
+    name: clone-build-push-deploy
+  timeouts:
+    pipeline: "0h90m0s"  # Extended timeout for deployment
+    tasks: "0h60m0s"
+  podTemplate:
+    securityContext:
+      fsGroup: 65532
+    nodeSelector:
+      "kubernetes.azure.com/scalesetpriority": "spot"
+      "workload-type": "spot-eligible"
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: "kubernetes.azure.com/scalesetpriority"
+                  operator: In
+                  values:
+                    - "spot"
+                - key: "workload-type"
+                  operator: In
+                  values:
+                    - "spot-eligible"
+    tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+    hostAliases:
+    - ip: "51.103.175.23" # The public IP you found with nslookup
+      hostnames:
+      - "api-dt.seliseblocks.com"
+  taskRunSpecs:
+  - pipelineTaskName: fetch-source
+    taskServiceAccountName: default
+    computeResources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+  - pipelineTaskName: build-push
+    taskServiceAccountName: default
+    computeResources:
+      requests:
+        memory: "2Gi"
+        cpu: "1"
+      limits:
+        memory: "8Gi"
+        cpu: "4"
+  - pipelineTaskName: deploy-app
+    taskServiceAccountName: deploy-sa  # Service account with deployment permissions
+    computeResources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+  - pipelineTaskName: sonar-scan
+    taskServiceAccountName: default
+    computeResources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "4Gi"
+        cpu: "2"
+  - pipelineTaskName: sca-scan
+    taskServiceAccountName: default
+    computeResources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "4Gi"
+  # # --- New Resource spec for the Trivy image Task ---
+  # - pipelineTaskName: trivy-image-scan
+  #   taskServiceAccountName: default
+  #   computeResources:
+  #     requests: { memory: "1Gi", cpu: "500m" }
+  #     limits: { memory: "4Gi", cpu: "2" }
+  workspaces:
+    - name: shared-data
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          storageClassName: tekton-storage   # check this storage class 
+          resources:
+            requests:
+              storage: 3Gi
+    - name: docker-credentials
+      configMap:
+        name: kaniko-docker-config
+    - name: sonar-credentials-ws
+      secret:
+        secretName: sonarqube-auth
+        items:
+          - key: token
+            path: login
+    # --- New Workspace binding for Dependency-Track ---
+    - name: dtrack-credentials-ws
+      secret:
+        secretName: dependency-track-auth # The secret we created in Step 1
+        items:
+          - key: api-key # The key within the secret
+            path: api-key   # The filename inside the container
+  params:
+    # Existing build parameters
+    - name: repo-url
+      value: https://github.com/SELISEdigitalplatforms/l3-react-blocks-construct.git
+    - name: revision
+      value: "main"
+    - name: image-reference
+      value: blocksacr.azurecr.io/demo:v10
+
+    # Dockerfile location
+    - name: dockerfile
+      value: "Dockerfile"
+    - name: extra-args
+      value:
+        - "--build-arg"
+        - "ci_build=prod"
+    
+    # New deployment parameters with comma-separated domains
+    - name: app-name
+      value: "react-blocks-demo"  # Change this to your desired app name
+    - name: namespace
+      value: "demo-apps"  # Change this to your target namespace
+    - name: domains
+      value: "demo.seliseblocks.com,site2.seliseblocks.com,handle-all.seliseblocks.com"
+    - name: cpu-request
+      value: "200m"
+    - name: memory-request
+      value: "256Mi"
+    - name: cpu-limit
+      value: "500m"
+    - name: memory-limit
+      value: "500Mi"
+    - name: replicas
+      value: "1"
+    - name: port
+      value: "80"  # Adjust based on your app port
+    
+    # Custom command and args (example for .NET app)
+    - name: command
+      value: '[]' # E.G: '["dotnet"]'
+    - name: args 
+      value: '[]' # E.G: '["YourApp.dll"]'
+    
+    # Environment variables
+    - name: env-vars
+      value: '[]' # E.G:  '[{"name":"KEY1","value":"VALUE1"},{"name":"KEY12","value":"VALUE2"}]'
+    
+    # Probe configuration
+    # Default probe path (used by all probes unless overridden)
+    - name: probe-path
+      value: "/"
+    
+    # Readiness probe configuration
+    - name: enable-readiness-probe
+      value: "false"  # Set to "true" to enable readiness probe
+    - name: readiness-probe-path
+      value: "/ping"  # Custom path, or leave empty to use probe-path
+    - name: readiness-initial-delay
+      value: "10"
+    - name: readiness-period
+      value: "5"
+    - name: readiness-timeout
+      value: "2"
+    - name: readiness-success-threshold
+      value: "1"
+    - name: readiness-failure-threshold
+      value: "3"
+    
+    # Liveness probe configuration
+    - name: enable-liveness-probe
+      value: "false"  # Set to "true" to enable liveness probe
+    - name: liveness-probe-path
+      value: "/"  # Custom path, or leave empty to use probe-path
+    - name: liveness-initial-delay
+      value: "30"
+    - name: liveness-period
+      value: "10"
+    - name: liveness-timeout
+      value: "3"
+    - name: liveness-success-threshold
+      value: "1"
+    - name: liveness-failure-threshold
+      value: "3"
+    
+    # Startup probe configuration (for slow-starting apps)
+    - name: enable-startup-probe
+      value: "false"  # Set to "true" for Java/.NET apps that start slowly
+    - name: startup-probe-path
+      value: "/ping"  # Custom path, or leave empty to use probe-path
+    - name: startup-initial-delay
+      value: "0"
+    - name: startup-period
+      value: "10"
+    - name: startup-timeout
+      value: "3"
+    - name: startup-success-threshold
+      value: "1"
+    - name: startup-failure-threshold
+      value: "60"  # Allow up to 10 minutes for startup (60 * 10s)
+
+    # --- SonarQube Parameters ---
+    - name: sonar-project-key
+      value: "l3-react-blocks-construct"
+    - name: sonar-host-url
+      value: "https://code.selise.biz"
+    - name: sonar-organization
+      value: "code.selise.biz"
+
+    # --- New Dependency-Track Parameter ---
+    - name: dtrack-host-url
+      value: "https://api-dt.seliseblocks.com"

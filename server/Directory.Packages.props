@@ -24,6 +24,7 @@
 	<PackageVersion Include="QRCoder" Version="1.6.0" />
 	<PackageVersion Include="SeliseBlocks.MailDriver" Version="9.0.0-preview.15" />
 	<PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.2" />
+	<PackageVersion Include="Swashbuckle.AspNetCore" Version="9.0.6" />
 	<PackageVersion Include="coverlet.collector" Version="6.0.4" />
 	<PackageVersion Include="FluentAssertions" Version="8.8.0" />
 	<PackageVersion Include="JUnitLogger" Version="1.0.1" />

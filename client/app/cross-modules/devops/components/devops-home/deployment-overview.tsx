@@ -32,7 +32,7 @@ const DeploymentOverview = ({ projects }: DeploymentOverviewProps) => {
   const navigate = useNavigate();
 
   return (
-    <div className="mx-auto min-h-screen w-full">
+    <div className="mx-auto min-h-screen w-full p-2 sm:p-4 lg:p-6">
       <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
         <h1 className="text-xl font-semibold">Deployment Overview</h1>
 

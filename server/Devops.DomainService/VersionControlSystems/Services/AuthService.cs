@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Devops.DomainService.VersionControlSystems.Services;
 
-public class AuthService: IAuthService
+public class AuthService : IAuthService
 {
     private readonly ILogger<AuthService> _logger;
     private readonly ITokenRepository _tokenRepository;
@@ -60,19 +60,21 @@ public class AuthService: IAuthService
                 _logger.LogInformation($"Successfully retrieved access token for user {BlocksContext.GetContext().UserId}");
                 return await SaveAccessToken(accessTokenResult);
             }
-            _logger.LogError($"Failed to retrieve access token for {accessTokenResult.ErrorDescription}");
+            var errorDescription = accessTokenResult?.ErrorDescription ?? "Unknown error";
+            var errorCode = accessTokenResult?.Error ?? "Unknown";
+            _logger.LogError($"Failed to retrieve access token. Error: {errorCode}, Description: {errorDescription}");
             return new BaseApiResponse
             {
                 IsSuccess = false,
-                Message = $"{accessTokenResult.Error}{accessTokenResult.ErrorDescription}",
+                Message = $"{errorCode}{errorDescription}",
                 StatusCode = HttpStatusCode.BadRequest,
                 Errors = new Dictionary<string, string>
                 {
-                    { "Error", accessTokenResult.ErrorDescription}
+                    { "Error", errorDescription}
                 }
             };
         }
-        catch (Exception ex) 
+        catch (Exception ex)
         {
             return new BaseApiResponse
             {
@@ -169,66 +171,99 @@ public class AuthService: IAuthService
 
     public async Task<BaseApiResponse> SaveAccessToken(GithubAccessTokenResponse accessTokenResponse)
     {
-        RepositoryToken repositoryToken = await _tokenRepository.getToken();
-
-        var user = await _versionControlService.GetUser(accessTokenResponse.AccessToken);
-        var userOrg = await _versionControlService.GetUserOrganizations(accessTokenResponse.AccessToken);
-        var userOrganizations = new List<UserOrganizations>();
-        foreach (var item in userOrg)
+        try
         {
-            var org = new UserOrganizations();
-            org.OrgId = item.id.ToString();
-            org.OrgNodeId = item.node_id;
-            org.OrgUserName = item.login;
-            org.AvatarUrl = item.avatar_url;
-            org.OrgDescription = item.description;
-            userOrganizations.Add(org);
-        }
+            _logger.LogInformation("Loading existing repository token.");
+            RepositoryToken repositoryToken = await _tokenRepository.getToken();
 
-        if (repositoryToken == null)
-        {
-            repositoryToken = new RepositoryToken
+            _logger.LogInformation("Fetching GitHub user details.");
+            var user = await _versionControlService.GetUser(accessTokenResponse.AccessToken);
+            if (user == null)
             {
-                ItemId = Guid.NewGuid().ToString(),
-                AccessToken = accessTokenResponse.AccessToken,
-                Source = "Github",
-                Scope = accessTokenResponse.Scope,
-                BlocksUserId = BlocksContext.GetContext().UserId,
-                UserName = user?.login,
-                CreatedBy = BlocksContext.GetContext().UserId,
-                CreatedDate = DateTime.UtcNow,
-                LastUpdatedDate = DateTime.UtcNow,
-                Organizations = userOrganizations,
-                LastUpdatedBy = BlocksContext.GetContext().UserId
-            };
-        }
-        else
-        {
-            repositoryToken.AccessToken = accessTokenResponse.AccessToken;
-            repositoryToken.Scope = accessTokenResponse.Scope;
-            repositoryToken.LastUpdatedDate = DateTime.UtcNow;
-            repositoryToken.Organizations = userOrganizations;
-            repositoryToken.LastUpdatedBy = BlocksContext.GetContext().UserId;
-            repositoryToken.UserName = user?.login;
-        }
+                _logger.LogError("GitHub user response was null.");
+            }
 
-        var result = await _tokenRepository.saveToken(repositoryToken);
+            _logger.LogInformation("Fetching GitHub user organizations.");
+            var userOrg = await _versionControlService.GetUserOrganizations(accessTokenResponse.AccessToken);
+            if (userOrg == null)
+            {
+                _logger.LogError("GitHub user organizations response was null.");
+                userOrg = [];
+            }
+            var userOrganizations = new List<UserOrganizations>();
+            foreach (var item in userOrg)
+            {
+                var org = new UserOrganizations();
+                org.OrgId = item.id.ToString();
+                org.OrgNodeId = item.node_id;
+                org.OrgUserName = item.login;
+                org.AvatarUrl = item.avatar_url;
+                org.OrgDescription = item.description;
+                userOrganizations.Add(org);
+            }
 
-        if (result)
-        {
+            if (repositoryToken == null)
+            {
+                repositoryToken = new RepositoryToken
+                {
+                    ItemId = Guid.NewGuid().ToString(),
+                    AccessToken = accessTokenResponse.AccessToken,
+                    Source = "Github",
+                    Scope = accessTokenResponse.Scope,
+                    BlocksUserId = BlocksContext.GetContext().UserId,
+                    UserName = user?.login,
+                    CreatedBy = BlocksContext.GetContext().UserId,
+                    CreatedDate = DateTime.UtcNow,
+                    LastUpdatedDate = DateTime.UtcNow,
+                    Organizations = userOrganizations,
+                    LastUpdatedBy = BlocksContext.GetContext().UserId
+                };
+            }
+            else
+            {
+                repositoryToken.AccessToken = accessTokenResponse.AccessToken;
+                repositoryToken.Scope = accessTokenResponse.Scope;
+                repositoryToken.LastUpdatedDate = DateTime.UtcNow;
+                repositoryToken.Organizations = userOrganizations;
+                repositoryToken.LastUpdatedBy = BlocksContext.GetContext().UserId;
+                repositoryToken.UserName = user?.login;
+            }
+
+            _logger.LogInformation("Saving repository token.");
+            var result = await _tokenRepository.saveToken(repositoryToken);
+
+            if (result)
+            {
+                _logger.LogInformation("Repository token saved successfully.");
+                return new BaseApiResponse
+                {
+                    IsSuccess = true,
+                    StatusCode = HttpStatusCode.OK
+                };
+            }
+
+            _logger.LogError("Failed to save repository token.");
             return new BaseApiResponse
             {
-                IsSuccess = true,
-                StatusCode = HttpStatusCode.OK
+                IsSuccess = false,
+                Message = "Failed to save access token.",
+                StatusCode = HttpStatusCode.BadRequest
             };
         }
-
-        return new BaseApiResponse
+        catch (Exception ex)
         {
-            IsSuccess = false,
-            Message = "Failed to save access token.",
-            StatusCode = HttpStatusCode.BadRequest
-        };
+            _logger.LogError(ex, "Error while saving GitHub access token.");
+            return new BaseApiResponse
+            {
+                IsSuccess = false,
+                Message = ex.Message,
+                StatusCode = HttpStatusCode.BadRequest,
+                Errors = new Dictionary<string, string>
+                {
+                    { "Exception", ex.Message }
+                }
+            };
+        }
     }
 
 

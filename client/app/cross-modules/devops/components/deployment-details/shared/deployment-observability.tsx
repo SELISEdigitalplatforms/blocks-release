@@ -39,11 +39,11 @@ const DeploymentObservability = ({
     event: React.MouseEvent,
   ) => {
     event.stopPropagation();
-    navigate(`/deployment/repo/${repoId}/deployment-logs/${buildId}?tab=${action.toLowerCase()}`);
+    navigate(`/devops/repo/${repoId}/deployment-logs/${buildId}?tab=${action.toLowerCase()}`);
   };
 
   const handleDeployedItem = (repoId: string, buildId: string) => {
-    navigate(`/deployment/repo/${repoId}/deployment-logs/${buildId}?tab=deployment-logs`);
+    navigate(`/devops/repo/${repoId}/deployment-logs/${buildId}?tab=deployment-logs`);
   };
 
   const sortedBuilds = [...(builds || [])].sort(

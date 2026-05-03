@@ -1,3 +1,5 @@
+import { getRuntimeEnv } from "@/lib/runtime-env";
+
 const generateRandomState = () => {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
@@ -13,11 +15,25 @@ const authenticateWithGithub = (extraState: string) => {
   // Define scopes for personal repository access
   const scopes = ["repo", "user:email", "read:user", "read:repo_hook"].join(" ");
 
+  const clientId = getRuntimeEnv("BLOCKS_GITHUB_SSO_CLIENT_ID");
+  // const appUrl = getRuntimeEnv("BLOCKS_APP_URL");
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  // const baseUrl = (appUrl || origin).replace(/\/$/, "");
+  // const redirectUri = baseUrl ? `${baseUrl}/callback` : "";
+
+  if (!clientId) {
+    console.error("Missing GitHub OAuth client ID.");
+    return;
+  }
+
   // Build the OAuth URL with all parameters
   const authUrl = new URL("https://github.com/login/oauth/authorize");
-  authUrl.searchParams.set("client_id", process.env.NEXT_PUBLIC_GITHUB_SSO_CLIENT_ID as string);
+  authUrl.searchParams.set("client_id", clientId);
   authUrl.searchParams.set("scope", scopes);
   authUrl.searchParams.set("state", randomState);
+  // if (redirectUri) {
+  //   authUrl.searchParams.set("redirect_uri", redirectUri);
+  // }
 
   // window.history.pushState({}, document.title, window.location.pathname);
   // window.location.assign(authUrl.toString());

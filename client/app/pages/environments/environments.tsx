@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { ProjectCardLoading } from "@/components/project-card/loading";
 import { useNavigate } from "react-router-dom";
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
 
 const ProjectGroupLoading = () => (
   <main className="flex flex-1 flex-col gap-4 p-4 sm:mx-10 md:gap-6">
@@ -153,14 +153,16 @@ export const EnvironmentsPage = () => {
             <DialogDescription className="flex flex-col gap-2 text-sm md:flex-row md:items-start md:gap-2">
               <span className="flex flex-row items-start gap-2">
                 <span>Please add the environments you want to configure.</span>
-                <Tooltip>
-                  <TooltipTrigger type="button" asChild>
-                    <CircleHelp className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs text-xs font-normal md:max-w-96 md:text-sm">
-                    You must have the corresponding branch in your repository.
-                  </TooltipContent>
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger type="button" asChild>
+                      <CircleHelp className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-xs font-normal md:max-w-96 md:text-sm">
+                      You must have the corresponding branch in your repository.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </span>
             </DialogDescription>
           </DialogHeader>

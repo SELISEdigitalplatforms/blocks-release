@@ -59,11 +59,11 @@ const LiveLogs = () => {
   }, [isError]);
 
   const handleSubmit = () => {
-    navigate(`/deployment/repo/${repoId}?refresh=true`);
+    navigate(`/devops/repo/${repoId}?refresh=true`);
   };
 
-  BREADCRUMB_CUSTOM_TITLES[`/deployment/repo/${repoId}/deployment-live`] = "Deployment Overview";
-  BREADCRUMB_CUSTOM_TITLES[`/deployment/repo/${repoId}/deployment-live/${buildIdStr}`] = buildIdStr;
+  BREADCRUMB_CUSTOM_TITLES[`/devops/repo/${repoId}/deployment-live`] = "Deployment Overview";
+  BREADCRUMB_CUSTOM_TITLES[`/devops/repo/${repoId}/deployment-live/${buildIdStr}`] = buildIdStr;
 
   return (
     <>

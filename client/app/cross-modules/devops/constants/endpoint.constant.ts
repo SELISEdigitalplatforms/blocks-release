@@ -1,4 +1,4 @@
-import { API_BASES } from "@/constant/endpoint.constant";
+import { API_BASES } from "@/constants/endpoint.constant";
 
 export const ALERT_ENDPOINTS = {
   SAVE_MONITOR: `${API_BASES.ALERT}/Monitor/SaveMonitor`,

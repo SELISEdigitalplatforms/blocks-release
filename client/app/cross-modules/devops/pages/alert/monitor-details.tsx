@@ -11,7 +11,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useState } from "react";
 import AddSingleMonitor from "@blocks-devops/components/add-repo/add-repo";
 import { Separator } from "@/components/ui-kits/separator/separator";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constant/breadcrumb-custom-title";
+import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { ArrowLeft, Settings } from "lucide-react";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import AlertAction from "@blocks-devops/components/add-repo/alert-action";
@@ -120,10 +120,10 @@ const MonitorSummary = ({ data, status, incident, createdAt }: MonitorSummaryPro
           <Card
             key={item.range}
             className={`flex flex-1 flex-col gap-2 rounded-md border-0 border-l-8 bg-transparent py-1 pl-4 shadow-none ${index === 1
-                ? "border-l-blocks-secondary-500"
-                : index === 2
-                  ? "border-l-chart-blue"
-                  : "border-l-chart-purple"
+              ? "border-l-blocks-secondary-500"
+              : index === 2
+                ? "border-l-chart-blue"
+                : "border-l-chart-purple"
               }`}
           >
             <CardTitle className="text-base font-medium">

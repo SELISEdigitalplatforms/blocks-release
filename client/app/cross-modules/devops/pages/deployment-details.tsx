@@ -158,8 +158,8 @@ const DeploymentDetails = () => {
     );
   }
 
-  BREADCRUMB_CUSTOM_TITLES[`/deployment/repo/${repoId}/deployment-logs`] = "Deployment Overview";
-  BREADCRUMB_CUSTOM_TITLES[`/deployment/repo/${repoId}/deployment-logs/${buildIdStr}`] = buildIdStr;
+  BREADCRUMB_CUSTOM_TITLES[`/devops/repo/${repoId}/deployment-logs`] = "Deployment Overview";
+  BREADCRUMB_CUSTOM_TITLES[`/devops/repo/${repoId}/deployment-logs/${buildIdStr}`] = buildIdStr;
 
   const activeTabData = tabs.find((tab) => tab.id === activeTab);
   const ActiveTabComponent = activeTabData?.component;

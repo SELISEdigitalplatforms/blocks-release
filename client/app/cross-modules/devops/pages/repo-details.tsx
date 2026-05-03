@@ -220,7 +220,7 @@ export default function RepoDetails() {
       {
         onSuccess: (deployResponse) => {
           if (deployResponse && deployResponse.buildId) {
-            navigate(`/deployment/repo/${repoId}/deployment-live/${deployResponse.buildId}`);
+            navigate(`/devops/repo/${repoId}/deployment-live/${deployResponse.buildId}`);
             setIsDeploying(false);
           } else {
             navigate("/devops");
@@ -262,7 +262,7 @@ export default function RepoDetails() {
       {
         onSuccess: (response) => {
           if (response && response.buildId) {
-            navigate(`/deployment/repo/${repoId}/deployment-live/${response.buildId}`);
+            navigate(`/devops/repo/${repoId}/deployment-live/${response.buildId}`);
             setIsDeploying(false);
           } else {
             navigate("/devops");

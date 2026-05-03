@@ -13,7 +13,7 @@ const RedirectCallbackUrl = () => {
 
     // Immediate redirect (loader will show briefly during navigation)
     if (!redirection || redirection === "") {
-      const configureUrl = `/deployment/configure${queryString ? `?${queryString}` : ""}`;
+      const configureUrl = `/devops/configure${queryString ? `?${queryString}` : ""}`;
       navigate(configureUrl, { replace: true });
     } else {
       // Construct the configure URL with query parameters

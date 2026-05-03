@@ -12,6 +12,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useNavigate } from "react-router-dom";
 import { useValidateAuthorization } from "@blocks-devops/hooks/github-info";
 import { IProviderDestination } from "@blocks-devops/models/utils";
+import { useProjectStore } from "@/store/useProjectStore";
 
 interface ProviderButtonsProps extends IProviderDestination {
   onClose?: (verifyAuth?: boolean) => void | Promise<void>;
@@ -21,6 +22,7 @@ interface ProviderButtonsProps extends IProviderDestination {
 
 const ProviderButtons = ({ destination, onClose, extraState, closeOnProviderSelect }: ProviderButtonsProps) => {
   const navigate = useNavigate();
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
 
   const { data: verifyAuth } = useValidateAuthorization();
   const [, setSelectedProvider] = useState<string | null>(null);
@@ -42,6 +44,11 @@ const ProviderButtons = ({ destination, onClose, extraState, closeOnProviderSele
             navigate(destination);
           }
         } else {
+          if (!projectKey) {
+            console.error("Missing project key for GitHub authorization.");
+            return;
+          }
+
           const reloadListener = (event: StorageEvent) => {
             console.log("Event:", event);
             if (event.key === "isReload" && event.newValue === "true") {
@@ -51,6 +58,9 @@ const ProviderButtons = ({ destination, onClose, extraState, closeOnProviderSele
             }
           };
           window.addEventListener("storage", reloadListener);
+
+          localStorage.setItem("github_auth_project_key", projectKey);
+          localStorage.setItem("github_auth_destination", destination);
 
           authenticateWithGithub(extraState ? extraState : "");
         }
@@ -92,7 +102,7 @@ const ProviderButtons = ({ destination, onClose, extraState, closeOnProviderSele
                 disabled={!provider.active}
               >
                 <img
-                  src={iconSrc.src}
+                  src={iconSrc}
                   alt={`${provider.name} icon`}
                   width={18}
                   height={18}

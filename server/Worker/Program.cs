@@ -1,6 +1,9 @@
 using Blocks.Genesis;
 using Devops.DomainService;
 using Devops.DomainService.AnalyticsTool.Models;
+using Devops.DomainService.Deployment.Interfaces;
+using Devops.DomainService.Deployment.Services;
+using Devops.DomainService.Shared.Utilities;
 using Devops.DomainService.Shared.Models;
 using DomainService.Dtos;
 using DomainService.Migration;
@@ -59,6 +62,7 @@ IHostBuilder CreateHostBuilder(string[] args) =>
 
             services.RegisterAllServices();
             services.RegisterApplicationServices(cloudBuildSecret);
+            services.AddSingleton<IDeploymentHubService, NullDeploymentHubService>();
 
             services.AddSingleton<IConsumer<PostBuildQueue>, PostBuildConsumer>();
             services.AddSingleton<IConsumer<LogNotificationQueue>, LogNotificationConsumer>();
@@ -75,7 +79,15 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.AddSingleton<IConsumer<PublishScheduleCommand>, DataCleanupConsumer>();
             services.AddSingleton<IConsumer<UpdateResourceUsageCommand_Identifier>, UpdateResourceUsageConsumer>();
 
-            ApplicationConfigurations.ConfigureWorker(services, IdpConstants.GetMessageConfiguration(secret.MessageConnectionString));
+            var workerMessageConfig = IdpConstants.GetMessageConfiguration(secret.MessageConnectionString);
+            var cloudBuildMessageConfig = CloudBuildConstants.GetWorkerMessageConfiguration(secret.MessageConnectionString);
+
+            if (workerMessageConfig.RabbitMqConfiguration != null && cloudBuildMessageConfig.RabbitMqConfiguration != null)
+                workerMessageConfig.RabbitMqConfiguration.ConsumerSubscriptions.AddRange(cloudBuildMessageConfig.RabbitMqConfiguration.ConsumerSubscriptions);
+            else if (workerMessageConfig.AzureServiceBusConfiguration != null && cloudBuildMessageConfig.AzureServiceBusConfiguration != null)
+                workerMessageConfig.AzureServiceBusConfiguration.Queues.AddRange(cloudBuildMessageConfig.AzureServiceBusConfiguration.Queues);
+
+            ApplicationConfigurations.ConfigureWorker(services, workerMessageConfig);
             //ApplicationConfigurations.ConfigureWorker(services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));
             #endregion
         });

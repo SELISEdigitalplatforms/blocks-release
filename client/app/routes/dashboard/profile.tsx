@@ -1,5 +1,4 @@
-import { Profile } from "@blocks-idp/iam/modules/user-management/profile";
-
 export default function ProfilePage() {
-	return <Profile />;
+	window.location.replace("http://dev-idp.blocksdevelopers.com/profile");
+	return null;
 }

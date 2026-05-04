@@ -1,7 +1,9 @@
 using BlocksTemplate.Api;
+using BlocksTemplate.Api.Hubs;
 using Blocks.Genesis;
 using Cloud.DomainService.Utilities;
 using Devops.DomainService;
+using Devops.DomainService.Deployment.Interfaces;
 using DomainService.Utilities;
 using DomainService.Shared;
 using FluentValidation.AspNetCore;
@@ -66,12 +68,21 @@ services.AddSwaggerGen(options =>
         options.IncludeXmlComments(xmlFile);
 });
 
+services.AddSignalR().AddJsonProtocol(options =>
+{
+    options.PayloadSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+});
+
 services.RegisterAllServices();
 services.AddApplicationServices();
 services.RegisterApplicationServices(cloudBuildSecret);
 services.AddCloudDomainServices();
 services.AddCloudLmtServices();
 services.AddCloudConfigurationServices();
+
+// Replace the Null implementation registered by the domain service with the
+// real SignalR-backed hub service so notifications actually reach connected clients.
+services.AddSingleton<IDeploymentHubService, DeploymentHubService>();
 
 var app = builder.Build();
 
@@ -80,6 +91,8 @@ app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", 
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
+
+app.MapHub<DeploymentLogHub>("/deploymentHub");
 
 var indexHtml = Path.Combine(app.Environment.WebRootPath ?? "", "index.html");
 if (File.Exists(indexHtml))

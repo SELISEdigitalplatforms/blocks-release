@@ -73,26 +73,23 @@ public class GithubService : IVersionControlService
 
     public async Task<bool> ValidateAccessToken(RepositoryToken token)
     {
-        var url = $"{CloudBuildConstants.GITHUB_API_BASE_URI}/applications/{_cloudBuildSecret.GithubClientId}/token";
-        string authString = $"{_cloudBuildSecret.GithubClientId}:{_cloudBuildSecret.GithubClientSecret}";
-        string base64Auth = Convert.ToBase64String(Encoding.ASCII.GetBytes(authString));
+        var url = $"{CloudBuildConstants.GITHUB_API_BASE_URI}/user";
         var headers = new Dictionary<string, string>
         {
-            { "User-Agent", "BlocksDevOps"},
-            { "Authorization", $"Basic {base64Auth}"}
-        };
-        var payload = new
-        {
-            access_token = token.AccessToken
+            { "User-Agent", "BlocksDevOps" },
+            { "Authorization", $"Bearer {token.AccessToken}" }
         };
 
-        var (result, response) = await _httpHelperServices.MakeHttpRequest<Object>(CloudBuildConstants.GITHUB_API_BASE_URI, url, HttpMethod.Post, payload, headers, null);
+        var (result, response) = await _httpHelperServices.MakeHttpRequest<object>(
+            $"{CloudBuildConstants.GITHUB_API_BASE_URI}",
+            url,
+            HttpMethod.Get,
+            null,
+            headers,
+            null
+        );
 
-        if (response.IsSuccessStatusCode)
-        {
-            return true;
-        }
-        return false;
+        return response.IsSuccessStatusCode;
 
     }
 

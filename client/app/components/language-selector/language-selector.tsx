@@ -1,4 +1,5 @@
 import useLanguage from "@/hooks/use-language-switcher";
+import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -6,7 +7,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui-kits/dropdown-menu/dropdown-menu";
-import { ChevronDown } from "lucide-react";
 
 const languages = [
   { key: "en", title: "English" },
@@ -18,26 +18,27 @@ export function LanguageSelector() {
   const { changeLanguage, language } = useLanguage();
 
   return (
-    <DropdownMenu>
+     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <div className="flex cursor-pointer items-center gap-1">
-          <span className="text-sm font-medium uppercase">{language}</span>
+        <button
+          type="button"
+          className="relative z-50 inline-flex h-9 items-center justify-center gap-1 rounded-full border border-transparent px-2.5 text-sm font-medium uppercase text-muted-foreground transition-all hover:border-input hover:bg-accent hover:text-accent-foreground hover:shadow-sm"
+        >
+          <span>{language}</span>
           <ChevronDown className="h-4 w-4" />
-        </div>
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {languages.map((lang, i) => (
+        {languages.map((lang, index) => (
           <div key={lang.key}>
             <DropdownMenuItem
-              className={`${lang.key === language ? "font-bold" : "cursor-pointer"}`}
-              onClick={() => {
-                changeLanguage(lang.key);
-              }}
+              className={lang.key === language ? "font-semibold" : ""}
+              onClick={() => changeLanguage(lang.key)}
               disabled={lang.key !== "en"}
             >
               {lang.title}
             </DropdownMenuItem>
-            {i !== languages.length - 1 && <DropdownMenuSeparator />}
+            {index !== languages.length - 1 && <DropdownMenuSeparator />}
           </div>
         ))}
       </DropdownMenuContent>

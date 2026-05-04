@@ -1,20 +1,42 @@
 import { API_BASE } from "@/constants/endpoint.constant";
+import { getRuntimeEnv } from "@/lib/runtime-env";
+
+const rawAlertBase = getRuntimeEnv("BLOCKS_OBSERVABILITY_APP_URL");
+const alertBase = rawAlertBase.replace(/\/+$/, "");
+const apiBase = API_BASE.replace(/^\/+/, "");
+
+let didWarnMissingAlertBase = false;
+
+const buildAlertEndpoint = (path: string): string => {
+  const cleanedPath = path.replace(/^\/+/, "");
+  if (!alertBase) {
+    if (!didWarnMissingAlertBase) {
+      console.warn(
+        "BLOCKS_OBSERVABILITY_APP_URL is missing; alert endpoints will use the current origin.",
+      );
+      didWarnMissingAlertBase = true;
+    }
+    return `/${apiBase}/${cleanedPath}`;
+  }
+
+  return `${alertBase}/${apiBase}/${cleanedPath}`;
+};
 
 export const ALERT_ENDPOINTS = {
-  SAVE_MONITOR: `${API_BASE}/Monitor/SaveMonitor`,
-  UPDATE_MONITOR: `${API_BASE}/Monitor/UpdateMonitor`,
-  DELETE_MONITOR: `${API_BASE}/Monitor/DeleteMonitor`,
-  GET_MONITOR_LIST: `${API_BASE}/Monitor/GetMonitorList`,
-  GET_MONITOR_LIST_BY_REPO_ID: `${API_BASE}/Monitor/GetMonitorListByRepoId`,
-  GET_MONITOR_DETAILS: `${API_BASE}/Monitor/GetMonitorDetails`,
-  IS_EXTERNAL_SERVICE_CONFIGURED: `${API_BASE}/Monitor/IsExternalServiceConfigured`,
-  GET_INCIDENT_LIST: `${API_BASE}/Monitor/GetIncidentList`,
-  GET_MONITOR_BY_ID: `${API_BASE}/Monitor/GetMonitorById`,
-  GET_MONITOR_RESPONSE_TIME: `${API_BASE}/Monitor/GetMonitorResponseTime`,
-  GET_MONITOR_DOWN_TIME: `${API_BASE}/Monitor/GetMonitorDownTime`,
-  SAVE_HEALTH: `${API_BASE}/Health/SaveHealth`,
-  UPDATE_HEALTH: `${API_BASE}/Health/UpdateHealth`,
-  DELETE_HEALTH: `${API_BASE}/Health/DeleteHealth`,
+  SAVE_MONITOR: buildAlertEndpoint("Monitor/SaveMonitor"),
+  UPDATE_MONITOR: buildAlertEndpoint("Monitor/UpdateMonitor"),
+  DELETE_MONITOR: buildAlertEndpoint("Monitor/DeleteMonitor"),
+  GET_MONITOR_LIST: buildAlertEndpoint("Monitor/GetMonitorList"),
+  GET_MONITOR_LIST_BY_REPO_ID: buildAlertEndpoint("Monitor/GetMonitorListByRepoId"),
+  GET_MONITOR_DETAILS: buildAlertEndpoint("Monitor/GetMonitorDetails"),
+  IS_EXTERNAL_SERVICE_CONFIGURED: buildAlertEndpoint("Monitor/IsExternalServiceConfigured"),
+  GET_INCIDENT_LIST: buildAlertEndpoint("Monitor/GetIncidentList"),
+  GET_MONITOR_BY_ID: buildAlertEndpoint("Monitor/GetMonitorById"),
+  GET_MONITOR_RESPONSE_TIME: buildAlertEndpoint("Monitor/GetMonitorResponseTime"),
+  GET_MONITOR_DOWN_TIME: buildAlertEndpoint("Monitor/GetMonitorDownTime"),
+  SAVE_HEALTH: buildAlertEndpoint("Health/SaveHealth"),
+  UPDATE_HEALTH: buildAlertEndpoint("Health/UpdateHealth"),
+  DELETE_HEALTH: buildAlertEndpoint("Health/DeleteHealth"),
 } as const;
 
 export const CLOUD_BUILD_ENDPOINTS = {

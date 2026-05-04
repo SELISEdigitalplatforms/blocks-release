@@ -12,7 +12,7 @@ export function DashboardLayout() {
 					<SidebarMenuDesktop />
 					<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
 						<DashboardHeader />
-						<main className="flex-1 overflow-auto">
+						<main className="flex-1 overflow-auto p-2 sm:p-4 lg:p-6">
 							<Outlet />
 						</main>
 					</div>

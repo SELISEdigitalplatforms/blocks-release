@@ -156,7 +156,7 @@ export const useProjectForm = () => {
   const navigate = useNavigate();
   const { isPending, mutateAsync } = useCreateProject();
   const { formData, resetFormData } = useCreateProjectFormState();
-  const { setTennantGroup, setSelectedProject } = useProjectStore();
+  const { setTenantGroup, setSelectedProject } = useProjectStore();
   const queryClient = useQueryClient();
 
   const saveProject = async () => {
@@ -187,7 +187,7 @@ export const useProjectForm = () => {
       });
       if (response?.isSuccess) {
         showSuccessToast({ description: "Your project has been created." });
-        setTennantGroup(response.tenantGroupId);
+        setTenantGroup(response.tenantGroupId);
 
         try {
           const projectGroups = await queryClient.fetchQuery({

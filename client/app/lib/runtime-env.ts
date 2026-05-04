@@ -6,7 +6,8 @@ type RuntimeKey =
   | "BLOCKS_GOOGLE_SITE_KEY"
   | "BLOCKS_CONSTRUCT_URL"
   | "BLOCKS_GITHUB_SSO_CLIENT_ID"
-  | "BLOCKS_APP_URL";
+  | "BLOCKS_APP_URL"
+  | "BLOCKS_OBSERVABILITY_APP_URL";
 
 declare global {
   interface Window {

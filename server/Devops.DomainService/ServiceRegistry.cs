@@ -56,6 +56,7 @@ public static class ServiceRegistry
 
         services.AddSingleton<IValidator<BuildRequest>, BuildRequestValidator>();
         services.AddSingleton<IValidator<RepoDomainUpdateRequest>, RepoDomainUpdateValidator>();
+        services.AddSingleton<IDeploymentHubService, NullDeploymentHubService>();
 
         services.AddSingleton<IKubernetes>(sp =>
         {

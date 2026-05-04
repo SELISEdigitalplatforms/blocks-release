@@ -1,20 +1,23 @@
 import { API_BASE } from "@/constants/endpoint.constant";
+import { getRuntimeEnv } from "@/lib/runtime-env";
+
+const ALERT_BASE = getRuntimeEnv("BLOCKS_OBSERVABILITY_APP_URL");
 
 export const ALERT_ENDPOINTS = {
-  SAVE_MONITOR: `${API_BASE}/Monitor/SaveMonitor`,
-  UPDATE_MONITOR: `${API_BASE}/Monitor/UpdateMonitor`,
-  DELETE_MONITOR: `${API_BASE}/Monitor/DeleteMonitor`,
-  GET_MONITOR_LIST: `${API_BASE}/Monitor/GetMonitorList`,
-  GET_MONITOR_LIST_BY_REPO_ID: `${API_BASE}/Monitor/GetMonitorListByRepoId`,
-  GET_MONITOR_DETAILS: `${API_BASE}/Monitor/GetMonitorDetails`,
-  IS_EXTERNAL_SERVICE_CONFIGURED: `${API_BASE}/Monitor/IsExternalServiceConfigured`,
-  GET_INCIDENT_LIST: `${API_BASE}/Monitor/GetIncidentList`,
-  GET_MONITOR_BY_ID: `${API_BASE}/Monitor/GetMonitorById`,
-  GET_MONITOR_RESPONSE_TIME: `${API_BASE}/Monitor/GetMonitorResponseTime`,
-  GET_MONITOR_DOWN_TIME: `${API_BASE}/Monitor/GetMonitorDownTime`,
-  SAVE_HEALTH: `${API_BASE}/Health/SaveHealth`,
-  UPDATE_HEALTH: `${API_BASE}/Health/UpdateHealth`,
-  DELETE_HEALTH: `${API_BASE}/Health/DeleteHealth`,
+  SAVE_MONITOR: `${ALERT_BASE}/${API_BASE}/Monitor/SaveMonitor`,
+  UPDATE_MONITOR: `${ALERT_BASE}/${API_BASE}/Monitor/UpdateMonitor`,
+  DELETE_MONITOR: `${ALERT_BASE}/${API_BASE}/Monitor/DeleteMonitor`,
+  GET_MONITOR_LIST: `${ALERT_BASE}/${API_BASE}/Monitor/GetMonitorList`,
+  GET_MONITOR_LIST_BY_REPO_ID: `${ALERT_BASE}/${API_BASE}/Monitor/GetMonitorListByRepoId`,
+  GET_MONITOR_DETAILS: `${ALERT_BASE}/${API_BASE}/Monitor/GetMonitorDetails`,
+  IS_EXTERNAL_SERVICE_CONFIGURED: `${ALERT_BASE}/${API_BASE}/Monitor/IsExternalServiceConfigured`,
+  GET_INCIDENT_LIST: `${ALERT_BASE}/${API_BASE}/Monitor/GetIncidentList`,
+  GET_MONITOR_BY_ID: `${ALERT_BASE}/${API_BASE}/Monitor/GetMonitorById`,
+  GET_MONITOR_RESPONSE_TIME: `${ALERT_BASE}/${API_BASE}/Monitor/GetMonitorResponseTime`,
+  GET_MONITOR_DOWN_TIME: `${ALERT_BASE}/${API_BASE}/Monitor/GetMonitorDownTime`,
+  SAVE_HEALTH: `${ALERT_BASE}/${API_BASE}/Health/SaveHealth`,
+  UPDATE_HEALTH: `${ALERT_BASE}/${API_BASE}/Health/UpdateHealth`,
+  DELETE_HEALTH: `${ALERT_BASE}/${API_BASE}/Health/DeleteHealth`,
 } as const;
 
 export const CLOUD_BUILD_ENDPOINTS = {

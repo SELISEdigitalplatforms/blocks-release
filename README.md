@@ -1,6 +1,6 @@
-# blocks-deployment
+# Blocks Deployment
 
-**blocks-deployment** is the Blocks cloud console: a **React 18** single-page application (Vite, TypeScript, Tailwind) paired with an **ASP.NET Core** host (`server/Api`) that serves the built SPA from `wwwroot`, exposes JSON APIs, registers **Swagger**, and adds **health checks** to DI (`AddHealthChecks()` in `Program.cs`; HTTP mapping may come from **SeliseBlocks.Genesis** middleware). A separate **.NET Worker** (`server/Worker`) runs message consumers and background work using the same domain services and **SeliseBlocks.Genesis** configuration stack. In production-style runs, the UI and API share one origin (static files + fallback to `index.html`); during local SPA development, Vite serves the app on port **4000** and can proxy selected paths to a backend URL when `BLOCKS_API_BASE_URL` is set.
+**Blocks Deployment** is the Blocks cloud console: a **React 18** single-page application (Vite, TypeScript, Tailwind) paired with an **ASP.NET Core** host (`server/Api`) that serves the built SPA from `wwwroot`, exposes JSON APIs, registers **Swagger**, and adds **health checks** to DI (`AddHealthChecks()` in `Program.cs`; HTTP mapping may come from **SeliseBlocks.Genesis** middleware). A separate **.NET Worker** (`server/Worker`) runs message consumers and background work using the same domain services and **SeliseBlocks.Genesis** configuration stack. In production-style runs, the UI and API share one origin (static files + fallback to `index.html`); during local SPA development, Vite serves the app on port **4000** and can proxy selected paths to a backend URL when `BLOCKS_API_BASE_URL` is set.
 
 ## Project structure
 

@@ -1,16 +1,16 @@
-import { useContext } from "react";
-import { PanelLeft } from "lucide-react";
-import { Button } from "@/components/ui-kits/button/button";
+import { BlocksAppLauncher } from "@/components/blocks-app-launcher/blocks-app-launcher";
+import { EnvironmentList } from "@/components/environment-list/environment-list";
+import { LanguageSelector } from "@/components/language-selector/language-selector";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
 import { Notification } from "@/components/notification/notification";
 import { ProjectList } from "@/components/project-list/project-list";
+import { Button } from "@/components/ui-kits/button/button";
 import { UserDropdownMenu } from "@/components/user-dropdown-menu/user-dropdown-menu";
-import { EnvironmentList } from "@/components/environment-list/environment-list";
-import { LanguageSelector } from "@/components/language-selector/language-selector";
-import { SidebarMobileView } from "@/layouts/sidebar-mobile-view/sidebar-mobile-view";
 import { SidebarContext } from "@/contexts/dashboard-layout-provider";
-import { BlocksAppLauncher } from "@/components/blocks-app-launcher/blocks-app-launcher";
+import { SidebarMobileView } from "@/layouts/sidebar-mobile-view/sidebar-mobile-view";
 import { cn } from "@/lib/utils";
+import { PanelLeft } from "lucide-react";
+import { useContext } from "react";
 
 export function DashboardHeader() {
   const { isSidebarOpen, toggleSidebar } = useContext(SidebarContext);
@@ -37,17 +37,21 @@ export function DashboardHeader() {
         </div>
 
         <div className="relative z-50 flex items-center gap-4">
-          <div className="hidden h-fit max-w-40 md:flex">
+          <div className="hidden h-fit w-fit-content md:flex">
             <EnvironmentList />
           </div>
-          <ModeToggle />
+          <div className="pointer-events-auto flex items-center">
+            <ModeToggle />
+          </div>
           <div className="pointer-events-auto flex items-center">
             <Notification />
           </div>
           <div className="pointer-events-auto flex items-center">
             <LanguageSelector />
           </div>
-          <BlocksAppLauncher />
+          <div className="pointer-events-auto flex items-center">
+            <BlocksAppLauncher />
+          </div>
           <div className="pointer-events-auto flex items-center">
             <UserDropdownMenu />
           </div>

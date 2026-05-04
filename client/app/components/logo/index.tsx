@@ -1,3 +1,6 @@
+import { useTheme } from "@/hooks/use-theme";
+import { RenderAlternatively } from "@/components/render-elements";
+
 interface LogoProps {
   src?: string;
   alt?: string;
@@ -5,9 +8,6 @@ interface LogoProps {
   height?: number;
   className?: string;
 }
-
-import { useTheme } from "@/hooks/use-theme";
-import { RenderAlternatively } from "../render-elements";
 
 export function Logo({ src, alt = "SELISE Logo", width, height, className }: LogoProps) {
   const { resolvedTheme } = useTheme();

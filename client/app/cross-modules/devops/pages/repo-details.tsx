@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ChevronLeft,
   ArrowRight,
+  ArrowLeft,
   ChartGantt,
   GitBranch,
   Loader,

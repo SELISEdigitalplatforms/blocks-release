@@ -14,6 +14,7 @@ export function BackIconButton({
 }: BackIconButtonProps) {
   return (
     <Button
+      aria-label="Go back"
       variant={"ghost"}
       size={"icon"}
       onClick={onClick}

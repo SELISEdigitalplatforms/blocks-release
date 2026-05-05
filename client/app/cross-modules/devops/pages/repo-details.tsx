@@ -3,10 +3,6 @@ import { useProjectStore } from "@/store/useProjectStore";
 import DeploymentSettingsModal from "@blocks-devops/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
 import DeploymentObservability from "@blocks-devops/components/deployment-details/shared/deployment-observability";
 import {
-  ChevronRight,
-  ChevronLeft,
-  ArrowRight,
-  ArrowLeft,
   ChartGantt,
   GitBranch,
   Loader,

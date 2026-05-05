@@ -1,40 +1,24 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Button } from "@/components/ui-kits/button/button";
+import { useProjectStore } from "@/store/useProjectStore";
+import DeploymentSettingsModal from "@blocks-devops/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
+import DeploymentObservability from "@blocks-devops/components/deployment-details/shared/deployment-observability";
 import {
-  ChevronLeft,
+  ChevronRight,
+  ChartGantt,
   GitBranch,
   Loader,
   Logs,
-  Settings,
-  ChartGantt,
   Rocket,
+  Settings,
 } from "lucide-react";
-import { Button } from "@/components/ui-kits/button/button";
-import DeploymentSettingsModal from "@blocks-devops/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
-import DeploymentObservability from "@blocks-devops/components/deployment-details/shared/deployment-observability";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
-import { Separator } from "@/components/ui-kits/separator/separator";
-import {
-  useGetRepoDetails,
-  useInitialRepoDeployment,
-} from "@blocks-devops/hooks/github-info";
-import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
+import { BackIconButton } from "@/components/buttons/buttons";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
-import { IRepoResponse } from "@blocks-devops/components/devops-home/repo-cards/repo-cards";
-import {
-  DeploymentFormData,
-  IHttpError,
-} from "@blocks-devops/models/github-info";
-import NotificationListener from "@blocks-devops/components/deployment-details/shared/notification-listener";
-import { formatFullDate } from "@/lib/utils";
-import { toast } from "@/hooks/use-toast";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
-import { DEPLOYMENT_OPTIONS_DETAILS } from "@blocks-devops/models/deployment-settings";
-import Alert from "./alert/alert";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
-import { REPO_DETAILS_PROVIDERS } from "@blocks-devops/constants/alert.constant";
+import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import {
   Select,
   SelectContent,
@@ -42,9 +26,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select";
+import { Separator } from "@/components/ui-kits/separator/separator";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
+import { toast } from "@/hooks/use-toast";
+import { formatFullDate } from "@/lib/utils";
+import NotificationListener from "@blocks-devops/components/deployment-details/shared/notification-listener";
+import { IRepoResponse } from "@blocks-devops/components/devops-home/repo-cards/repo-cards";
+import { REPO_DETAILS_PROVIDERS } from "@blocks-devops/constants/alert.constant";
+import {
+  useGetRepoDetails,
+  useInitialRepoDeployment,
+} from "@blocks-devops/hooks/github-info";
+import { DEPLOYMENT_OPTIONS_DETAILS } from "@blocks-devops/models/deployment-settings";
+import {
+  DeploymentFormData,
+  IHttpError,
+} from "@blocks-devops/models/github-info";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { useQueryState } from "nuqs";
-import { BackIconButton } from "@/components/buttons/buttons";
+import Alert from "./alert/alert";
 
 export interface IRepoDetailsResponse {
   data: { repo: IRepoResponse; build: IPipeline[] };

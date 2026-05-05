@@ -15,7 +15,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { BackIconButton } from "@/components/buttons/buttons";
+import { BackIconButton } from "@/components/buttons";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
@@ -398,7 +398,7 @@ export default function RepoDetails() {
       <div className="mx-auto pb-8">
         <div className="mt-2 space-y-2">
           <div className="flex items-center gap-2">
-            <BackIconButton onClick={handleGoBack} />
+            <BackIconButton onClick={handleGoBack} data-testid="back-button" />
             <div>
               <h1 className="text-2xl font-semibold">Repository Details</h1>
               <div className="text-sm text-muted-foreground">
@@ -456,7 +456,10 @@ export default function RepoDetails() {
         <div className="mt-2 space-y-2">
           <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <BackIconButton onClick={handleGoBack} />
+              <BackIconButton
+                onClick={handleGoBack}
+                data-testid="back-button"
+              />
               <div>
                 <h1 className="text-lg font-semibold sm:text-2xl">
                   {latestBuild?.repoName.split("/").pop() ||

@@ -4,6 +4,7 @@ import DeploymentSettingsModal from "@blocks-devops/components/deployment-detail
 import DeploymentObservability from "@blocks-devops/components/deployment-details/shared/deployment-observability";
 import {
   ChevronRight,
+  ChevronLeft,
   ChartGantt,
   GitBranch,
   Loader,

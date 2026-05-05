@@ -1,18 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, GitBranch, Loader, Logs, Settings, ChartGantt, Rocket } from "lucide-react";
-
+import {
+  ChevronLeft,
+  GitBranch,
+  Loader,
+  Logs,
+  Settings,
+  ChartGantt,
+  Rocket,
+} from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import DeploymentSettingsModal from "@blocks-devops/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
 import DeploymentObservability from "@blocks-devops/components/deployment-details/shared/deployment-observability";
 import { useProjectStore } from "@/store/useProjectStore";
 
 import { Separator } from "@/components/ui-kits/separator/separator";
-import { useGetRepoDetails, useInitialRepoDeployment } from "@blocks-devops/hooks/github-info";
+import {
+  useGetRepoDetails,
+  useInitialRepoDeployment,
+} from "@blocks-devops/hooks/github-info";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { IRepoResponse } from "@blocks-devops/components/devops-home/repo-cards/repo-cards";
-import { DeploymentFormData, IHttpError } from "@blocks-devops/models/github-info";
+import {
+  DeploymentFormData,
+  IHttpError,
+} from "@blocks-devops/models/github-info";
 import NotificationListener from "@blocks-devops/components/deployment-details/shared/notification-listener";
 import { formatFullDate } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -31,6 +44,7 @@ import {
 } from "@/components/ui-kits/select/select";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { useQueryState } from "nuqs";
+import { BackIconButton } from "@/components/buttons/buttons";
 
 export interface IRepoDetailsResponse {
   data: { repo: IRepoResponse; build: IPipeline[] };
@@ -89,19 +103,22 @@ export default function RepoDetails() {
   const [tabId, setTabId] = useQueryState("tab", { defaultValue: "details" });
 
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
-  const projectEnvironment = useProjectStore().selectedProject?.environment || "";
+  const projectEnvironment =
+    useProjectStore().selectedProject?.environment || "";
   const projectName = useProjectStore().selectedProject?.name || "";
 
   const [isDeploying, setIsDeploying] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [filteredBuilds, setFilteredBuilds] = useState<IPipeline[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDeploymentSettingsForDeploy, setIsDeploymentSettingsForDeploy] = useState(false);
+  const [isDeploymentSettingsForDeploy, setIsDeploymentSettingsForDeploy] =
+    useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
 
   const { mutate: deployManually } = useInitialRepoDeployment();
 
-  const { mutate: initialDeploy, isPending: isInitialDeploying } = useInitialRepoDeployment();
+  const { mutate: initialDeploy, isPending: isInitialDeploying } =
+    useInitialRepoDeployment();
   const [forceRefresh, setForceRefresh] = useState(false);
 
   const {
@@ -136,7 +153,10 @@ export default function RepoDetails() {
       const httpError = error as IHttpError;
       const errorResponse = httpError.errors;
 
-      if (errorResponse.data?.repo === null && errorResponse.isSuccess === false) {
+      if (
+        errorResponse.data?.repo === null &&
+        errorResponse.isSuccess === false
+      ) {
         navigate("/devops");
       }
     }
@@ -144,7 +164,9 @@ export default function RepoDetails() {
 
   useEffect(() => {
     if (
-      (!repoDetails || !repoDetails?.data?.build || !Array.isArray(repoDetails?.data?.build)) &&
+      (!repoDetails ||
+        !repoDetails?.data?.build ||
+        !Array.isArray(repoDetails?.data?.build)) &&
       repoDetails?.isSuccess === false
     ) {
       setFilteredBuilds([]);
@@ -181,14 +203,17 @@ export default function RepoDetails() {
       return null;
     }
 
-    const latest = filteredBuilds.reduce<IPipeline | null>((latest, current) => {
-      if (!latest) return current;
+    const latest = filteredBuilds.reduce<IPipeline | null>(
+      (latest, current) => {
+        if (!latest) return current;
 
-      const latestDate = new Date(latest.createdDate);
-      const currentDate = new Date(current.createdDate);
+        const latestDate = new Date(latest.createdDate);
+        const currentDate = new Date(current.createdDate);
 
-      return currentDate > latestDate ? current : latest;
-    }, null);
+        return currentDate > latestDate ? current : latest;
+      },
+      null,
+    );
 
     return latest;
   }, [filteredBuilds]);
@@ -220,7 +245,9 @@ export default function RepoDetails() {
       {
         onSuccess: (deployResponse) => {
           if (deployResponse && deployResponse.buildId) {
-            navigate(`/devops/repo/${repoId}/deployment-live/${deployResponse.buildId}`);
+            navigate(
+              `/devops/repo/${repoId}/deployment-live/${deployResponse.buildId}`,
+            );
             setIsDeploying(false);
           } else {
             navigate("/devops");
@@ -262,7 +289,9 @@ export default function RepoDetails() {
       {
         onSuccess: (response) => {
           if (response && response.buildId) {
-            navigate(`/devops/repo/${repoId}/deployment-live/${response.buildId}`);
+            navigate(
+              `/devops/repo/${repoId}/deployment-live/${response.buildId}`,
+            );
             setIsDeploying(false);
           } else {
             navigate("/devops");
@@ -330,7 +359,9 @@ export default function RepoDetails() {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <div className="mb-4 text-lg text-red-600">Missing required parameters:</div>
+          <div className="mb-4 text-lg text-red-600">
+            Missing required parameters:
+          </div>
           <div className="mb-4 text-sm text-low-emphasis">
             repoId: {repoId || "MISSING"}
             <br />
@@ -339,8 +370,7 @@ export default function RepoDetails() {
           <div className="space-x-2">
             <button
               onClick={() => navigate(-1)}
-              className="rounded bg-gray-500 px-4 py-2 text-white"
-            >
+              className="rounded bg-gray-500 px-4 py-2 text-white">
               Go Back
             </button>
           </div>
@@ -359,14 +389,15 @@ export default function RepoDetails() {
     );
   }
 
-  if (repoDetails?.data?.build.length === 0 && repoDetails?.data?.repo !== null) {
+  if (
+    repoDetails?.data?.build.length === 0 &&
+    repoDetails?.data?.repo !== null
+  ) {
     return (
       <div className="mx-auto pb-8">
         <div className="mt-2 space-y-2">
           <div className="flex items-center gap-2">
-            <Button variant={"ghost"} onClick={handleGoBack} className="pl-0">
-              <ChevronLeft size={20} />
-            </Button>
+            <BackIconButton onClick={handleGoBack} />
             <div>
               <h1 className="text-2xl font-semibold">Repository Details</h1>
               <div className="text-sm text-muted-foreground">
@@ -386,11 +417,14 @@ export default function RepoDetails() {
                 </h3>
 
                 <p className="max-w-md items-center text-center text-sm text-low-emphasis">
-                  This repository has not been deployed yet. Click the deploy button to create your
-                  first deployment.
+                  This repository has not been deployed yet. Click the deploy
+                  button to create your first deployment.
                 </p>
               </div>
-              <Button onClick={handleDeploy} disabled={isProcessing} className="mt-4">
+              <Button
+                onClick={handleDeploy}
+                disabled={isProcessing}
+                className="mt-4">
                 Deploy Now
               </Button>
             </div>
@@ -421,12 +455,11 @@ export default function RepoDetails() {
         <div className="mt-2 space-y-2">
           <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <Button variant="ghost" onClick={handleGoBack} className="pl-0">
-                <ChevronLeft size={20} />
-              </Button>
+              <BackIconButton onClick={handleGoBack} />
               <div>
                 <h1 className="text-lg font-semibold sm:text-2xl">
-                  {latestBuild?.repoName.split("/").pop() || latestBuild?.repoName}
+                  {latestBuild?.repoName.split("/").pop() ||
+                    latestBuild?.repoName}
                 </h1>
               </div>
             </div>
@@ -457,16 +490,16 @@ export default function RepoDetails() {
             value={tabId}
             onValueChange={(value: string) =>
               tabChangedHandler(value as keyof typeof REPO_DETAILS_PROVIDERS)
-            }
-          >
+            }>
             <div className="mb-5 mt-6 flex items-center justify-between rounded text-base">
               <div className="md:hidden">
                 <Select
                   value={tabId}
                   onValueChange={(value: string) =>
-                    tabChangedHandler(value as keyof typeof REPO_DETAILS_PROVIDERS)
-                  }
-                >
+                    tabChangedHandler(
+                      value as keyof typeof REPO_DETAILS_PROVIDERS,
+                    )
+                  }>
                   <SelectTrigger className="w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -492,18 +525,21 @@ export default function RepoDetails() {
                 <Card>
                   <CardHeader className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     {" "}
-                    <h3 className="text-lg font-semibold">Deployment Information</h3>
+                    <h3 className="text-lg font-semibold">
+                      Deployment Information
+                    </h3>
                     <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                       <DialogTrigger asChild>
                         <Button
                           variant="outline"
                           onClick={() => setIsModalOpen(true)}
                           disabled={isDeploying}
-                          className="w-full shadow-sm sm:w-auto"
-                        >
+                          className="w-full shadow-sm sm:w-auto">
                           <div className="flex items-center justify-center gap-2">
                             <Rocket size={20} />
-                            <span>{isDeploying ? "Deploying..." : "Deploy"}</span>
+                            <span>
+                              {isDeploying ? "Deploying..." : "Deploy"}
+                            </span>
                           </div>
                         </Button>
                       </DialogTrigger>
@@ -528,45 +564,49 @@ export default function RepoDetails() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="block truncate text-sm text-primary hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                            onClick={(e) => e.stopPropagation()}>
                             {latestBuild?.repoUrl || "N/A"}
                           </a>
                         </div>
 
                         <div className="space-y-2">
-                          <p className="text-sm text-low-emphasis">Deploys To</p>
+                          <p className="text-sm text-low-emphasis">
+                            Deploys To
+                          </p>
                           <CopyToClipboardButton
                             textToCopy={latestBuild?.defaultDeploymentUrl || ""}
-                            isHoverable={false}
-                          >
+                            isHoverable={false}>
                             <a
                               href={latestBuild?.defaultDeploymentUrl || "#"}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="block truncate text-sm text-primary hover:underline"
-                              onClick={(e) => e.stopPropagation()}
-                            >
+                              onClick={(e) => e.stopPropagation()}>
                               {latestBuild?.defaultDeploymentUrl || "N/A"}
                             </a>
                           </CopyToClipboardButton>
                         </div>
 
                         <div className="space-y-2">
-                          <p className="text-sm text-low-emphasis">Custom Deployment URL</p>
+                          <p className="text-sm text-low-emphasis">
+                            Custom Deployment URL
+                          </p>
                           {repoDetails?.data?.repo?.customDeploymentUrl &&
-                            repoDetails?.data?.repo?.customDeploymentUrl !== "N/A" ? (
+                          repoDetails?.data?.repo?.customDeploymentUrl !==
+                            "N/A" ? (
                             <CopyToClipboardButton
-                              textToCopy={repoDetails?.data?.repo?.customDeploymentUrl}
-                              isHoverable={false}
-                            >
+                              textToCopy={
+                                repoDetails?.data?.repo?.customDeploymentUrl
+                              }
+                              isHoverable={false}>
                               <a
-                                href={repoDetails?.data?.repo?.customDeploymentUrl}
+                                href={
+                                  repoDetails?.data?.repo?.customDeploymentUrl
+                                }
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="block truncate text-sm text-primary hover:underline"
-                                onClick={(e) => e.stopPropagation()}
-                              >
+                                onClick={(e) => e.stopPropagation()}>
                                 {repoDetails?.data?.repo?.customDeploymentUrl}
                               </a>
                             </CopyToClipboardButton>
@@ -581,7 +621,9 @@ export default function RepoDetails() {
                       <div className="grid grid-cols-1 gap-4 md:mb-4 md:gap-6">
                         <div className="space-y-4">
                           <div className="space-y-2">
-                            <p className="text-sm text-low-emphasis">Deployment Status</p>
+                            <p className="text-sm text-low-emphasis">
+                              Deployment Status
+                            </p>
                             <NotificationListener
                               latestBuild={latestBuild}
                               deploymentStatus={latestBuild?.status}
@@ -589,18 +631,25 @@ export default function RepoDetails() {
                           </div>
 
                           <div className="space-y-2">
-                            <p className="text-sm text-low-emphasis">Latest Deployment Date</p>
+                            <p className="text-sm text-low-emphasis">
+                              Latest Deployment Date
+                            </p>
                             <span className="text-sm">
                               {latestBuild
                                 ? formatFullDate(
-                                  new Date(repoDetails?.data?.repo?.lastDeploymentDate),
-                                )
+                                    new Date(
+                                      repoDetails?.data?.repo
+                                        ?.lastDeploymentDate,
+                                    ),
+                                  )
                                 : "N/A"}
                             </span>
                           </div>
 
                           <div className="space-y-2">
-                            <p className="text-sm text-low-emphasis">Deployment Type</p>
+                            <p className="text-sm text-low-emphasis">
+                              Deployment Type
+                            </p>
                             <span className="text-sm">
                               {(() => {
                                 const result =
@@ -617,12 +666,20 @@ export default function RepoDetails() {
                       </div>
                     </div>
                     <div className="w-full">
-                      <Separator orientation="horizontal" className="my-2 w-full" />
+                      <Separator
+                        orientation="horizontal"
+                        className="my-2 w-full"
+                      />
 
                       <div className="flex w-full flex-col gap-3 pb-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                        <h3 className="text-lg font-semibold">Deployment History</h3>
+                        <h3 className="text-lg font-semibold">
+                          Deployment History
+                        </h3>
                       </div>
-                      <DeploymentObservability builds={filteredBuilds} viewLatestBuild={true} />
+                      <DeploymentObservability
+                        builds={filteredBuilds}
+                        viewLatestBuild={true}
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -639,22 +696,26 @@ export default function RepoDetails() {
               <Card>
                 <div className="flex w-full flex-col gap-3 pb-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-col items-start gap-2">
-                    <h3 className="text-lg font-semibold">Deployment History</h3>
+                    <h3 className="text-lg font-semibold">
+                      Deployment History
+                    </h3>
                   </div>
                   {filteredBuilds?.length > 3 ? (
                     <Button
                       variant="outline"
                       size="xs"
                       onClick={handleViewAllHistory}
-                      className="w-full shadow-sm sm:w-auto"
-                    >
+                      className="w-full shadow-sm sm:w-auto">
                       {showAllHistory
                         ? "View Less"
                         : `View all history (${filteredBuilds?.length || 0})`}
                     </Button>
                   ) : null}
                 </div>
-                <DeploymentObservability builds={filteredBuilds} showAllHistory={showAllHistory} />
+                <DeploymentObservability
+                  builds={filteredBuilds}
+                  showAllHistory={showAllHistory}
+                />
               </Card>
             </TabsContent>
           </Tabs>

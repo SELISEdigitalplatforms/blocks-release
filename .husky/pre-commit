@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
 
+echo "Running staged files..."
 cd client && npx lint-staged

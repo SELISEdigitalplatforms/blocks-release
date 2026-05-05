@@ -29,6 +29,7 @@ public class BuildService : IBuildService
     private readonly IVersionControlService _githubService;
     private readonly IValidator<RepoDomainUpdateRequest> _repoDomainUpdateRequestValidator;
     private readonly IMessageClient _messageClient;
+    private readonly LogRetrievalService _logRetrievalService;
 
     public BuildService(
                         ILogger<BuildService> logger,   
@@ -53,6 +54,7 @@ public class BuildService : IBuildService
         _pipelineRunService = pipelineRunService;
         _githubWebhookService = githubWebhookService;
         _messageClient = messageClient;
+        _logRetrievalService = logRetrievalService;
     }
 
     public async Task<BuildResponse> Build(BuildRequest request, Repo? repo = null)
@@ -100,7 +102,7 @@ public class BuildService : IBuildService
                     PipelineType = PipelineTypes.RepoDeployment,
                     PipelineEventType = PipelineEventTypes.RetrieveLog
                 };
-                await _messageClient.SendToConsumerAsync(new ConsumerMessage<PostBuildQueue> { ConsumerName = CloudBuildConstants.POST_BUILD_LISTENER, Payload = postBuildQueue});
+                // await _messageClient.SendToConsumerAsync(new ConsumerMessage<PostBuildQueue> { ConsumerName = CloudBuildConstants.POST_BUILD_LISTENER, Payload = postBuildQueue});
             }
             catch (Exception ex)
             {
@@ -119,6 +121,19 @@ public class BuildService : IBuildService
             //        _logger.LogWarning($"Failed to initiage log retrieval service. Error: {ex.Message}");
             //    }
             //});
+
+             _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _logRetrievalService.CheckPodLogsAsync(build);
+                }
+                catch (Exception ex)
+                {
+                    // TODO: replace with your logger
+                    Console.WriteLine(ex);
+                }
+            });
 
             BuildResponse buildResponse = new BuildResponse
             {

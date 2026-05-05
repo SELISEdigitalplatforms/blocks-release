@@ -5,9 +5,13 @@ import {
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
 import RequestForm from "./request-form";
-import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/radio-group";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/components/ui-kits/radio-group/radio-group";
 import { useEffect, useState } from "react";
 import CallbackForm from "./callback-form";
+import { RenderAlternatively } from "@/components/render-elements";
 
 type FormType = "request" | "callback";
 
@@ -28,7 +32,7 @@ const AddSingleMonitor = ({
   repoId,
   repoName,
   request,
-  externalServiceId
+  externalServiceId,
 }: AlertProviderProps) => {
   const [selectedForm, setSelectedForm] = useState<FormType>("request");
 
@@ -37,21 +41,23 @@ const AddSingleMonitor = ({
   }, [request]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(value) => onOpenChange(value)}>
       <DialogContent className="md:max-w-screen-sm">
         <DialogHeader>
-          <DialogTitle>{itemId ? "Configure monitor" : "Add single monitor"}</DialogTitle>
+          <DialogTitle>
+            {itemId ? "Configure monitor" : "Add single monitor"}
+          </DialogTitle>
         </DialogHeader>
         <div className="max-h-[70vh] overflow-y-auto px-2">
-          {/* Radio Group for Form Selection - Only show when adding new monitor */}
           {!itemId && (
             <div className="mb-4">
-              <label className="mb-2 block text-sm font-medium">Monitor Type</label>
+              <label className="mb-2 block text-sm font-medium">
+                Monitor Type
+              </label>
               <RadioGroup
                 value={selectedForm}
                 onValueChange={(value: FormType) => setSelectedForm(value)}
-                className="flex gap-4"
-              >
+                className="flex gap-4">
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="request" id="request" />
                   <label htmlFor="request">Request</label>
@@ -64,8 +70,7 @@ const AddSingleMonitor = ({
             </div>
           )}
 
-          {/* Conditional Form Rendering */}
-          {selectedForm === "request" ? (
+          <RenderAlternatively condition={selectedForm === "request"}>
             <RequestForm
               itemId={itemId}
               onClose={() => onOpenChange(false)}
@@ -73,7 +78,7 @@ const AddSingleMonitor = ({
               repoName={repoName}
               externalServiceId={externalServiceId}
             />
-          ) : (
+
             <CallbackForm
               itemId={itemId}
               repoId={repoId}
@@ -81,7 +86,7 @@ const AddSingleMonitor = ({
               externalServiceId={externalServiceId}
               onClose={() => onOpenChange(false)}
             />
-          )}
+          </RenderAlternatively>
         </div>
       </DialogContent>
     </Dialog>

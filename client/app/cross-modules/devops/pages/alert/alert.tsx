@@ -62,7 +62,11 @@ const Alert = ({
                 <Button
                   onClick={() => setOpen((open) => !open)}
                   variant={"outline"}
-                  className="h-9">
+                  className="h-9"
+                  disabled={
+                    buildLength <= 0 ||
+                    (build !== "Succeeded" && build !== "Failed")
+                  }>
                   <Plus className="mr-2 h-4 w-4" />
                   Add
                 </Button>

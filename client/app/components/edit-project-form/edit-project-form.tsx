@@ -19,7 +19,12 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/useProjectStore";
 import { useGetProject, useUpdateProject } from "@/hooks/use-project";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-kits/tooltip/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui-kits/tooltip/tooltip";
 import {
   Card,
   CardContent,
@@ -112,20 +117,22 @@ export const EditProjectForm = ({ onAfterSubmit }: EditProjectFormProps) => {
               <FormItem>
                 <FormLabel className="flex items-center gap-2">
                   Enter your custom domain below
-                  <Tooltip open={customDomainTooltipOpen}>
-                    <TooltipTrigger
-                      className="peer"
-                      type="button"
-                      onMouseEnter={() => setCustomDomainTooltipOpen(true)}
-                      onMouseLeave={() => setCustomDomainTooltipOpen(false)}
-                    >
-                      <CircleHelp className="h-4 w-4" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-96 text-sm font-normal">
-                      Enter the full URL of the custom domain or subdomain where your app will be
-                      hosted (e.g., https://example.com or https://app.example.com).
-                    </TooltipContent>
-                  </Tooltip>
+                  <TooltipProvider>
+                    <Tooltip open={customDomainTooltipOpen}>
+                      <TooltipTrigger
+                        className="peer"
+                        type="button"
+                        onMouseEnter={() => setCustomDomainTooltipOpen(true)}
+                        onMouseLeave={() => setCustomDomainTooltipOpen(false)}
+                      >
+                        <CircleHelp className="h-4 w-4" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-96 text-sm font-normal">
+                        Enter the full URL of the custom domain or subdomain where your app will be
+                        hosted (e.g., https://example.com or https://app.example.com).
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </FormLabel>
                 <FormControl>
                   <Input {...field} placeholder="Custom domain URL" className="mt-2" />

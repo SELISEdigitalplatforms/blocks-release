@@ -5,6 +5,7 @@ import { NuqsAdapter } from "nuqs/adapters/react-router/v6";
 import { Toaster } from "./components/ui-kits/toaster/toaster";
 import { ThemeProvider } from "./hooks/use-theme";
 import QueryProvider from "./providers/query-provider";
+import { DeploymentHubListener } from "./cross-modules/communication/components/deployment-hub-listener";
 import { router } from "./router";
 import "./styles/globals.css";
 
@@ -15,6 +16,7 @@ createRoot(document.getElementById("root")!).render(
         <NuqsAdapter>
           <RouterProvider router={router} />
           <Toaster />
+          <DeploymentHubListener />
         </NuqsAdapter>
       </ThemeProvider>
     </QueryProvider>

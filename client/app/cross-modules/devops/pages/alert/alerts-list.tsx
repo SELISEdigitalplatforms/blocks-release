@@ -249,10 +249,8 @@ export function AlertsList({
   if (isLoading) return <LoadingSkelton />;
   return (
     <>
-      {" "}
       <ScrollArea className="w-full">
         <Table className="text-sm">
-          {" "}
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="px-4 py-2 hover:bg-transparent">

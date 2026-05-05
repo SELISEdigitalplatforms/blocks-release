@@ -5,6 +5,7 @@ import DeploymentObservability from "@blocks-devops/components/deployment-detail
 import {
   ChevronRight,
   ChevronLeft,
+  ArrowRight,
   ChartGantt,
   GitBranch,
   Loader,

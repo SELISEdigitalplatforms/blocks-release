@@ -89,10 +89,11 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Blocks Deployment API v1"));
 
+app.MapHub<DeploymentLogHub>("/deploymentHub");
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.MapHub<DeploymentLogHub>("/deploymentHub");
+
 
 var indexHtml = Path.Combine(app.Environment.WebRootPath ?? "", "index.html");
 if (File.Exists(indexHtml))

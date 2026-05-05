@@ -1,4 +1,9 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui-kits/tabs/tabs";
 import {
   Select,
   SelectContent,
@@ -33,7 +38,6 @@ const Alert = ({
   buildLength: number;
 }) => {
   const build = useDeploymentStatus(latestBuild, status);
-  console.log(build, "buildLengthbuildLengthbuildLength", buildLength);
   const projectKey = useProjectStore()?.selectedProject?.tenantId || "";
   const { data, isLoading } = useGetMonitorListById(projectKey, repoId);
   const [tabId, setTabId] = useState("health");
@@ -44,83 +48,78 @@ const Alert = ({
   };
 
   return (
-    <main>
-      <Card>
-        <Tabs
-          value={tabId}
-          onValueChange={(value: string) =>
-            tabChangedHandler(value as keyof typeof ALERT_PROVIDERS)
-          }
-        >
-          <CardHeader>
-            <div className="flex flex-col items-start justify-between sm:flex-row sm:items-center">
-              <span className="p-2 text-xl font-semibold">Monitoring</span>
-              <div className="flex items-center justify-end gap-4 rounded text-base">
-                <div className="flex items-center gap-2 sm:gap-4">
-                  <Button
-                    onClick={() => setOpen((open) => !open)}
-                    variant={"outline"}
-                    className="h-9"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add
-                  </Button>
-                </div>
-                <div className="md:hidden">
-                  <Select
-                    value={tabId}
-                    onValueChange={(value: string) =>
-                      tabChangedHandler(value as keyof typeof ALERT_PROVIDERS)
-                    }
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="health">Health</SelectItem>
-                      <SelectItem value="resources">Resources</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="hidden h-9 md:block">
-                  <TabsList>
-                    <TabsTrigger value="health" className="w-20">
-                      Health
-                    </TabsTrigger>
-                    <TabsTrigger value="resources" className="w-20">
-                      Resources
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
+    <Card>
+      <Tabs
+        value={tabId}
+        onValueChange={(value: string) =>
+          tabChangedHandler(value as keyof typeof ALERT_PROVIDERS)
+        }>
+        <CardHeader>
+          <div className="flex flex-col items-start justify-between sm:flex-row sm:items-center">
+            <span className="p-2 text-xl font-semibold">Monitoring</span>
+            <div className="flex items-center justify-end gap-4 rounded text-base">
+              <div className="flex items-center gap-2 sm:gap-4">
+                <Button
+                  onClick={() => setOpen((open) => !open)}
+                  variant={"outline"}
+                  className="h-9">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add
+                </Button>
+              </div>
+              <div className="md:hidden">
+                <Select
+                  value={tabId}
+                  onValueChange={(value: string) =>
+                    tabChangedHandler(value as keyof typeof ALERT_PROVIDERS)
+                  }>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="health">Health</SelectItem>
+                    <SelectItem value="resources">Resources</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="hidden h-9 md:block">
+                <TabsList>
+                  <TabsTrigger value="health" className="w-20">
+                    Health
+                  </TabsTrigger>
+                  <TabsTrigger value="resources" className="w-20">
+                    Resources
+                  </TabsTrigger>
+                </TabsList>
               </div>
             </div>
-          </CardHeader>
-          {buildLength > 1 || build === "Succeeded" || build === "Failed" ? (
-            <CardContent>
-              <TabsContent value="health">
-                <AlertsList data={data?.data || []} isLoading={isLoading} />
-              </TabsContent>
-              <TabsContent value="resources">
-                <div className="h-[500px]">
-                  <ComingSoonPage message="Coming soon" />
-                </div>
-              </TabsContent>
-              <AddSingleMonitor
-                open={open}
-                onOpenChange={setOpen}
-                repoName={repoName}
-                repoId={repoId}
-                request={true}
-              />
-            </CardContent>
-          ) : (
-            <div className="flex h-20 items-center justify-center">
-              Please deploy your project to begin populating this section
-            </div>
-          )}
-        </Tabs>
-      </Card>
-    </main>
+          </div>
+        </CardHeader>
+        {buildLength > 1 || build === "Succeeded" || build === "Failed" ? (
+          <CardContent>
+            <TabsContent value="health">
+              <AlertsList data={data?.data || []} isLoading={isLoading} />
+            </TabsContent>
+            <TabsContent value="resources">
+              <div className="h-[500px]">
+                <ComingSoonPage message="Coming soon" />
+              </div>
+            </TabsContent>
+            <AddSingleMonitor
+              open={open}
+              onOpenChange={setOpen}
+              repoName={repoName}
+              repoId={repoId}
+              request={true}
+            />
+          </CardContent>
+        ) : (
+          <div className="flex h-20 items-center justify-center">
+            Please deploy your project to begin populating this section
+          </div>
+        )}
+      </Tabs>
+    </Card>
   );
 };
 

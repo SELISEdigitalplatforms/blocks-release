@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 
-# npm --prefix client run build
 dotnet build server
+npm --prefix client run build

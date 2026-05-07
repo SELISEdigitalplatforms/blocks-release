@@ -1,4 +1,5 @@
 ﻿using Blocks.Genesis;
+using Devops.DomainService.AnalyticsTool.Services.Sast;
 using Devops.DomainService.AnalyticsTool.Services.Sca;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Interfaces;
@@ -17,7 +18,10 @@ namespace Api.Controllers
         private readonly DependencyTrackAuthService _dependencyTrackAuthService;
         private readonly DependencyTrackAnalyticsService _scaAnalyticsService;
         private readonly IBuildRepository _buildRepository;
-        public AnalyticsToolController(DependencyTrackAuthService dependencyTrackAuthService, ChangeControllerContext changeControllerContext, DependencyTrackAnalyticsService scaAnalyticsService, IBuildRepository buildRepository)
+        private readonly ISonarQubeAuthService _sonarQubeAuthService;
+
+
+        public AnalyticsToolController(DependencyTrackAuthService dependencyTrackAuthService, ChangeControllerContext changeControllerContext, DependencyTrackAnalyticsService scaAnalyticsService, IBuildRepository buildRepository, ISonarQubeAuthService sonarQubeAuthService    )
         {
             _dependencyTrackAuthService = dependencyTrackAuthService;
             _changeControllerContext = changeControllerContext;
@@ -36,12 +40,26 @@ namespace Api.Controllers
             Build build = await _buildRepository.GetBuild(buildId);
             if (build is not null)
             {
-                var uuidRetrievieResult = await _scaAnalyticsService.RetrieveScaProjectUuid(build);
+                var uuidRetrievedResult = await _scaAnalyticsService.RetrieveScaProjectUuid(build);
             }
-            bool userCreationResult = await _dependencyTrackAuthService.ProcessDependenctytrackOidcUser(userName, projectId);
+            bool userCreationResult = await _dependencyTrackAuthService.ProcessDependencyTrackOidcUser(userName, projectId);
             return Ok(new BaseResponse()
             {
                 IsSuccess = userCreationResult
+            });
+        }
+
+       [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> ProcessSonarQubeUser([FromQuery] string ProjectKey, string buildId)
+        {
+            _changeControllerContext?.ChangeContext(new ProjectKeyQuery { ProjectKey = ProjectKey });
+            var userName = BlocksContext.GetContext()?.UserName;
+            Build build = await _buildRepository.GetBuild(buildId);
+            bool result = await _sonarQubeAuthService.ProcessSonarQubeUser(userName, build?.RepoName, ProjectKey);
+            return Ok(new BaseResponse()
+            {
+                IsSuccess = result
             });
         }
     }

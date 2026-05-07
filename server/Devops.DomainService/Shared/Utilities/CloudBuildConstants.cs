@@ -6,14 +6,13 @@ namespace Devops.DomainService.Shared.Utilities
     {
         public static readonly string NAMESPACE_NAME = "tekton-pipelines";
         public static readonly string YAML_PATH = Path.Combine(AppContext.BaseDirectory, "Assets" , "pipeline_fe_react_construct.yaml");
-        public static readonly string DATAGETWAY_YAML_PATH = Path.Combine(AppContext.BaseDirectory, "Assets" , "pipeline_run_uds.yaml");
+        public static readonly string DATA_GATEWAY_YAML_PATH = Path.Combine(AppContext.BaseDirectory, "Assets" , "pipeline_run_uds.yaml");
         public static readonly string GITHUB_BASE_URI = "https://github.com";
         public static readonly string GITHUB_API_BASE_URI = "https://api.github.com";
-        public static readonly string SAST_TOOLS_API_BASE_URI = "https://code.selise.biz/api";
-        public static readonly string SCA_TOOLS_API_BASE_URI = "https://api-dt.seliseblocks.com";
-        public static readonly string NOTIFICATION_LISTENER = "blocks_cloudbuild_notification_listener_asif_local";
-        public static readonly string POST_BUILD_LISTENER = "blocks_cloudbuild_post_build_listener_asif_local";
-        public static readonly string ProjectCreateSuccessQueue = "blocks_identifier_project_create_listener_asif_local";
+        public static readonly string[] SONARQUBE_PERMISSIONS = new[] { "codeviewer", "issueadmin", "securityhotspotadmin", "user" };
+        public static readonly string NOTIFICATION_LISTENER = "blocks_cloudbuild_notification_listener";
+        public static readonly string POST_BUILD_LISTENER = "blocks_cloudbuild_post_build_listener";
+        public static readonly string ProjectCreateSuccessQueue = "blocks_identifier_project_create_listener";
 
         public static readonly string[] SAST_METRIC_KEYS = new string[]
         {

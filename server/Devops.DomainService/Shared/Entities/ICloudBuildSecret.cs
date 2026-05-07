@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,6 +13,7 @@ namespace Devops.DomainService.Shared.Entities
         public string SastBasicAuthToken { get; set; }
         public string DependencyTrackApiKey { get; set; }
         public string DependencyTrackDefaultTeamId { get; set; }
+        public string SonarQubeToken { get; set; }
         public string GithubWebhookSecret { get; set; }
         public string GithubClientSecret { get; set; }
         public string GithubClientId { get; set; }

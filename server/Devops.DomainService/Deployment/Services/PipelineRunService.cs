@@ -147,7 +147,7 @@ namespace Devops.DomainService.Deployment.Services
             try
             {
                 var accessToken = _cloudBuildSecret.SeliseGithubPat;
-                var yamlPath = CloudBuildConstants.DATAGETWAY_YAML_PATH;
+                var yamlPath = CloudBuildConstants.DATA_GATEWAY_YAML_PATH;
                 var metadataName = StringFormatterService.Truncate($"uds-config-run-{projectKey}-{version}-{Guid.NewGuid().ToString("N")}", 63);
                 var revision = _configuration["DatagatewayClusterRevision"];
 

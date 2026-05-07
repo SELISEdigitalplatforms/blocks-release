@@ -1,4 +1,4 @@
-﻿using Devops.DomainService.Shared.Entities;
+using Devops.DomainService.Shared.Entities;
 using Microsoft.Extensions.Configuration;
 using System.Reflection;
 
@@ -14,6 +14,7 @@ namespace Blocks.Genesis
         public string GithubWebhookSecret { get; set; }
         public string GithubClientSecret { get; set; }
         public string GithubClientId { get; set; }
+        public string SonarQubeToken { get; set; }
 
 
         public static async Task<ICloudBuildSecret> ProcessBlocksSecret(VaultType vaultType = VaultType.Azure)

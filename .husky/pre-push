@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
 
 cd client && npm run build
+dotnet build server/Api/Api.csproj

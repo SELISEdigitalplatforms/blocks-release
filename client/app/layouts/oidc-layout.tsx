@@ -1,8 +1,8 @@
-import { Outlet, useLocation, useSearchParams } from "react-router-dom";
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Logo } from "@/components/logo";
-import { Loader } from "lucide-react";
 import { extractOIDCParams } from "@blocks-idp/authentication/utils/oidc-utils";
+import { Loader } from "lucide-react";
+import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import { Outlet, useLocation, useSearchParams } from "react-router-dom";
 
 type OIDCContextType = {
   logoUrl?: string;
@@ -89,7 +89,7 @@ function OIDCProvider({ children }: { children: ReactNode }) {
   return <OIDCContext.Provider value={params}>{children}</OIDCContext.Provider>;
 }
 
-function OidcLayoutContent({ children }: { children: ReactNode }) {
+function OidcLayoutContent() {
   const { logoUrl, themeColor, isLoading } = useOIDCContext();
 
   if (isLoading) {

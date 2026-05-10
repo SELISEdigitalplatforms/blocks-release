@@ -1,6 +1,3 @@
-import { Fragment, useState } from "react";
-import { Menu, X } from "lucide-react";
-import { Link } from "react-router-dom";
 import { EnvironmentList } from "@/components/environment-list/environment-list";
 import { Logo } from "@/components/logo";
 import { MobileMenuItem } from "@/components/menus/mobile-menu-item";
@@ -8,15 +5,17 @@ import { ProjectList } from "@/components/project-list/project-list";
 import { Button } from "@/components/ui-kits/button/button";
 import { Separator } from "@/components/ui-kits/separator/separator";
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
+    Sheet,
+    SheetClose,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
 } from "@/components/ui-kits/sheet/sheet";
 import { navigationMenus } from "@/constants/navigation-menus";
 import { useFilteredMenus } from "@/hooks/use-filtered-menus";
+import { Menu, X } from "lucide-react";
+import { Fragment, useState } from "react";
 
 export function SidebarMobileView() {
   const [open, setOpen] = useState(false);
@@ -33,9 +32,9 @@ export function SidebarMobileView() {
       <SheetContent side="left" className="w-full overflow-y-auto p-0" aria-describedby={undefined} hideClose>
         <SheetHeader className="h-[60px] px-4 py-3">
           <SheetTitle className="flex items-center justify-between">
-            <Link to="/services/authentication">
+
               <Logo width={72} height={36} className="h-9 w-auto" />
-            </Link>
+
             <SheetClose className="!mt-0">
               <X className="h-4 w-4" />
             </SheetClose>

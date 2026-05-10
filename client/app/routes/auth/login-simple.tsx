@@ -1,22 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui-kits/button/button";
 import { Logo } from "@/components/logo";
-import { getRuntimeEnv } from "@/lib/runtime-env";
-import {
-  ShieldCheck,
-  Users,
-  KeyRound,
-  Puzzle,
-  BookOpenText,
-  BrainCircuit,
-  Activity,
-  ArrowRight,
-  MoveRight,
-  Github,
-} from "lucide-react";
-import { Link } from "react-router-dom";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
+import { Button } from "@/components/ui-kits/button/button";
+import { getRuntimeEnv } from "@/lib/runtime-env";
+import { motion } from "framer-motion";
+import {
+    Activity,
+    ArrowRight,
+    BookOpenText,
+    BrainCircuit,
+    Github,
+    KeyRound,
+    MoveRight,
+    Puzzle,
+    ShieldCheck,
+    Users,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 const pillars = [
   { icon: ShieldCheck, label: "Identity & MFA", desc: "Passkeys, OAuth 2.0, OIDC" },
@@ -58,7 +58,7 @@ const ResourcesPanel = () => {
   return (
     <aside className="mt-8 w-full shrink-0 lg:mt-0 lg:w-[380px] xl:w-[420px]">
       <div className="overflow-hidden rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] shadow-md">
-        
+
         <div className="relative overflow-hidden bg-primary px-6 py-6">
           <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/5" />
           <div className="absolute -bottom-6 -right-2 h-20 w-20 rounded-full bg-white/5" />
@@ -82,7 +82,7 @@ const ResourcesPanel = () => {
           </Link>
         </div>
 
-        
+
         <div className="divide-y divide-[hsl(var(--border-default))]">
           {sdks.map((sdk) => (
             <div key={sdk.name} className="flex items-center justify-between px-6 py-3.5">
@@ -118,7 +118,7 @@ const ResourcesPanel = () => {
           ))}
         </div>
 
-        
+
         <div className="flex items-center justify-between bg-[hsl(var(--surface-app))] px-6 py-3.5">
           <span className="text-xs text-[hsl(var(--medium-emphasis))]">Fully open source</span>
           <Link
@@ -170,7 +170,7 @@ export default function LoginSimplePage() {
 
   return (
     <div className="relative flex min-h-screen flex-col bg-[hsl(var(--surface-app))]">
-      
+
       <header className="relative z-10 flex items-center px-6 py-5 xl:px-[154px]">
         <Logo width={120} height={52} />
         <div className="absolute right-6 top-5 xl:right-[154px]">
@@ -178,11 +178,11 @@ export default function LoginSimplePage() {
         </div>
       </header>
 
-      
+
       <main className="relative z-10 flex flex-1 flex-col items-start justify-center gap-16 px-6 py-12 lg:flex-row lg:items-center lg:gap-16 lg:py-0 xl:px-[154px]">
-        
+
         <div className="flex flex-1 flex-col items-start gap-6">
-          
+
           <div className="flex flex-col gap-2">
             <p className="text-sm font-semibold uppercase tracking-[0.1em] text-primary">Blocks OS Platform</p>
             <h1 className="max-w-xl text-5xl font-semibold tracking-tight text-[hsl(var(--high-emphasis))] lg:text-6xl">
@@ -213,7 +213,7 @@ export default function LoginSimplePage() {
             while Blocks OS handles the infrastructure.
           </p>
 
-          
+
           <div className="flex flex-wrap gap-2">
             {pillars.map(({ icon: Icon, label }) => (
               <div
@@ -226,7 +226,7 @@ export default function LoginSimplePage() {
             ))}
           </div>
 
-          
+
           <div className="flex flex-col gap-2 pt-2">
             <div className="flex flex-row gap-3">
               <Button
@@ -241,7 +241,7 @@ export default function LoginSimplePage() {
                 )}
               </Button>
             </div>
-          
+
           </div>
         </div>
 
@@ -250,4 +250,3 @@ export default function LoginSimplePage() {
     </div>
   );
 }
-

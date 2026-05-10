@@ -19,6 +19,7 @@ using Devops.DomainService.AnalyticsTool.Services.Sca;
 using Devops.DomainService.DataGetwayDeployment.Services;
 using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.DataGatewayDeployment.Services;
+using Devops.DomainService.AnalyticsTool.Services.Sast;
 
 namespace Devops.DomainService;
 
@@ -57,6 +58,7 @@ public static class ServiceRegistry
         services.AddSingleton<IValidator<BuildRequest>, BuildRequestValidator>();
         services.AddSingleton<IValidator<RepoDomainUpdateRequest>, RepoDomainUpdateValidator>();
         services.AddSingleton<IDeploymentHubService, NullDeploymentHubService>();
+        services.AddSingleton<ISonarQubeAuthService, SonarQubeAuthService>();
 
         services.AddSingleton<IKubernetes>(sp =>
         {

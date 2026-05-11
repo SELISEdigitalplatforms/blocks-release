@@ -16,7 +16,7 @@ import {
 } from "./util";
 import { ErrorTransformer } from "@/lib/error-transform";
 import { useGetAllServices } from "@/cross-modules/identifier/hooks/use-services";
-import { useGetEnvRepositories } from "@/hooks/use-project";
+import { useGetEnvRepositories } from "@/cross-modules/identifier/hooks/use-project";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMemo } from "react";

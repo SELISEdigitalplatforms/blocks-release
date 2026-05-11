@@ -1,10 +1,6 @@
 import { API_BASE } from "@/constants/endpoint.constant";
 
-// ─── Subpaths ─────────────────────────────────────────────────────────────────
-
 const AUTH_SUBPATH = "/Authentication";
-
-// ─── Auth endpoints (auth.service / oauth.service) ───────────────────────────
 
 export const AUTH_ENDPOINTS = {
   TOKEN: `${API_BASE}${AUTH_SUBPATH}/Token`,
@@ -13,16 +9,6 @@ export const AUTH_ENDPOINTS = {
   GET_LOGIN_OPTIONS: `${API_BASE}${AUTH_SUBPATH}/GetLoginOptions`,
 } as const;
 
-// ─── Client credential endpoints (auth-clients.service) ─────────────────────
-
-export const AUTH_CLIENT_ENDPOINTS = {
-  GET_CLIENT_CREDENTIALS: `${API_BASE}${AUTH_SUBPATH}/GetClientCredentials`,
-  SAVE_CLIENT_CREDENTIAL: `${API_BASE}${AUTH_SUBPATH}/SaveClientCredential`,
-  DELETE_CLIENT_CREDENTIAL: `${API_BASE}${AUTH_SUBPATH}/DeleteClientCredential`,
-} as const;
-
-// ─── OIDC client endpoints (auth-clients-oidc.service) ──────────────────────
-
 export const AUTH_OIDC_ENDPOINTS = {
   GET_OIDC_CLIENTS: `${API_BASE}${AUTH_SUBPATH}/GetOIDCClients`,
   GET_OIDC_CLIENT: `${API_BASE}${AUTH_SUBPATH}/GetOIDCClient`,
@@ -30,34 +16,6 @@ export const AUTH_OIDC_ENDPOINTS = {
   DELETE_OIDC_CLIENT: `${API_BASE}${AUTH_SUBPATH}/DeleteOIDCClient`,
 } as const;
 
-// ─── Auth configuration endpoints (auth-config.service) ─────────────────────
-
-export const AUTH_CONFIG_ENDPOINTS = {
-  GET_CONFIG: `${API_BASE}${AUTH_SUBPATH}/Get`,
-  UPDATE_CONFIG: `${API_BASE}${AUTH_SUBPATH}/Update`,
-} as const;
-
-// ─── SSO endpoints (social.service) ─────────────────────────────────────────
-
-export const SSO_ENDPOINTS = {
-  GET_SSO_CREDENTIALS: `${API_BASE}${AUTH_SUBPATH}/GetSsoCredentials`,
-  GET_SSO_CREDENTIAL: `${API_BASE}${AUTH_SUBPATH}/GetSsoCredential`,
-  SAVE_SSO_CREDENTIAL: `${API_BASE}${AUTH_SUBPATH}/SaveSsoCredential`,
-  DELETE_SSO_CREDENTIAL: `${API_BASE}${AUTH_SUBPATH}/DeleteSsoCredential`,
-  UPDATE_STATUS: `${API_BASE}${AUTH_SUBPATH}/UpdateStatus`,
-} as const;
-
-// ─── OIDC flow endpoints (oidc-auth-flow.service) ───────────────────────────
-
 export const OIDC_FLOW_ENDPOINTS = {
   USER_ACKNOWLEDGEMENT: `${API_BASE}${AUTH_SUBPATH}/UserAcknowledgement`,
 } as const;
-
-// ─── Legacy re-export (backward compat for oauth.service) ───────────────────
-
-export const IDP_ENDPOINTS = {
-  AUTHENTICATION: {
-    GET_SOCIAL_LOGIN_ENDPOINT: AUTH_ENDPOINTS.GET_SOCIAL_LOGIN_ENDPOINT,
-    TOKEN: AUTH_ENDPOINTS.TOKEN,
-  },
-};

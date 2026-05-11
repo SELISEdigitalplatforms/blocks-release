@@ -28,7 +28,10 @@ export class AuthService {
     );
   }
 
-  verifyOidc(payload: { code: string; state: string }): Promise<unknown> {
+  verifyOidc(payload: {
+    code: string;
+    state: string;
+  }): Promise<{ access_token: string; refresh_token: string }> {
     const body = new URLSearchParams();
     body.append("grant_type", "authorization_code");
     body.append("code", payload.code);

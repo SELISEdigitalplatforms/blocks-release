@@ -1,4 +1,11 @@
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui-kits/form/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui-kits/form/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui-kits/input/input";
@@ -9,15 +16,21 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { showErrorToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { signinFormDefaultValue, signinFormSchema } from "../login/schema";
+import { signinFormDefaultValue, signinFormSchema } from "./schema";
 import { useOIDCContext } from "@/layouts/oidc-layout/oidc-layout";
-import { ISigninByEmailPayload, ISigninByEmailResponse } from "@blocks-idp/authentication/models/auth.model";
-import { buildOIDCNavigationUrl, getCurrentOIDCParams } from "@blocks-idp/authentication/utils/oidc-utils";
+import {
+  ISigninByEmailPayload,
+  ISigninByEmailResponse,
+} from "@blocks-idp/authentication/models/auth.model";
+import {
+  buildOIDCNavigationUrl,
+  getCurrentOIDCParams,
+} from "@blocks-idp/authentication/utils/oidc-utils";
 import { PasswordInput } from "@/components/password-input";
 import { getApiUrl } from "@/lib/get-api-path";
 
 export const signinByEmail = async (
-  payload: ISigninByEmailPayload & { projectKey: string }
+  payload: ISigninByEmailPayload & { projectKey: string },
 ): Promise<ISigninByEmailResponse> => {
   try {
     const url = getApiUrl("idp/v1", "Authentication/Login");
@@ -51,7 +64,8 @@ export const signinByEmail = async (
 
     if (!response.ok) {
       const errorText = await response.text();
-      let errorJSON: { error?: string; error_description?: string } | null = null;
+      let errorJSON: { error?: string; error_description?: string } | null =
+        null;
       try {
         errorJSON = JSON.parse(errorText);
       } catch {
@@ -79,7 +93,8 @@ export const signinByEmail = async (
 };
 
 export const OidcSigninForm = () => {
-  const { themeColor, projectKey, clientId, scope, state, redirectUri, nonce } = useOIDCContext();
+  const { themeColor, projectKey, clientId, scope, state, redirectUri, nonce } =
+    useOIDCContext();
   const navigate = useNavigate();
   const { setAuthenticated } = useAuthStore();
   const [isPending, setIsPending] = useState(false);
@@ -109,7 +124,11 @@ export const OidcSigninForm = () => {
       });
 
       if (res.enable_mfa) {
-        return navigate(buildOIDCNavigationUrl(`/mfa-check?mfa_id=${res.mfaId}&mfa_type=${res.mfaType}`));
+        return navigate(
+          buildOIDCNavigationUrl(
+            `/mfa-check?mfa_id=${res.mfaId}&mfa_type=${res.mfaType}`,
+          ),
+        );
       }
 
       try {
@@ -131,7 +150,8 @@ export const OidcSigninForm = () => {
       const baseUrl = buildOIDCNavigationUrl(`/oidc/error`);
       const errorParams = new URLSearchParams();
       if (apiError?.error) errorParams.set("error", apiError.error);
-      if (apiError?.error_description) errorParams.set("error_description", apiError.error_description);
+      if (apiError?.error_description)
+        errorParams.set("error_description", apiError.error_description);
       const errorQuery = errorParams.toString();
       const separator = baseUrl.includes("?") ? "&" : "?";
       navigate(errorQuery ? `${baseUrl}${separator}${errorQuery}` : baseUrl);
@@ -142,7 +162,9 @@ export const OidcSigninForm = () => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
+      <form
+        onSubmit={form.handleSubmit(onSubmitHandler)}
+        className="flex flex-col gap-4">
         <FormField
           control={form.control}
           name="username"
@@ -173,8 +195,7 @@ export const OidcSigninForm = () => {
         <Link
           to={buildOIDCNavigationUrl("/oidc/forgot-password")}
           className="ml-auto inline-block text-sm hover:underline"
-          style={{ color: themeColor }}
-        >
+          style={{ color: themeColor }}>
           Forgot password?
         </Link>
 
@@ -184,8 +205,7 @@ export const OidcSigninForm = () => {
           style={{
             backgroundColor: themeColor,
           }}
-          disabled={isPending}
-        >
+          disabled={isPending}>
           Log in
         </Button>
       </form>

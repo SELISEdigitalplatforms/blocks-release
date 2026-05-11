@@ -81,4 +81,5 @@ export enum MONITOR_SOURCE_TYPES {
   DeployedServices = "1",
   BlocksServices = "2",
   ExternalServices = "3",
+  OtherServices = "4",
 }

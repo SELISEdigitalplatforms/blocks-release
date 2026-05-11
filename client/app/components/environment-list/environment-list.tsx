@@ -9,8 +9,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
-import { useGetProject, useGetProjects } from "@/hooks/use-project";
-import { IProject } from "@/models/project.model";
+import {
+  useGetProject,
+  useGetProjects,
+} from "@blocks-identifier/hooks/use-project";
+import { IProject } from "@blocks-identifier/models/project.model";
 import { useProjectStore } from "@/store/useProjectStore";
 
 const redirectPaths: Record<string, string> = {
@@ -18,7 +21,8 @@ const redirectPaths: Record<string, string> = {
   "/services/iam/role-detail/*": "/services/iam?tab=roles",
   "/services/iam/organization-detail/*": "/services/iam",
   "/services/iam/permission-detail/*": "/services/iam",
-  "/services/authentication/sso-configuration": "/services/authentication?tab=social",
+  "/services/authentication/sso-configuration":
+    "/services/authentication?tab=social",
 };
 
 const wildcardToRegex = (pattern: string) => {
@@ -31,15 +35,20 @@ export function EnvironmentList() {
   const { pathname } = useLocation();
   const { data: projectGroups = [], isLoading } = useGetProjects();
   const { selectedProject, setSelectedProject } = useProjectStore();
-  const { data: projectData } = useGetProject({ projectId: selectedProject?.itemId || "" });
+  const { data: projectData } = useGetProject({
+    projectId: selectedProject?.itemId || "",
+  });
   const pendingProjectRef = useRef<IProject | null>(null);
 
   const redirectRegexMap = useMemo(
     () =>
-      Object.entries(redirectPaths).reduce<Record<string, string>>((acc, [pattern, target]) => {
-        acc[wildcardToRegex(pattern)] = target;
-        return acc;
-      }, {}),
+      Object.entries(redirectPaths).reduce<Record<string, string>>(
+        (acc, [pattern, target]) => {
+          acc[wildcardToRegex(pattern)] = target;
+          return acc;
+        },
+        {},
+      ),
     [],
   );
 
@@ -51,7 +60,10 @@ export function EnvironmentList() {
   }, [pathname, setSelectedProject]);
 
   useEffect(() => {
-    if (projectData?.data && selectedProject?.itemId === projectData.data.itemId) {
+    if (
+      projectData?.data &&
+      selectedProject?.itemId === projectData.data.itemId
+    ) {
       setSelectedProject(projectData.data);
     }
   }, [projectData, selectedProject?.itemId, setSelectedProject]);
@@ -70,14 +82,17 @@ export function EnvironmentList() {
     setSelectedProject(project);
   };
 
-  const environment = projectData?.data.environment || selectedProject?.environment;
+  const environment =
+    projectData?.data.environment || selectedProject?.environment;
   const applicationDomain =
     projectData?.data.applicationDomain || selectedProject?.applicationDomain;
 
   const projects = useMemo(() => {
     if (!selectedProject) return [];
     const groupWithSelected = projectGroups.find((group) =>
-      group.projects.some((project) => project.itemId === selectedProject.itemId),
+      group.projects.some(
+        (project) => project.itemId === selectedProject.itemId,
+      ),
     );
     return groupWithSelected ? groupWithSelected.projects : [];
   }, [projectGroups, selectedProject]);
@@ -101,13 +116,17 @@ export function EnvironmentList() {
           <ChevronDown className="h-4 w-4 shrink-0" />
         </div>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[--radix-dropdown-menu-trigger-width]">
+      <DropdownMenuContent
+        align="end"
+        className="w-[--radix-dropdown-menu-trigger-width]">
         <DropdownMenuLabel>Your Environments</DropdownMenuLabel>
         {projects
           .filter((project) => project.itemId !== selectedProject?.itemId)
           .slice(0, 5)
           .map((project) => (
-            <DropdownMenuItem key={project.itemId} onSelect={() => handleProjectSelect(project)}>
+            <DropdownMenuItem
+              key={project.itemId}
+              onSelect={() => handleProjectSelect(project)}>
               {isLoading ? (
                 <div className="flex w-full items-center justify-center py-2">
                   <Loader size={16} className="animate-spin text-gray-400" />
@@ -118,7 +137,9 @@ export function EnvironmentList() {
             </DropdownMenuItem>
           ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled>Environment overview is not part of this client</DropdownMenuItem>
+        <DropdownMenuItem disabled>
+          Environment overview is not part of this client
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

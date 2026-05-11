@@ -1,19 +1,11 @@
 import { http } from "@/lib/http-client";
+import { SERVICE_REGISTRY_ENDPOINTS } from "@blocks-identifier/constants/endpoint.constant";
 import {
-  IRegisterServicePayload,
-  IRegisterServiceResponse,
   IGetAllServicesPayload,
   IGetAllServicesResponse,
 } from "../models/service.model";
-import { SERVICE_REGISTRY_ENDPOINTS } from "@blocks-identifier/constants/endpoint.constant";
 
 export class ServiceRegistryService {
-  registerService(
-    payload: IRegisterServicePayload,
-  ): Promise<IRegisterServiceResponse> {
-    return http.post(SERVICE_REGISTRY_ENDPOINTS.REGISTER, payload);
-  }
-
   getAllServices(
     payload: IGetAllServicesPayload,
   ): Promise<IGetAllServicesResponse> {

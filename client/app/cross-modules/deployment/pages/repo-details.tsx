@@ -43,7 +43,7 @@ import {
 } from "@blocks-deployment/models/github-info";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { useQueryState } from "nuqs";
-import Alert from "./alert/alert";
+import Alert from "../components/alert/alert";
 
 export interface IRepoDetailsResponse {
   data: { repo: IRepoResponse; build: IPipeline[] };

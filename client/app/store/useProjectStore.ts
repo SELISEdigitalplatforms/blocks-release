@@ -22,9 +22,9 @@ export const useProjectStore = create<IProjectStore>()(
       selectedProject: null,
       selectedTenantGroup: null,
       setSelectedProject(project) {
-        set((state) => ({ ...state, selectedProject: project }));
         set((state) => ({
           ...state,
+          selectedProject: project,
           selectedTenantGroup: project.tenantGroupId,
         }));
       },

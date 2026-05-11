@@ -34,7 +34,10 @@ export function EnvironmentList() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { data: projectGroups = [], isLoading } = useGetProjects();
-  const { selectedProject, setSelectedProject } = useProjectStore();
+  const selectedProject = useProjectStore((state) => state.selectedProject);
+  const setSelectedProject = useProjectStore(
+    (state) => state.setSelectedProject,
+  );
   const { data: projectData } = useGetProject({
     projectId: selectedProject?.itemId || "",
   });
@@ -62,11 +65,17 @@ export function EnvironmentList() {
   useEffect(() => {
     if (
       projectData?.data &&
-      selectedProject?.itemId === projectData.data.itemId
+      selectedProject &&
+      selectedProject.itemId === projectData.data.itemId &&
+      // Only update if there are meaningful changes to avoid loops
+      (selectedProject.name !== projectData.data.name ||
+        selectedProject.applicationDomain !==
+          projectData.data.applicationDomain ||
+        selectedProject.environment !== projectData.data.environment)
     ) {
       setSelectedProject(projectData.data);
     }
-  }, [projectData, selectedProject?.itemId, setSelectedProject]);
+  }, [projectData?.data, selectedProject, setSelectedProject]);
 
   const handleProjectSelect = (project: IProject) => {
     const redirectEntry = Object.entries(redirectRegexMap).find(([regex]) =>

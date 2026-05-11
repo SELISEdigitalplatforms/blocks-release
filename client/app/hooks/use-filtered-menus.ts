@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useLocation } from "react-router-dom";
-import { Menu } from "@/models/menu-models";
+import { Menu } from "@/models/menu.model";
 
 export function useFilteredMenus(menus: Menu[]): Menu[] {
   const { pathname } = useLocation();
@@ -24,8 +24,7 @@ export function useFilteredMenus(menus: Menu[]): Menu[] {
       "service-identity__api-settings",
       "service-identity__secret-management",
       "service-identity__lmt",
-            "service-identity__apps",
-
+      "service-identity__apps",
     ]);
 
     try {
@@ -38,9 +37,11 @@ export function useFilteredMenus(menus: Menu[]): Menu[] {
       if (item.type === "separator") return true;
       if (item.disabled) return false;
       // Hide project menus when NOT on /project-overview
-      if (!isProjectOverviewRoute && projectOverviewMenuIds.has(item.id)) return false;
+      if (!isProjectOverviewRoute && projectOverviewMenuIds.has(item.id))
+        return false;
       // Hide non-project menus when ON /project-overview
-      if (isProjectOverviewRoute && nonProjectMenuIds.has(item.id)) return false;
+      if (isProjectOverviewRoute && nonProjectMenuIds.has(item.id))
+        return false;
       return !parsedBlockedMenu.includes(item.id);
     });
 
@@ -57,12 +58,17 @@ export function useFilteredMenus(menus: Menu[]): Menu[] {
       }
 
       // Keep separator-overview if Overview is before it and not on project route
-      if (separatorId === "separator-overview" && previousItem?.type !== "separator" && !isProjectOverviewRoute) {
+      if (
+        separatorId === "separator-overview" &&
+        previousItem?.type !== "separator" &&
+        !isProjectOverviewRoute
+      ) {
         return true;
       }
 
       if (!previousItem || !nextItem) return false;
-      if (previousItem.type === "separator" || nextItem.type === "separator") return false;
+      if (previousItem.type === "separator" || nextItem.type === "separator")
+        return false;
 
       return true;
     });

@@ -9,11 +9,25 @@ interface LogoProps {
   className?: string;
 }
 
-export function Logo({ src, alt = "SELISE Logo", width, height, className }: LogoProps) {
+export function Logo({
+  src,
+  alt = "SELISE Logo",
+  width,
+  height,
+  className,
+}: LogoProps) {
   const { resolvedTheme } = useTheme();
 
   if (src) {
-    return <img src={src} alt={alt} width={width} height={height} className={className} />;
+    return (
+      <img
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        className={className}
+      />
+    );
   }
 
   return (

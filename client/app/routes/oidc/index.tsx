@@ -11,7 +11,7 @@ export default function OidcIndexPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { setAuthenticated, setTokens } = useAuthStore();
-  const [isExchanging, setIsExchanging] = useState(false);
+  const [_isExchanging, setIsExchanging] = useState(false);
 
   const code = searchParams.get("code");
   const state = searchParams.get("state");
@@ -21,16 +21,19 @@ export default function OidcIndexPage() {
     if (!code || !state) return;
 
     setIsExchanging(true);
-    authService.verifyOidc({ code, state })
+    authService
+      .verifyOidc({ code, state })
       .then((res) => {
-        const isLocalhost = getRuntimeEnv("BLOCKS_API_BASE_URL")?.includes("localhost");
+        const isLocalhost = getRuntimeEnv("BLOCKS_API_BASE_URL")?.includes(
+          "localhost",
+        );
 
         if (isLocalhost && res.access_token && res.refresh_token) {
           setTokens(res.access_token, res.refresh_token);
         }
         setAuthenticated();
 
-        window.location.href = `${window.location.origin}/devops`;
+        window.location.href = `${window.location.origin}/deployment`;
       })
       .catch(() => {
         navigate("/oidc/error");

@@ -22,11 +22,11 @@ export interface IProject {
   tenantSlug: string;
 }
 
-// export interface IResource {
-//   name: string;
-//   link: string;
-//   resourceId: string;
-// }
+export interface IResource {
+  name: string;
+  link: string;
+  resourceId: string;
+}
 export interface IProjectGroup {
   tenantGroupId: string;
   projects: IProject[];

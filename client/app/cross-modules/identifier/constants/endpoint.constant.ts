@@ -7,6 +7,7 @@ const PROJECT_SUBPATH = "/Project";
 export const PROJECT_ENDPOINTS = {
   GETS: `${API_BASE}${PROJECT_SUBPATH}/Gets`,
   GET: `${API_BASE}${PROJECT_SUBPATH}/Get`,
+  ADD_ASSET: `${API_BASE}${PROJECT_SUBPATH}/AddAsset`,
 } as const;
 
 // ─── Service Registry endpoints ───────────────────────────────────────────────

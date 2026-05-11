@@ -1,7 +1,7 @@
 import { projectService } from "@/cross-modules/identifier/services/project.service";
 import { useProjectStore } from "@/store/useProjectStore";
 import { projectService as crossProjectService } from "@blocks-identifier/services/project.service";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 export const useGetProjects = (tenantGroupId = "") => {
@@ -54,5 +54,17 @@ export const useGetEnvRepositories = (projectKey: string) => {
   return useQuery({
     queryKey: ["env-repositories", projectKey],
     queryFn: () => crossProjectService.getEnvRepositories(projectKey),
+  });
+};
+
+export const useAddAssets = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["assets", "add"],
+    mutationFn: crossProjectService.addAssets,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["get-assets"] });
+      queryClient.invalidateQueries({ queryKey: ["env-repositories"] });
+    },
   });
 };

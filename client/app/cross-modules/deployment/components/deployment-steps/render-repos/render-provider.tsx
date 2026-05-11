@@ -15,7 +15,7 @@ import { IProviderDestination } from "@blocks-deployment/models/utils";
 import { useProjectStore } from "@/store/useProjectStore";
 
 interface ProviderButtonsProps extends IProviderDestination {
-  onClose?: (verifyAuth?: boolean) => void | Promise<void>;
+  onClose?: (verifyAuth: boolean) => void | Promise<void>;
   extraState?: string;
   closeOnProviderSelect?: boolean;
 }
@@ -85,12 +85,11 @@ const ProviderButtons = ({
       default:
         console.error("Unknown provider:", providerId);
     }
-    if (closeOnProviderSelect && onClose) onClose();
+    if (closeOnProviderSelect && onClose) onClose(true);
   };
 
   return (
     <>
-      {" "}
       <div className="flex h-auto w-full flex-col items-center self-stretch">
         <div className="flex flex-col items-center gap-4">
           {/* <h2 className="mb-2 text-center text-base font-normal text-gray-600">

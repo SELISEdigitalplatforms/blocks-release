@@ -47,6 +47,7 @@ const Deployment = () => {
       variant: "destructive",
       title: "Error",
       description: error?.errors?.Message,
+      duration: 3000,
     });
   }
 
@@ -61,7 +62,7 @@ const Deployment = () => {
     );
   }
 
-  return <DeploymentOverview projects={apiProjects?.data} />;
+  return <DeploymentOverview projects={apiProjects?.data} refetch={refetch} />;
 };
 
 export default Deployment;

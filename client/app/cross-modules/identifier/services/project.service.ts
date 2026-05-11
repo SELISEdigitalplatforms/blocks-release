@@ -8,6 +8,7 @@ import {
   IGetProjectPayload,
   IGetProjectResponse,
   IProjectGroup,
+  IResource,
 } from "@blocks-identifier/models/project.model";
 
 export class ProjectService {
@@ -32,6 +33,13 @@ export class ProjectService {
   }> {
     const url = `${CLOUD_BUILD_ENDPOINTS.REPOS_LIST}?projectkey=${projectKey}`;
     return http.get(url);
+  }
+
+  addAssets(payload: { tenantGroupId: string; resource: IResource }): Promise<{
+    errors: unknown | null;
+    isSuccess: boolean;
+  }> {
+    return http.post(PROJECT_ENDPOINTS.ADD_ASSET, payload);
   }
 }
 

@@ -8,6 +8,7 @@ import {
 } from "@blocks-deployment/models/deployed-logs";
 import { IRepoResponse, RepoCards } from "./repo-cards/repo-cards";
 import { NoRepositoryAvailable } from "../deployment-details/shared/no-repository";
+import { ErrorRepository } from "../deployment-details/shared/error-repository";
 
 export interface IProject {
   builds: IBuildData[];
@@ -29,9 +30,10 @@ export interface IProjectRepoListEnvWiseResponse {
 
 interface DeploymentOverviewProps {
   projects: IRepoResponse[];
+  refetch: () => void;
 }
 
-const DeploymentOverview = ({ projects }: DeploymentOverviewProps) => {
+const DeploymentOverview = ({ projects, refetch }: DeploymentOverviewProps) => {
   const navigate = useNavigate();
 
   return (
@@ -52,17 +54,25 @@ const DeploymentOverview = ({ projects }: DeploymentOverviewProps) => {
         </div>
       </div>
 
-      {projects?.length > 0 ? (
-        <div className="mb-8 space-y-4">
-          {projects?.map((repo, index) => (
-            <RepoCards key={index} repo={repo} />
-          ))}
-        </div>
-      ) : (
-        <NoRepositoryAvailable />
-      )}
+      {GetProjectOverview(projects, refetch)}
     </div>
   );
 };
 
 export default DeploymentOverview;
+
+function GetProjectOverview(projects: IRepoResponse[], refetch: () => void) {
+  if (!projects) {
+    return <ErrorRepository refetch={refetch} />;
+  }
+  if (projects?.length === 0) {
+    return <NoRepositoryAvailable />;
+  }
+  return (
+    <div className="mb-8 space-y-4">
+      {projects?.map((repo, index) => (
+        <RepoCards key={index} repo={repo} />
+      ))}
+    </div>
+  );
+}

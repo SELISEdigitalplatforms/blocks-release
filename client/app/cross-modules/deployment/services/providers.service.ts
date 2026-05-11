@@ -3,21 +3,25 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 const generateRandomState = () => {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
-  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
+    "",
+  );
 };
 
-const authenticateWithGithub = (extraState: string) => {
+const authenticateWithGithub = (_extraState: string) => {
   const randomState = generateRandomState();
   // const stringifiedState = JSON.stringify({ extraState, randomState });
   // const b64 = btoa(stringifiedState);
   // const state = extraState ? `${b64}` : randomState;
 
   // Define scopes for personal repository access
-  const scopes = ["repo", "user:email", "read:user", "read:repo_hook"].join(" ");
+  const scopes = ["repo", "user:email", "read:user", "read:repo_hook"].join(
+    " ",
+  );
 
   const clientId = getRuntimeEnv("BLOCKS_GITHUB_SSO_CLIENT_ID");
   // const appUrl = getRuntimeEnv("BLOCKS_APP_URL");
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const _origin = typeof window !== "undefined" ? window.location.origin : "";
   // const baseUrl = (appUrl || origin).replace(/\/$/, "");
   // const redirectUri = baseUrl ? `${baseUrl}/callback` : "";
 
@@ -43,9 +47,11 @@ const authenticateWithGithub = (extraState: string) => {
 
 // Function to verify state parameter when handling the callback
 const verifyOAuthState = (receivedState: string | null) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tempStorage = (window as any).tempOAuthStorage;
   const storedState = tempStorage?.github_oauth_state;
   if (tempStorage) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (window as any).tempOAuthStorage;
   }
   return storedState === receivedState;

@@ -5,12 +5,12 @@ import { ProjectList } from "@/components/project-list/project-list";
 import { Button } from "@/components/ui-kits/button/button";
 import { Separator } from "@/components/ui-kits/separator/separator";
 import {
-    Sheet,
-    SheetClose,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
 } from "@/components/ui-kits/sheet/sheet";
 import { navigationMenus } from "@/constants/navigation-menus";
 import { useFilteredMenus } from "@/hooks/use-filtered-menus";
@@ -29,11 +29,14 @@ export function SidebarMobileView() {
           <span className="sr-only">Toggle navigation menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-full overflow-y-auto p-0" aria-describedby={undefined} hideClose>
+      <SheetContent
+        side="left"
+        className="w-full overflow-y-auto p-0"
+        aria-describedby={undefined}
+        hideClose>
         <SheetHeader className="h-[60px] px-4 py-3">
           <SheetTitle className="flex items-center justify-between">
-
-              <Logo width={72} height={36} className="h-9 w-auto" />
+            <Logo width={72} height={36} className="h-9 w-auto" />
 
             <SheetClose className="!mt-0">
               <X className="h-4 w-4" />
@@ -42,18 +45,26 @@ export function SidebarMobileView() {
         </SheetHeader>
         <Separator />
         <div className="mt-3 flex w-full flex-col items-start px-6">
-          <div className="ml-1 text-sm text-[hsl(var(--low-emphasis))]">Project</div>
+          <div className="ml-1 text-sm text-[hsl(var(--low-emphasis))]">
+            Project
+          </div>
           <ProjectList />
         </div>
         <div className="my-3 flex w-full flex-col items-start px-6">
-          <div className="ml-1 text-sm text-[hsl(var(--low-emphasis))]">Environment</div>
+          <div className="ml-1 text-sm text-[hsl(var(--low-emphasis))]">
+            Environment
+          </div>
           <EnvironmentList />
         </div>
         <Separator />
         <nav className="grid gap-2">
           {allowedMenu.map((menu) => (
             <Fragment key={menu.id}>
-              {menu.type === "menu" ? <MobileMenuItem menu={menu} onClick={() => setOpen(false)} /> : <Separator />}
+              {menu.type === "menu" ? (
+                <MobileMenuItem menu={menu} onClick={() => setOpen(false)} />
+              ) : (
+                <Separator />
+              )}
             </Fragment>
           ))}
         </nav>

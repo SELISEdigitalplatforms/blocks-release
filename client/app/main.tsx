@@ -8,16 +8,19 @@ import QueryProvider from "./providers/query-provider";
 import { DeploymentHubListener } from "./cross-modules/communication/components/deployment-hub-listener";
 import { router } from "./router";
 import "./styles/globals.css";
+import { TooltipProvider } from "./components/ui-kits/tooltip/tooltip";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryProvider>
       <ThemeProvider>
-        <NuqsAdapter>
-          <RouterProvider router={router} />
-          <Toaster />
-          <DeploymentHubListener />
-        </NuqsAdapter>
+        <TooltipProvider>
+          <NuqsAdapter>
+            <RouterProvider router={router} />
+            <Toaster />
+            <DeploymentHubListener />
+          </NuqsAdapter>
+        </TooltipProvider>
       </ThemeProvider>
     </QueryProvider>
   </StrictMode>,

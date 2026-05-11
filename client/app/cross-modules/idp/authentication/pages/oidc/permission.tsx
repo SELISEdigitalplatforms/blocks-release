@@ -1,15 +1,19 @@
-
 import { Button } from "@/components/ui-kits/button/button";
-import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui-kits/card/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+} from "@/components/ui-kits/card/card";
 import { Link } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { useOIDCContext } from "@/layouts/oidc-layout/oidc-layout";
 import { userAcknowledgement } from "@blocks-idp/authentication/services/oidc-auth-flow.service";
-// import { getCurrentOIDCParams } from "@blocks-idp/authentication/utils/oidc-utils";
 
 export const OIDCPermissionScreen = () => {
   const contextValues = useOIDCContext();
-  const { userName, themeColor, state, nonce, scope, redirectUri } = contextValues;
+  const { userName, themeColor, state, nonce, scope, redirectUri } =
+    contextValues;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const contextRef = useRef(contextValues);
@@ -28,7 +32,10 @@ export const OIDCPermissionScreen = () => {
 
     const redirectUrl = new URL(currentContext.redirectUri);
     redirectUrl.searchParams.set("error", "access_denied");
-    redirectUrl.searchParams.set("error_description", "User denied the authorization request");
+    redirectUrl.searchParams.set(
+      "error_description",
+      "User denied the authorization request",
+    );
 
     if (currentContext.state) {
       redirectUrl.searchParams.set("state", currentContext.state);
@@ -81,7 +88,9 @@ export const OIDCPermissionScreen = () => {
         <div className="space-y-1">
           <div className="text-3xl font-semibold">Hello</div>
           {userName && (
-            <div className="break-words text-xl font-medium text-muted-foreground">{userName}</div>
+            <div className="break-words text-xl font-medium text-muted-foreground">
+              {userName}
+            </div>
           )}
         </div>
         <CardDescription className="mt-3 text-lg text-foreground">
@@ -99,14 +108,13 @@ export const OIDCPermissionScreen = () => {
             </ul>
           </div>
           <div className="my-4 text-left text-sm text-foreground">
-            By clicking Allow, you permit Blocks Cloud to use your information in accordance with
-            its{" "}
+            By clicking Allow, you permit Blocks Cloud to use your information
+            in accordance with its{" "}
             <Link
               to="https://selisegroup.com/software-development-terms/"
               className="underline"
               style={{ color: themeColor }}
-              target="_blank"
-            >
+              target="_blank">
               Terms of Services{" "}
             </Link>
             and{" "}
@@ -114,8 +122,7 @@ export const OIDCPermissionScreen = () => {
               to="https://selisegroup.com/privacy-policy/"
               className="underline"
               style={{ color: themeColor }}
-              target="_blank"
-            >
+              target="_blank">
               Privacy policy.
             </Link>
           </div>
@@ -126,16 +133,14 @@ export const OIDCPermissionScreen = () => {
               variant="outline"
               className="flex-1"
               disabled={isSubmitting}
-              onClick={handleDeny}
-            >
+              onClick={handleDeny}>
               Deny
             </Button>
             <Button
               className="flex-1"
               disabled={isSubmitting}
               onClick={handleAllow}
-              style={{ backgroundColor: themeColor }}
-            >
+              style={{ backgroundColor: themeColor }}>
               Allow
             </Button>
           </div>

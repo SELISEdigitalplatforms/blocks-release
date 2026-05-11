@@ -1,70 +1,70 @@
-import { http } from "@/lib/http-client";
-import {
+import type {
   GetMonitorByIdResponse,
   GetMonitorPingLogsResponse,
   IAddSingleMonitorPayload,
   IAddSingleMonitorResponse,
   IAlertResponse,
+  IDeleteHealthResponse,
+  IGetHealthMonitorListPayload,
   IGetMonitorList,
   IIncidentSummaryResponse,
   IMonitorIncidentListResponse,
   ISaveHealth,
   ISaveSingleHealthResponse,
   IUpdateHealth,
-  IUpdateMonitor,
-} from "@blocks-deployment/models/alerts";
+  IUpdateSingleMonitorPayload,
+} from "@/cross-modules/deployment/models/alerts.model";
+import { http } from "@/lib/http-client";
+import { ALERT_ENDPOINTS } from "@blocks-deployment/constants/endpoint.constant";
 
 class AlertsService {
-  private readonly alertBaseUrl =
-    "https://dev-observability.blocksdevelopers.com/api";
-
   async addSingleMonitor(payload: IAddSingleMonitorPayload) {
-    const url = `${this.alertBaseUrl}/Monitor/SaveMonitor`;
+    const url = ALERT_ENDPOINTS.SAVE_MONITOR;
     return http.post<IAlertResponse<IAddSingleMonitorResponse>>(url, payload);
   }
-  async updateSingleMonitor(payload: IUpdateMonitor) {
-    const url = `${this.alertBaseUrl}/Monitor/UpdateMonitor`;
+  async updateSingleMonitor(payload: Partial<IUpdateSingleMonitorPayload>) {
+    const url = ALERT_ENDPOINTS.UPDATE_MONITOR;
     return http.post<IAlertResponse<IAddSingleMonitorResponse>>(url, payload);
   }
   async deleteSingleMonitor(itemId: string) {
-    const url = `${this.alertBaseUrl}/Monitor/DeleteMonitor?itemId=${encodeURIComponent(itemId)}`;
+    const url = `${ALERT_ENDPOINTS.DELETE_MONITOR}?itemId=${encodeURIComponent(itemId)}`;
     return http.delete<IAlertResponse<null>>(url);
   }
 
   async getMonitorList(projectKey: string) {
-    const url = `${this.alertBaseUrl}/Monitor/GetMonitorList?ProjectKey=${encodeURIComponent(projectKey)}`;
+    const url = `${ALERT_ENDPOINTS.GET_MONITOR_LIST}?ProjectKey=${encodeURIComponent(projectKey)}`;
     return http.get<IGetMonitorList>(url);
   }
   async getMonitorListById(projectKey: string, repoId: string) {
-    const url = `${this.alertBaseUrl}/Monitor/GetMonitorListByRepoId?ProjectKey=${encodeURIComponent(projectKey)}&repoId=${repoId}`;
+    const url = `${ALERT_ENDPOINTS.GET_MONITOR_LIST_BY_REPO_ID}?ProjectKey=${encodeURIComponent(projectKey)}&repoId=${repoId}`;
     return http.get<IGetMonitorList>(url);
   }
   async getMonitorDetails(monitorId: string) {
-    const url = `${this.alertBaseUrl}/Monitor/GetMonitorDetails?monitorId=${encodeURIComponent(monitorId)}`;
+    const url = `${ALERT_ENDPOINTS.GET_MONITOR_DETAILS}?monitorId=${encodeURIComponent(monitorId)}`;
     return http.get<IIncidentSummaryResponse>(url);
   }
   async isExternalServiceConfigured(externalServiceId: string) {
-    const url = `${this.alertBaseUrl}/Monitor/IsExternalServiceConfigured?externalServiceId=${encodeURIComponent(externalServiceId)}`;
+    const url = `${ALERT_ENDPOINTS.IS_EXTERNAL_SERVICE_CONFIGURED}?externalServiceId=${encodeURIComponent(externalServiceId)}`;
     return http.get<IAlertResponse<IAddSingleMonitorResponse>>(url);
   }
 
-  async getHealthMonitorList(
-    projectKey: string,
-    monitorSourceType?: number,
-    pageNumber: number = 0,
-    pageSize: number = 10,
-  ) {
+  async getHealthMonitorList({
+    projectKey,
+    pageNumber,
+    pageSize,
+    monitorSourceType,
+  }: IGetHealthMonitorListPayload) {
     const params = new URLSearchParams({
       projectKey,
       pageNumber: pageNumber.toString(),
       pageSize: pageSize.toString(),
-      ...(monitorSourceType !== undefined && {
+      ...(monitorSourceType !== null && {
         monitorSourceType: monitorSourceType.toString(),
       }),
     });
 
-    const url = `${this.alertBaseUrl}/Monitor/GetMonitorList?${params.toString()}`;
-    return http.get<any>(url);
+    const url = `${ALERT_ENDPOINTS.GET_MONITOR_LIST}?${params.toString()}`;
+    return http.get<IGetMonitorList>(url);
   }
 
   async getAllMonitorIncidentList(
@@ -72,11 +72,11 @@ class AlertsService {
     pageNumber: number = 0,
     pageSize: number = 10,
   ) {
-    const url = `${this.alertBaseUrl}/Monitor/GetIncidentList?monitorId=${encodeURIComponent(monitorId)}&pageNumber=${pageNumber}&pageSize=${pageSize}`;
+    const url = `${ALERT_ENDPOINTS.GET_INCIDENT_LIST}?monitorId=${encodeURIComponent(monitorId)}&pageNumber=${pageNumber}&pageSize=${pageSize}`;
     return http.get<IMonitorIncidentListResponse>(url);
   }
   async getMonitorById(monitorId: string) {
-    const url = `${this.alertBaseUrl}/Monitor/GetMonitorById?monitorId=${encodeURIComponent(monitorId)}`;
+    const url = `${ALERT_ENDPOINTS.GET_MONITOR_BY_ID}?monitorId=${encodeURIComponent(monitorId)}`;
     return http.get<GetMonitorByIdResponse>(url);
   }
 
@@ -85,7 +85,7 @@ class AlertsService {
     startTime: string;
     endTime: string;
   }) {
-    const url = `${this.alertBaseUrl}/Monitor/GetMonitorResponseTime?monitorId=${encodeURIComponent(payload.monitorId)}&startTime=${encodeURIComponent(payload.startTime)}&endTime=${encodeURIComponent(payload.endTime)}`;
+    const url = `${ALERT_ENDPOINTS.GET_MONITOR_RESPONSE_TIME}?monitorId=${encodeURIComponent(payload.monitorId)}&startTime=${encodeURIComponent(payload.startTime)}&endTime=${encodeURIComponent(payload.endTime)}`;
     return http.get<GetMonitorPingLogsResponse>(url);
   }
   async GetMonitorDownTime(payload: {
@@ -93,20 +93,20 @@ class AlertsService {
     startTime: string;
     endTime: string;
   }) {
-    const url = `${this.alertBaseUrl}/Monitor/GetMonitorDownTime?monitorId=${encodeURIComponent(payload.monitorId)}&startDate=${payload.startTime}&endDate=${payload.endTime}`;
+    const url = `${ALERT_ENDPOINTS.GET_MONITOR_DOWN_TIME}?monitorId=${encodeURIComponent(payload.monitorId)}&startDate=${payload.startTime}&endDate=${payload.endTime}`;
     return http.get<GetMonitorPingLogsResponse>(url);
   }
   async saveHealth(payload: ISaveHealth) {
-    const url = `${this.alertBaseUrl}/Health/SaveHealth`;
+    const url = ALERT_ENDPOINTS.SAVE_HEALTH;
     return http.post<ISaveSingleHealthResponse>(url, payload);
   }
-  async updateHealth(payload: IUpdateHealth) {
-    const url = `${this.alertBaseUrl}/Health/UpdateHealth`;
-    return http.post<any>(url, payload);
+  async updateHealth(payload: Partial<IUpdateHealth>) {
+    const url = ALERT_ENDPOINTS.UPDATE_HEALTH;
+    return http.post<ISaveSingleHealthResponse>(url, payload);
   }
   async deleteHealth(itemId: string) {
-    const url = `${this.alertBaseUrl}/Health/DeleteHealth?itemId=${encodeURIComponent(itemId)}`;
-    return http.delete<any>(url);
+    const url = `${ALERT_ENDPOINTS.DELETE_HEALTH}?itemId=${encodeURIComponent(itemId)}`;
+    return http.delete<IDeleteHealthResponse>(url);
   }
 }
 export const alertsService = new AlertsService();

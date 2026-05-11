@@ -3,11 +3,7 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "target": "ES2022",
     "useDefineForClassFields": true,
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
@@ -20,41 +16,19 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@/*": [
-        "./app/*"
-      ],
-      "@blocks-idp/*": [
-        "./app/idp/*"
-      ],
-      "@blocks-lmt/*": [
-        "./app/cross-modules/lmt/*"
-      ],
-      "@blocks-storage/*": [
-        "./app/cross-modules/storage/*"
-      ],
-      "@blocks-communication/*": [
-        "./app/cross-modules/communication/*"
-      ],
-      "@blocks-identifier/*": [
-        "./app/cross-modules/identifier/*"
-      ],
-      "@blocks-localization/*": [
-        "./app/cross-modules/localization/*"
-      ],
-      "@blocks-utilities/*": [
-        "./app/cross-modules/utilities/*"
-      ],
-      "@blocks-ai/*": [
-        "./app/cross-modules/ai/*"
-      ],
-      "@blocks-devops/*": [
-        "./app/cross-modules/devops/*"
-      ]
+      "@/*": ["./app/*"],
+      "@blocks-idp/*": ["./app/cross-modules/idp/*"],
+      "@blocks-lmt/*": ["./app/cross-modules/lmt/*"],
+      "@blocks-storage/*": ["./app/cross-modules/storage/*"],
+      "@blocks-communication/*": ["./app/cross-modules/communication/*"],
+      "@blocks-identifier/*": ["./app/cross-modules/identifier/*"],
+      "@blocks-localization/*": ["./app/cross-modules/localization/*"],
+      "@blocks-utilities/*": ["./app/cross-modules/utilities/*"],
+      "@blocks-ai/*": ["./app/cross-modules/ai/*"],
+      "@blocks-deployment/*": ["./app/cross-modules/deployment/*"]
     }
   },
-  "include": [
-    "app"
-  ],
+  "include": ["app"],
   "exclude": [
     "**/*.test.ts",
     "**/*.test.tsx",

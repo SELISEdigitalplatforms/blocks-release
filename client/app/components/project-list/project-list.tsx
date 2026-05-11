@@ -17,12 +17,7 @@ import { IProject } from "@/cross-modules/identifier/models/project.model";
 import { useProjectStore } from "@/store/useProjectStore";
 
 const redirectPaths: Record<string, string> = {
-  "/services/iam/user-detail/*": "/services/iam",
-  "/services/iam/role-detail/*": "/services/iam?tab=roles",
-  "/services/iam/organization-detail/*": "/services/iam",
-  "/services/iam/permission-detail/*": "/services/iam",
-  "/services/authentication/sso-configuration":
-    "/services/authentication?tab=social",
+  "/deployment/repo/*": "/deployment",
 };
 
 const wildcardToRegex = (pattern: string) => {

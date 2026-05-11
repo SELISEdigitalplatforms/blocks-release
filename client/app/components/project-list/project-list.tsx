@@ -34,7 +34,10 @@ export function ProjectList() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { data: projectGroups = [], isLoading } = useGetProjects();
-  const { selectedProject, setSelectedProject } = useProjectStore();
+  const selectedProject = useProjectStore((state) => state.selectedProject);
+  const setSelectedProject = useProjectStore(
+    (state) => state.setSelectedProject,
+  );
   const { data: projectData } = useGetProject({
     projectId: selectedProject?.itemId || "",
   });

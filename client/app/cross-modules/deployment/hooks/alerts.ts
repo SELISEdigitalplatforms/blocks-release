@@ -68,13 +68,6 @@ export const useDeleteMonitor = () => {
   });
 };
 
-export const useGetMonitorList = (projectKey: string, repoId: string) => {
-  return useQuery({
-    queryKey: ["monitor-list", projectKey, repoId],
-    queryFn: () => alertsService.getMonitorListById(projectKey, repoId),
-    refetchOnMount: "always",
-  });
-};
 export const useGetHealthMonitorList = (
   payload: IGetHealthMonitorListPayload,
 ) => {
@@ -103,16 +96,12 @@ export const useGetHealthMonitorList = (
     enabled: !!projectKey,
   });
 };
-export const useGetMonitorListById = (
-  projectKey: string,
-  repoId: string,
-  enabled: boolean = true,
-) => {
+export const useGetMonitorListById = (projectKey: string, repoId: string) => {
   return useQuery({
     queryKey: ["monitor-list-by-id", projectKey, repoId],
     queryFn: () => alertsService.getMonitorListById(projectKey, repoId),
     refetchOnMount: "always",
-    enabled,
+    enabled: !!projectKey && !!repoId,
   });
 };
 

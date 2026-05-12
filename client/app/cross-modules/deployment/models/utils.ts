@@ -62,6 +62,18 @@ export interface IChangeSettings {
   repoId: string;
 }
 
+export interface IUpdateRepoSettingsPayload {
+  repoId: string;
+  projectKey: string;
+  customDomain: string;
+  lastDeploymentStatus: string;
+  projectEnv?: string;
+  projectName?: string;
+  deploymentType?: "auto" | "manual";
+  hostingProviderId?: string;
+  machineConfigId?: string;
+  regionId?: string;
+}
 export interface IChangeRepoSpecs {
   repoId: string;
   projectKey: string;

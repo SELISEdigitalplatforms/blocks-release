@@ -20,8 +20,8 @@ import { getMonitorFormDefaultValues } from "./schema";
 type SubmitContext = {
   itemId?: string;
   projectKey: string;
+  repoId: string;
   repoName: string;
-  externalServiceName: string;
 };
 
 const DEFAULT_REQUEST_BODY = '{"key":"value"}';
@@ -118,7 +118,11 @@ export const toFormValuesFromMonitorDetails = (
   monitorDetails?: IMonitorDetails,
 ): MonitorFormValues => {
   if (!monitorDetails) {
-    return getMonitorFormDefaultValues();
+    return getMonitorFormDefaultValues({
+      repoId: "",
+      repoName: "",
+      repoUrl: "",
+    });
   }
 
   const { headerName, headerValue, jsonSwitcher } = getHeaderInfo(
@@ -132,7 +136,6 @@ export const toFormValuesFromMonitorDetails = (
     ),
     sourceType: toSourceType(monitorDetails.monitorSourceTypes),
     selectedRepoId: monitorDetails.repoId || "",
-    selectedServiceId: monitorDetails.externalServiceId || "",
     urlMonitor: monitorDetails.url || "",
     monitorSettings: {
       monitor_interval: toSliderStep(monitorDetails.intervalInSeconds, 2),
@@ -175,8 +178,8 @@ export const toCreateRequestPayload = (
   isActive: true,
   httpMethodType: values.requestConfiguration.http_methods,
   protocolType: "HTTP",
-  externalServiceId: values.selectedServiceId,
-  externalServiceName: context.externalServiceName,
+  externalServiceId: null,
+  externalServiceName: null,
   monitorSourceType: toMonitorSourceType(values.sourceType),
 });
 
@@ -205,8 +208,8 @@ export const toUpdateRequestPayload = (
   isActive: true,
   httpMethodType: values.requestConfiguration.http_methods,
   protocolType: "HTTP",
-  externalServiceId: values.selectedServiceId,
-  externalServiceName: context.externalServiceName,
+  externalServiceId: null,
+  externalServiceName: null,
   monitorSourceType: toMonitorSourceType(values.sourceType),
 });
 
@@ -222,8 +225,8 @@ export const toCreateCallbackPayload = (
   isActive: true,
   repoName: context.repoName,
   repoId: values.selectedRepoId,
-  externalServiceId: values.selectedServiceId,
-  externalServiceName: context.externalServiceName,
+  externalServiceId: null,
+  externalServiceName: null,
   monitorSourceType: toMonitorSourceType(values.sourceType),
 });
 
@@ -240,7 +243,7 @@ export const toUpdateCallbackPayload = (
   isActive: true,
   repoName: context.repoName,
   repoId: values.selectedRepoId,
-  externalServiceId: values.selectedServiceId,
-  externalServiceName: context.externalServiceName,
+  externalServiceId: null,
+  externalServiceName: null,
   monitorSourceType: toMonitorSourceType(values.sourceType),
 });

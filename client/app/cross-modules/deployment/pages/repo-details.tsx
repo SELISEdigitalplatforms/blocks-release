@@ -2,14 +2,8 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/useProjectStore";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
 import DeploymentObservability from "@blocks-deployment/components/deployment-details/shared/deployment-observability";
-import {
-  ChartGantt,
-  GitBranch,
-  Loader,
-  Logs,
-  Rocket,
-  Settings,
-} from "lucide-react";
+import { ChartGantt, GitBranch, Logs, Rocket, Settings } from "lucide-react";
+import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -378,14 +372,7 @@ export default function RepoDetails() {
     );
   }
   if (isLoading) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader className="h-8 w-8 animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner variant="overlay" label="Loading..." />;
   }
 
   if (
@@ -688,6 +675,11 @@ export default function RepoDetails() {
                 <Alert
                   repoName={latestBuild?.repoName || ""}
                   repoId={repoId}
+                  repoUrl={
+                    repoDetails?.data?.repo?.customDeploymentURL ||
+                    repoDetails?.data?.repo?.defaultDeploymentUrl ||
+                    repoDetails?.data?.repo?.repoUrl
+                  }
                   status={latestBuild?.status || ""}
                   latestBuild={latestBuild}
                   buildLength={filteredBuilds?.length}

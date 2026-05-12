@@ -1,3 +1,6 @@
+import { FormActionsRow } from "@/components/form-field/form-actions-row";
+import { IntervalSliderField } from "@/components/form-field/interval-slider-field";
+import { LabeledRadioOption } from "@/components/form-field/labeled-radio-option";
 import { InfoTooltip } from "@/components/info-tool-tip/info-tool-tip";
 import {
   RenderAlternatively,
@@ -21,95 +24,41 @@ import { Input } from "@/components/ui-kits/input/input";
 import { RadioGroup } from "@/components/ui-kits/radio-group/radio-group";
 import { Switch } from "@/components/ui-kits/switch/switch";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
-import { HTTP_METHODS } from "@/cross-modules/deployment/constants/alert.constant";
+import {
+  HTTP_METHODS,
+  MONITOR_INTERVAL_TICKS,
+  MONITOR_INTERVAL_TOOLTIP,
+  MONITOR_TYPE_OPTIONS,
+  REQUEST_JSON_TOOLTIP,
+  TIMEOUT_TOOLTIP,
+} from "@/cross-modules/deployment/constants/alert.constant";
 import { type FormEventHandler } from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { EntitySelectField } from "@/components/form-field/entity-select-field";
-import { FormActionsRow } from "@/components/form-field/form-actions-row";
-import { IntervalSliderField } from "@/components/form-field/interval-slider-field";
-import { LabeledRadioOption } from "@/components/form-field/labeled-radio-option";
 import type {
   MonitorConfigurationType,
-  MonitorFormValues,
   MonitorFormMode,
-  SourceType,
+  MonitorFormValues,
 } from "./schema";
-
-type RepoOption = {
-  itemId: string;
-  repoName: string;
-};
-
-type ServiceOption = {
-  serviceId: string;
-  name: string;
-};
-
-const MONITOR_TYPE_OPTIONS: {
-  id: string;
-  value: MonitorConfigurationType;
-  label: string;
-}[] = [
-  { id: "monitor-type-request", value: "request", label: "Request" },
-  { id: "monitor-type-callback", value: "callback", label: "Callback" },
-];
-
-const SOURCE_TYPE_OPTIONS: { id: string; value: SourceType; label: string }[] =
-  [
-    { id: "monitor-source-none", value: "none", label: "None" },
-    { id: "monitor-source-deployed", value: "deployed", label: "Deployed" },
-    {
-      id: "monitor-source-my-services",
-      value: "my-services",
-      label: "My services",
-    },
-  ];
-
-const MONITOR_INTERVAL_TICKS = ["30s", "1min", "5min", "30min", "1h"];
-const MONITOR_INTERVAL_TOOLTIP =
-  "How frequently the system will check your endpoint for availability and performance";
-const TIMEOUT_TOOLTIP =
-  "Maximum time to wait for a response from your endpoint before considering it timed out";
-const REQUEST_JSON_TOOLTIP =
-  "Set Content-Type header to application/json for API requests";
 
 type MonitorFormFieldsProps = {
   form: UseFormReturn<MonitorFormValues>;
   mode: MonitorFormMode;
   onSubmit: FormEventHandler<HTMLFormElement>;
   monitorType: MonitorConfigurationType;
-  sourceType: SourceType;
-  deployedRepos: RepoOption[];
-  services: ServiceOption[];
-  isLoadingRepos: boolean;
-  isLoadingServices: boolean;
   isSubmitting: boolean;
   isEditMode: boolean;
-  sourceError: string;
-  isSourceBlocked: boolean;
   onMonitorTypeChange: (value: MonitorConfigurationType) => void;
-  onSourceTypeChange: (value: SourceType) => void;
-  onRepoChange: (value: string) => void;
-  onServiceChange: (value: string) => void;
+  isSourceBlocked?: boolean;
 };
 
 export const MonitorFormFields = ({
   form,
   onSubmit,
   monitorType,
-  sourceType,
-  deployedRepos,
-  services,
-  isLoadingRepos,
-  isLoadingServices,
   isSubmitting,
   isEditMode,
-  sourceError,
-  isSourceBlocked,
   onMonitorTypeChange,
-  onSourceTypeChange,
-  onRepoChange,
-  onServiceChange,
+  isSourceBlocked = false,
 }: MonitorFormFieldsProps) => {
   const httpMethod = form.watch("requestConfiguration.http_methods");
   const sendAsJson = form.watch("requestConfiguration.json_switcher");
@@ -174,87 +123,6 @@ export const MonitorFormFields = ({
                 </FormItem>
               )}
             />
-
-            <div className=" rounded-md border border-input bg-background px-4 py-3 space-y-3">
-              <FormField
-                control={form.control}
-                name="sourceType"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col gap-1">
-                    <FormLabel className="block text-sm font-medium">
-                      Tag a Service
-                    </FormLabel>
-                    <FormControl className="flex items-center gap-2">
-                      <RadioGroup
-                        value={field.value}
-                        onValueChange={(value: SourceType) => {
-                          field.onChange(value);
-                          onSourceTypeChange(value);
-                        }}
-                        className="flex flex-wrap gap-4"
-                        disabled={isEditMode}>
-                        {SOURCE_TYPE_OPTIONS.map((option) => (
-                          <LabeledRadioOption
-                            key={option.id}
-                            id={option.id}
-                            value={option.value}
-                            label={option.label}
-                            disabled={isEditMode}
-                          />
-                        ))}
-                      </RadioGroup>
-                    </FormControl>
-
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <RenderConditionally condition={sourceType === "deployed"}>
-                <EntitySelectField
-                  control={form.control}
-                  name="selectedRepoId"
-                  label="Select repo"
-                  placeholder={
-                    isLoadingRepos ? "Loading repos..." : "Select a repo"
-                  }
-                  disabled={isEditMode || isLoadingRepos}
-                  options={deployedRepos}
-                  getOptionKey={(repo) => repo.itemId}
-                  getOptionValue={(repo) => repo.itemId}
-                  getOptionLabel={(repo) => repo.repoName}
-                  onValueChange={onRepoChange}
-                />
-              </RenderConditionally>
-
-              <RenderConditionally condition={sourceType === "my-services"}>
-                <EntitySelectField
-                  control={form.control}
-                  name="selectedServiceId"
-                  label="Select service"
-                  placeholder={
-                    isLoadingServices
-                      ? "Loading services..."
-                      : "Select a service"
-                  }
-                  disabled={isEditMode || isLoadingServices}
-                  options={services}
-                  getOptionKey={(service) => service.serviceId}
-                  getOptionValue={(service) => service.serviceId}
-                  getOptionLabel={(service) => service.name}
-                  onValueChange={onServiceChange}
-                />
-              </RenderConditionally>
-              {sourceError && (
-                <p className="text-sm text-destructive">{sourceError}</p>
-              )}
-
-              {isEditMode && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Monitor source cannot be changed for existing monitors.
-                </p>
-              )}
-            </div>
 
             <RenderConditionally condition={monitorType === "request"}>
               <FormField
@@ -421,9 +289,7 @@ export const MonitorFormFields = ({
             cancelLabel="Cancel"
             saveLabel="Save"
             isSaveDisabled={
-              isSubmitting ||
-              !form.formState.isValid ||
-              Boolean(isSourceBlocked)
+              isSubmitting || !form.formState.isValid || !!isSourceBlocked
             }
           />
         </div>

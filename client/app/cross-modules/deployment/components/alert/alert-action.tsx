@@ -19,7 +19,7 @@ import {
   useDeleteMonitor,
   useUpdateHealth,
   useUpdateSingleMonitor,
-} from "@blocks-deployment/hooks/alerts";
+} from "@/cross-modules/deployment/hooks/use-alerts";
 import { useQueryClient } from "@tanstack/react-query";
 import { EllipsisVertical } from "lucide-react";
 import { useState } from "react";

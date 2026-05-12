@@ -21,7 +21,7 @@ import {
   useChangeRepoSpecs,
   useGetRepoDetails,
   useGetSpecs,
-} from "@blocks-deployment/hooks/github-info";
+} from "@/cross-modules/deployment/hooks/use-github-info";
 import { toast } from "@/hooks/use-toast";
 import { DEPLOYMENT_OPTIONS } from "@blocks-deployment/models/deployment-settings";
 import useIsMobile from "@/hooks/use-is-mobile";

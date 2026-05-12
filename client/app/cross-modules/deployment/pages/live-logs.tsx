@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { useParams, useNavigate } from "react-router-dom";
-import { useGetCardProjectAndBranch } from "@blocks-deployment/hooks/github-info";
+import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use-github-info";
 import React, { useEffect, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import LiveDeploymentLogs from "@blocks-deployment/components/deployment-details/live/live-logs-section";

@@ -37,7 +37,7 @@ import {
   useGetSCALibraryData,
   useGetSCADContainerData,
   useSCARedirectLink,
-} from "@blocks-deployment/hooks/observability";
+} from "@/cross-modules/deployment/hooks/use-observability";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui-kits/button/button";
 

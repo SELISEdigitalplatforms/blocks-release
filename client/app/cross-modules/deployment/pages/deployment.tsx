@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import DeploymentOverview from "@blocks-deployment/components/deployment-home/deployment-overview";
-import { useGetAllProjects } from "@blocks-deployment/hooks/github-info";
+import { useGetAllProjects } from "@/cross-modules/deployment/hooks/use-github-info";
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 import { toast } from "@/hooks/use-toast";
 import { useProjectStore } from "@/store/useProjectStore";

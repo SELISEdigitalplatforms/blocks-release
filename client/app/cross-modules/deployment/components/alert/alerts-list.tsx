@@ -295,8 +295,7 @@ export function AlertsList({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="text-medium-emphasis"
-                  onClick={() => handleRowClick(row.original.itemId as string)}
+                  className="text-medium-emphasis cursor-auto"
                   isHoverable>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

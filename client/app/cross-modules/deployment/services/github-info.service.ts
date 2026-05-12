@@ -140,14 +140,9 @@ export class GithubInfoService {
     return this.httpClient.put(url, payload);
   }
 
-  async changeRepoSpecs(payload: IChangeRepoSpecs) {
-    const url = CLOUD_BUILD_ENDPOINTS.SETTINGS;
+  async updateRepoSettings(payload: IChangeRepoSpecs) {
+    const url = CLOUD_BUILD_ENDPOINTS.REPO_SETTINGS_UPDATE;
     return this.httpClient.post(url, payload);
-  }
-
-  async changeRepoSettings(payload: IChangeSettings) {
-    const url = CLOUD_BUILD_ENDPOINTS.SETTINGS;
-    return this.httpClient.put(url, payload);
   }
 
   async getBuildLogs(

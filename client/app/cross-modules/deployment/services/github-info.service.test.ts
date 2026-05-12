@@ -348,9 +348,9 @@ describe("GithubInfoService", () => {
     });
   });
 
-  // ─── changeRepoSpecs ───────────────────────────────────────────────────────
+  // ─── updateRepoSettings ───────────────────────────────────────────────────────
 
-  describe("changeRepoSpecs", () => {
+  describe("updateRepoSettings", () => {
     it("should call correct endpoint with payload", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
@@ -359,7 +359,7 @@ describe("GithubInfoService", () => {
         projectKey: TEST_PROJECT_KEY,
         machineConfigId: "mc-1",
       };
-      const result = await githubInfoService.changeRepoSpecs(payload);
+      const result = await githubInfoService.updateRepoSettings(payload);
 
       expect(http.post).toHaveBeenCalledWith(
         CLOUD_BUILD_ENDPOINTS.SETTINGS,

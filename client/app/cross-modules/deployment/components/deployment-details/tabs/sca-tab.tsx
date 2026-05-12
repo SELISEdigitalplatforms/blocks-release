@@ -40,6 +40,7 @@ import {
 } from "@/cross-modules/deployment/hooks/use-observability";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui-kits/button/button";
+import { ErrorDisplay } from "@/components/error-display/error-display";
 
 interface Dependency {
   id: string;
@@ -1047,7 +1048,14 @@ const SCATab: React.FC = () => {
           ) : null}
         </>
       ) : (
-        <div>Error loading SCA data</div>
+        <Card>
+          <CardContent className="p-2">
+            <ErrorDisplay
+              text={error?.message || "Error loading SCA data"}
+              className="w-full"
+            />
+          </CardContent>
+        </Card>
       )}
     </div>
   );

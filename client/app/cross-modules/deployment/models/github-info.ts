@@ -21,6 +21,8 @@ export interface ICloneRepo {
 }
 
 export interface DeploymentFormData {
+  customDomain: string;
+  lastDeploymentStatus: string;
   deploymentType: "auto" | "manual";
   framework: string;
   provider: string;

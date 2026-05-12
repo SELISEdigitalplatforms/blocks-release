@@ -2,347 +2,427 @@ import { createWrapper } from "@/test-utils/test-providers/query-client";
 import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
-    mockRepository,
-    mockRepositories,
-    mockRepositoryUser,
-    mockBranch,
-    MOCK_REPO_ID,
-    MOCK_BUILD_ID,
-    mockSuccessResponse,
-    mockGithubInfoServiceFactory,
+  mockRepository,
+  mockRepositories,
+  mockRepositoryUser,
+  mockBranch,
+  MOCK_REPO_ID,
+  MOCK_BUILD_ID,
+  mockSuccessResponse,
+  mockGithubInfoServiceFactory,
 } from "../test-utils/__mocks__";
 import { githubInfoService } from "../services/github-info.service";
 import { useProjectStore } from "@/modules/identifier/state/use-project-store";
 import {
-    useGithubVerification,
-    useValidateAuthorization,
-    useRevokeAccess,
-    useGetGithubRepos,
-    useGetRepositoryUser,
-    useRemoveAuthorization,
-    useGithubBranches,
-    useRepoAndGitBranchMatch,
-    useInitialRepoDeployment,
-    useManualDeployment,
-    useGetSpecs,
-    useGetAllRepoBuilds,
-    useGetAllProjects,
-    useGetRepoDetails,
-    useGetCardProjectAndBranch,
-    useChangeBuildSpecs,
-    useChangeRepoSpecs,
+  useGithubVerification,
+  useValidateAuthorization,
+  useRevokeAccess,
+  useGetGithubRepos,
+  useGetRepositoryUser,
+  useRemoveAuthorization,
+  useGithubBranches,
+  useRepoAndGitBranchMatch,
+  useInitialRepoDeployment,
+  useManualDeployment,
+  useGetSpecs,
+  useGetAllRepoBuilds,
+  useGetAllProjects,
+  useGetRepoDetails,
+  useGetCardProjectAndBranch,
+  useChangeBuildSpecs,
+  useUpdateRepoSettings,
 } from "./github-info";
 import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
 
-vi.mock("../services/github-info.service", () => mockGithubInfoServiceFactory());
+vi.mock("../services/github-info.service", () =>
+  mockGithubInfoServiceFactory(),
+);
 vi.mock("@/modules/identifier/state/use-project-store", () => ({
-    useProjectStore: vi.fn(),
+  useProjectStore: vi.fn(),
 }));
 
 describe("Github Info Hooks", () => {
-    beforeEach(() => {
-        vi.mocked(useProjectStore).mockReturnValue({
-            selectedProject: { tenantId: TEST_PROJECT_KEY },
-        } as any);
+  beforeEach(() => {
+    vi.mocked(useProjectStore).mockReturnValue({
+      selectedProject: { tenantId: TEST_PROJECT_KEY },
+    } as any);
+  });
+
+  // ─── useGithubVerification ─────────────────────────────────────────────────
+
+  describe("useGithubVerification", () => {
+    it("should verify github code successfully", async () => {
+      const code = "auth-code";
+      vi.mocked(githubInfoService.verifyAuthorization).mockResolvedValue(
+        "token-123",
+      );
+
+      const { result } = renderHook(() => useGithubVerification(code), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toBe("token-123");
+      expect(githubInfoService.verifyAuthorization).toHaveBeenCalledWith(
+        code,
+        TEST_PROJECT_KEY,
+      );
+    });
+  });
+
+  // ─── useValidateAuthorization ─────────────────────────────────────────────
+
+  describe("useValidateAuthorization", () => {
+    it("should validate authorization successfully", async () => {
+      vi.mocked(githubInfoService.checkAlreadyAuthorization).mockResolvedValue({
+        isSuccess: true,
+      });
+
+      const { result } = renderHook(() => useValidateAuthorization(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual({ isSuccess: true });
+    });
+  });
+
+  // ─── useGetGithubRepos ─────────────────────────────────────────────────────
+
+  describe("useGetGithubRepos", () => {
+    it("should fetch github repos successfully", async () => {
+      const mockResponse = {
+        data: { items: [mockRepository], total_count: 1 },
+        isSuccess: true,
+      };
+      vi.mocked(githubInfoService.getGithubRepos).mockResolvedValue(
+        mockResponse as any,
+      );
+
+      const { result } = renderHook(() => useGetGithubRepos(true), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(mockResponse);
     });
 
-    // ─── useGithubVerification ─────────────────────────────────────────────────
+    it("should not fetch when not enabled", () => {
+      const { result } = renderHook(() => useGetGithubRepos(false), {
+        wrapper: createWrapper(),
+      });
 
-    describe("useGithubVerification", () => {
-        it("should verify github code successfully", async () => {
-            const code = "auth-code";
-            vi.mocked(githubInfoService.verifyAuthorization).mockResolvedValue("token-123");
-
-            const { result } = renderHook(() => useGithubVerification(code), {
-                wrapper: createWrapper(),
-            });
-
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(result.current.data).toBe("token-123");
-            expect(githubInfoService.verifyAuthorization).toHaveBeenCalledWith(code, TEST_PROJECT_KEY);
-        });
+      expect(result.current.isLoading).toBe(false);
+      expect(githubInfoService.getGithubRepos).not.toHaveBeenCalled();
     });
+  });
 
-    // ─── useValidateAuthorization ─────────────────────────────────────────────
+  // ─── useManualDeployment ───────────────────────────────────────────────────
 
-    describe("useValidateAuthorization", () => {
-        it("should validate authorization successfully", async () => {
-            vi.mocked(githubInfoService.checkAlreadyAuthorization).mockResolvedValue({ isSuccess: true });
+  describe("useManualDeployment", () => {
+    it("should trigger manual deployment successfully", async () => {
+      const payload = { repoId: MOCK_REPO_ID, ProjectKey: TEST_PROJECT_KEY };
+      vi.mocked(githubInfoService.manualDeploy).mockResolvedValue(
+        mockSuccessResponse as any,
+      );
 
-            const { result } = renderHook(() => useValidateAuthorization(), {
-                wrapper: createWrapper(),
-            });
+      const { result } = renderHook(() => useManualDeployment(), {
+        wrapper: createWrapper(),
+      });
 
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(result.current.data).toEqual({ isSuccess: true });
-        });
+      result.current.mutate(payload);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(githubInfoService.manualDeploy).toHaveBeenCalledWith(payload);
     });
+  });
 
-    // ─── useGetGithubRepos ─────────────────────────────────────────────────────
+  // ─── useGetCardProjectAndBranch ────────────────────────────────────────────
 
-    describe("useGetGithubRepos", () => {
-        it("should fetch github repos successfully", async () => {
-            const mockResponse = { data: { items: [mockRepository], total_count: 1 }, isSuccess: true };
-            vi.mocked(githubInfoService.getGithubRepos).mockResolvedValue(mockResponse as any);
+  describe("useGetCardProjectAndBranch", () => {
+    it("should fetch card project and branch successfully", async () => {
+      vi.mocked(githubInfoService.getCardRepoAndBranches).mockResolvedValue({
+        isSuccess: true,
+      } as any);
 
-            const { result } = renderHook(() => useGetGithubRepos(true), {
-                wrapper: createWrapper(),
-            });
+      const { result } = renderHook(
+        () => useGetCardProjectAndBranch(MOCK_BUILD_ID),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(result.current.data).toEqual(mockResponse);
-        });
-
-        it("should not fetch when not enabled", () => {
-            const { result } = renderHook(() => useGetGithubRepos(false), {
-                wrapper: createWrapper(),
-            });
-
-            expect(result.current.isLoading).toBe(false);
-            expect(githubInfoService.getGithubRepos).not.toHaveBeenCalled();
-        });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(githubInfoService.getCardRepoAndBranches).toHaveBeenCalledWith(
+        MOCK_BUILD_ID,
+        TEST_PROJECT_KEY,
+      );
     });
+  });
 
-    // ─── useManualDeployment ───────────────────────────────────────────────────
+  // ─── useRevokeAccess ───────────────────────────────────────────────────────
 
-    describe("useManualDeployment", () => {
-        it("should trigger manual deployment successfully", async () => {
-            const payload = { repoId: MOCK_REPO_ID, ProjectKey: TEST_PROJECT_KEY };
-            vi.mocked(githubInfoService.manualDeploy).mockResolvedValue(mockSuccessResponse as any);
+  describe("useRevokeAccess", () => {
+    it("should revoke access successfully", async () => {
+      vi.mocked(githubInfoService.revokeAccess).mockResolvedValue(
+        mockSuccessResponse as any,
+      );
 
-            const { result } = renderHook(() => useManualDeployment(), {
-                wrapper: createWrapper(),
-            });
+      const { result } = renderHook(() => useRevokeAccess(), {
+        wrapper: createWrapper(),
+      });
 
-            result.current.mutate(payload);
-
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(githubInfoService.manualDeploy).toHaveBeenCalledWith(payload);
-        });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(mockSuccessResponse);
+      expect(githubInfoService.revokeAccess).toHaveBeenCalled();
     });
+  });
 
-    // ─── useGetCardProjectAndBranch ────────────────────────────────────────────
+  // ─── useGetRepositoryUser ──────────────────────────────────────────────────
 
-    describe("useGetCardProjectAndBranch", () => {
-        it("should fetch card project and branch successfully", async () => {
-            vi.mocked(githubInfoService.getCardRepoAndBranches).mockResolvedValue({ isSuccess: true } as any);
+  describe("useGetRepositoryUser", () => {
+    it("should fetch repository user successfully", async () => {
+      vi.mocked(githubInfoService.getRepositoryUser).mockResolvedValue(
+        mockRepositoryUser,
+      );
 
-            const { result } = renderHook(() => useGetCardProjectAndBranch(MOCK_BUILD_ID), {
-                wrapper: createWrapper(),
-            });
+      const { result } = renderHook(() => useGetRepositoryUser(true), {
+        wrapper: createWrapper(),
+      });
 
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(githubInfoService.getCardRepoAndBranches).toHaveBeenCalledWith(MOCK_BUILD_ID, TEST_PROJECT_KEY);
-        });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(mockRepositoryUser);
+      expect(githubInfoService.getRepositoryUser).toHaveBeenCalledWith(
+        TEST_PROJECT_KEY,
+      );
     });
+  });
 
-    // ─── useRevokeAccess ───────────────────────────────────────────────────────
+  // ─── useRemoveAuthorization ───────────────────────────────────────────────
 
-    describe("useRevokeAccess", () => {
-        it("should revoke access successfully", async () => {
-            vi.mocked(githubInfoService.revokeAccess).mockResolvedValue(mockSuccessResponse as any);
+  describe("useRemoveAuthorization", () => {
+    it("should remove authorization successfully", async () => {
+      vi.mocked(githubInfoService.removeAuthorization).mockResolvedValue(
+        mockSuccessResponse as any,
+      );
 
-            const { result } = renderHook(() => useRevokeAccess(), {
-                wrapper: createWrapper(),
-            });
+      const { result } = renderHook(() => useRemoveAuthorization(), {
+        wrapper: createWrapper(),
+      });
 
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(result.current.data).toEqual(mockSuccessResponse);
-            expect(githubInfoService.revokeAccess).toHaveBeenCalled();
-        });
+      result.current.mutate();
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(githubInfoService.removeAuthorization).toHaveBeenCalled();
     });
+  });
 
-    // ─── useGetRepositoryUser ──────────────────────────────────────────────────
+  // ─── useGithubBranches ────────────────────────────────────────────────────
 
-    describe("useGetRepositoryUser", () => {
-        it("should fetch repository user successfully", async () => {
-            vi.mocked(githubInfoService.getRepositoryUser).mockResolvedValue(mockRepositoryUser);
+  describe("useGithubBranches", () => {
+    it("should fetch github branches successfully", async () => {
+      const mockBranches = [mockBranch];
+      vi.mocked(githubInfoService.getGithubBranches).mockResolvedValue(
+        mockBranches as any,
+      );
 
-            const { result } = renderHook(() => useGetRepositoryUser(true), {
-                wrapper: createWrapper(),
-            });
+      const { result } = renderHook(() => useGithubBranches("repo-name"), {
+        wrapper: createWrapper(),
+      });
 
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(result.current.data).toEqual(mockRepositoryUser);
-            expect(githubInfoService.getRepositoryUser).toHaveBeenCalledWith(TEST_PROJECT_KEY);
-        });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(mockBranches);
+      expect(githubInfoService.getGithubBranches).toHaveBeenCalledWith(
+        "repo-name",
+        TEST_PROJECT_KEY,
+      );
     });
+  });
 
-    // ─── useRemoveAuthorization ───────────────────────────────────────────────
+  // ─── useRepoAndGitBranchMatch ──────────────────────────────────────────────
 
-    describe("useRemoveAuthorization", () => {
-        it("should remove authorization successfully", async () => {
-            vi.mocked(githubInfoService.removeAuthorization).mockResolvedValue(mockSuccessResponse as any);
+  describe("useRepoAndGitBranchMatch", () => {
+    it("should check repo and branch match successfully", async () => {
+      vi.mocked(githubInfoService.getRepoAndGitBranchMatch).mockResolvedValue(
+        mockSuccessResponse as any,
+      );
 
-            const { result } = renderHook(() => useRemoveAuthorization(), {
-                wrapper: createWrapper(),
-            });
+      const { result } = renderHook(
+        () => useRepoAndGitBranchMatch(MOCK_REPO_ID),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
-            result.current.mutate();
-
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(githubInfoService.removeAuthorization).toHaveBeenCalled();
-        });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(mockSuccessResponse);
+      expect(githubInfoService.getRepoAndGitBranchMatch).toHaveBeenCalledWith(
+        MOCK_REPO_ID,
+        TEST_PROJECT_KEY,
+      );
     });
+  });
 
-    // ─── useGithubBranches ────────────────────────────────────────────────────
+  // ─── useInitialRepoDeployment ─────────────────────────────────────────────
 
-    describe("useGithubBranches", () => {
-        it("should fetch github branches successfully", async () => {
-            const mockBranches = [mockBranch];
-            vi.mocked(githubInfoService.getGithubBranches).mockResolvedValue(mockBranches as any);
+  describe("useInitialRepoDeployment", () => {
+    it("should trigger initial repo deployment successfully", async () => {
+      const payload = {
+        repoId: MOCK_REPO_ID,
+        projectKey: TEST_PROJECT_KEY,
+        machineConfigId: "mc-1",
+      };
+      vi.mocked(githubInfoService.repoInitialDeploy).mockResolvedValue(
+        mockSuccessResponse as any,
+      );
 
-            const { result } = renderHook(() => useGithubBranches("repo-name"), {
-                wrapper: createWrapper(),
-            });
+      const { result } = renderHook(() => useInitialRepoDeployment(), {
+        wrapper: createWrapper(),
+      });
 
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(result.current.data).toEqual(mockBranches);
-            expect(githubInfoService.getGithubBranches).toHaveBeenCalledWith("repo-name", TEST_PROJECT_KEY);
-        });
+      result.current.mutate(payload);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(githubInfoService.repoInitialDeploy).toHaveBeenCalledWith(payload);
     });
+  });
 
-    // ─── useRepoAndGitBranchMatch ──────────────────────────────────────────────
+  // ─── useGetSpecs ──────────────────────────────────────────────────────────
 
-    describe("useRepoAndGitBranchMatch", () => {
-        it("should check repo and branch match successfully", async () => {
-            vi.mocked(githubInfoService.getRepoAndGitBranchMatch).mockResolvedValue(mockSuccessResponse as any);
+  describe("useGetSpecs", () => {
+    it("should fetch specs successfully", async () => {
+      const mockSpecs = { data: [] };
+      vi.mocked(githubInfoService.getSpecs).mockResolvedValue(mockSpecs as any);
 
-            const { result } = renderHook(() => useRepoAndGitBranchMatch(MOCK_REPO_ID), {
-                wrapper: createWrapper(),
-            });
+      const { result } = renderHook(() => useGetSpecs(), {
+        wrapper: createWrapper(),
+      });
 
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(result.current.data).toEqual(mockSuccessResponse);
-            expect(githubInfoService.getRepoAndGitBranchMatch).toHaveBeenCalledWith(MOCK_REPO_ID, TEST_PROJECT_KEY);
-        });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(mockSpecs);
+      expect(githubInfoService.getSpecs).toHaveBeenCalled();
     });
+  });
 
-    // ─── useInitialRepoDeployment ─────────────────────────────────────────────
+  // ─── useGetAllRepoBuilds ──────────────────────────────────────────────────
 
-    describe("useInitialRepoDeployment", () => {
-        it("should trigger initial repo deployment successfully", async () => {
-            const payload = { repoId: MOCK_REPO_ID, projectKey: TEST_PROJECT_KEY, machineConfigId: "mc-1" };
-            vi.mocked(githubInfoService.repoInitialDeploy).mockResolvedValue(mockSuccessResponse as any);
+  describe("useGetAllRepoBuilds", () => {
+    it("should fetch all repo builds successfully", async () => {
+      const mockBuilds = [mockRepositories];
+      vi.mocked(githubInfoService.getAllRepoBuilds).mockResolvedValue(
+        mockBuilds as any,
+      );
 
-            const { result } = renderHook(() => useInitialRepoDeployment(), {
-                wrapper: createWrapper(),
-            });
+      const { result } = renderHook(
+        () => useGetAllRepoBuilds(TEST_PROJECT_KEY),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
-            result.current.mutate(payload);
-
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(githubInfoService.repoInitialDeploy).toHaveBeenCalledWith(payload);
-        });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(mockBuilds);
+      expect(githubInfoService.getAllRepoBuilds).toHaveBeenCalledWith(
+        TEST_PROJECT_KEY,
+      );
     });
+  });
 
-    // ─── useGetSpecs ──────────────────────────────────────────────────────────
+  // ─── useGetAllProjects ────────────────────────────────────────────────────
 
-    describe("useGetSpecs", () => {
-        it("should fetch specs successfully", async () => {
-            const mockSpecs = { data: [] };
-            vi.mocked(githubInfoService.getSpecs).mockResolvedValue(mockSpecs as any);
+  describe("useGetAllProjects", () => {
+    it("should fetch all projects successfully", async () => {
+      const mockProjects = [mockRepositories];
+      vi.mocked(githubInfoService.getAllProjects).mockResolvedValue(
+        mockProjects as any,
+      );
 
-            const { result } = renderHook(() => useGetSpecs(), {
-                wrapper: createWrapper(),
-            });
+      const { result } = renderHook(() => useGetAllProjects(TEST_PROJECT_KEY), {
+        wrapper: createWrapper(),
+      });
 
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(result.current.data).toEqual(mockSpecs);
-            expect(githubInfoService.getSpecs).toHaveBeenCalled();
-        });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(mockProjects);
+      expect(githubInfoService.getAllProjects).toHaveBeenCalledWith(
+        TEST_PROJECT_KEY,
+      );
     });
+  });
 
-    // ─── useGetAllRepoBuilds ──────────────────────────────────────────────────
+  // ─── useGetRepoDetails ────────────────────────────────────────────────────
 
-    describe("useGetAllRepoBuilds", () => {
-        it("should fetch all repo builds successfully", async () => {
-            const mockBuilds = [mockRepositories];
-            vi.mocked(githubInfoService.getAllRepoBuilds).mockResolvedValue(mockBuilds as any);
+  describe("useGetRepoDetails", () => {
+    it("should fetch repo details successfully", async () => {
+      const mockDetails = {};
+      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue(
+        mockDetails as any,
+      );
 
-            const { result } = renderHook(() => useGetAllRepoBuilds(TEST_PROJECT_KEY), {
-                wrapper: createWrapper(),
-            });
+      const { result } = renderHook(
+        () => useGetRepoDetails(TEST_PROJECT_KEY, MOCK_REPO_ID),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(result.current.data).toEqual(mockBuilds);
-            expect(githubInfoService.getAllRepoBuilds).toHaveBeenCalledWith(TEST_PROJECT_KEY);
-        });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(mockDetails);
+      expect(githubInfoService.getRepoDetails).toHaveBeenCalledWith(
+        TEST_PROJECT_KEY,
+        MOCK_REPO_ID,
+      );
     });
+  });
 
-    // ─── useGetAllProjects ────────────────────────────────────────────────────
+  // ─── useChangeBuildSpecs ──────────────────────────────────────────────────
 
-    describe("useGetAllProjects", () => {
-        it("should fetch all projects successfully", async () => {
-            const mockProjects = [mockRepositories];
-            vi.mocked(githubInfoService.getAllProjects).mockResolvedValue(mockProjects as any);
+  describe("useChangeBuildSpecs", () => {
+    it("should change build specs successfully", async () => {
+      const payload = {
+        deploymentType: "manual" as const,
+        hostingProviderId: "hp-1",
+        machineConfigId: "mc-1",
+        regionId: "reg-1",
+        repoId: MOCK_REPO_ID,
+      };
+      vi.mocked(githubInfoService.changeBuildSpecs).mockResolvedValue(
+        mockSuccessResponse as any,
+      );
 
-            const { result } = renderHook(() => useGetAllProjects(TEST_PROJECT_KEY), {
-                wrapper: createWrapper(),
-            });
+      const { result } = renderHook(() => useChangeBuildSpecs(), {
+        wrapper: createWrapper(),
+      });
 
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(result.current.data).toEqual(mockProjects);
-            expect(githubInfoService.getAllProjects).toHaveBeenCalledWith(TEST_PROJECT_KEY);
-        });
+      result.current.mutate(payload);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(githubInfoService.changeBuildSpecs).toHaveBeenCalledWith(payload);
     });
+  });
 
-    // ─── useGetRepoDetails ────────────────────────────────────────────────────
+  // ─── useUpdateRepoSettings ───────────────────────────────────────────────────
 
-    describe("useGetRepoDetails", () => {
-        it("should fetch repo details successfully", async () => {
-            const mockDetails = {};
-            vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue(mockDetails as any);
+  describe("useUpdateRepoSettings", () => {
+    it("should change repo specs successfully", async () => {
+      const payload = {
+        repoId: MOCK_REPO_ID,
+        projectKey: TEST_PROJECT_KEY,
+        machineConfigId: "mc-1",
+      };
+      vi.mocked(githubInfoService.updateRepoSettings).mockResolvedValue(
+        mockSuccessResponse as any,
+      );
 
-            const { result } = renderHook(() => useGetRepoDetails(TEST_PROJECT_KEY, MOCK_REPO_ID), {
-                wrapper: createWrapper(),
-            });
+      const { result } = renderHook(() => useUpdateRepoSettings(), {
+        wrapper: createWrapper(),
+      });
 
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(result.current.data).toEqual(mockDetails);
-            expect(githubInfoService.getRepoDetails).toHaveBeenCalledWith(TEST_PROJECT_KEY, MOCK_REPO_ID);
-        });
+      result.current.mutate(payload);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(githubInfoService.updateRepoSettings).toHaveBeenCalledWith(
+        payload,
+      );
     });
-
-    // ─── useChangeBuildSpecs ──────────────────────────────────────────────────
-
-    describe("useChangeBuildSpecs", () => {
-        it("should change build specs successfully", async () => {
-            const payload = {
-                deploymentType: "manual" as const,
-                hostingProviderId: "hp-1",
-                machineConfigId: "mc-1",
-                regionId: "reg-1",
-                repoId: MOCK_REPO_ID,
-            };
-            vi.mocked(githubInfoService.changeBuildSpecs).mockResolvedValue(mockSuccessResponse as any);
-
-            const { result } = renderHook(() => useChangeBuildSpecs(), {
-                wrapper: createWrapper(),
-            });
-
-            result.current.mutate(payload);
-
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(githubInfoService.changeBuildSpecs).toHaveBeenCalledWith(payload);
-        });
-    });
-
-    // ─── useChangeRepoSpecs ───────────────────────────────────────────────────
-
-    describe("useChangeRepoSpecs", () => {
-        it("should change repo specs successfully", async () => {
-            const payload = { repoId: MOCK_REPO_ID, projectKey: TEST_PROJECT_KEY, machineConfigId: "mc-1" };
-            vi.mocked(githubInfoService.changeRepoSpecs).mockResolvedValue(mockSuccessResponse as any);
-
-            const { result } = renderHook(() => useChangeRepoSpecs(), {
-                wrapper: createWrapper(),
-            });
-
-            result.current.mutate(payload);
-
-            await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(githubInfoService.changeRepoSpecs).toHaveBeenCalledWith(payload);
-        });
-    });
+  });
 });

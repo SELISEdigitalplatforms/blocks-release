@@ -1,7 +1,7 @@
 import { API_BASE } from "@/constants/endpoint.constant";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 
-const rawAlertBase = getRuntimeEnv("BLOCKS_OBSERVABILITY_APP_URL");
+const rawAlertBase = getRuntimeEnv("BLOCKS_LOGIC_APP_URL");
 const alertBase = rawAlertBase.replace(/\/+$/, "");
 const apiBase = API_BASE.replace(/^\/+/, "");
 
@@ -12,7 +12,7 @@ const buildAlertEndpoint = (path: string): string => {
   if (!alertBase) {
     if (!didWarnMissingAlertBase) {
       console.warn(
-        "BLOCKS_OBSERVABILITY_APP_URL is missing; alert endpoints will use the current origin.",
+        "BLOCKS_LOGIC_APP_URL is missing; alert endpoints will use the current origin.",
       );
       didWarnMissingAlertBase = true;
     }

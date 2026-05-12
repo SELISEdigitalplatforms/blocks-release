@@ -66,8 +66,15 @@ public static class ServiceRegistry
 
             if (env.IsDevelopment())
             {
-                var kubeConfig = KubernetesClientConfiguration.BuildConfigFromConfigFile();
-                return new Kubernetes(kubeConfig);
+                try
+                {
+                    var kubeConfig = KubernetesClientConfiguration.BuildConfigFromConfigFile();
+                    return new Kubernetes(kubeConfig);
+                }
+                catch
+                {
+                    return null!;
+                }
             }
             try
             {

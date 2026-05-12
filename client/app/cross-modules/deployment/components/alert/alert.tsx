@@ -12,34 +12,29 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui-kits/tabs/tabs";
-
 import ComingSoonPage from "@/components/coming-soon/coming-soon";
 import { Button } from "@/components/ui-kits/button/button";
+import { useGetMonitorListById } from "@/cross-modules/deployment/hooks/use-alerts";
 import { useProjectStore } from "@/store/useProjectStore";
 import { useDeploymentStatus } from "@blocks-deployment/components/deployment-details/shared/notification-listener";
 import { ALERT_PROVIDERS } from "@blocks-deployment/constants/alert.constant";
-import { useGetMonitorListById } from "@/cross-modules/deployment/hooks/use-alerts";
-import { Plus } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useState } from "react";
-import { AddSingleMonitorForm } from "../monitor/form/add-monitor-form";
-import { MonitorModal } from "../monitor/modal/monitor-modal";
+import { useNavigate } from "react-router-dom";
 import { AlertsList } from "./alerts-list";
 
 const Alert = ({
-  repoName,
   repoId,
-  repoUrl,
   latestBuild,
   status,
   buildLength,
 }: {
-  repoName: string;
   repoId: string;
-  repoUrl: string;
   latestBuild: unknown;
   status: string;
   buildLength: number;
 }) => {
+  const navigate = useNavigate();
   const build = useDeploymentStatus(latestBuild, status);
   const projectKey = useProjectStore()?.selectedProject?.tenantId || "";
   const { data, isLoading } = useGetMonitorListById(projectKey, repoId);
@@ -59,22 +54,26 @@ const Alert = ({
         }>
         <CardHeader>
           <div className="flex flex-col items-start justify-between sm:flex-row sm:items-center">
-            <span className="p-2 text-xl font-semibold">Monitoring</span>
-            <div className="flex items-center justify-end gap-4 rounded text-base">
-              <div className="flex items-center gap-2 sm:gap-4">
-                <Button
-                  onClick={() => setOpen((open) => !open)}
-                  variant={"outline"}
-                  className="h-9"
-                  disabled={
-                    buildLength <= 0 ||
-                    (build !== "Succeeded" && build !== "Failed")
-                  }>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add
-                </Button>
-              </div>
-              <div className="md:hidden">
+            <span className="p-2 text-xl font-semibold leading-none">
+              Monitoring
+            </span>
+            <div className="flex h-10 items-center justify-end gap-4 rounded text-base">
+              <Button
+                onClick={() =>
+                  navigate(
+                    "https://dev-observability.blocksdevelopers.com/health",
+                    { replace: true },
+                  )
+                }
+                className="h-9 gap-2"
+                disabled={
+                  buildLength <= 0 ||
+                  (build !== "Succeeded" && build !== "Failed")
+                }>
+                <ExternalLink className="h-4 w-4" />
+                Manage Monitors
+              </Button>
+              <div className="flex items-center md:hidden">
                 <Select
                   value={tabId}
                   onValueChange={(value: string) =>
@@ -89,7 +88,7 @@ const Alert = ({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="hidden h-9 md:block">
+              <div className="hidden h-9 items-center md:flex">
                 <TabsList>
                   <TabsTrigger value="health" className="w-20">
                     Health
@@ -112,14 +111,14 @@ const Alert = ({
                 <ComingSoonPage message="Coming soon" />
               </div>
             </TabsContent>
-            <MonitorModal open={open} onOpenChange={setOpen}>
+            {/* <MonitorModal open={open} onOpenChange={setOpen}>
               <AddSingleMonitorForm
                 repoId={repoId}
                 repoName={repoName}
                 repoUrl={repoUrl}
                 onSuccess={() => setOpen(false)}
               />
-            </MonitorModal>
+            </MonitorModal> */}
           </CardContent>
         ) : (
           <div className="flex h-20 items-center justify-center">

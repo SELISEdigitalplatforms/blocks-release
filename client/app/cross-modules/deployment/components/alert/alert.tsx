@@ -18,7 +18,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/useProjectStore";
 import { useDeploymentStatus } from "@blocks-deployment/components/deployment-details/shared/notification-listener";
 import { ALERT_PROVIDERS } from "@blocks-deployment/constants/alert.constant";
-import { useGetMonitorListById } from "@blocks-deployment/hooks/alerts";
+import { useGetMonitorListById } from "@/cross-modules/deployment/hooks/use-alerts";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { AddSingleMonitorForm } from "../monitor/form/add-monitor-form";

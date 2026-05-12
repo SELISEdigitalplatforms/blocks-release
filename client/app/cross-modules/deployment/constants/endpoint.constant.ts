@@ -1,33 +1,20 @@
 import { API_BASE } from "@/constants/endpoint.constant";
 
 export const ALERT_ENDPOINTS = {
-  SAVE_MONITOR:
-    "https://dev-logic.blocksdevelopers.com/api/Monitor/SaveMonitor",
-  UPDATE_MONITOR:
-    "https://dev-logic.blocksdevelopers.com/api/Monitor/UpdateMonitor",
-  DELETE_MONITOR:
-    "https://dev-logic.blocksdevelopers.com/api/Monitor/DeleteMonitor",
-  GET_MONITOR_LIST:
-    "https://dev-logic.blocksdevelopers.com/api/Monitor/GetMonitorList",
-  GET_MONITOR_LIST_BY_REPO_ID:
-    "https://dev-logic.blocksdevelopers.com/api/Monitor/GetMonitorListByRepoId",
-  GET_MONITOR_DETAILS:
-    "https://dev-logic.blocksdevelopers.com/api/Monitor/GetMonitorDetails",
-  IS_EXTERNAL_SERVICE_CONFIGURED:
-    "https://dev-logic.blocksdevelopers.com/api/Monitor/IsExternalServiceConfigured",
-  GET_INCIDENT_LIST:
-    "https://dev-logic.blocksdevelopers.com/api/Monitor/GetIncidentList",
-  GET_MONITOR_BY_ID:
-    "https://dev-logic.blocksdevelopers.com/api/Monitor/GetMonitorById",
-  GET_MONITOR_RESPONSE_TIME:
-    "https://dev-logic.blocksdevelopers.com/api/Monitor/GetMonitorResponseTime",
-  GET_MONITOR_DOWN_TIME:
-    "https://dev-logic.blocksdevelopers.com/api/Monitor/GetMonitorDownTime",
-  SAVE_HEALTH: "https://dev-logic.blocksdevelopers.com/api/Health/SaveHealth",
-  UPDATE_HEALTH:
-    "https://dev-logic.blocksdevelopers.com/api/Health/UpdateHealth",
-  DELETE_HEALTH:
-    "https://dev-logic.blocksdevelopers.com/api/Health/DeleteHealth",
+  SAVE_MONITOR: `${API_BASE}/Monitor/SaveMonitor`,
+  UPDATE_MONITOR: `${API_BASE}/Monitor/UpdateMonitor`,
+  DELETE_MONITOR: `${API_BASE}/Monitor/DeleteMonitor`,
+  GET_MONITOR_LIST: `${API_BASE}/Monitor/GetMonitorList`,
+  GET_MONITOR_LIST_BY_REPO_ID: `${API_BASE}/Monitor/GetMonitorListByRepoId`,
+  GET_MONITOR_DETAILS: `${API_BASE}/Monitor/GetMonitorDetails`,
+  IS_EXTERNAL_SERVICE_CONFIGURED: `${API_BASE}/Monitor/IsExternalServiceConfigured`,
+  GET_INCIDENT_LIST: `${API_BASE}/Monitor/GetIncidentList`,
+  GET_MONITOR_BY_ID: `${API_BASE}/Monitor/GetMonitorById`,
+  GET_MONITOR_RESPONSE_TIME: `${API_BASE}/Monitor/GetMonitorResponseTime`,
+  GET_MONITOR_DOWN_TIME: `${API_BASE}/Monitor/GetMonitorDownTime`,
+  SAVE_HEALTH: `${API_BASE}/Health/SaveHealth`,
+  UPDATE_HEALTH: `${API_BASE}/Health/UpdateHealth`,
+  DELETE_HEALTH: `${API_BASE}/Health/DeleteHealth`,
 } as const;
 
 export const CLOUD_BUILD_ENDPOINTS = {

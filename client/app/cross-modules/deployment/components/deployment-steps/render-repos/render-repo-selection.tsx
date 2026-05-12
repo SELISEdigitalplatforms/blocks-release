@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, ChevronsUpDown, Github, GitBranch } from "lucide-react";
-import { useGithubBranches } from "@blocks-deployment/hooks/github-info";
+import { useGithubBranches } from "@/cross-modules/deployment/hooks/use-github-info";
 import WarningBanner from "../import-repo/helpers/warning-banner";
 import type {
   IBranch,

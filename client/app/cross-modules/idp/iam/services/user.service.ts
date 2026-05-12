@@ -1,12 +1,11 @@
-import { http } from "@/lib/http-client";
+import { serviceInstances } from "@/lib/http-client";
 import { User } from "@blocks-idp/iam/models/user";
 import { USER_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class UserService {
-  constructor() {}
-
+  private readonly httpClient = serviceInstances.deploymentService;
   getUser(): Promise<{ data: User }> {
-    return http.get(USER_ENDPOINTS.GET_USER);
+    return this.httpClient.get(USER_ENDPOINTS.GET_USER);
   }
 }
 

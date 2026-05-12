@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui-kits/button/button";
-import { useGetCardProjectAndBranch } from "@blocks-deployment/hooks/github-info";
+import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use-github-info";
 import { toast } from "@/hooks/use-toast";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
 import { ChevronLeft } from "lucide-react";

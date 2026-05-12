@@ -26,13 +26,16 @@ import { MonitorModal } from "../monitor/modal/monitor-modal";
 import { AlertsList } from "./alerts-list";
 
 const Alert = ({
+  repoName,
   repoId,
+  repoUrl,
   latestBuild,
   status,
   buildLength,
 }: {
   repoName: string;
   repoId: string;
+  repoUrl: string;
   latestBuild: unknown;
   status: string;
   buildLength: number;
@@ -109,9 +112,11 @@ const Alert = ({
                 <ComingSoonPage message="Coming soon" />
               </div>
             </TabsContent>
-            <MonitorModal open={open} onOpenChange={setOpen} itemId={null}>
+            <MonitorModal open={open} onOpenChange={setOpen}>
               <AddSingleMonitorForm
-                itemId={null}
+                repoId={repoId}
+                repoName={repoName}
+                repoUrl={repoUrl}
                 onSuccess={() => setOpen(false)}
               />
             </MonitorModal>

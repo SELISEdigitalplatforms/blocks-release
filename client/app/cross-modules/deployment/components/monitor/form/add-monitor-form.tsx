@@ -3,15 +3,25 @@ import { MonitorFormFields } from "./monitor-form-fields";
 import { useMonitorFormController } from "./use-monitor-form-controller";
 
 type Props = {
-  itemId?: string | null;
+  repoId: string;
+  repoName: string;
+  repoUrl: string;
   onSuccess?: () => void;
 };
 
-export function AddSingleMonitorForm({ itemId: _itemId, onSuccess }: Props) {
+export function AddSingleMonitorForm({
+  repoId,
+  repoName,
+  repoUrl,
+  onSuccess,
+}: Props) {
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
 
   const controller = useMonitorFormController({
     mode: "add",
+    repoId,
+    repoName,
+    repoUrl,
     projectKey,
     onSuccess,
   });
@@ -22,19 +32,9 @@ export function AddSingleMonitorForm({ itemId: _itemId, onSuccess }: Props) {
       mode="add"
       onSubmit={controller.form.handleSubmit(controller.submit)}
       monitorType={controller.monitorType}
-      sourceType={controller.sourceType}
-      deployedRepos={controller.deployedRepos}
-      services={controller.services}
-      isLoadingRepos={controller.isLoadingRepos}
-      isLoadingServices={controller.isLoadingServices}
       isSubmitting={controller.isSubmitting}
       isEditMode={controller.isEditMode}
-      sourceError={controller.sourceError}
-      isSourceBlocked={controller.isSourceBlocked}
       onMonitorTypeChange={controller.setMonitorType}
-      onSourceTypeChange={controller.setSourceType}
-      onRepoChange={controller.setSelectedRepoId}
-      onServiceChange={controller.setSelectedServiceId}
     />
   );
 }

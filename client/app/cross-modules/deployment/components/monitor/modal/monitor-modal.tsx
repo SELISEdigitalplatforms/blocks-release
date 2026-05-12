@@ -9,18 +9,14 @@ import { X } from "lucide-react";
 import { DialogProps } from "@radix-ui/react-dialog";
 import { PropsWithChildren } from "react";
 
-type Props = PropsWithChildren<
-  DialogProps & {
-    itemId: string | null;
-  }
->;
+type Props = PropsWithChildren<DialogProps>;
 
-export function MonitorModal({ itemId, open, onOpenChange, children }: Props) {
+export function MonitorModal({ open, onOpenChange, children }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="md:max-w-screen-sm" hideCloseButton>
         <DialogHeader className="relative pr-8">
-          <DialogTitle>{itemId ? "Configure" : "Add monitor"}</DialogTitle>
+          <DialogTitle>{"Add monitor"}</DialogTitle>
           <DialogClose
             type="button"
             onClick={() => onOpenChange?.(false)}

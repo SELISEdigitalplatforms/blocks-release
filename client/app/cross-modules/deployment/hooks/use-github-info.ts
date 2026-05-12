@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { githubInfoService } from "../services/github-info.service";
 import { IBuildApiResponse } from "@blocks-deployment/models/deployed-logs";
-import {
+import type {
   IChangeRepoSpecs,
   IChangeSettings,
   IManualDeploymentPayload,
+  IUpdateRepoSettingsPayload,
 } from "@blocks-deployment/models/utils";
 import { useProjectStore } from "@/store/useProjectStore";
 
@@ -259,18 +260,26 @@ export const useChangeBuildSpecs = () => {
   });
 };
 
-export const useChangeRepoSpecs = () => {
+export const useUpdateRepoSettings = ({
+  onSuccess,
+  onError,
+}: {
+  onSuccess?: () => void;
+  onError?: () => void;
+}) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: IChangeRepoSpecs) =>
-      githubInfoService.changeRepoSpecs(payload),
+    mutationFn: (payload: IUpdateRepoSettingsPayload) =>
+      githubInfoService.updateRepoSettings(payload),
     onSuccess: (data) => {
       queryClient.setQueryData(["repo-specs"], data);
       queryClient.invalidateQueries({ queryKey: ["repo-builds"] });
+      queryClient.invalidateQueries({ queryKey: ["repo-details"] });
+      onSuccess?.();
     },
-    onError: (error) => {
-      console.error("Build specs change failed:", error);
+    onError: () => {
+      onError?.();
     },
   });
 };

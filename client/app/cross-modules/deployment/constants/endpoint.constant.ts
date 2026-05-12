@@ -25,6 +25,7 @@ export const CLOUD_BUILD_ENDPOINTS = {
   RUN_BUILD: `${API_BASE}/build/run-build`,
   MANUAL: `${API_BASE}/build/manual`,
   SETTINGS: `${API_BASE}/build/settings`,
+  REPO_SETTINGS_UPDATE: `${API_BASE}/build/repo-settings-update`,
   REPORTS: `${API_BASE}/build/reports`,
   PROCESS_DEPENDENCY_TRACK_USER: `${API_BASE}/AnalyticsTool/ProcessDependencyTrackUser`,
   PROCESS_SONARQUBE_USER: `${API_BASE}/AnalyticsTool/ProcessSonarQubeUser`,

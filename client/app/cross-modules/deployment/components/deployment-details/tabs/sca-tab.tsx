@@ -40,7 +40,7 @@ import {
 } from "@/cross-modules/deployment/hooks/use-observability";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui-kits/button/button";
-import { ErrorDisplay } from "@/components/error-display/error-display";
+import { ErrorDisplay } from "@/components/error-display";
 
 interface Dependency {
   id: string;

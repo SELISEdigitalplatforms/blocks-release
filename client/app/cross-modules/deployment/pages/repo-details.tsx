@@ -673,13 +673,7 @@ export default function RepoDetails() {
                   </CardContent>
                 </Card>
                 <Alert
-                  repoName={latestBuild?.repoName || ""}
                   repoId={repoId}
-                  repoUrl={
-                    repoDetails?.data?.repo?.customDeploymentURL ||
-                    repoDetails?.data?.repo?.defaultDeploymentUrl ||
-                    repoDetails?.data?.repo?.repoUrl
-                  }
                   status={latestBuild?.status || ""}
                   latestBuild={latestBuild}
                   buildLength={filteredBuilds?.length}

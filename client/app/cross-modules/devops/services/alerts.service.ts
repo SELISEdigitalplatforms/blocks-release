@@ -1,4 +1,5 @@
 import { http } from "@/lib/http-client";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 import {
   GetMonitorByIdResponse,
   GetMonitorPingLogsResponse,
@@ -15,7 +16,7 @@ import {
 } from "@blocks-devops/models/alerts";
 
 class AlertsService {
-  private readonly alertBaseUrl = "https://dev-log.blocksdevelopers.com/api";
+  private readonly alertBaseUrl = getRuntimeEnv("BLOCKS_LOGIC_APP_URL") + "/api";
 
   async addSingleMonitor(payload: IAddSingleMonitorPayload) {
     const url = `${this.alertBaseUrl}/Monitor/SaveMonitor`;

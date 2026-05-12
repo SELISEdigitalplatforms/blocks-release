@@ -29,7 +29,7 @@ import { REPO_DETAILS_PROVIDERS } from "@blocks-deployment/constants/alert.const
 import {
   useGetRepoDetails,
   useInitialRepoDeployment,
-} from "@blocks-deployment/hooks/github-info";
+} from "@/cross-modules/deployment/hooks/use-github-info";
 import { DEPLOYMENT_OPTIONS_DETAILS } from "@blocks-deployment/models/deployment-settings";
 import {
   DeploymentFormData,

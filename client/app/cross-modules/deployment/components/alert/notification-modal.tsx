@@ -10,7 +10,7 @@ import { useState } from "react";
 import {
   useUpdateHealth,
   useUpdateSingleMonitor,
-} from "@blocks-deployment/hooks/alerts";
+} from "@/cross-modules/deployment/hooks/use-alerts";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { ErrorTransformer } from "@/lib/error-transform";
 import { z } from "zod";

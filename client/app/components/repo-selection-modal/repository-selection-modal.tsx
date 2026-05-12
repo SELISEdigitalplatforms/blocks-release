@@ -25,7 +25,7 @@ import {
 } from "@/components/ui-kits/command/command";
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
-import { useGetGithubRepos } from "@/cross-modules/deployment/hooks/github-info";
+import { useGetGithubRepos } from "@/cross-modules/deployment/hooks/use-github-info";
 import {
   IRepository,
   iconMap,

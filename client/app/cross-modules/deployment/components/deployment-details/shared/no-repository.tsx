@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui-kits/dialog/dialog";
-import { useValidateAuthorization } from "@/cross-modules/deployment/hooks/github-info";
+import { useValidateAuthorization } from "@/cross-modules/deployment/hooks/use-github-info";
 import { IRepository } from "@/cross-modules/deployment/models/github-info";
 import { useAddAssets } from "@/cross-modules/identifier/hooks/use-project";
 import { useBoolean } from "@/hooks/use-boolean";

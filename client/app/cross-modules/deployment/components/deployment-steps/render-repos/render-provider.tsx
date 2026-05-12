@@ -10,7 +10,7 @@ import {
 import { iconMap } from "@blocks-deployment/models/github-info";
 import { Button } from "@/components/ui-kits/button/button";
 import { useNavigate } from "react-router-dom";
-import { useValidateAuthorization } from "@blocks-deployment/hooks/github-info";
+import { useValidateAuthorization } from "@/cross-modules/deployment/hooks/use-github-info";
 import { IProviderDestination } from "@blocks-deployment/models/utils";
 import { useProjectStore } from "@/store/useProjectStore";
 

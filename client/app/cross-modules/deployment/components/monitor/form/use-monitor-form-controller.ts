@@ -3,7 +3,7 @@ import {
   useSaveHealth,
   useUpdateHealth,
   useUpdateSingleMonitor,
-} from "@/cross-modules/deployment/hooks/alerts";
+} from "@/cross-modules/deployment/hooks/use-alerts";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-toast";
 import { ErrorTransformer } from "@/lib/error-transform";
 import { zodResolver } from "@hookform/resolvers/zod";

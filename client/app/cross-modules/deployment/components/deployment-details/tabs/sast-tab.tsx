@@ -2,7 +2,7 @@ import { Separator } from "@/components/ui-kits/separator/separator";
 import {
   useGetSASTData,
   useSASTRedirectLink,
-} from "@blocks-deployment/hooks/observability";
+} from "@/cross-modules/deployment/hooks/use-observability";
 import { AlertTriangle, ExternalLink, Shield, Clock } from "lucide-react";
 import { useParams } from "react-router-dom";
 import React, { useMemo } from "react";

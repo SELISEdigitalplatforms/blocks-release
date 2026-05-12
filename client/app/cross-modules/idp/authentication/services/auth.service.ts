@@ -1,4 +1,4 @@
-import { http } from "@/lib/http-client";
+import { serviceInstances } from "@/lib/http-client";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
@@ -8,6 +8,7 @@ import {
 import { AUTH_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class AuthService {
+  private readonly httpClient = serviceInstances.deploymentService;
   signinByEmail(
     payload: ISigninByEmailPayload,
   ): Promise<ISigninByEmailResponse> {
@@ -16,7 +17,7 @@ export class AuthService {
     body.append("username", payload.username);
     body.append("password", payload.password);
 
-    return http.post(
+    return this.httpClient.post(
       AUTH_ENDPOINTS.TOKEN,
       body,
       {
@@ -38,7 +39,7 @@ export class AuthService {
     body.append("state", payload.state);
     body.append("client_secret", "e048ec1b63d548dd85d053f364d5d54c");
 
-    return http.post(
+    return this.httpClient.post(
       `https://dev-idp.blocksdevelopers.com${AUTH_ENDPOINTS.TOKEN}`,
       body,
       {
@@ -59,7 +60,7 @@ export class AuthService {
     const refreshToken = isLocalhost
       ? useAuthStore.getState().refreshToken || ""
       : "";
-    return http.post(AUTH_ENDPOINTS.LOGOUT, { refreshToken });
+    return this.httpClient.post(AUTH_ENDPOINTS.LOGOUT, { refreshToken });
   }
 }
 

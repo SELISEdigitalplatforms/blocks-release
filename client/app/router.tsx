@@ -32,7 +32,6 @@ export const router = createBrowserRouter([
   {
     element: <DashboardLayout />,
     children: [
-      { path: "/profile", element: <ProfilePage /> },
       { path: "/deployment", element: <DeploymentPage /> },
       {
         path: "/deployment/repo/:repoId",
@@ -46,6 +45,7 @@ export const router = createBrowserRouter([
         path: "/deployment/repo/:repoId/deployment-live/:buildId",
         element: <DeploymentLivePage />,
       },
+      { path: "/profile", element: <ProfilePage /> },
     ],
   },
 

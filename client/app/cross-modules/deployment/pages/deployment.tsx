@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import DeploymentOverview from "@blocks-deployment/components/deployment-home/deployment-overview";
 import { useGetAllProjects } from "@blocks-deployment/hooks/github-info";
-import { Loader } from "lucide-react";
+import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 import { toast } from "@/hooks/use-toast";
 import { useProjectStore } from "@/store/useProjectStore";
 
@@ -52,14 +52,7 @@ const Deployment = () => {
   }
 
   if (loadingProjects) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader className="h-8 w-8 animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner variant="overlay" label="Loading..." />;
   }
 
   return <DeploymentOverview projects={apiProjects?.data} refetch={refetch} />;

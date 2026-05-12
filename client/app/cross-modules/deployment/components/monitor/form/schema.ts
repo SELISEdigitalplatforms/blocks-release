@@ -58,30 +58,13 @@ export const monitorFormSchema = z
       .min(1, "Service name is required")
       .max(100, "Service name too long. Maximum 100 characters allowed."),
     monitorConfigurationType: z.enum(["request", "callback"]),
-    sourceType: z.enum(["none", "deployed", "my-services"]),
+    sourceType: z.enum(["deployed", "my-services", "none"]),
     selectedRepoId: z.string().default(""),
-    selectedServiceId: z.string().default(""),
     urlMonitor: z.string().trim().default(""),
     monitorSettings: monitorSettingsSchema,
     requestConfiguration: requestConfigurationSchema,
   })
   .superRefine((data, ctx) => {
-    if (data.sourceType === "deployed" && !data.selectedRepoId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Select a deployed repo.",
-        path: ["selectedRepoId"],
-      });
-    }
-
-    if (data.sourceType === "my-services" && !data.selectedServiceId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Select a service.",
-        path: ["selectedServiceId"],
-      });
-    }
-
     if (data.monitorConfigurationType === "request") {
       if (!data.urlMonitor) {
         ctx.addIssue({
@@ -113,15 +96,22 @@ export const monitorFormSchema = z
 
 export type MonitorFormValues = z.infer<typeof monitorFormSchema>;
 
-export const getMonitorFormDefaultValues = (
-  monitorConfigurationType: MonitorConfigurationType = "request",
-): MonitorFormValues => ({
-  name: "",
+export const getMonitorFormDefaultValues = ({
+  monitorConfigurationType = "request",
+  repoId,
+  repoName,
+  repoUrl,
+}: {
+  monitorConfigurationType?: MonitorConfigurationType;
+  repoId: string;
+  repoName: string;
+  repoUrl: string;
+}): MonitorFormValues => ({
+  name: repoName,
   monitorConfigurationType,
-  sourceType: "none",
-  selectedRepoId: "",
-  selectedServiceId: "",
-  urlMonitor: "",
+  sourceType: "deployed",
+  selectedRepoId: repoId,
+  urlMonitor: repoUrl,
   monitorSettings: {
     monitor_interval: 2,
     request_timeout: 3,

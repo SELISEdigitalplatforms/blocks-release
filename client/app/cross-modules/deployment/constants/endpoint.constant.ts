@@ -1,42 +1,33 @@
 import { API_BASE } from "@/constants/endpoint.constant";
-import { getRuntimeEnv } from "@/lib/runtime-env";
-
-const rawAlertBase = getRuntimeEnv("BLOCKS_OBSERVABILITY_APP_URL");
-const alertBase = rawAlertBase.replace(/\/+$/, "");
-const apiBase = API_BASE.replace(/^\/+/, "");
-
-let didWarnMissingAlertBase = false;
-
-const buildAlertEndpoint = (path: string): string => {
-  const cleanedPath = path.replace(/^\/+/, "");
-  if (!alertBase) {
-    if (!didWarnMissingAlertBase) {
-      console.warn(
-        "BLOCKS_OBSERVABILITY_APP_URL is missing; alert endpoints will use the current origin.",
-      );
-      didWarnMissingAlertBase = true;
-    }
-    return `/${apiBase}/${cleanedPath}`;
-  }
-
-  return `${alertBase}/${apiBase}/${cleanedPath}`;
-};
 
 export const ALERT_ENDPOINTS = {
-  SAVE_MONITOR: buildAlertEndpoint("Monitor/SaveMonitor"),
-  UPDATE_MONITOR: buildAlertEndpoint("Monitor/UpdateMonitor"),
-  DELETE_MONITOR: buildAlertEndpoint("Monitor/DeleteMonitor"),
-  GET_MONITOR_LIST: buildAlertEndpoint("Monitor/GetMonitorList"),
-  GET_MONITOR_LIST_BY_REPO_ID: buildAlertEndpoint("Monitor/GetMonitorListByRepoId"),
-  GET_MONITOR_DETAILS: buildAlertEndpoint("Monitor/GetMonitorDetails"),
-  IS_EXTERNAL_SERVICE_CONFIGURED: buildAlertEndpoint("Monitor/IsExternalServiceConfigured"),
-  GET_INCIDENT_LIST: buildAlertEndpoint("Monitor/GetIncidentList"),
-  GET_MONITOR_BY_ID: buildAlertEndpoint("Monitor/GetMonitorById"),
-  GET_MONITOR_RESPONSE_TIME: buildAlertEndpoint("Monitor/GetMonitorResponseTime"),
-  GET_MONITOR_DOWN_TIME: buildAlertEndpoint("Monitor/GetMonitorDownTime"),
-  SAVE_HEALTH: buildAlertEndpoint("Health/SaveHealth"),
-  UPDATE_HEALTH: buildAlertEndpoint("Health/UpdateHealth"),
-  DELETE_HEALTH: buildAlertEndpoint("Health/DeleteHealth"),
+  SAVE_MONITOR:
+    "https://dev-logic.blocksdevelopers.com/api/Monitor/SaveMonitor",
+  UPDATE_MONITOR:
+    "https://dev-logic.blocksdevelopers.com/api/Monitor/UpdateMonitor",
+  DELETE_MONITOR:
+    "https://dev-logic.blocksdevelopers.com/api/Monitor/DeleteMonitor",
+  GET_MONITOR_LIST:
+    "https://dev-logic.blocksdevelopers.com/api/Monitor/GetMonitorList",
+  GET_MONITOR_LIST_BY_REPO_ID:
+    "https://dev-logic.blocksdevelopers.com/api/Monitor/GetMonitorListByRepoId",
+  GET_MONITOR_DETAILS:
+    "https://dev-logic.blocksdevelopers.com/api/Monitor/GetMonitorDetails",
+  IS_EXTERNAL_SERVICE_CONFIGURED:
+    "https://dev-logic.blocksdevelopers.com/api/Monitor/IsExternalServiceConfigured",
+  GET_INCIDENT_LIST:
+    "https://dev-logic.blocksdevelopers.com/api/Monitor/GetIncidentList",
+  GET_MONITOR_BY_ID:
+    "https://dev-logic.blocksdevelopers.com/api/Monitor/GetMonitorById",
+  GET_MONITOR_RESPONSE_TIME:
+    "https://dev-logic.blocksdevelopers.com/api/Monitor/GetMonitorResponseTime",
+  GET_MONITOR_DOWN_TIME:
+    "https://dev-logic.blocksdevelopers.com/api/Monitor/GetMonitorDownTime",
+  SAVE_HEALTH: "https://dev-logic.blocksdevelopers.com/api/Health/SaveHealth",
+  UPDATE_HEALTH:
+    "https://dev-logic.blocksdevelopers.com/api/Health/UpdateHealth",
+  DELETE_HEALTH:
+    "https://dev-logic.blocksdevelopers.com/api/Health/DeleteHealth",
 } as const;
 
 export const CLOUD_BUILD_ENDPOINTS = {

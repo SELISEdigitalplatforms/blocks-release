@@ -130,8 +130,8 @@ export interface IUpdateSingleMonitorPayload extends BaseMonitorPayload {
   itemId: string;
   repoId: string;
   repoName: string;
-  externalServiceId: string;
-  externalServiceName: string;
+  externalServiceId: string | null;
+  externalServiceName: string | null;
   url: string;
   protocolType: string;
   httpMethodType: string;
@@ -145,8 +145,8 @@ export interface IUpdateHealth extends BaseMonitorPayload {
   itemId: string;
   repoName: string;
   repoId: string;
-  externalServiceId: string;
-  externalServiceName: string;
+  externalServiceId: string | null;
+  externalServiceName: string | null;
   gracePeriodInSeconds: number;
 }
 

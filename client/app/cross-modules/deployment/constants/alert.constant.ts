@@ -1,5 +1,3 @@
-import type { MonitorConfigurationType } from "../components/monitor/form/schema";
-
 export enum ALERT_PROVIDERS {
   health = "health",
   resources = "resources",
@@ -85,20 +83,3 @@ export enum MONITOR_SOURCE_TYPES {
   ExternalServices = "3",
   OtherServices = "4",
 }
-
-export const MONITOR_TYPE_OPTIONS: {
-  id: string;
-  value: MonitorConfigurationType;
-  label: string;
-}[] = [
-  { id: "monitor-type-request", value: "request", label: "Request" },
-  { id: "monitor-type-callback", value: "callback", label: "Callback" },
-];
-
-export const MONITOR_INTERVAL_TICKS = ["30s", "1min", "5min", "30min", "1h"];
-export const MONITOR_INTERVAL_TOOLTIP =
-  "How frequently the system will check your endpoint for availability and performance";
-export const TIMEOUT_TOOLTIP =
-  "Maximum time to wait for a response from your endpoint before considering it timed out";
-export const REQUEST_JSON_TOOLTIP =
-  "Set Content-Type header to application/json for API requests";

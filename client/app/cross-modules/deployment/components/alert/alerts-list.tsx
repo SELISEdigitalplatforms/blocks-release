@@ -1,20 +1,13 @@
-import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
-import type { AlertTree } from "@blocks-deployment/models/alerts.model";
-import { useMemo } from "react";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
 import {
   FilterControls,
   useSortQueryParams,
 } from "@/components/filter-toolbar";
+import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import {
   ScrollArea,
   ScrollBar,
 } from "@/components/ui-kits/scroll-area/scroll-area";
+import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
   Table,
   TableBody,
@@ -23,13 +16,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-kits/table/table";
-import { useNavigate } from "react-router-dom";
-import { useAlertFilterQueryParams } from "./alerts-filter-toolbar";
-import ProgressBar from "@/cross-modules/deployment/components/alert/progress-bar";
 import AlertAction from "@/cross-modules/deployment/components/alert/alert-action";
-import { ArrowUp, ArrowDown } from "lucide-react";
+import ProgressBar from "@/cross-modules/deployment/components/alert/progress-bar";
 import { useProjectStore } from "@/store/useProjectStore";
-import { Pagination } from "@/components/ui-kits/pagination/pagination";
+import type { AlertTree } from "@blocks-deployment/models/alerts.model";
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { ArrowDown, ArrowUp } from "lucide-react";
+import { useMemo } from "react";
+import { useAlertFilterQueryParams } from "./alerts-filter-toolbar";
 
 type AlertsListProps = {
   data: AlertTree[];
@@ -95,7 +94,6 @@ export function AlertsList({
   totalCount = 0,
   onPageChange,
 }: AlertsListProps) {
-  const navigate = useNavigate();
   const projectKey = useProjectStore()?.selectedProject?.tenantId || "";
   const { setQueryParams } = useAlertFilterQueryParams();
   const { sortQueryParams, setSortQueryParams } = useAlertSortQueryParams();
@@ -159,7 +157,7 @@ export function AlertsList({
           />
         ),
         cell: ({ row }) => {
-          const url = row.original.url || row.original.request?.url || "N/A";
+          const url = row.original.url || "N/A";
           return (
             <div className="ml-2 flex w-[180px] items-center sm:ml-0 sm:w-[150px]">
               <span className="break-all">{url}</span>
@@ -259,11 +257,7 @@ export function AlertsList({
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-  const handleRowClick = (itemId: string) => {
-    if (itemId) {
-      navigate(`/health/monitor/${itemId}`);
-    }
-  };
+
   if (isLoading) return <LoadingSkelton />;
   return (
     <>

@@ -1,3 +1,5 @@
+import ComingSoonPage from "@/components/coming-soon/coming-soon";
+import { Button } from "@/components/ui-kits/button/button";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
 import {
   Select,
@@ -12,15 +14,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui-kits/tabs/tabs";
-import ComingSoonPage from "@/components/coming-soon/coming-soon";
-import { Button } from "@/components/ui-kits/button/button";
 import { useGetMonitorListById } from "@/cross-modules/deployment/hooks/use-alerts";
 import { useProjectStore } from "@/store/useProjectStore";
 import { useDeploymentStatus } from "@blocks-deployment/components/deployment-details/shared/notification-listener";
 import { ALERT_PROVIDERS } from "@blocks-deployment/constants/alert.constant";
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { AlertsList } from "./alerts-list";
 
 const Alert = ({
@@ -34,12 +33,10 @@ const Alert = ({
   status: string;
   buildLength: number;
 }) => {
-  const navigate = useNavigate();
   const build = useDeploymentStatus(latestBuild, status);
   const projectKey = useProjectStore()?.selectedProject?.tenantId || "";
   const { data, isLoading } = useGetMonitorListById(projectKey, repoId);
   const [tabId, setTabId] = useState("health");
-  const [open, setOpen] = useState(false);
 
   const tabChangedHandler = (value: keyof typeof ALERT_PROVIDERS) => {
     setTabId(value);
@@ -60,9 +57,9 @@ const Alert = ({
             <div className="flex h-10 items-center justify-end gap-4 rounded text-base">
               <Button
                 onClick={() =>
-                  navigate(
-                    "https://dev-observability.blocksdevelopers.com/health",
-                    { replace: true },
+                  window.open(
+                    "http://dev-observability.blocksdevelopers.com/health",
+                    "_blank",
                   )
                 }
                 className="h-9 gap-2"
@@ -111,14 +108,6 @@ const Alert = ({
                 <ComingSoonPage message="Coming soon" />
               </div>
             </TabsContent>
-            {/* <MonitorModal open={open} onOpenChange={setOpen}>
-              <AddSingleMonitorForm
-                repoId={repoId}
-                repoName={repoName}
-                repoUrl={repoUrl}
-                onSuccess={() => setOpen(false)}
-              />
-            </MonitorModal> */}
           </CardContent>
         ) : (
           <div className="flex h-20 items-center justify-center">

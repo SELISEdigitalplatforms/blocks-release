@@ -28,7 +28,7 @@ const wildcardToRegex = (pattern: string) => {
 export function EnvironmentList() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { data: projectGroups = [], isLoading } = useGetProjects();
+  const { data: projectGroups = [], isLoading } = useGetProjects({});
   const selectedProject = useProjectStore((state) => state.selectedProject);
   const setSelectedProject = useProjectStore(
     (state) => state.setSelectedProject,

@@ -4,7 +4,13 @@ import { projectService as crossProjectService } from "@blocks-identifier/servic
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-export const useGetProjects = (tenantGroupId = "") => {
+export const useGetProjects = ({
+  tenantGroupId = "",
+  enabled = true,
+}: {
+  tenantGroupId?: string;
+  enabled?: boolean;
+}) => {
   const setProjects = useProjectStore((state) => state.setProjects);
   const setSelectedProject = useProjectStore(
     (state) => state.setSelectedProject,
@@ -14,6 +20,7 @@ export const useGetProjects = (tenantGroupId = "") => {
     queryKey: ["identifier", "projects", tenantGroupId],
     queryFn: () => projectService.getProjects(0, 100, tenantGroupId),
     staleTime: 5 * 60 * 1000,
+    enabled,
   });
 
   useEffect(() => {

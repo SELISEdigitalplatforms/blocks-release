@@ -1,3 +1,3 @@
-import DevOps from "@blocks-devops/pages/devops";
+import Deployment from "@blocks-deployment/pages/deployment";
 
-export default DevOps;
+export default Deployment;

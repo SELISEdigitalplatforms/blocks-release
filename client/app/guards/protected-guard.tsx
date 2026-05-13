@@ -15,7 +15,13 @@ import { useGetProjects } from "@/cross-modules/identifier/hooks/use-project";
 
 export function ProtectedGuard({ children }: { children: React.ReactNode }) {
   const { isMounted } = useAppState();
-  const { data: user } = useGetUser();
+  const {
+    data: user,
+    isLoading,
+    isError,
+  } = useGetUser({
+    enabled: isMounted,
+  });
   const { data: _projects } = useGetProjects({ enabled: !!user });
 
   const { setUser } = useAuthStore();
@@ -23,10 +29,11 @@ export function ProtectedGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isMounted) return;
-    if (!user) return navigate(`/login`, { replace: true });
+    if (isLoading) return;
+    if (isError || !user) return navigate(`/login`, { replace: true });
     setUser(user.data);
-  }, [user, navigate, setUser, isMounted]);
-  if (!isMounted || !user) return null;
+  }, [user, isLoading, isError, navigate, setUser, isMounted]);
+  if (!isMounted || isLoading || !user) return null;
   return <>{children}</>;
 }
 

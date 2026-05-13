@@ -208,7 +208,10 @@ export default function LoginPage() {
       const baseUrl =
         getRuntimeEnv("BLOCKS_IDP_APP_URL") ||
         "https://dev-idp.blocksdevelopers.com";
-      const initiateUrl = `${baseUrl}/api/idp/initiate?x-blocks-key=${blocksKey}`;
+      const clientId =
+        getRuntimeEnv("BLOCKS_OIDC_CLIENT_ID") ||
+        "6523b311-256f-4b9a-a88a-2ac4e02bad25";
+      const initiateUrl = `${baseUrl}/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${clientId}`;
       const headers: Record<string, string> = {};
       if (blocksKey) headers["X-Blocks-Key"] = blocksKey;
 

@@ -1,8 +1,7 @@
+import { useAuthStore } from "@/store/auth.store";
+import { Loader } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader } from "lucide-react";
-import { useAuthStore } from "@/store/auth.store";
-import { getRuntimeEnv } from "@/lib/runtime-env";
 
 export default function LoginCallbackPage() {
   const [searchParams] = useSearchParams();
@@ -17,7 +16,7 @@ export default function LoginCallbackPage() {
   useEffect(() => {
     if (hasProcessed.current) return;
     hasProcessed.current = true;
-    const apiBaseUrl = getRuntimeEnv("BLOCKS_IDP_APP_URL");
+    const apiBaseUrl = "https://dev-idp.blocksdevelopers.com";
 
     const callbackUrl = new URL("/api/idp/callback", apiBaseUrl);
     // Forward the callback parameters to backend
@@ -35,7 +34,7 @@ export default function LoginCallbackPage() {
       .then((res) => {
         if (res.ok) {
           setAuthenticated();
-          window.location.href = "/console";
+          window.location.href = "/health";
         } else {
           window.location.href = "/login?error=callback_failed";
         }

@@ -1,10 +1,40 @@
 import react from "@vitejs/plugin-react";
+import fs from "fs";
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
+
+function getHttpsConfig(env: Record<string, string>): false | { key: Buffer; cert: Buffer } {
+  if ((env.BLOCKS_DEV_HTTPS ?? "").toLowerCase() !== "true") {
+    return false;
+  }
+
+  const keyPath =
+    env.BLOCKS_DEV_SSL_KEY_PATH ||
+    "C:/SSL_Certificates/dev-deployment.blocksdevelopers.com-key.pem";
+  const certPath =
+    env.BLOCKS_DEV_SSL_CERT_PATH ||
+    "C:/SSL_Certificates/dev-deployment.blocksdevelopers.com.pem";
+
+  const resolvedKeyPath = path.resolve(__dirname, keyPath);
+  const resolvedCertPath = path.resolve(__dirname, certPath);
+
+  if (!fs.existsSync(resolvedKeyPath) || !fs.existsSync(resolvedCertPath)) {
+    throw new Error(
+      `HTTPS certificate files were not found. Checked key: ${resolvedKeyPath}, cert: ${resolvedCertPath}`,
+    );
+  }
+
+  return {
+    key: fs.readFileSync(resolvedKeyPath),
+    cert: fs.readFileSync(resolvedCertPath),
+  };
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "BLOCKS_");
   const proxyTarget = env.BLOCKS_API_BASE_URL;
+  const devHost = env.BLOCKS_DEV_HOST || true;
+  const httpsConfig = getHttpsConfig(env);
 
   return {
     envPrefix: ["BLOCKS_"],
@@ -46,11 +76,14 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
     },
     server: {
-      host: true, // Listen on all addresses (0.0.0.0)
+
+      host: devHost, // Listen on all addresses or configured host
       port: 4000,
       strictPort: true,
+      https: httpsConfig || undefined,
       allowedHosts: [
         "dev-cloud.seliseblocks.com",
+        "dev-deployment.blocksdevelopers.com",
         "localhost",
         ".seliseblocks.com",
         ".blocksdevelopers.com",

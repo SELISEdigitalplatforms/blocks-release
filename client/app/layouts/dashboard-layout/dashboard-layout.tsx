@@ -8,21 +8,21 @@ import { ErrorBoundary } from "@/components/error-boundary";
 export function DashboardLayout() {
   return (
     <ProtectedGuard>
-      <ImpersonateGuard>
-        <DashboardLayoutProvider isOpen={true} persist>
-          <div className="relative flex h-screen overflow-hidden bg-[hsl(var(--surface-app))]">
-            <SidebarMenuDesktop />
-            <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-              <DashboardHeader />
-              <main className="relative flex-1 overflow-auto p-2 sm:p-4 lg:p-6">
-                <ErrorBoundary>
-                  <Outlet />
-                </ErrorBoundary>
-              </main>
-            </div>
+      {/* <ImpersonateGuard> */}
+      <DashboardLayoutProvider isOpen={true} persist>
+        <div className="relative flex h-screen overflow-hidden bg-[hsl(var(--surface-app))]">
+          <SidebarMenuDesktop />
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <DashboardHeader />
+            <main className="relative flex-1 overflow-auto p-2 sm:p-4 lg:p-6">
+              <ErrorBoundary>
+                <Outlet />
+              </ErrorBoundary>
+            </main>
           </div>
-        </DashboardLayoutProvider>
-      </ImpersonateGuard>
+        </div>
+      </DashboardLayoutProvider>
+      {/* </ImpersonateGuard> */}
     </ProtectedGuard>
   );
 }

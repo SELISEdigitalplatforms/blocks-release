@@ -1,5 +1,5 @@
 import { projectService } from "@/cross-modules/identifier/services/project.service";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@/store/project.store";
 import { projectService as crossProjectService } from "@blocks-identifier/services/project.service";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";

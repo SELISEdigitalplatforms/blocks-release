@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useAuthStore } from "@/store/auth.store";
 import {
   useStartImpersonation,
   useStopImpersonation,
@@ -8,7 +8,7 @@ import {
 import { useAppState } from "./public-guard";
 import { useGetUser } from "@/cross-modules/idp/iam/hooks/use-user";
 import { useImpersonateStore } from "@/store/impersonate.store";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@/store/project.store";
 import { ImpersonationRequest } from "@/cross-modules/identifier/services/impersonation.service";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 

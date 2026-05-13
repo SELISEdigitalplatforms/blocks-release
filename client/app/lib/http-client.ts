@@ -1,7 +1,7 @@
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@/store/project.store";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { getQueryClient } from "@/providers/query-provider";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useAuthStore } from "@/store/auth.store";
 
 class HttpError extends Error {
   status: number;

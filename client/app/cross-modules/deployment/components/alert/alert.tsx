@@ -15,7 +15,7 @@ import {
   TabsTrigger,
 } from "@/components/ui-kits/tabs/tabs";
 import { useGetMonitorListById } from "@/cross-modules/deployment/hooks/use-alerts";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@/store/project.store";
 import { useDeploymentStatus } from "@blocks-deployment/components/deployment-details/shared/notification-listener";
 import { ALERT_PROVIDERS } from "@blocks-deployment/constants/alert.constant";
 import { ExternalLink } from "lucide-react";

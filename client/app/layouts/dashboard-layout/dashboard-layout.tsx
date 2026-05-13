@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { DashboardLayoutProvider } from "@/contexts/dashboard-layout-provider";
-import { ProtectedGuard } from "@/guards/protected-guard";
+import { ImpersonateGuard, ProtectedGuard } from "@/guards/protected-guard";
 import { SidebarMenuDesktop } from "@/layouts/sidebar-menu-desktop/sidebar-menu-desktop";
 import { DashboardHeader } from "@/layouts/dashboard-header/dashboard-header";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -8,19 +8,21 @@ import { ErrorBoundary } from "@/components/error-boundary";
 export function DashboardLayout() {
   return (
     <ProtectedGuard>
-      <DashboardLayoutProvider isOpen={true} persist>
-        <div className="relative flex h-screen overflow-hidden bg-[hsl(var(--surface-app))]">
-          <SidebarMenuDesktop />
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            <DashboardHeader />
-            <main className="relative flex-1 overflow-auto p-2 sm:p-4 lg:p-6">
-              <ErrorBoundary>
-                <Outlet />
-              </ErrorBoundary>
-            </main>
+      <ImpersonateGuard>
+        <DashboardLayoutProvider isOpen={true} persist>
+          <div className="relative flex h-screen overflow-hidden bg-[hsl(var(--surface-app))]">
+            <SidebarMenuDesktop />
+            <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+              <DashboardHeader />
+              <main className="relative flex-1 overflow-auto p-2 sm:p-4 lg:p-6">
+                <ErrorBoundary>
+                  <Outlet />
+                </ErrorBoundary>
+              </main>
+            </div>
           </div>
-        </div>
-      </DashboardLayoutProvider>
+        </DashboardLayoutProvider>
+      </ImpersonateGuard>
     </ProtectedGuard>
   );
 }

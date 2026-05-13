@@ -1,19 +1,5 @@
 import { API_BASE } from "@/constants/endpoint.constant";
 
-// ─── People endpoints ─────────────────────────────────────────────────────────
-
-const PEOPLE_SUBPATH = "/People";
-
-export const PEOPLE_ENDPOINTS = {
-  CONFIRM_INVITATION: `${API_BASE}${PEOPLE_SUBPATH}/ConfirmInvitation`,
-  GETS: `${API_BASE}${PEOPLE_SUBPATH}/Gets`,
-  INVITE: `${API_BASE}${PEOPLE_SUBPATH}/Invite`,
-  RESEND_INVITATION: `${API_BASE}${PEOPLE_SUBPATH}/ResendInvitation`,
-  REMOVE_ACCESS: `${API_BASE}${PEOPLE_SUBPATH}/RemoveAccess`,
-  SIGNUP: `${API_BASE}${PEOPLE_SUBPATH}/Signup`,
-  TRANSFER_OWNERSHIP: `${API_BASE}${PEOPLE_SUBPATH}/TransferOwnerShip`,
-} as const;
-
 // ─── Project endpoints ────────────────────────────────────────────────────────
 
 const PROJECT_SUBPATH = "/Project";
@@ -21,45 +7,7 @@ const PROJECT_SUBPATH = "/Project";
 export const PROJECT_ENDPOINTS = {
   GETS: `${API_BASE}${PROJECT_SUBPATH}/Gets`,
   GET: `${API_BASE}${PROJECT_SUBPATH}/Get`,
-  CREATE: `${API_BASE}${PROJECT_SUBPATH}/Create`,
-  UPDATE: `${API_BASE}${PROJECT_SUBPATH}/UpdateProject`,
-  UPDATE_TENANT_GROUP: `${API_BASE}${PROJECT_SUBPATH}/UpdateTenantGroup`,
-  DISABLE: `${API_BASE}${PROJECT_SUBPATH}/Disable`,
-
-  GET_ASSET: `${API_BASE}${PROJECT_SUBPATH}/GetAsset`,
   ADD_ASSET: `${API_BASE}${PROJECT_SUBPATH}/AddAsset`,
-  GET_LOGIN_OPTIONS: `${API_BASE}${PROJECT_SUBPATH}/GetLoginOptions`,
-  UPDATE_TOKEN_VALIDATION: `${API_BASE}${PROJECT_SUBPATH}/UpdateTokenValidationParameters`,
-  GET_TOKEN_VALIDATION: `${API_BASE}${PROJECT_SUBPATH}/GetTokenValidationParameters`,
-  ADD_JWT_CLAIM: `${API_BASE}${PROJECT_SUBPATH}/AddJwtClaim`,
-  GET_JWT_CLAIMS: `${API_BASE}${PROJECT_SUBPATH}/GetThirdPartyJWTClaims`,
-  SAVE_JWT_CLAIMS: `${API_BASE}${PROJECT_SUBPATH}/SaveThirdPartyJWTClaims`,
-} as const;
-
-// ─── Domain endpoints ─────────────────────────────────────────────────────────
-
-const DOMAIN_SUBPATH = "/Domain";
-
-export const DOMAIN_ENDPOINTS = {
-  CONFIGURE: `${API_BASE}${DOMAIN_SUBPATH}/Configure`,
-} as const;
-
-// ─── Migration endpoints ──────────────────────────────────────────────────────
-
-const MIGRATION_SUBPATH = "/Migration";
-
-export const MIGRATION_ENDPOINTS = {
-  MIGRATE: `${API_BASE}${MIGRATION_SUBPATH}/Migrate`,
-  VERIFY: `${API_BASE}${MIGRATION_SUBPATH}/Verify`,
-  GET_STATUS: `${API_BASE}${MIGRATION_SUBPATH}/GetMigrationStatus`,
-} as const;
-
-// ─── Subscription endpoints ───────────────────────────────────────────────────
-
-const SUBSCRIPTION_SUBPATH = "/Subscription";
-
-export const SUBSCRIPTION_ENDPOINTS = {
-  GETS: `${API_BASE}${SUBSCRIPTION_SUBPATH}/Gets`,
 } as const;
 
 // ─── Service Registry endpoints ───────────────────────────────────────────────
@@ -67,7 +15,6 @@ export const SUBSCRIPTION_ENDPOINTS = {
 const SERVICE_SUBPATH = "/Service";
 
 export const SERVICE_REGISTRY_ENDPOINTS = {
-  REGISTER: `${API_BASE}${SERVICE_SUBPATH}/Register`,
   GET_ALL: `${API_BASE}${SERVICE_SUBPATH}/GetAll`,
 } as const;
 
@@ -77,5 +24,4 @@ const BUILD_SUBPATH = "/build";
 
 export const CLOUD_BUILD_ENDPOINTS = {
   REPOS_LIST: `${API_BASE}${BUILD_SUBPATH}/repos-list`,
-  REPO_UPDATE: `${API_BASE}${BUILD_SUBPATH}/repo-update`,
 } as const;

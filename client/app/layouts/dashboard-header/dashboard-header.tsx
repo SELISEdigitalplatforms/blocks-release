@@ -26,9 +26,11 @@ export function DashboardHeader() {
           <Button
             variant="ghost"
             size="icon"
-            className={cn("hidden shrink-0 p-0", !isSidebarOpen && "inline-flex")}
-            onClick={toggleSidebar}
-          >
+            className={cn(
+              "hidden shrink-0 p-0",
+              !isSidebarOpen && "inline-flex",
+            )}
+            onClick={toggleSidebar}>
             <PanelLeft className="h-6 w-6" />
           </Button>
           <div className="w-52">

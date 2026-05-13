@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { cn } from "@/lib/utils";
-import { Menu } from "@/models/menu-models";
+import { Menu } from "@/models/menu.model";
 
 type MenuItemType = Extract<Menu, { type: "menu" }>;
 
@@ -18,15 +18,20 @@ function ChildMenuItem({ menu }: { menu: MenuItemType }) {
         "flex h-10 items-center px-4 py-1.5 text-base transition-colors hover:text-[hsl(var(--high-emphasis))]",
         isActiveMenu && "!text-primary",
         menu.disabled && "pointer-events-none cursor-not-allowed opacity-50",
-      )}
-    >
+      )}>
       {menu.icon ? <menu.icon className="mr-2 h-5 w-5" /> : null}
       <span>{menu.name}</span>
     </Link>
   );
 }
 
-export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; isSidebarOpen: boolean }) {
+export function DesktopMenuItem({
+  menu,
+  isSidebarOpen,
+}: {
+  menu: MenuItemType;
+  isSidebarOpen: boolean;
+}) {
   const { pathname } = useLocation();
 
   const isActiveMenu = useMemo(() => {
@@ -49,7 +54,12 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
   if (!hasChildren) {
     return (
       <div className={cn(baseClasses, "group justify-between")}>
-        <Link to={menu.path} className={cn("flex items-center gap-3", menu.disabled && "pointer-events-none opacity-50")}>
+        <Link
+          to={menu.path}
+          className={cn(
+            "flex items-center gap-3",
+            menu.disabled && "pointer-events-none opacity-50",
+          )}>
           {menu.icon ? <menu.icon className="h-5 w-5" /> : null}
           {isSidebarOpen ? (
             <span className="relative">
@@ -57,8 +67,7 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
               {menu.badge ? (
                 <Badge
                   variant="secondary"
-                  className="absolute -top-2 left-full ml-1 h-4 px-1 text-[9px] font-semibold uppercase text-primary"
-                >
+                  className="absolute -top-2 left-full ml-1 h-4 px-1 text-[9px] font-semibold uppercase text-primary">
                   {menu.badge}
                 </Badge>
               ) : null}
@@ -70,7 +79,9 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
             {menu.name}
           </div>
         ) : null}
-        {isActiveMenu ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
+        {isActiveMenu ? (
+          <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" />
+        ) : null}
       </div>
     );
   }
@@ -85,8 +96,7 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
             {menu.badge ? (
               <Badge
                 variant="outline"
-                className="absolute -top-2 left-full ml-1 h-4 px-1 text-[9px] font-semibold uppercase text-primary"
-              >
+                className="absolute -top-2 left-full ml-1 h-4 px-1 text-[9px] font-semibold uppercase text-primary">
                 {menu.badge}
               </Badge>
             ) : null}
@@ -99,12 +109,19 @@ export function DesktopMenuItem({ menu, isSidebarOpen }: { menu: MenuItemType; i
         </div>
       ) : null}
       {isSidebarOpen ? <ChevronRight className="ml-auto h-4 w-4" /> : null}
-      {isActiveMenu ? <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" /> : null}
+      {isActiveMenu ? (
+        <div className="absolute right-0 top-2.5 h-5 w-1 rounded-lg bg-primary" />
+      ) : null}
 
       <div className="absolute left-full top-0 z-10 hidden w-64 flex-col rounded-sm border bg-background py-2 group-hover:flex group-hover:text-[hsl(var(--low-emphasis))]">
         {menu.children
-          ?.filter((subMenu): subMenu is MenuItemType => subMenu.type === "menu" && !subMenu.disabled)
-          .map((subMenu) => <ChildMenuItem key={subMenu.id} menu={subMenu} />)}
+          ?.filter(
+            (subMenu): subMenu is MenuItemType =>
+              subMenu.type === "menu" && !subMenu.disabled,
+          )
+          .map((subMenu) => (
+            <ChildMenuItem key={subMenu.id} menu={subMenu} />
+          ))}
       </div>
       <div className="absolute left-full top-0 hidden h-full w-1 bg-transparent group-hover:block" />
     </div>

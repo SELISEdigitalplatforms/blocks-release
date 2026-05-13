@@ -18,7 +18,7 @@ import {
 } from "@/components/ui-kits/table/table";
 import AlertAction from "@/cross-modules/deployment/components/alert/alert-action";
 import ProgressBar from "@/cross-modules/deployment/components/alert/progress-bar";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@/store/project.store";
 import type { AlertTree } from "@blocks-deployment/models/alerts.model";
 import {
   ColumnDef,

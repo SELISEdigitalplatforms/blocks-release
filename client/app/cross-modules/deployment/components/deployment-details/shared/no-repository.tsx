@@ -13,7 +13,7 @@ import { IRepository } from "@/cross-modules/deployment/models/github-info";
 import { useAddAssets } from "@/cross-modules/identifier/hooks/use-project";
 import { useBoolean } from "@/hooks/use-boolean";
 import { toast } from "@/hooks/use-toast";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@/store/project.store";
 import { GitBranch, Plus } from "lucide-react";
 import ProviderButtons from "../../deployment-steps/render-repos/render-provider";
 

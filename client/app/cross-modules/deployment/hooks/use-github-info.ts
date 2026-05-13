@@ -7,7 +7,7 @@ import type {
   IManualDeploymentPayload,
   IUpdateRepoSettingsPayload,
 } from "@blocks-deployment/models/utils";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@/store/project.store";
 
 export const useGithubVerification = (code: string) => {
   const projectKey = useProjectStore().selectedProject?.tenantId || "";

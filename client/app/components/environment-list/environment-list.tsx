@@ -14,7 +14,7 @@ import {
   useGetProjects,
 } from "@blocks-identifier/hooks/use-project";
 import { IProject } from "@blocks-identifier/models/project.model";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@/store/project.store";
 
 const redirectPaths: Record<string, string> = {
   "/deployment/repo/*": "/deployment",

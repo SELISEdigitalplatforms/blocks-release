@@ -1,6 +1,6 @@
 import { serviceInstances } from "@/lib/http-client";
 import { getRuntimeEnv } from "@/lib/runtime-env";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useAuthStore } from "@/store/auth.store";
 import {
   ISigninByEmailPayload,
   ISigninByEmailResponse,

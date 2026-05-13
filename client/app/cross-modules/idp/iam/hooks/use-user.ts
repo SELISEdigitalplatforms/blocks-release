@@ -1,4 +1,4 @@
-import { useAuthStore } from "@/store/useAuthStore";
+import { useAuthStore } from "@/store/auth.store";
 import { userService } from "@blocks-idp/iam/services/user.service";
 import { useQuery } from "@tanstack/react-query";
 

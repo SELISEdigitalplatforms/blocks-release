@@ -25,7 +25,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { DEPLOYMENT_OPTIONS } from "@blocks-deployment/models/deployment-settings";
 import useIsMobile from "@/hooks/use-is-mobile";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@/store/project.store";
 import { useNavigate } from "react-router-dom";
 
 interface IDeploymentSettingsModalProps {

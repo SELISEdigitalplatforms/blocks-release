@@ -10,7 +10,7 @@ import { ChevronLeft } from "lucide-react";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { IDeploymentPageData } from "./deployment-details";
 import { IHttpError } from "@blocks-deployment/models/github-info";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@/store/project.store";
 
 const LiveLogs = () => {
   const navigate = useNavigate();

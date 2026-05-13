@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui-kits/button/button";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@/store/project.store";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
 import DeploymentObservability from "@blocks-deployment/components/deployment-details/shared/deployment-observability";
 import { ChartGantt, GitBranch, Logs, Rocket, Settings } from "lucide-react";

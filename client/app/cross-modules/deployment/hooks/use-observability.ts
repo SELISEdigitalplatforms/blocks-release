@@ -1,4 +1,4 @@
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore } from "@/store/project.store";
 import { observabilityService } from "@blocks-deployment/services/observability.service";
 import { useQuery } from "@tanstack/react-query";
 

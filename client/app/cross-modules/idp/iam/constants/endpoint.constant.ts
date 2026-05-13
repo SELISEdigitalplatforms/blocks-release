@@ -13,5 +13,5 @@ export const ACCOUNT_ENDPOINTS = {
 // ─── User endpoints (user.service) ──────────────────────────────────────────
 
 export const USER_ENDPOINTS = {
-  GET_USER: `${API_BASE}${IAM_SUBPATH}/GetUser`,
+  GET_USER: `${API_BASE}${IAM_SUBPATH}/user`,
 } as const;

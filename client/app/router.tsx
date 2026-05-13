@@ -2,15 +2,14 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 
 // Layouts
 import { DashboardLayout } from "./layouts/dashboard-layout/dashboard-layout";
-import { OidcLayout } from "./layouts/oidc-layout/oidc-layout";
 
 // Auth routes
 import LoginPage from "./routes/auth/login";
 
 // OIDC routes (un-guarded)
-import OidcIndexPage from "./routes/oidc/index";
 
 // Deployment routes (module deployment)
+import CallbackPage from "./routes/callback/callback";
 import ProfilePage from "./routes/dashboard/profile";
 import DeploymentPage from "./routes/deployment/deployment";
 import DeploymentLivePage from "./routes/deployment/deployment-live";
@@ -19,14 +18,20 @@ import DeploymentRepoDetailsPage from "./routes/deployment/deployment-repo-detai
 
 export const router = createBrowserRouter([
   // ── Simple login (no guards, no API calls) ──
-  { path: "/login", element: <LoginPage /> },
+  {
+    path: "/login",
+    children: [
+      { index: true, element: <LoginPage /> },
+      { path: "callback", element: <CallbackPage /> },
+    ],
+  },
 
   // ── OIDC layout (un-guarded, themed) ──
-  {
-    path: "/oidc",
-    element: <OidcLayout />,
-    children: [{ index: true, element: <OidcIndexPage /> }],
-  },
+  //   {
+  //     path: "/oidc",
+  //     element: <OidcLayout />,
+  //     children: [{ index: true, element: <OidcIndexPage /> }],
+  //   },
 
   // ── Dashboard and project overview in dashboard layout (consolidated sidebar) ──
   {

@@ -1,6 +1,7 @@
 import { Logo } from "@/components/logo";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
 import { Button } from "@/components/ui-kits/button/button";
+import { showErrorToast } from "@/hooks/use-toast";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { motion } from "framer-motion";
 import {
@@ -166,7 +167,7 @@ const ResourcesPanel = () => {
 };
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [titleNumber, setTitleNumber] = useState(0);
   const titles = useMemo(
     () => ["observable", "intelligent", "scalable", "resilient", "secure"],
@@ -180,22 +181,48 @@ export default function LoginPage() {
     return () => clearTimeout(timeoutId);
   }, [titleNumber, titles]);
 
-  const handleLogin = () => {
-    setIsLoading(true);
-    const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
+  //   const handleLogin = () => {
+  //     setIsLoading(true);
+  //     const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
 
-    const params = new URLSearchParams({
-      response_type: "code",
-      client_id: "6523b311-256f-4b9a-a88a-2ac4e02bad25",
-      redirect_uri: "https://dev-deployment.blocksdevelopers.com/oidc",
-      scope: "openId",
-      audience: "https://dev-deployment.blocksdevelopers.com",
-      state: "039849038",
-      nonce: "35443",
-      ...(blocksKey ? { "x-blocks-key": blocksKey } : {}),
-    });
+  //     const params = new URLSearchParams({
+  //       response_type: "code",
+  //       client_id: "6523b311-256f-4b9a-a88a-2ac4e02bad25",
+  //       redirect_uri: "https://dev-deployment.blocksdevelopers.com/oidc",
+  //       scope: "openId",
+  //       audience: "https://dev-deployment.blocksdevelopers.com",
+  //       state: "039849038",
+  //       nonce: "35443",
+  //       ...(blocksKey ? { "x-blocks-key": blocksKey } : {}),
+  //     });
 
-    window.location.href = `https://dev-idp.blocksdevelopers.com/api/Authentication/Authorize?${params.toString()}`;
+  //     window.location.href = `https://dev-idp.blocksdevelopers.com/api/Authentication/Authorize?${params.toString()}`;
+  //   };
+
+  const startLogin = async () => {
+    try {
+      if (isStarting) return;
+      setIsStarting(true);
+
+      const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
+      const initiateUrl = `${import.meta.env.BLOCKS_IDP_APP_URL}/api/idp/initiate?x-blocks-key=${blocksKey}`;
+      const headers: Record<string, string> = {};
+      if (blocksKey) headers["X-Blocks-Key"] = blocksKey;
+
+      const response = await fetch(initiateUrl.toString(), { headers });
+      const data = await response.json();
+
+      if (data.redirect_uri) {
+        window.location.href = data.redirect_uri;
+      } else {
+        showErrorToast({ errors: "Failed to get authorization URL" });
+        setIsStarting(false);
+      }
+    } catch (errors) {
+      console.error("Login initiation error:", errors);
+      showErrorToast({ errors: "Unable to start login. Please try again." });
+      setIsStarting(false);
+    }
   };
 
   return (
@@ -261,10 +288,10 @@ export default function LoginPage() {
               <Button
                 size="lg"
                 className="group gap-2"
-                disabled={isLoading}
-                onClick={handleLogin}>
-                {isLoading ? "Redirecting…" : "Log in to your account"}
-                {!isLoading && (
+                disabled={isStarting}
+                onClick={startLogin}>
+                {isStarting ? "Redirecting…" : "Log in to your account"}
+                {!isStarting && (
                   <MoveRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 )}
               </Button>

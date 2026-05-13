@@ -1,3 +1,3 @@
-import LiveLogs from "@blocks-devops/pages/live-logs";
+import LiveLogs from "@blocks-deployment/pages/live-logs";
 
 export default LiveLogs;

@@ -1,17 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { serviceRegistryService } from "@blocks-identifier/services/service-registery.service";
-import { IGetAllServicesPayload, IRegisterServicePayload } from "@blocks-identifier/types/services.type";
-
-export const useRegisterService = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationKey: ["service", "register"],
-    mutationFn: (payload: IRegisterServicePayload) => serviceRegistryService.registerService(payload),
-    onSuccess: (res) => {
-      if (res.isSuccess) queryClient.invalidateQueries({ queryKey: ["services"] });
-    },
-  });
-};
+import { IGetAllServicesPayload } from "@blocks-identifier/models/service.model";
+import { serviceRegistryService } from "@blocks-identifier/services/service-registry.service";
+import { useQuery } from "@tanstack/react-query";
 
 export const useGetAllServices = (options: IGetAllServicesPayload) => {
   return useQuery({

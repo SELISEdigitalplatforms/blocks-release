@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./app"),
-        "@blocks-idp": path.resolve(__dirname, "./app/idp"),
+        "@blocks-idp": path.resolve(__dirname, "./app/cross-modules/idp"),
         "@blocks-lmt": path.resolve(__dirname, "./app/cross-modules/lmt"),
         "@blocks-storage": path.resolve(
           __dirname,
@@ -35,9 +35,9 @@ export default defineConfig(({ mode }) => {
           "./app/cross-modules/utilities",
         ),
         "@blocks-ai": path.resolve(__dirname, "./app/cross-modules/ai"),
-        "@blocks-devops": path.resolve(
+        "@blocks-deployment": path.resolve(
           __dirname,
-          "./app/cross-modules/devops",
+          "./app/cross-modules/deployment",
         ),
       },
     },

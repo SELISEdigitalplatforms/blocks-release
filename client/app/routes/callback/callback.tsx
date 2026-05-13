@@ -34,7 +34,7 @@ export default function LoginCallbackPage() {
       .then((res) => {
         if (res.ok) {
           setAuthenticated();
-          window.location.href = "/health";
+          window.location.href = "/deployment";
         } else {
           window.location.href = "/login?error=callback_failed";
         }

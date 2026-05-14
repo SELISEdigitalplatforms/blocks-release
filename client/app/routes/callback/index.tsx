@@ -1,3 +1,4 @@
+import { getRuntimeEnv } from "@/lib/runtime-env";
 import { useAuthStore } from "@/store/auth.store";
 import { Loader } from "lucide-react";
 import { useEffect, useRef } from "react";
@@ -16,9 +17,14 @@ export default function LoginCallbackPage() {
   useEffect(() => {
     if (hasProcessed.current) return;
     hasProcessed.current = true;
-    const apiBaseUrl = "https://dev-idp.blocksdevelopers.com";
+    const apiBase = getRuntimeEnv("BLOCKS_IDP_BASE_URL");
 
-    const callbackUrl = new URL("/api/idp/callback", apiBaseUrl);
+    // Use window.location.origin as base. An absolute apiBase (prod) wins;
+    // a relative apiBase (dev proxy) gets resolved against the current origin.
+    const callbackUrl = new URL(
+      `${apiBase}/api/idp/callback`,
+      window.location.origin,
+    );
     // Forward the callback parameters to backend
     if (code) callbackUrl.searchParams.set("code", code);
     if (state) callbackUrl.searchParams.set("state", state);

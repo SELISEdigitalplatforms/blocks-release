@@ -196,7 +196,7 @@ export default function LoginPage() {
   //       ...(blocksKey ? { "x-blocks-key": blocksKey } : {}),
   //     });
 
-  //     window.location.href = `https://dev-idp.blocksdevelopers.com/api/Authentication/Authorize?${params.toString()}`;
+  //     window.location.href = `${getRuntimeEnv("BLOCKS_IDP_BASE_URL")}/api/Authentication/Authorize?${params.toString()}`;
   //   };
 
   const startLogin = async () => {
@@ -205,12 +205,11 @@ export default function LoginPage() {
       setIsStarting(true);
 
       const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
-      const baseUrl =
-        getRuntimeEnv("BLOCKS_IDP_APP_URL") ||
-        "https://dev-idp.blocksdevelopers.com";
-      const clientId =
-        getRuntimeEnv("BLOCKS_OIDC_CLIENT_ID") ||
-        "6523b311-256f-4b9a-a88a-2ac4e02bad25";
+      const clientId = getRuntimeEnv("BLOCKS_OIDC_CLIENT_ID");
+      // In Vite dev, route through the /dev-idp-proxy to avoid CORS
+      // (browser sees a same-origin request; Vite forwards it to BLOCKS_IDP_BASE_URL).
+      // In production, fall back to the absolute IDP URL.
+      const baseUrl = getRuntimeEnv("BLOCKS_IDP_BASE_URL");
       const initiateUrl = `${baseUrl}/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${clientId}`;
       const headers: Record<string, string> = {};
       if (blocksKey) headers["X-Blocks-Key"] = blocksKey;

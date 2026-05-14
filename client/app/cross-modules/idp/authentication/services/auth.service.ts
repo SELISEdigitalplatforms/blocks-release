@@ -41,7 +41,7 @@ export class AuthService {
     body.append("client_secret", "e048ec1b63d548dd85d053f364d5d54c");
 
     return this.httpClient.post(
-      `https://dev-idp.blocksdevelopers.com${AUTH_ENDPOINTS.TOKEN}`,
+      `${getRuntimeEnv("BLOCKS_IDP_BASE_URL")}${AUTH_ENDPOINTS.TOKEN}`,
       body,
       {
         "Content-Type": "application/x-www-form-urlencoded",

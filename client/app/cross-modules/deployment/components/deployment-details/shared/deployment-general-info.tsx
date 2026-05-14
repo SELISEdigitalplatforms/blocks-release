@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { formatFullDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { formatFullDate } from "@/utils/date.util";
 import { IDeploymentPageData } from "@blocks-deployment/pages/deployment-details";
 import NotificationListener from "./notification-listener";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";

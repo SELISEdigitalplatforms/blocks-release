@@ -12,7 +12,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui-kits/sheet/sheet";
-import { navigationMenus } from "@/constants/navigation-menus";
+import { navigationMenus } from "@/constants/navigation-menus.constant";
 import { useFilteredMenus } from "@/hooks/use-filtered-menus";
 import { Menu, X } from "lucide-react";
 import { Fragment, useState } from "react";

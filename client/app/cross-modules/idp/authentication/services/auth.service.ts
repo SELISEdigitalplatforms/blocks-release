@@ -9,6 +9,7 @@ import { AUTH_ENDPOINTS } from "../constants/endpoint.constant";
 
 export class AuthService {
   private readonly httpClient = serviceInstances.deploymentService;
+  private readonly idpHttpClient = serviceInstances.idpService;
   signinByEmail(
     payload: ISigninByEmailPayload,
   ): Promise<ISigninByEmailResponse> {
@@ -60,7 +61,7 @@ export class AuthService {
     const refreshToken = isLocalhost
       ? useAuthStore.getState().refreshToken || ""
       : "";
-    return this.httpClient.post(AUTH_ENDPOINTS.LOGOUT, { refreshToken });
+    return this.idpHttpClient.post(AUTH_ENDPOINTS.LOGOUT, { refreshToken });
   }
 }
 

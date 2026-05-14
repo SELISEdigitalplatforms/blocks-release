@@ -6,8 +6,7 @@ import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use
 import { toast } from "@/hooks/use-toast";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
 import { ChevronLeft } from "lucide-react";
-import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
+import DeploymentGeneralInfo from "@blocks-deployment/components/deployment-details/shared/deployment-general-info";
 import DeploymentLogsTab from "@blocks-deployment/components/deployment-details/tabs/deployment-logs-tab";
 import SASTTab from "@blocks-deployment/components/deployment-details/tabs/sast-tab";
 import SCATab from "@blocks-deployment/components/deployment-details/tabs/sca-tab";
@@ -168,18 +167,11 @@ const DeploymentDetails = () => {
     );
   }
 
-  BREADCRUMB_CUSTOM_TITLES[`/deployment/repo/${repoId}/deployment-logs`] =
-    "Deployment Overview";
-  BREADCRUMB_CUSTOM_TITLES[
-    `/deployment/repo/${repoId}/deployment-logs/${buildIdStr}`
-  ] = buildIdStr;
-
   const activeTabData = tabs.find((tab) => tab.id === activeTab);
   const ActiveTabComponent = activeTabData?.component;
 
   return (
     <>
-      <PageBreadcrumb breadcrumbIndex={4} />
       <div className="mb-8 mt-5 flex h-full w-full flex-col items-center gap-4">
         <div className="flex w-full flex-col items-start gap-4">
           <div className="flex w-full items-center justify-between">

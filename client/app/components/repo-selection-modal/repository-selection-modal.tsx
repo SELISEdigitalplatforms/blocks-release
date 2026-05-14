@@ -31,7 +31,7 @@ import {
   iconMap,
 } from "@/cross-modules/deployment/models/github-info";
 import { providers } from "@/cross-modules/deployment/models/git-dummy";
-import { debounce } from "@/lib/utils";
+import { debounce } from "@/utils/debounce.util";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { githubInfoService } from "@/cross-modules/deployment/services/github-info.service";
 

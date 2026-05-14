@@ -347,7 +347,7 @@ export const serviceInstances = {
     getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || "",
   ),
   idpService: new HttpClient(
-    getRuntimeEnv("BLOCKS_IDP_APP_URL") || "",
+    getRuntimeEnv("BLOCKS_IDP_BASE_URL") || "",
     getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || "",
   ),
 };

@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { getDeploymentLogEventBadgeClassName } from "@blocks-deployment/utils/deployment-logs.utils";
 import { IDeploySettings } from "@blocks-deployment/models/deployed-logs";
 import { ChevronRight } from "lucide-react";
-import { formatFullDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { formatFullDate } from "@/utils/date.util";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
 import React, { useState } from "react";
 import {

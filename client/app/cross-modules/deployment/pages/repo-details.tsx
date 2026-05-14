@@ -22,7 +22,7 @@ import {
 import { Separator } from "@/components/ui-kits/separator/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { toast } from "@/hooks/use-toast";
-import { formatFullDate } from "@/lib/utils";
+import { formatFullDate } from "@/utils/date.util";
 import NotificationListener from "@blocks-deployment/components/deployment-details/shared/notification-listener";
 import { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
 import { REPO_DETAILS_PROVIDERS } from "@blocks-deployment/constants/alert.constant";

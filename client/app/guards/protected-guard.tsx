@@ -4,14 +4,14 @@ import { useAuthStore } from "@/store/auth.store";
 import {
   useStartImpersonation,
   useStopImpersonation,
-} from "@/cross-modules/identifier/hooks/use-impersonation";
+} from "@blocks-idp/authentication/hooks/use-impersonation";
 import { useAppState } from "./public-guard";
 import { useGetUser } from "@/cross-modules/idp/iam/hooks/use-user";
 import { useImpersonateStore } from "@/store/impersonate.store";
 import { useProjectStore } from "@/store/project.store";
-import { ImpersonationRequest } from "@/cross-modules/identifier/services/impersonation.service";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { useGetProjects } from "@/cross-modules/identifier/hooks/use-project";
+import type { ImpersonationRequest } from "@blocks-idp/authentication/models/impersonate.model";
 
 export function ProtectedGuard({ children }: { children: React.ReactNode }) {
   const { isMounted } = useAppState();

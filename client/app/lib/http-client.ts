@@ -336,10 +336,6 @@ class HttpClient {
     return response.body;
   }
 }
-export const http = new HttpClient(
-  getRuntimeEnv("BLOCKS_API_BASE_URL") || "",
-  getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || "",
-);
 
 export const serviceInstances = {
   deploymentService: new HttpClient(

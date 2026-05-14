@@ -1,13 +1,13 @@
 import { Button } from "@/components/ui-kits/button/button";
+import { cn } from "@/lib/utils";
+import { formatDate } from "@/utils/date.util";
 import { useParams, useNavigate } from "react-router-dom";
 import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use-github-info";
 import React, { useEffect, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import LiveDeploymentLogs from "@blocks-deployment/components/deployment-details/live/live-logs-section";
 import DeploymentGeneralInfo from "@blocks-deployment/components/deployment-details/shared/deployment-general-info";
-import PageBreadcrumb from "@/components/breadcrumb/breadcrumb";
 import { ChevronLeft } from "lucide-react";
-import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title";
 import { IDeploymentPageData } from "./deployment-details";
 import { IHttpError } from "@blocks-deployment/models/github-info";
 import { useProjectStore } from "@/store/project.store";
@@ -62,15 +62,8 @@ const LiveLogs = () => {
     navigate(`/deployment/repo/${repoId}?refresh=true`);
   };
 
-  BREADCRUMB_CUSTOM_TITLES[`/deployment/repo/${repoId}/deployment-live`] =
-    "Deployment Overview";
-  BREADCRUMB_CUSTOM_TITLES[
-    `/deployment/repo/${repoId}/deployment-live/${buildIdStr}`
-  ] = buildIdStr;
-
   return (
     <>
-      <PageBreadcrumb breadcrumbIndex={4} />
       <div className="mt-4 flex h-full flex-col items-center gap-4">
         <div className="flex w-full flex-col items-start gap-4">
           <div className="flex w-full justify-start">

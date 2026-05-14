@@ -9,7 +9,8 @@ import {
 } from "@blocks-deployment/utils/deployment-logs.utils";
 import { IPipeline } from "@blocks-deployment/pages/repo-details";
 import NotificationListener from "./notification-listener";
-import { formatFullDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { formatFullDate } from "@/utils/date.util";
 import SASTLogo from "@blocks-deployment/assets/icons/SAST.svg";
 import SCALogo from "@blocks-deployment/assets/icons/SCA.svg";
 import DASTLogo from "@blocks-deployment/assets/icons/DAST.png";

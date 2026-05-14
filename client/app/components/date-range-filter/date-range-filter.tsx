@@ -5,7 +5,8 @@ import { Calendar } from "@/components/ui-kits/calendar/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
-import { formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { formatDate } from "@/utils/date.util";
 import { Separator } from "../ui-kits/separator/separator";
 import useIsMobile from "@/hooks/use-is-mobile";
 

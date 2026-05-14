@@ -11,7 +11,7 @@ import {
 } from "../ui-kits/sheet/sheet";
 import { Button } from "../ui-kits/button/button";
 import { Filter } from "lucide-react";
-import { deepEqual } from "@/lib/utils";
+import { deepEqual } from "@/utils/equal.util";
 
 type FilterItem<T extends Record<string, unknown>> = {
   [K in keyof typeof FilterControls]: {

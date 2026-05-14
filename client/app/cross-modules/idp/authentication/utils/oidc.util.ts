@@ -8,7 +8,6 @@ interface OIDCParams {
   nonce?: string;
   scope?: string;
   redirectUri?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: string | undefined;
 }
 
@@ -18,16 +17,16 @@ interface OIDCParams {
 const fullyDecodeURIComponent = (value: string): string => {
   let decoded = value;
   let previous = "";
-  
+
   while (decoded !== previous && decoded.includes("%")) {
     previous = decoded;
     try {
       decoded = decodeURIComponent(decoded);
     } catch {
-      break; 
+      break;
     }
   }
-  
+
   return decoded;
 };
 
@@ -40,17 +39,17 @@ const normalizeColorValue = (value: string | null | undefined): string => {
   }
 
   let color = fullyDecodeURIComponent(value);
-  
+
   color = color.replace(/&.*$/, "");
-  
+
   if (/^[A-Fa-f0-9]{6}$/.test(color)) {
     return `#${color}`;
   }
-  
+
   if (color.startsWith("#") && /^#[A-Fa-f0-9]{6}$/.test(color)) {
     return color;
   }
-  
+
   return "#124091";
 };
 
@@ -77,28 +76,27 @@ export const extractOIDCParams = (debug = false): OIDCParams => {
   let scope = searchParams.get("scope") || undefined;
   let redirectUri = searchParams.get("redirect_uri") || undefined;
 
-
   if (!themeColor || themeColor === "" || themeColor === "&") {
     const brandColorMatch = fullUrl.match(/[?&]brandColor=([^&#]*)/)?.[1];
     if (brandColorMatch && brandColorMatch !== "" && brandColorMatch !== "&") {
       themeColor = brandColorMatch;
     }
   }
-    
+
   if (hash) {
     const hashContent = hash.substring(1);
-    
+
     const colorMatch = hashContent.match(/^([A-Fa-f0-9]{6})/)?.[1];
     if (colorMatch) {
       if (!themeColor || themeColor === "" || themeColor === "&") {
         themeColor = `#${colorMatch}`;
       }
-      
+
       const remainingHash = hashContent.substring(6);
-      
+
       if (remainingHash.startsWith("&")) {
         const hashParams = new URLSearchParams(remainingHash.substring(1));
-        
+
         if (!logoUrl) {
           logoUrl = hashParams.get("logoUrl") || undefined;
         }
@@ -126,7 +124,7 @@ export const extractOIDCParams = (debug = false): OIDCParams => {
       } else {
         try {
           const hashParams = new URLSearchParams(hashContent);
-          
+
           if (!themeColor && hashParams.has("brandColor")) {
             themeColor = hashParams.get("brandColor") || undefined;
           }
@@ -192,14 +190,13 @@ export const extractOIDCParams = (debug = false): OIDCParams => {
  * IMPORTANT: Only encodes values ONCE, even if called multiple times
  */
 export const buildOIDCNavigationUrl = (path: string): string => {
-  const params = extractOIDCParams(); 
+  const params = extractOIDCParams();
   const searchParams = new URLSearchParams();
 
   if (params.projectKey) searchParams.set("x-blocks-key", params.projectKey);
   if (params.userName) searchParams.set("userName", params.userName);
   if (params.clientId) searchParams.set("clientId", params.clientId);
   if (params.logoUrl) searchParams.set("logoUrl", params.logoUrl);
-  
 
   if (params.themeColor) {
     searchParams.set("brandColor", params.themeColor);
@@ -217,17 +214,17 @@ export const buildOIDCNavigationUrl = (path: string): string => {
  * Gets current params as URLSearchParams for redirects
  */
 export const getCurrentOIDCParams = (): URLSearchParams => {
-  const params = extractOIDCParams(); 
+  const params = extractOIDCParams();
   const searchParams = new URLSearchParams();
 
   if (params.projectKey) searchParams.set("x-blocks-key", params.projectKey);
   if (params.userName) searchParams.set("userName", params.userName);
   if (params.clientId) searchParams.set("clientId", params.clientId);
   if (params.logoUrl) searchParams.set("logoUrl", params.logoUrl);
-  if(params.state) searchParams.set("state", params.state);
-  if(params.nonce) searchParams.set("nonce", params.nonce);
-  if(params.scope) searchParams.set("scope", params.scope);
-  if(params.redirectUri) searchParams.set("redirect_uri", params.redirectUri);
+  if (params.state) searchParams.set("state", params.state);
+  if (params.nonce) searchParams.set("nonce", params.nonce);
+  if (params.scope) searchParams.set("scope", params.scope);
+  if (params.redirectUri) searchParams.set("redirect_uri", params.redirectUri);
 
   if (params.themeColor) {
     searchParams.set("brandColor", params.themeColor);

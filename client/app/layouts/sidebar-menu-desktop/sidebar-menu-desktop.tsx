@@ -2,7 +2,7 @@ import { Logo } from "@/components/logo";
 import { DesktopMenuItem } from "@/components/menus/desktop-menu-item";
 import { Button } from "@/components/ui-kits/button/button";
 import { Separator } from "@/components/ui-kits/separator/separator";
-import { navigationMenus } from "@/constants/navigation-menus";
+import { navigationMenus } from "@/constants/navigation-menus.constant";
 import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import { useFilteredMenus } from "@/hooks/use-filtered-menus";
 import { useTheme } from "@/hooks/use-theme";

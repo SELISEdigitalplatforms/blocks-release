@@ -1,5 +1,5 @@
 import { Logo } from "@/components/logo";
-import { extractOIDCParams } from "@blocks-idp/authentication/utils/oidc-utils";
+import { extractOIDCParams } from "@blocks-idp/authentication/utils/oidc.util";
 import { Loader } from "lucide-react";
 import {
   createContext,

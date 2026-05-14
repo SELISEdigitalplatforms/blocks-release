@@ -25,7 +25,7 @@ import {
 import {
   buildOIDCNavigationUrl,
   getCurrentOIDCParams,
-} from "@blocks-idp/authentication/utils/oidc-utils";
+} from "@blocks-idp/authentication/utils/oidc.util";
 import { PasswordInput } from "@/components/password-input";
 import { getApiUrl } from "@/lib/get-api-path";
 

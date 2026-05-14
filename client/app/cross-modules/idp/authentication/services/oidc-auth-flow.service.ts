@@ -71,7 +71,7 @@ export const refreshAccessToken = async (projectKey: string): Promise<string | n
     body.append("grant_type", "refresh_token");
     body.append("refresh_token", refreshToken);
 
-    const url = `${getRuntimeEnv("BLOCKS_IDP_APP_URL")}${AUTH_ENDPOINTS.TOKEN}`;
+    const url = `${getRuntimeEnv("BLOCKS_IDP_BASE_URL")}${AUTH_ENDPOINTS.TOKEN}`;
 
     const response = await fetch(url, {
       method: "POST",

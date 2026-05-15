@@ -8,32 +8,32 @@ import {
   Activity,
   ArrowRight,
   BookOpenText,
-  BrainCircuit,
   Github,
-  KeyRound,
+  Globe,
+  History,
   MoveRight,
-  Puzzle,
+  Rocket,
   ShieldCheck,
-  Users,
+  Eye,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 const pillars = [
   {
-    icon: ShieldCheck,
-    label: "Identity & MFA",
-    desc: "Passkeys, OAuth 2.0, OIDC",
+    icon: Rocket,
+    label: "Seamless Deployment",
+    desc: "Auto & manual deploy modes",
   },
   {
-    icon: Users,
-    label: "User Management",
-    desc: "Roles, teams & access control",
+    icon: Activity,
+    label: "Real-time Monitoring",
+    desc: "Live logs & build status",
   },
-  { icon: BrainCircuit, label: "AI Agents", desc: "Embedded intelligence" },
-  { icon: Activity, label: "Observability", desc: "Logs, metrics & tracing" },
-  { icon: KeyRound, label: "Secrets & Auth", desc: "Secure credential vaults" },
-  { icon: Puzzle, label: "Modular SDKs", desc: "Plug-in what you need" },
+  { icon: History, label: "Build History", desc: "Analytics & past deployments" },
+  { icon: ShieldCheck, label: "Security Scans", desc: "SAST, SCA & DAST" },
+  { icon: Eye, label: "Observability", desc: "Dependency Track insights" },
+  { icon: Globe, label: "Custom Domains", desc: "Flexible hosting config" },
 ];
 
 const ResourcesPanel = () => {
@@ -272,10 +272,10 @@ export default function LoginPage() {
           </div>
 
           <p className="max-w-lg text-lg leading-relaxed tracking-tight text-muted-foreground">
-            Blocks OS is a modern platform for building and deploying secure,
-            scalable applications with built-in observability, AI capabilities,
-            and comprehensive identity management. Focus on your application
-            logic while Blocks OS handles the infrastructure.
+            Deployment in Blocks Cloud provides a streamlined way to deploy,
+            monitor, and analyze your applications—all from one place. Connect
+            your repositories, automate deployments, and get detailed
+            observability insights for every build.
           </p>
 
           <div className="flex flex-wrap gap-2">

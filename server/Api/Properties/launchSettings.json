@@ -5,10 +5,12 @@
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
-      "launchUrl": "http://localhost:5000",
-      "applicationUrl": "http://localhost:5000",
+      "launchUrl": "https://localhost:5000",
+      "applicationUrl": "https://localhost:5000",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Kestrel__Certificates__Default__Path": "C:/SSL_Certificates/dev-deployment.blocksdevelopers.com.pem",
+        "Kestrel__Certificates__Default__KeyPath": "C:/SSL_Certificates/dev-deployment.blocksdevelopers.com-key.pem"
       }
     }
   }

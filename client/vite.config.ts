@@ -3,25 +3,27 @@ import fs from "fs";
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
 
-function getHttpsConfig(env: Record<string, string>): false | { key: Buffer; cert: Buffer } {
-  if ((env.BLOCKS_DEV_HTTPS ?? "").toLowerCase() !== "true") {
+// HTTPS is driven solely by the machine env vars DEPLOYMENT_SSL_CERT / DEPLOYMENT_SSL_KEY.
+// If either is unset/empty, or the file it points to is missing, fall back to HTTP (no throw).
+function getHttpsConfig(): false | { key: Buffer; cert: Buffer } {
+  const certPath = process.env.DEPLOYMENT_SSL_CERT;
+  const keyPath = process.env.DEPLOYMENT_SSL_KEY;
+
+  if (!certPath || !keyPath) {
+    console.warn(
+      "[vite] DEPLOYMENT_SSL_CERT / DEPLOYMENT_SSL_KEY not set — serving over HTTP.",
+    );
     return false;
   }
 
-  const keyPath =
-    env.BLOCKS_DEV_SSL_KEY_PATH ||
-    "C:/SSL_Certificates/dev-deployment.blocksdevelopers.com-key.pem";
-  const certPath =
-    env.BLOCKS_DEV_SSL_CERT_PATH ||
-    "C:/SSL_Certificates/dev-deployment.blocksdevelopers.com.pem";
-
-  const resolvedKeyPath = path.resolve(__dirname, keyPath);
   const resolvedCertPath = path.resolve(__dirname, certPath);
+  const resolvedKeyPath = path.resolve(__dirname, keyPath);
 
-  if (!fs.existsSync(resolvedKeyPath) || !fs.existsSync(resolvedCertPath)) {
-    throw new Error(
-      `HTTPS certificate files were not found. Checked key: ${resolvedKeyPath}, cert: ${resolvedCertPath}`,
+  if (!fs.existsSync(resolvedCertPath) || !fs.existsSync(resolvedKeyPath)) {
+    console.warn(
+      `[vite] SSL cert files not found (cert: ${resolvedCertPath}, key: ${resolvedKeyPath}) — serving over HTTP.`,
     );
+    return false;
   }
 
   return {
@@ -35,7 +37,7 @@ export default defineConfig(({ mode }) => {
   const proxyTarget = env.BLOCKS_API_BASE_URL;
   const idpProxyTarget = env.BLOCKS_IDP_BASE_URL;
   const devHost = env.BLOCKS_DEV_HOST || true;
-  const httpsConfig = getHttpsConfig(env);
+  const httpsConfig = getHttpsConfig();
 
   return {
     envPrefix: ["BLOCKS_"],

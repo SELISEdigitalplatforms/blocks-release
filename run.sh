@@ -110,9 +110,28 @@ build_frontend() {
 }
 
 # ---------- BACKEND ----------
+# HTTPS is driven by the machine env vars DEPLOYMENT_SSL_CERT / DEPLOYMENT_SSL_KEY.
+# Both set + both files present -> HTTPS on $API_PORT; otherwise -> HTTP (fallback).
+configure_backend_tls() {
+    if [ -n "${DEPLOYMENT_SSL_CERT:-}" ] && [ -n "${DEPLOYMENT_SSL_KEY:-}" ] \
+       && [ -f "$DEPLOYMENT_SSL_CERT" ] && [ -f "$DEPLOYMENT_SSL_KEY" ]; then
+        export Kestrel__Certificates__Default__Path="$DEPLOYMENT_SSL_CERT"
+        export Kestrel__Certificates__Default__KeyPath="$DEPLOYMENT_SSL_KEY"
+        export ASPNETCORE_URLS="https://0.0.0.0:$API_PORT"
+        echo "Backend TLS: HTTPS on $API_PORT"
+    else
+        export ASPNETCORE_URLS="http://0.0.0.0:$API_PORT"
+        echo "Backend TLS: cert env not set/found — HTTP on $API_PORT"
+    fi
+}
+
 run_backend() {
+    configure_backend_tls
     echo "Running .NET API on port $API_PORT..."
-    dotnet run --project "$API_PROJECT"
+    # Pass the URL on the command line: it has higher precedence than the
+    # launchSettings.json applicationUrl, which would otherwise override
+    # the ASPNETCORE_URLS we exported above.
+    dotnet run --project "$API_PROJECT" -- --urls "$ASPNETCORE_URLS"
 }
 
 run_worker() {

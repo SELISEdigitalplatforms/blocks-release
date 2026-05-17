@@ -1,4 +1,5 @@
 ﻿using Blocks.Genesis;
+using Microsoft.AspNetCore.Authorization;
 using CloudConfiguration.DomainService.Shared.Services;
 using CloudConfiguration.DomainService.Storage.Entities;
 using CloudConfiguration.DomainService.Storage.RequestModel;
@@ -13,44 +14,37 @@ namespace BlocksTemplate.Api.Controllers
     public class StorageController : ControllerBase
     {
         private readonly IConfigurationService _configurationService;
-        private readonly ChangeControllerContext _changeControllerContext;
 
-        public StorageController(IConfigurationService configurationService,
-                                 ChangeControllerContext changeControllerContext)
+        public StorageController(IConfigurationService configurationService)
         {
             _configurationService = configurationService;
-            _changeControllerContext = changeControllerContext;
         }
 
         [HttpPost]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<BaseMutationResponse> Save([FromBody] SaveStorageConfigurationRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _configurationService.SaveStorageConfigurationAsync(request);
         }
 
         [HttpGet]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<List<StorageConfiguration>> Gets([FromQuery] GetStorageConfigurationsRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _configurationService.GetStorageConfigurationsAsync();
         }
 
         [HttpGet]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<StorageConfiguration> Get([FromQuery] GetStorageConfigurationRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _configurationService.GetStorageConfigurationAsync(request?.ConfigurationName ?? string.Empty);
         }
 
         [HttpPost]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<BaseResponse> Delete([FromQuery] DeleteStorageConfigurationRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _configurationService.DeleteStorageConfigurationAsync(request?.ConfigurationName ?? string.Empty);
         }
 

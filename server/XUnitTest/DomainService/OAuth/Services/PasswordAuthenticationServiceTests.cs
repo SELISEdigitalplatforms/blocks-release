@@ -77,7 +77,7 @@ namespace XUnitTest.DomainService.OAuth.Services
             {
                 TenantId = "tenant-123",
                 TenantSalt = "salt-abc",
-                ApplicationDomain = "example.com",
+                Applications = new List<Applications> { new() { Domain = "example.com" } },
                 DbConnectionString = "Server=test;Database=test;",
                 JwtTokenParameters = new JwtTokenParameters()
                 {
@@ -137,7 +137,7 @@ namespace XUnitTest.DomainService.OAuth.Services
             {
                 TenantId = "tenant-456",
                 TenantSalt = "salt-xyz",
-                ApplicationDomain = "example.com",
+                Applications = new List<Applications> { new() { Domain = "example.com" } },
                 DbConnectionString = "Server=test;Database=test;",
                 JwtTokenParameters = new JwtTokenParameters()
                 {

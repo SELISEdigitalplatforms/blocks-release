@@ -7,7 +7,7 @@
 ```text
 blocks-deployment/
 ├── client/                    # React SPA (Vite)
-│   ├── app/                   # Application routes, IDP, cross-modules (devops, lmt, …)
+│   ├── app/                   # Application routes, IDP, cross-modules (deployment, lmt, …)
 │   ├── public/                # Static assets copied into the build
 │   ├── index.html             # SPA shell; __BLOCKS_*__ placeholders for publish-time injection
 │   ├── vite.config.ts         # build outDir, dev server, BLOCKS_ env prefix, dev proxies
@@ -35,11 +35,11 @@ blocks-deployment/
 
 ## Prerequisites
 
-| Requirement | Source in repo |
-|---------------|----------------|
-| **.NET SDK** matching **net10.0** | `server/Directory.Build.props` (`TargetFramework`) |
-| **Node.js + npm** for the client | `client/package.json`; root `Dockerfile` uses **Node 22** for `npm ci` / `npm run build` |
-| **PowerShell** (Windows script) | `run.ps1` |
+| Requirement                       | Source in repo                                                                           |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| **.NET SDK** matching **net10.0** | `server/Directory.Build.props` (`TargetFramework`)                                       |
+| **Node.js + npm** for the client  | `client/package.json`; root `Dockerfile` uses **Node 22** for `npm ci` / `npm run build` |
+| **PowerShell** (Windows script)   | `run.ps1`                                                                                |
 
 There is **no** `docker-compose` file in this repository. Container builds use the root `Dockerfile` / `Dockerfile.worker`.
 
@@ -51,16 +51,16 @@ This repository does **not** embed Compose files or hard-require an external inf
 
 ### Flag reference (shared concepts)
 
-| Flag | Bash `run.sh` | PowerShell `run.ps1` | Behavior |
-|------|---------------|----------------------|----------|
-| `-a` / `--all` | Yes | Yes | Build the client, then start **API + Worker** (no Vite dev server). |
-| `-b` / `--backend` | Yes | Yes | Run the **API** only (`dotnet run` on `server/Api/Api.csproj`). Frees **API port 5000** first. |
-| `-w` / `--worker` | Yes | Yes | Run the **Worker** only (`dotnet run` on `server/Worker/Worker.csproj`). |
-| `-f` / `--frontend` | Yes | Yes | Install deps if needed, then **`npm run dev`** in `client/` (Vite on **4000**). |
-| `-k` / `--kill-port` | Yes | Yes | Free processes listening on **API port 5000** (not the Vite port). |
-| `-n` / `--npm` | Yes | Yes | Run `npm` in `client/` with the remaining arguments (e.g. `-n install`). |
-| `-d` / `--dotnet` | **No** | Yes | **PowerShell only:** pass through to `dotnet` (e.g. `.\run.ps1 -d restore`). |
-| `-h` / `--help` | Yes (via `usage`) | Yes | Show usage. |
+| Flag                 | Bash `run.sh`     | PowerShell `run.ps1` | Behavior                                                                                       |
+| -------------------- | ----------------- | -------------------- | ---------------------------------------------------------------------------------------------- |
+| `-a` / `--all`       | Yes               | Yes                  | Build the client, then start **API + Worker** (no Vite dev server).                            |
+| `-b` / `--backend`   | Yes               | Yes                  | Run the **API** only (`dotnet run` on `server/Api/Api.csproj`). Frees **API port 5000** first. |
+| `-w` / `--worker`    | Yes               | Yes                  | Run the **Worker** only (`dotnet run` on `server/Worker/Worker.csproj`).                       |
+| `-f` / `--frontend`  | Yes               | Yes                  | Install deps if needed, then **`npm run dev`** in `client/` (Vite on **4000**).                |
+| `-k` / `--kill-port` | Yes               | Yes                  | Free processes listening on **API port 5000** (not the Vite port).                             |
+| `-n` / `--npm`       | Yes               | Yes                  | Run `npm` in `client/` with the remaining arguments (e.g. `-n install`).                       |
+| `-d` / `--dotnet`    | **No**            | Yes                  | **PowerShell only:** pass through to `dotnet` (e.g. `.\run.ps1 -d restore`).                   |
+| `-h` / `--help`      | Yes (via `usage`) | Yes                  | Show usage.                                                                                    |
 
 **Default ports**
 
@@ -68,6 +68,8 @@ This repository does **not** embed Compose files or hard-require an external inf
 - Vite dev: **4000** (`client/package.json` → `vite --port 4000` and `vite.config.ts` `server.port`).
 
 `launchSettings.json` is what Visual Studio / `dotnet run` use from the IDE; keep it in mind if your IDE profile differs from the scripts.
+
+**Local HTTPS:** both the Vite dev server (4000) and the API (5000) serve HTTPS automatically when the machine env vars `DEPLOYMENT_SSL_CERT` / `DEPLOYMENT_SSL_KEY` point at an mkcert cert; otherwise they fall back to HTTP. One-time setup is documented in **[LOCAL_GUIDE.md → "Local HTTPS setup (mkcert)"](LOCAL_GUIDE.md)**.
 
 ### Unix (`run.sh`)
 
@@ -155,14 +157,14 @@ dotnet build server/Blocks.slnx
 
 Copy `client/.env.example` to `client/.env`. Vite loads variables prefixed with **`BLOCKS_`** (`envPrefix` in `client/vite.config.ts`); use `import.meta.env.BLOCKS_*` in code. The example file documents the same keys.
 
-| Variable | Role |
-|----------|------|
-| `BLOCKS_APP_URL` | Public app origin; surfaced at runtime via `window.__BLOCKS_ENV__` / `import.meta.env` (see `client/app/lib/runtime-env.ts`, `client/index.html`). |
-| `BLOCKS_API_BASE_URL` | Base URL for API calls; in **`npm run dev`**, when set, enables the **`server.proxy`** rules in `client/vite.config.ts` (paths such as `/api`, `/cloudbuild`, `/idp`, …). Used in `client/app/lib/get-api-path.ts` for composed API URLs. |
-| `BLOCKS_X_BLOCKS_KEY` | Injected into the published shell for client/runtime use (placeholder replacement on the server). |
-| `BLOCKS_GOOGLE_SITE_KEY` | Injected for captcha-related flows. |
-| `BLOCKS_CONSTRUCT_URL` | Injected construct/builder URL token. |
-| `BLOCKS_GITHUB_SSO_CLIENT_ID` | Injected GitHub SSO client id. |
+| Variable                      | Role                                                                                                                                                                                                                                      |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BLOCKS_APP_URL`              | Public app origin; surfaced at runtime via `window.__BLOCKS_ENV__` / `import.meta.env` (see `client/app/lib/runtime-env.ts`, `client/index.html`).                                                                                        |
+| `BLOCKS_API_BASE_URL`         | Base URL for API calls; in **`npm run dev`**, when set, enables the **`server.proxy`** rules in `client/vite.config.ts` (paths such as `/api`, `/cloudbuild`, `/idp`, …). Used in `client/app/lib/get-api-path.ts` for composed API URLs. |
+| `BLOCKS_X_BLOCKS_KEY`         | Injected into the published shell for client/runtime use (placeholder replacement on the server).                                                                                                                                         |
+| `BLOCKS_GOOGLE_SITE_KEY`      | Injected for captcha-related flows.                                                                                                                                                                                                       |
+| `BLOCKS_CONSTRUCT_URL`        | Injected construct/builder URL token.                                                                                                                                                                                                     |
+| `BLOCKS_GITHUB_SSO_CLIENT_ID` | Injected GitHub SSO client id.                                                                                                                                                                                                            |
 
 When the API serves a **built** SPA from `wwwroot`, `server/Api/Program.cs` runs **`DotNetEnv.Env.Load()`** and replaces placeholders such as `__BLOCKS_API_BASE_URL__` in `.html`, `.js`, `.css`, and `.json` under `wwwroot` with non-empty environment values. Match those names to deployment secrets or env files on the host.
 

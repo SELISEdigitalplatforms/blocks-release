@@ -21,12 +21,13 @@ namespace Api.Controllers
         private readonly ISonarQubeAuthService _sonarQubeAuthService;
 
 
-        public AnalyticsToolController(DependencyTrackAuthService dependencyTrackAuthService, ChangeControllerContext changeControllerContext, DependencyTrackAnalyticsService scaAnalyticsService, IBuildRepository buildRepository, ISonarQubeAuthService sonarQubeAuthService    )
+        public AnalyticsToolController(DependencyTrackAuthService dependencyTrackAuthService, ChangeControllerContext changeControllerContext, DependencyTrackAnalyticsService scaAnalyticsService, IBuildRepository buildRepository, ISonarQubeAuthService sonarQubeAuthService)
         {
             _dependencyTrackAuthService = dependencyTrackAuthService;
             _changeControllerContext = changeControllerContext;
             _scaAnalyticsService = scaAnalyticsService;
             _buildRepository = buildRepository;
+            _sonarQubeAuthService = sonarQubeAuthService;
         }
 
         [HttpGet]

@@ -32,7 +32,7 @@ namespace DomainService.Projects
         private async Task<bool> IsDomainUpdated(string applicationDomain, string projectId, CancellationToken _)
         {
             var project = await _repository.GetByTenantIdAsync(projectId);
-            return project?.ApplicationDomain != applicationDomain;
+            return project?.Applications.FirstOrDefault()?.Domain != applicationDomain;
         }
 
         private async Task<bool> IsUniqueDomain(string applicationDomain, CancellationToken _)

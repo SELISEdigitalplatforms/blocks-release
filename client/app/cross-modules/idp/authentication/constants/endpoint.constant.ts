@@ -1,6 +1,6 @@
 import { API_BASE } from "@/constants/endpoint.constant";
 
-const AUTH_SUBPATH = "/Authentication";
+const AUTH_SUBPATH = "/auth";
 
 export const AUTH_ENDPOINTS = {
   TOKEN: `${API_BASE}${AUTH_SUBPATH}/Token`,

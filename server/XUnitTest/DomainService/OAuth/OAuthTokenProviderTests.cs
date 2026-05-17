@@ -346,8 +346,7 @@ namespace XUnitTest.DomainService.OAuth
             _tenants.Setup(x => x.GetTenantByID("tenant-123")).Returns(new Tenant 
             { 
                 TenantId = "tenant-123", 
-                CookieDomain = ".example.com",
-                ApplicationDomain = "test.example.com",
+                Applications = new List<Applications> { new() { CookieDomain = ".example.com", Domain = "test.example.com" } },
                 DbConnectionString = "test-connection-string",
                 JwtTokenParameters = new JwtTokenParameters
                 {

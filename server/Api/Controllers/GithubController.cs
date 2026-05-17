@@ -23,7 +23,6 @@ public class GithubController: ControllerBase
     private readonly IRepoRepository _repoRepository;
     private readonly IGithubWebhookService _webhoookService;
     private readonly IBuildService _buildService;
-    private readonly ChangeControllerContext _changeControllerContext;
     private readonly IConfiguration _config;
     private readonly string _secret; 
     public GithubController(IConfiguration config,
@@ -32,13 +31,11 @@ public class GithubController: ControllerBase
                             IGithubWebhookService webhoookService, 
                             IRepoRepository repoRepository, 
                             IBuildService buildService, 
-                            ChangeControllerContext changeControllerContext,
                             ICloudBuildSecret cloudBuildSecret)
     {
         _logger = logger;
         _githubService = githubService;
         _webhoookService = webhoookService;
-        _changeControllerContext = changeControllerContext;
         _config = config;
         _buildService = buildService;
         _repoRepository = repoRepository;
@@ -49,7 +46,6 @@ public class GithubController: ControllerBase
     [Authorize]
     public async Task<ActionResult> GetUser([FromQuery] string? ProjectKey)
     {
-        _changeControllerContext.ChangeContext(new ProjectKeyQuery { ProjectKey = ProjectKey });
         var user = await _githubService.GetUser();
         if(user!=null)
             return Ok(user);
@@ -60,7 +56,6 @@ public class GithubController: ControllerBase
     [Authorize]
     public async Task<ActionResult> GetRepos([FromQuery] string? ProjectKey, [FromQuery] string? Search, [FromQuery] int PageNumber = 1, [FromQuery] int PageSize = 30)
     {
-        _changeControllerContext.ChangeContext(new ProjectKeyQuery { ProjectKey = ProjectKey });
 
         SearchRepositoryListRequest request = new SearchRepositoryListRequest()
         {
@@ -84,7 +79,6 @@ public class GithubController: ControllerBase
     [Authorize]
     public async Task<ActionResult> GetBranches([FromQuery] string repo, [FromQuery] string? ProjectKey)
     {
-        _changeControllerContext.ChangeContext(new ProjectKeyQuery { ProjectKey = ProjectKey });
         var branches = await _githubService.GetBranches(repo);
         if(branches!=null)
             return Ok(branches);
@@ -101,7 +95,6 @@ public class GithubController: ControllerBase
             {
                 ProjectKey = ProjectKey
             };
-            _changeControllerContext.ChangeContext(query);
         }
 
         Repo repo = await _repoRepository.GetRepo(repoId);
@@ -135,7 +128,6 @@ public class GithubController: ControllerBase
             {
                 ProjectKey = ProjectKey
             };
-            _changeControllerContext.ChangeContext(query);
         }
         var result = await _githubService.Clone(repo);
         if (result)
@@ -187,7 +179,6 @@ public class GithubController: ControllerBase
         };
         if (!string.IsNullOrEmpty(query.ProjectKey))
         {
-            _changeControllerContext.ChangeContext(query);
         }
         var repo = await _repoRepository.GetRepo(RepoId);
         if (repo is null)

@@ -20,18 +20,15 @@ public class BuildController : ControllerBase
     private readonly BuildService _buildService;
     private readonly IBuildRepository _buildRepository;
     private readonly IRepoRepository _repoRepository;
-    private readonly ChangeControllerContext _changeControllerContext;
     private readonly TestReportService _testReportService;
     private readonly IDataGatewayDeploymentService _dataGatewayDeploymentService;
     public BuildController(BuildService buildService, 
                            IBuildRepository buildRepository,
                            IRepoRepository repoRepository,
-                           ChangeControllerContext changeControllerContext, 
                            TestReportService testReportService,
                            IDataGatewayDeploymentService dataGatewayDeploymentService)
     {
         _buildService = buildService;
-        _changeControllerContext = changeControllerContext;
         _buildRepository = buildRepository;
         _testReportService = testReportService;
         _repoRepository = repoRepository;
@@ -42,7 +39,6 @@ public class BuildController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetById([FromQuery] string buildId, string ProjectKey)
     {
-        _changeControllerContext.ChangeContext(new ProjectKeyQuery { ProjectKey = ProjectKey });
         var builds = await _buildService.GetBuildWithRepo(buildId);
         if(builds != null)
         {
@@ -64,7 +60,6 @@ public class BuildController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetRepos([FromQuery] string ProjectKey)
     {
-        _changeControllerContext.ChangeContext(new ProjectKeyQuery { ProjectKey = ProjectKey });
         var repoWithBuilds = await _buildService.GetRepos(ProjectKey);
         if(repoWithBuilds != null)
         {
@@ -87,7 +82,6 @@ public class BuildController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetReposList([FromQuery] string ProjectKey)
     {
-        _changeControllerContext.ChangeContext(new ProjectKeyQuery { ProjectKey = ProjectKey });
         var repoList = await _repoRepository.GetRepos();
         if (repoList != null)
         {
@@ -110,7 +104,6 @@ public class BuildController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetRepoDetails([FromQuery] string ProjectKey, string RepoId)
     {
-        _changeControllerContext.ChangeContext(new ProjectKeyQuery { ProjectKey = ProjectKey });
         try
         {
             var repoBuildList = await _repoRepository.GetRepoBuildList(RepoId);
@@ -153,7 +146,6 @@ public class BuildController : ControllerBase
     [Authorize]
     public async Task<BaseApiResponse> RepoDomainUpdateRequest([FromBody] RepoDomainUpdateRequest request)
     {
-        _changeControllerContext.ChangeContext(request);
         return await _buildService.UpdateRepoDomain(request);
   
     }
@@ -169,7 +161,6 @@ public class BuildController : ControllerBase
                 StatusCode= HttpStatusCode.BadRequest,
                 Message = "Repo id is required"
             });
-        _changeControllerContext.ChangeContext(request);
         var response = await _buildService.RunBuild(request);
         if (response.StatusCode == HttpStatusCode.OK) return Ok(response);
         return BadRequest(response);
@@ -188,7 +179,6 @@ public class BuildController : ControllerBase
                 Message = "Repo id is required"
             });
         }
-        _changeControllerContext.ChangeContext(request);
         var response = await _buildService.ManualBuild(request);
         if (response.StatusCode == HttpStatusCode.OK) return Ok(response);
         return BadRequest(response);
@@ -199,7 +189,6 @@ public class BuildController : ControllerBase
     [Authorize]
     public async Task<IActionResult> RepoSettingsUpdate([FromBody] RepoUpdateRequest request)
     {
-        _changeControllerContext.ChangeContext(request);
         var response =  await _buildService.UpdateRepo(request);
         return Ok(response);
     }
@@ -222,7 +211,6 @@ public class BuildController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetReports([FromQuery]  string buildId, string type, string ProjectKey)
     {
-        _changeControllerContext.ChangeContext(new ProjectKeyQuery { ProjectKey = ProjectKey });
         var result = await _testReportService.GetReport(buildId, type);
         return Ok(new BaseApiResponse()
         {

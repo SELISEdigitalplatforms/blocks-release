@@ -20,9 +20,10 @@ namespace Worker.Consumers.Identifier
 
         public async Task Consume(Tenant project)
         {
-            if (project.CookieDomain != IdentifierConstants.BlocsDomain)
+            var application = project.Applications.FirstOrDefault();
+            if (application?.CookieDomain != IdentifierConstants.BlocsDomain)
             {
-                await Task.WhenAll(_domainManagementService.ConfigureDomainAsync(new ConfigureDomainRequest { CookieDomain = project.ApplicationDomain, ProjectKey = project.ItemId }),
+                await Task.WhenAll(_domainManagementService.ConfigureDomainAsync(new ConfigureDomainRequest { CookieDomain = application?.Domain ?? string.Empty, ProjectKey = project.ItemId }),
                                    _projectManagementService.ConfigureProjectAsync(project));
             }
             else

@@ -1,3 +1,3 @@
-import RepoDetails from "@blocks-devops/pages/repo-details";
+import RepoDetails from "@blocks-deployment/pages/repo-details";
 
 export default RepoDetails;

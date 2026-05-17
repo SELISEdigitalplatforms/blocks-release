@@ -1,3 +1,3 @@
-import DeploymentDetails from "@blocks-devops/pages/deployment-details";
+import DeploymentDetails from "@blocks-deployment/pages/deployment-details";
 
 export default DeploymentDetails;

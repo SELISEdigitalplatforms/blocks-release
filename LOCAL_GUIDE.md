@@ -42,6 +42,72 @@ npm install
 
 ---
 
+## Local HTTPS setup (mkcert)
+
+Both the frontend (Vite, port **4000**) and backend (.NET Kestrel, port **5000**) serve HTTPS
+under the named domain when **two machine environment variables** point at an mkcert certificate.
+If either is unset or its file is missing, **everything falls back to HTTP automatically** — no
+errors. This procedure is reusable across projects; only the domain/cert changes.
+
+### One-time, per machine
+
+1. **Install mkcert** and its local CA (the CA is then trusted by Chrome/Edge/OS):
+
+   ```bash
+   mkcert -install
+   ```
+
+2. **Generate the cert + key** for the domain (pick any stable directory):
+
+   ```bash
+   mkcert -cert-file C:/SSL_Certificates/dev-deployment.blocksdevelopers.com.pem \
+          -key-file  C:/SSL_Certificates/dev-deployment.blocksdevelopers.com-key.pem \
+          dev-deployment.blocksdevelopers.com
+   ```
+
+3. **Add a hosts entry** so the domain resolves locally:
+
+   ```
+   127.0.0.1 dev-deployment.blocksdevelopers.com
+   ```
+
+   - Windows: `C:\Windows\System32\drivers\etc\hosts`
+   - macOS/Linux: `/etc/hosts`
+
+4. **Set the two machine env vars** (then restart the terminal/IDE so they're picked up):
+
+   * Windows (PowerShell):
+
+     ```powershell
+     setx DEPLOYMENT_SSL_CERT "C:\SSL_Certificates\dev-deployment.blocksdevelopers.com.pem"
+     setx DEPLOYMENT_SSL_KEY  "C:\SSL_Certificates\dev-deployment.blocksdevelopers.com-key.pem"
+     ```
+
+   * macOS/Linux (add to `~/.bashrc` / `~/.zshrc`):
+
+     ```bash
+     export DEPLOYMENT_SSL_CERT="$HOME/.ssl/dev-deployment.blocksdevelopers.com.pem"
+     export DEPLOYMENT_SSL_KEY="$HOME/.ssl/dev-deployment.blocksdevelopers.com-key.pem"
+     ```
+
+### Behavior
+
+| Both vars set + files exist | Result |
+|---|---|
+| Yes | FE `https://dev-deployment.blocksdevelopers.com:4000`, API `https://…:5000` (trusted cert) |
+| No  | FE `http://…:4000`, API `http://…:5000` (automatic fallback) |
+
+This applies to every launch method: `npm run dev` (from `client/`), `./run.sh -f|-b|-a`, and the
+`run.ps1` equivalents. The frontend reads the vars in `client/vite.config.ts`; the run scripts map
+them to Kestrel for the backend. Run the backend via `./run.sh -b|-a` or `run.ps1 -b|-a` (not bare
+`dotnet run`, which has no cert mapping and stays HTTP).
+
+> **Reuse for another project:** keep the env var names `DEPLOYMENT_SSL_CERT` /
+> `DEPLOYMENT_SSL_KEY` identical; only generate a cert for that project's domain and update the
+> hosts entry.
+
+---
+
 ## Unified run.sh Script
 
 All development workflows are handled via:

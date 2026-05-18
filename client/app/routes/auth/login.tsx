@@ -393,8 +393,10 @@ export default function LoginPage() {
       // In Vite dev, route through the /dev-idp-proxy to avoid CORS
       // (browser sees a same-origin request; Vite forwards it to BLOCKS_IDP_BASE_URL).
       // In production, fall back to the absolute IDP URL.
-      const baseUrl = getRuntimeEnv("BLOCKS_IDP_BASE_URL");
-      const initiateUrl = `${baseUrl}/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${clientId}`;
+      const idpBaseUrl = getRuntimeEnv("BLOCKS_IDP_BASE_URL");
+      const apiBaseUrl = getRuntimeEnv("BLOCKS_API_BASE_URL");
+      const redirectUri = "https://dev-deployment.blocksdevelopers.com:4000" + "/login/callback";
+      const initiateUrl = `${idpBaseUrl}/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${clientId}&redirectUri=${encodeURIComponent(redirectUri)}`;
       const headers: Record<string, string> = {};
       if (blocksKey) headers["X-Blocks-Key"] = blocksKey;
 

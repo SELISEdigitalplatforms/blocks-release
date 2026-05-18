@@ -30,19 +30,17 @@ namespace Api.Controllers
         private readonly IAuthenticationDomainService _authenticationDomainService;
         private readonly IConfiguration _configuration;
         private readonly IAuthenticationRepository _authenticationRepository;
-        private readonly ChangeControllerContext _changeControllerContext;
         public readonly IConfigurationService _confirurationService;
         public AuthenticationController(IOAuthTokenProvider oAuthTokenProvider,
                               IAuthenticationService authenticationService,
                               IConfiguration configuration,
                               IAuthenticationDomainService authenticationDomainService,
                               IAuthenticationRepository authenticationRepository,
-                              ChangeControllerContext changeControllerContext, IConfigurationService confirurationService)
+                              IConfigurationService confirurationService)
         {
             _oAuthTokenProvider = oAuthTokenProvider;
             _authenticationService = authenticationService;
             _configuration = configuration;
-            _changeControllerContext = changeControllerContext;
             _authenticationDomainService = authenticationDomainService;
             _authenticationDomainService = authenticationDomainService;
             _authenticationRepository = authenticationRepository;
@@ -68,7 +66,7 @@ namespace Api.Controllers
         }
 
         [HttpPost]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<IActionResult> LogoutAll()
         {
             var result = await _authenticationService.LogoutUser(string.Empty, Request);
@@ -85,35 +83,31 @@ namespace Api.Controllers
 
         #region Client
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpPost]
         public async Task<SaveOIDCClientResponse> SaveOIDCClient([FromBody] SaveOIDCClientRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _authenticationDomainService.SaveOIDCClientAsync(request);
         }
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpGet]
         public async Task<GetOIDCClientResponse> GetOIDCClient([FromQuery] GetOIDCClientRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _authenticationDomainService.GetOIDCClientAsyncAsync(request.ClientId);
         }
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpGet]
         public async Task<GetOIDCClientsResponse> GetOIDCClients([FromQuery] GetOIDCClientsRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _authenticationDomainService.GetOIDCClientsAsyncAsync();
         }
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpPost]
         public async Task<BaseResponse> DeleteOIDCClient([FromBody] DeleteOIDCClientRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _authenticationDomainService.DeleteOIDCClientAsyncAsync(request);
         }
 
@@ -131,27 +125,24 @@ namespace Api.Controllers
             return await _authenticationRepository.GetUserCodesByUserIdAsync(BlocksContext.GetContext()?.UserId);
         }
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpPost]
         public async Task<BaseResponse> SaveClientCredential([FromBody] SaveClientCredentialRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _authenticationDomainService.SaveClientCredentialAsync(request);
         }
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpPost]
         public async Task<BaseResponse> DeleteClientCredential([FromBody] DeleteClientCredentialRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _authenticationDomainService.DeleteClientCredentialAsync(request);
         }
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpGet]
         public async Task<List<ClientCredential>> GetClientCredentials([FromQuery] GetAllClientCredentialsRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _authenticationRepository.GetClientCredentialsAsync();
         }
 
@@ -295,43 +286,38 @@ namespace Api.Controllers
         #region Social
 
         [HttpPost]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<SaveSsoCredentialResponse> SaveSsoCredential([FromBody] SaveSsoCredentialRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _authenticationDomainService.SaveSocialLoginCredentialAsync(request);
         }
 
         [HttpPost]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<BaseResponse> DeleteSsoCredential([FromBody] DeleteSsoCredentialRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _authenticationDomainService.DeleteSocialLoginCredentialAsync(request.ItemId);
         }
 
         [HttpGet]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<GetSsoCredentialResponse> GetSsoCredential([FromQuery] GetSsoCredentialRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _authenticationDomainService.GetSsoCredentialAsync(request.ItemId);
         }
 
 
         [HttpGet]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<List<SocialLoginCredential>> GetSsoCredentials([FromQuery] GetSsoCredentialsRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _authenticationDomainService.GetSocialLoginCredentialsAsync();
         }
 
         [HttpPost]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<BaseResponse> UpdateStatus([FromBody] UpdateSsoCredentialStatusRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _authenticationDomainService.UpdateSsoCredentialStatusAsync(request);
         }
 
@@ -343,19 +329,17 @@ namespace Api.Controllers
 
         #endregion
         #region Cloud Configuration
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> Get([FromQuery] GetAuthenticationConfigurationRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _confirurationService.GetAuthenticationConfigAsync();
         }
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpPost]
         public async Task<BaseResponse> Update([FromBody] UpdateAuthenticationConfigurationRequest configuration)
         {
-            _changeControllerContext.ChangeContext(configuration);
             return await _confirurationService.UpdateAuthenticationConfigAsync(configuration);
         }
         #endregion

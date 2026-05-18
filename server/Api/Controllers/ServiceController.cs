@@ -17,7 +17,7 @@ namespace Api.Controllers
             _serviceManagement = serviceManagement;
         }
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> Register([FromBody] RegisterServiceRequest request)
         {
@@ -30,7 +30,7 @@ namespace Api.Controllers
             return BadRequest(response);
         }
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpPost]
         public async Task<GetAllServiceResponse> GetAll([FromBody] GetAllServiceRequest request)
         {

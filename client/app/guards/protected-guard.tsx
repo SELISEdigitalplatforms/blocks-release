@@ -1,17 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/auth.store";
-import {
-  useStartImpersonation,
-  useStopImpersonation,
-} from "@blocks-idp/authentication/hooks/use-impersonation";
+import { impersonationService } from "@blocks-idp/authentication/services/impersonation.service";
 import { useAppState } from "./public-guard";
 import { useGetUser } from "@/cross-modules/idp/iam/hooks/use-user";
 import { useImpersonateStore } from "@/store/impersonate.store";
 import { useProjectStore } from "@/store/project.store";
 import { getRuntimeEnv } from "@/lib/runtime-env";
-import { useGetProjects } from "@/cross-modules/identifier/hooks/use-project";
-import type { ImpersonationRequest } from "@blocks-idp/authentication/models/impersonate.model";
+import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 
 export function ProtectedGuard({ children }: { children: React.ReactNode }) {
   const { isMounted } = useAppState();
@@ -22,7 +18,6 @@ export function ProtectedGuard({ children }: { children: React.ReactNode }) {
   } = useGetUser({
     enabled: isMounted,
   });
-  const { data: _projects } = useGetProjects({ enabled: !!user });
 
   const { setUser } = useAuthStore();
   const navigate = useNavigate();
@@ -39,63 +34,81 @@ export function ProtectedGuard({ children }: { children: React.ReactNode }) {
 
 export function ImpersonateGuard({ children }: { children: React.ReactNode }) {
   const { startImpersonation, stopImpersonation } = useImpersonateStore();
-  const { mutate: startImpersonationMutate } = useStartImpersonation();
-  const { mutate: stopImpersonationMutate } = useStopImpersonation();
 
-  const { selectedProject } = useProjectStore();
+  // Subscribe to the primitive tenantId only. The header (EnvironmentList)
+  // re-syncs `selectedProject` from `useGetProject` once it mounts, which
+  // changes the object identity on every refetch; keying off the primitive
+  // means we only react to a real tenant switch.
+  const selectedTenantId = useProjectStore(
+    (state) => state.selectedProject?.tenantId,
+  );
 
   const [ready, setReady] = useState(false);
-  const impersonateRef = useRef({
-    hasStarted: false,
-    isCompleted: false,
+  // `impersonatedTenantId`: tenant we've confirmed impersonation for.
+  // `requestedTenantId`: tenant we've already kicked off a request for
+  // (so we don't fire duplicates while it's in flight).
+  const stateRef = useRef({
+    impersonatedTenantId: null as string | null,
+    requestedTenantId: null as string | null,
   });
 
+  // Call the impersonation service directly. We deliberately bypass
+  // react-query's useMutation here: under StrictMode its observer is torn
+  // down/recreated and the per-call promise resolution gets lost, leaving
+  // the guard stuck on "pending" forever (the bug we hit).
   useEffect(() => {
-    if (!selectedProject?.tenantId) return;
-    if (impersonateRef.current.hasStarted) return;
-    impersonateRef.current.hasStarted = true;
+    if (!selectedTenantId) return;
+    if (stateRef.current.impersonatedTenantId === selectedTenantId) return;
+    if (stateRef.current.requestedTenantId === selectedTenantId) return;
+    stateRef.current.requestedTenantId = selectedTenantId;
 
-    const payload: ImpersonationRequest = {
-      targetTenantId: selectedProject.tenantId,
-    };
+    const target = selectedTenantId;
+    console.debug("[ImpersonateGuard] calling impersonate ->", target);
 
-    startImpersonationMutate(payload, {
-      onSuccess: () => {
-        startImpersonation(
-          payload.targetTenantId,
-          getRuntimeEnv("BLOCKS_X_BLOCKS_KEY"),
-        );
-
-        impersonateRef.current.isCompleted = true;
+    // NOTE: no `cancelled` flag here on purpose. Under React StrictMode the
+    // effect runs setup → cleanup → setup; a cleanup-set `cancelled` would
+    // discard the (already in-flight) resolution and `setReady` would never
+    // fire. The `requestedTenantId` ref persists across StrictMode and
+    // prevents duplicate network calls, so it's safe to always apply.
+    impersonationService
+      .startImpersonation({ targetTenantId: target })
+      .then((res) => {
+        console.debug("[ImpersonateGuard] impersonate RESOLVED", res);
+        startImpersonation(target, getRuntimeEnv("BLOCKS_X_BLOCKS_KEY"));
+        stateRef.current.impersonatedTenantId = target;
+        // Only the FIRST impersonation gates rendering. Subsequent tenant
+        // switches keep the subtree mounted so queries are not cancelled.
         setReady(true);
-      },
-      onError: () => {
-        impersonateRef.current.hasStarted = false;
-      },
-    });
-
-    return () => {
-      if (!impersonateRef.current.isCompleted) return;
-
-      stopImpersonationMutate(undefined, {
-        onSuccess: () => {
-          stopImpersonation();
-          impersonateRef.current.hasStarted = false;
-          impersonateRef.current.isCompleted = false;
-
-          setReady(false);
-        },
+      })
+      .catch((err) => {
+        console.error("[ImpersonateGuard] impersonate REJECTED", err);
+        // allow a retry of the same tenant
+        if (stateRef.current.requestedTenantId === target) {
+          stateRef.current.requestedTenantId = null;
+        }
       });
-    };
-  }, [
-    selectedProject?.tenantId,
-    startImpersonationMutate,
-    stopImpersonationMutate,
-    startImpersonation,
-    stopImpersonation,
-  ]);
+  }, [selectedTenantId, startImpersonation]);
 
-  if (!ready) return null;
+  // Stop impersonation only when the guard actually unmounts.
+  useEffect(() => {
+    return () => {
+      if (!stateRef.current.impersonatedTenantId) return;
+      stateRef.current.impersonatedTenantId = null;
+      stateRef.current.requestedTenantId = null;
+      impersonationService
+        .stopImpersonation()
+        .then(() => stopImpersonation())
+        .catch((err) =>
+          console.error("[ImpersonateGuard] stopImpersonation failed", err),
+        );
+    };
+  }, [stopImpersonation]);
+
+  if (!ready) {
+    return (
+      <LoadingSpinner variant="overlay" label="Preparing your workspace…" />
+    );
+  }
 
   return <>{children}</>;
 }

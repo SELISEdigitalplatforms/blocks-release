@@ -18,20 +18,17 @@ namespace Api.Controllers
         private readonly IProjectManagementService _projectManagementService;
         private readonly IValidator<CreateProjectRequest> _createProjectValidator;
         private readonly IValidator<UpdateProjectRequest> _updateProjectValidator;
-        private readonly ChangeControllerContext _changeControllerContext;
 
         public ProjectController(IProjectManagementService projectManagementService,
                                  IValidator<CreateProjectRequest> createProjectValidator,
-                                 IValidator<UpdateProjectRequest> updateProjectValidator,
-                                 ChangeControllerContext changeControllerContext)
+                                 IValidator<UpdateProjectRequest> updateProjectValidator)
         {
             _projectManagementService = projectManagementService;
             _createProjectValidator = createProjectValidator;
             _updateProjectValidator = updateProjectValidator;
-            _changeControllerContext = changeControllerContext;
         }
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpPost]
         public async Task<CreateProjectResponse> Create([FromBody] CreateProjectRequest request)
         {
@@ -47,20 +44,20 @@ namespace Api.Controllers
 
 
         [HttpGet]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<List<GroupedProjectsDto>> Gets([FromQuery] GetProjectsRequest request)
         {
             return await _projectManagementService.GetAllAsync(request);
         }
 
         [HttpPost]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<RestoreProjectResponse> Restore([FromBody] RestoreProjectRequest restoreProjectRequest)
         {
             return await _projectManagementService.RestoreProjectAsync(restoreProjectRequest);
         }
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpGet]
         public async Task<GetProjectResponse> Get([FromQuery] string projectId)
         {
@@ -70,7 +67,7 @@ namespace Api.Controllers
             return await _projectManagementService.GetAsync(projectId);
         }
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpPost]
         public async Task<BaseResponse> UpdateProject([FromBody] UpdateProjectRequest request)
         {
@@ -96,7 +93,7 @@ namespace Api.Controllers
              return await _projectManagementService.UpdateTenantGroupAsync(request);
         }
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpPost]
         public async Task<BaseResponse> Disable([FromBody] DisableProjectRequest request)
         {
@@ -109,14 +106,14 @@ namespace Api.Controllers
         }
 
         [HttpGet]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<GetAssetResponse> GetAsset([FromQuery] GetAssetRequest request)
         {
             return await _projectManagementService.GetAssetAsync(request);   
         }
 
         [HttpPost]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<BaseResponse> AddAsset([FromBody] AddAssetRequest asset)
         {
             if (string.IsNullOrWhiteSpace(asset.TenantGroupId) || asset.Resource == null)
@@ -129,32 +126,30 @@ namespace Api.Controllers
         }
 
         [HttpPost]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<BaseResponse> UpdateTokenValidationParameters([FromBody] UpdateTokenValidationParametersRequest request)
         {
             return await _projectManagementService.UpdateTokenValidationParametersAsync(request);
         }
 
         [HttpGet]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<IActionResult> GetTokenValidationParameters([FromQuery] GetTokenValidationParametersRequest request)
         {
             return await _projectManagementService.GetProjectTokenValidationParametersAsync(request.ProjectKey);
         }
 
         [HttpPost]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<SaveThirdPartyJWTClaimsResponse> SaveThirdPartyJWTClaims([FromBody] SaveThirdPartyJWTClaimsRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _projectManagementService.SaveThirdPartyJWTClaimsAsync(request);
         }
 
         [HttpGet]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<ThirdPartyJWTClaims?> GetThirdPartyJWTClaims([FromQuery] GetThirdPartyJWTClaimsRequest request)
         {
-            _changeControllerContext.ChangeContext(request);
             return await _projectManagementService.GetThirdPartyJWTClaimsAsync(request);
         }
     }

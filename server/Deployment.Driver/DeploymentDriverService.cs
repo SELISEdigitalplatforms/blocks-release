@@ -10,16 +10,13 @@ namespace DeploymentDriver
     {
         private readonly IAuthService _authService;
         private readonly IRepoRepository _repoRepository;
-        private readonly ChangeControllerContext _changeControllerContext;
 
         public DeploymentDriverService(
             IAuthService authService,
-            IRepoRepository repoRepository,
-            ChangeControllerContext changeControllerContext)
+            IRepoRepository repoRepository)
         {
             _authService = authService;
             _repoRepository = repoRepository;
-            _changeControllerContext = changeControllerContext;
         }
 
         public async Task<BaseApiResponse> IsAuthorizeAsync()
@@ -48,7 +45,6 @@ namespace DeploymentDriver
 
         public async Task<BaseApiResponse> GetReposListAsync(string projectKey)
         {
-            _changeControllerContext.ChangeContext(new ProjectKeyQuery { ProjectKey = projectKey });
             var repoList = await _repoRepository.GetRepos();
             if (repoList != null)
             {

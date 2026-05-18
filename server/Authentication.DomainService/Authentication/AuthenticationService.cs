@@ -126,7 +126,7 @@ namespace DomainService.Authentication
 
         public bool DeleteCookie(HttpRequest request)
         {
-            var cookieDomain = _tenants.GetTenantByID(BlocksContext.GetContext()?.TenantId ?? "")?.CookieDomain;
+            var cookieDomain = _tenants.GetTenantByID(BlocksContext.GetContext()?.TenantId ?? "")?.Applications.FirstOrDefault()?.CookieDomain;
             var bc = BlocksContext.GetContext();    
             var cookieOptions = new CookieOptions
             {

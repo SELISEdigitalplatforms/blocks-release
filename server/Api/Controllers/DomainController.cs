@@ -16,7 +16,7 @@ namespace Api.Controllers
             _domainManagementService = domainManagementService;
         }
 
-        [ProtectedEndPoint]
+        [Authorize]
         [HttpPost]
         public async Task<BaseResponse> Configure([FromBody] ConfigureDomainRequest request)
         {

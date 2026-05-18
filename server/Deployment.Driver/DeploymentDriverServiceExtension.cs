@@ -13,7 +13,6 @@ namespace Blocks.Extensions.DependencyInjection
         {
             var cloudBuildSecret = await CloudBuildSecret.ProcessBlocksSecret(vaultType);
             services.RegisterApplicationServices(cloudBuildSecret);
-            services.AddSingleton<ChangeControllerContext>();
             services.AddScoped<IDeploymentDriverService, DeploymentDriverService>();
         }
     }

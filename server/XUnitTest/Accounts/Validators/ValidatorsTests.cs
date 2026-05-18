@@ -50,7 +50,7 @@ namespace XUnitTest.Accounts.Validators
                 .Where(m => m.Name == "Create" && m.ReturnType == typeof(BlocksContext))
                 .ToList();
 
-            // Try 15-parameter version first (newer API with actualTentId + refreshToken)
+            // Try 15-parameter version first (newer API with actualTenantId + refreshToken)
             var create15Method = createMethods.FirstOrDefault(m => m.GetParameters().Length == 15);
 
             if (create15Method != null)

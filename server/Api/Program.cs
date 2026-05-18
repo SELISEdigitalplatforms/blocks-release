@@ -20,7 +20,8 @@ Console.WriteLine($"Using Genesis vault type: {vaultType}");
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
 var cloudBuildSecret = await CloudBuildSecret.ProcessBlocksSecret(vaultType);
 var builder = WebApplication.CreateBuilder(args);
-
+Console.WriteLine(secret.DatabaseConnectionString);
+Console.WriteLine(secret.AllowedCorsOrigins);
 ApplicationConfigurations.ConfigureServices(builder.Services, IdpConstants.GetMessageConfiguration(secret.MessageConnectionString));
 
 builder.Services.Configure<FormOptions>(options =>
@@ -32,12 +33,11 @@ var services = builder.Services;
 
 services.AddHealthChecks();
 
-ApplicationConfigurations.ConfigureApi(services);
-
-builder.Services.Configure<MvcOptions>(options =>
-{
-    options.Conventions.Insert(0, new GlobalApiRoutePrefixConvention("api"));
-});
+// serviceName ("blocks-os-api") is used for log/metric/trace collections, but the
+// IDP issues tokens whose service_access claim grants the canonical service name
+// "blocks-os". Genesis 10's HasServiceAccess check requires an exact match, so the
+// service-access resource name is set explicitly to "blocks-os" to accept those tokens.
+ApplicationConfigurations.ConfigureApi(services, serviceName, serviceAccessResourceName: "blocks-os");
 
 var wwwrootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
 Directory.CreateDirectory(wwwrootPath);
@@ -45,27 +45,11 @@ Directory.CreateDirectory(wwwrootPath);
 ApplyFrontendRuntimeSettings(builder.Configuration, wwwrootPath);
 
 services.AddEndpointsApiExplorer();
-services.AddSwaggerGen(options =>
+services.AddBlocksSwagger(new BlocksSwaggerOptions
 {
-    options.SwaggerDoc("v1", new() { Title = "Blocks Deployment API", Version = "v1" });
-    options.AddSecurityDefinition("Bearer", new()
-    {
-        Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-    });
-    options.AddSecurityRequirement(new()
-    {
-        {
-            new() { Reference = new() { Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme, Id = "Bearer" } },
-            []
-        }
-    });
-    var xmlFile = Path.Combine(AppContext.BaseDirectory, "Blocks.Genesis.xml");
-    if (File.Exists(xmlFile))
-        options.IncludeXmlComments(xmlFile);
+    Title = "Blocks Deployment API",
+    Version = "v1",
+    EnableBearerAuth = true
 });
 
 services.AddSignalR().AddJsonProtocol(options =>
@@ -86,9 +70,6 @@ services.AddSingleton<IDeploymentHubService, DeploymentHubService>();
 
 var app = builder.Build();
 
-app.UseSwagger();
-app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Blocks Deployment API v1"));
-
 app.MapHub<DeploymentLogHub>("/deploymentHub");
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -107,6 +88,24 @@ if (File.Exists(indexHtml))
 
 
 }
+
+// Genesis 10's SecurityHeadersMiddleware stamps a hardcoded
+// "Content-Security-Policy: default-src 'self'; frame-ancestors 'none'" with no
+// connect-src, which blocks the SPA's cross-origin calls to the IDP and other
+// Blocks services. Override only that header (Genesis's other security headers
+// are left intact) with a config-derived connect-src allowlist. OnStarting runs
+// just before headers flush, so it deterministically wins over Genesis's
+// directly-set value regardless of middleware ordering.
+var contentSecurityPolicy = BuildContentSecurityPolicy(builder.Configuration);
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        context.Response.Headers["Content-Security-Policy"] = contentSecurityPolicy;
+        return Task.CompletedTask;
+    });
+    await next();
+});
 
 ApplicationConfigurations.ConfigureMiddleware(app);
 
@@ -127,6 +126,45 @@ static VaultType ResolveVaultType()
     return string.Equals(environment, "Development", StringComparison.OrdinalIgnoreCase)
         ? VaultType.OnPrem
         : VaultType.Azure;
+}
+
+static string BuildContentSecurityPolicy(IConfiguration configuration)
+{
+    static string? ResolveEnvOrConfig(IConfiguration config, string key) =>
+        Environment.GetEnvironmentVariable(key) ?? config[$"FrontendRuntime:{key}"];
+
+    string[] urlKeys =
+    [
+        "BLOCKS_IDP_BASE_URL",
+        "BLOCKS_API_BASE_URL",
+        "BLOCKS_CONSTRUCT_URL",
+        "BLOCKS_LOGIC_APP_URL",
+        "BLOCKS_APP_URL"
+    ];
+
+    var origins = new List<string>();
+    foreach (var key in urlKeys)
+    {
+        var value = ResolveEnvOrConfig(configuration, key);
+        if (string.IsNullOrWhiteSpace(value)) continue;
+
+        if (Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri))
+        {
+            var origin = uri.IsDefaultPort
+                ? $"{uri.Scheme}://{uri.Host}"
+                : $"{uri.Scheme}://{uri.Host}:{uri.Port}";
+            if (!origins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+            {
+                origins.Add(origin);
+            }
+        }
+    }
+
+    var connectSrc = origins.Count > 0
+        ? $"connect-src 'self' {string.Join(' ', origins)}"
+        : "connect-src 'self'";
+
+    return $"default-src 'self'; frame-ancestors 'none'; {connectSrc}";
 }
 
 static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string webRootPath)

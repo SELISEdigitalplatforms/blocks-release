@@ -159,3 +159,6 @@ server/Api/wwwroot/**
 # Ignore environment-specific app settings, keep base appsettings.json
 # **/appsettings.*.json
 # **/appsetting.*.json
+
+# JetBrains files
+.idea/

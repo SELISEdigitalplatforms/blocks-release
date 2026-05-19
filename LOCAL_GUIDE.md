@@ -44,7 +44,7 @@ npm install
 
 ## Local HTTPS setup (mkcert)
 
-Both the frontend (Vite, port **4000**) and backend (.NET Kestrel, port **5000**) serve HTTPS
+Both the frontend (Vite, port **4000**) and backend (.NET Kestrel, port **5002**) serve HTTPS
 under the named domain when **two machine environment variables** point at an mkcert certificate.
 If either is unset or its file is missing, **everything falls back to HTTP automatically** — no
 errors. This procedure is reusable across projects; only the domain/cert changes.
@@ -75,15 +75,14 @@ errors. This procedure is reusable across projects; only the domain/cert changes
    - macOS/Linux: `/etc/hosts`
 
 4. **Set the two machine env vars** (then restart the terminal/IDE so they're picked up):
-
-   * Windows (PowerShell):
+   - Windows (PowerShell):
 
      ```powershell
      setx DEPLOYMENT_SSL_CERT "C:\SSL_Certificates\dev-deployment.blocksdevelopers.com.pem"
      setx DEPLOYMENT_SSL_KEY  "C:\SSL_Certificates\dev-deployment.blocksdevelopers.com-key.pem"
      ```
 
-   * macOS/Linux (add to `~/.bashrc` / `~/.zshrc`):
+   - macOS/Linux (add to `~/.bashrc` / `~/.zshrc`):
 
      ```bash
      export DEPLOYMENT_SSL_CERT="$HOME/.ssl/dev-deployment.blocksdevelopers.com.pem"
@@ -92,10 +91,10 @@ errors. This procedure is reusable across projects; only the domain/cert changes
 
 ### Behavior
 
-| Both vars set + files exist | Result |
-|---|---|
-| Yes | FE `https://dev-deployment.blocksdevelopers.com:4000`, API `https://…:5000` (trusted cert) |
-| No  | FE `http://…:4000`, API `http://…:5000` (automatic fallback) |
+| Both vars set + files exist | Result                                                                                     |
+| --------------------------- | ------------------------------------------------------------------------------------------ |
+| Yes                         | FE `https://dev-deployment.blocksdevelopers.com:4000`, API `https://…:5002` (trusted cert) |
+| No                          | FE `http://…:4000`, API `http://…:5002` (automatic fallback)                               |
 
 This applies to every launch method: `npm run dev` (from `client/`), `./run.sh -f|-b|-a`, and the
 `run.ps1` equivalents. The frontend reads the vars in `client/vite.config.ts`; the run scripts map
@@ -118,22 +117,22 @@ All development workflows are handled via:
 
 ### Available Commands
 
-* `./run.sh -b` or `--backend`
-  Run only the .NET API (default port: 5000)
+- `./run.sh -b` or `--backend`
+  Run only the .NET API (default port: 5002)
 
-* `./run.sh -w` or `--worker`
+- `./run.sh -w` or `--worker`
   Run only the .NET Worker service
 
-* `./run.sh -f` or `--frontend`
+- `./run.sh -f` or `--frontend`
   Run frontend dev server (Vite)
 
-* `./run.sh -a` or `--all`
+- `./run.sh -a` or `--all`
   Build frontend → run API + Worker together
 
-* `./run.sh -k` or `--kill-port`
+- `./run.sh -k` or `--kill-port`
   Kill any process using the API port
 
-* `./run.sh -n <args>` or `--npm <args>`
+- `./run.sh -n <args>` or `--npm <args>`
   Run any npm command inside `client/`
   Example:
 
@@ -142,7 +141,7 @@ All development workflows are handled via:
   ./run.sh -n run build
   ```
 
-* `./run.sh -d <args>` or `--dotnet <args>`
+- `./run.sh -d <args>` or `--dotnet <args>`
   Run any .NET CLI command
   Example:
 
@@ -249,8 +248,8 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 ### Recommended usage
 
-* ✅ Use `run.sh` with **Git Bash** (best compatibility)
-* ✅ Use `run.ps1` with **PowerShell** (native Windows)
+- ✅ Use `run.sh` with **Git Bash** (best compatibility)
+- ✅ Use `run.ps1` with **PowerShell** (native Windows)
 
 ---
 
@@ -304,13 +303,13 @@ git commit -m "Make run.sh executable"
 
 ### Permission reference
 
-| Scenario | Command |
-|---|---|
-| Make executable for everyone | `chmod +x run.sh` |
-| Make executable for owner only | `chmod u+x run.sh` |
-| Set full permissions numerically | `chmod 755 run.sh` |
-| Check current permissions | `ls -la run.sh` |
-| Fix via git (permanent) | `git add --chmod=+x run.sh && git commit` |
+| Scenario                         | Command                                   |
+| -------------------------------- | ----------------------------------------- |
+| Make executable for everyone     | `chmod +x run.sh`                         |
+| Make executable for owner only   | `chmod u+x run.sh`                        |
+| Set full permissions numerically | `chmod 755 run.sh`                        |
+| Check current permissions        | `ls -la run.sh`                           |
+| Fix via git (permanent)          | `git add --chmod=+x run.sh && git commit` |
 
 > This applies to **macOS, Linux, and WSL** — they all follow POSIX permission semantics.
 
@@ -318,9 +317,8 @@ git commit -m "Make run.sh executable"
 
 ## Notes
 
-* Always use `dotnet restore` (or `./run.sh -d restore`) to install backend dependencies
-* Avoid manually editing `.csproj` for packages—use `dotnet add`
-* Frontend is fully standard Node/Vite
-* `./run.sh -a` is your **full-stack dev command**
-* Worker runs independently—make sure required services (DB, queues, etc.) are available
-
+- Always use `dotnet restore` (or `./run.sh -d restore`) to install backend dependencies
+- Avoid manually editing `.csproj` for packages—use `dotnet add`
+- Frontend is fully standard Node/Vite
+- `./run.sh -a` is your **full-stack dev command**
+- Worker runs independently—make sure required services (DB, queues, etc.) are available

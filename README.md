@@ -54,26 +54,26 @@ This repository does **not** embed Compose files or hard-require an external inf
 | Flag                 | Bash `run.sh`     | PowerShell `run.ps1` | Behavior                                                                                       |
 | -------------------- | ----------------- | -------------------- | ---------------------------------------------------------------------------------------------- |
 | `-a` / `--all`       | Yes               | Yes                  | Build the client, then start **API + Worker** (no Vite dev server).                            |
-| `-b` / `--backend`   | Yes               | Yes                  | Run the **API** only (`dotnet run` on `server/Api/Api.csproj`). Frees **API port 5000** first. |
+| `-b` / `--backend`   | Yes               | Yes                  | Run the **API** only (`dotnet run` on `server/Api/Api.csproj`). Frees **API port 5002** first. |
 | `-w` / `--worker`    | Yes               | Yes                  | Run the **Worker** only (`dotnet run` on `server/Worker/Worker.csproj`).                       |
 | `-f` / `--frontend`  | Yes               | Yes                  | Install deps if needed, then **`npm run dev`** in `client/` (Vite on **4000**).                |
-| `-k` / `--kill-port` | Yes               | Yes                  | Free processes listening on **API port 5000** (not the Vite port).                             |
+| `-k` / `--kill-port` | Yes               | Yes                  | Free processes listening on **API port 5002** (not the Vite port).                             |
 | `-n` / `--npm`       | Yes               | Yes                  | Run `npm` in `client/` with the remaining arguments (e.g. `-n install`).                       |
 | `-d` / `--dotnet`    | **No**            | Yes                  | **PowerShell only:** pass through to `dotnet` (e.g. `.\run.ps1 -d restore`).                   |
 | `-h` / `--help`      | Yes (via `usage`) | Yes                  | Show usage.                                                                                    |
 
 **Default ports**
 
-- API: **5000** (hard-coded in both scripts; matches `server/Api/Properties/launchSettings.json` `applicationUrl`).
+- API: **5002** (hard-coded in both scripts; matches `server/Api/Properties/launchSettings.json` `applicationUrl`).
 - Vite dev: **4000** (`client/package.json` → `vite --port 4000` and `vite.config.ts` `server.port`).
 
 `launchSettings.json` is what Visual Studio / `dotnet run` use from the IDE; keep it in mind if your IDE profile differs from the scripts.
 
-**Local HTTPS:** both the Vite dev server (4000) and the API (5000) serve HTTPS automatically when the machine env vars `DEPLOYMENT_SSL_CERT` / `DEPLOYMENT_SSL_KEY` point at an mkcert cert; otherwise they fall back to HTTP. One-time setup is documented in **[LOCAL_GUIDE.md → "Local HTTPS setup (mkcert)"](LOCAL_GUIDE.md)**.
+**Local HTTPS:** both the Vite dev server (4000) and the API (5002) serve HTTPS automatically when the machine env vars `DEPLOYMENT_SSL_CERT` / `DEPLOYMENT_SSL_KEY` point at an mkcert cert; otherwise they fall back to HTTP. One-time setup is documented in **[LOCAL_GUIDE.md → "Local HTTPS setup (mkcert)"](LOCAL_GUIDE.md)**.
 
 ### Unix (`run.sh`)
 
-- **Backend:** clears port 5000, runs `dotnet run` (no explicit `dotnet restore`).
+- **Backend:** clears port 5002, runs `dotnet run` (no explicit `dotnet restore`).
 - **Frontend:** if `client/node_modules` is missing, runs `npm clean-install`; otherwise runs `npm run dev`. Frees port **4000** with `lsof` (or falls back to `netstat`/`taskkill` on some environments).
 - **All (`-a`):** `npm install` + `npm run build` in `client/`, then copies **`client/dist` → `server/Api/wwwroot`** only if `client/dist` exists (`rsync` if available, else `rm` + `cp`). In this repo, **`client/vite.config.ts` sets `build.outDir` to `../server/Api/wwwroot`**, so the production build usually writes **directly** to `wwwroot` and the `dist` sync may not run.
 - **All:** runs API and Worker as **background jobs** in the same shell; `trap` kills them on exit.
@@ -86,10 +86,10 @@ Examples:
 ```bash
 chmod +x run.sh   # once, if needed
 ./run.sh -f       # Vite on http://localhost:4000
-./run.sh -b       # API on http://localhost:5000
+./run.sh -b       # API on http://localhost:5002
 ./run.sh -w       # Worker
 ./run.sh -a       # build SPA + API + Worker
-./run.sh -k       # clear port 5000
+./run.sh -k       # clear port 5002
 ./run.sh -n ci    # npm ci in client/
 ```
 

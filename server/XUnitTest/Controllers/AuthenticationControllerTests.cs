@@ -1091,8 +1091,7 @@ namespace XUnitTest.Controllers
                 phoneNumber: string.Empty,
                 displayName: "Test User",
                 oauthToken: string.Empty,
-                refreshToken: string.Empty,
-                actualTenantId: "test-tenant"
+                originalTenantId: "test-tenant"
             );
 
             BlocksContext.SetContext(blocksContext, true);
@@ -1134,8 +1133,7 @@ namespace XUnitTest.Controllers
                 phoneNumber: string.Empty,
                 displayName: "Test User",
                 oauthToken: string.Empty,
-                refreshToken: string.Empty,
-                actualTenantId: "test-tenant"
+                originalTenantId: "test-tenant"
             );
 
             BlocksContext.SetContext(blocksContext, true);
@@ -1173,8 +1171,7 @@ namespace XUnitTest.Controllers
                 phoneNumber: string.Empty,
                 displayName: "Test User",
                 oauthToken: string.Empty,
-                refreshToken: string.Empty,
-                actualTenantId: "test-tenant"
+                originalTenantId: "test-tenant"
             );
 
             BlocksContext.SetContext(blocksContext, true);
@@ -1306,8 +1303,7 @@ namespace XUnitTest.Controllers
                 phoneNumber: string.Empty,
                 displayName: "Test User",
                 oauthToken: string.Empty,
-                refreshToken: string.Empty,
-                actualTenantId: "test-tenant"
+                originalTenantId: "test-tenant"
             );
 
             BlocksContext.SetContext(blocksContext, true);
@@ -1617,8 +1613,7 @@ namespace XUnitTest.Controllers
                 phoneNumber: string.Empty,
                 displayName: "Test User",
                 oauthToken: string.Empty,
-                refreshToken: string.Empty,
-                actualTenantId: "test-tenant"
+                originalTenantId: "test-tenant"
             );
 
             BlocksContext.SetContext(blocksContext, true);
@@ -1667,8 +1662,7 @@ namespace XUnitTest.Controllers
                 phoneNumber: string.Empty,
                 displayName: "Authenticated User",
                 oauthToken: string.Empty,
-                refreshToken: string.Empty,
-                actualTenantId: "test-tenant"
+                originalTenantId: "test-tenant"
             );
 
             BlocksContext.SetContext(blocksContext, true);
@@ -1723,8 +1717,7 @@ namespace XUnitTest.Controllers
                 phoneNumber: string.Empty,
                 displayName: "Authenticated User",
                 oauthToken: string.Empty,
-                refreshToken: string.Empty,
-                actualTenantId: "test-tenant"
+                originalTenantId: "test-tenant"
             );
 
             BlocksContext.SetContext(blocksContext, true);

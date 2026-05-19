@@ -13,18 +13,22 @@ import {
 
 export class ProjectService {
   private readonly httpClient = serviceInstances.deploymentService;
+  // TEMP: route project reads through the logic app while the deployment-side
+  // impersonation/cookie 401 is being fixed. Revert to `httpClient` once fixed.
+  private readonly logicClient = serviceInstances.logicService;
+
   getProjects(
     page: number,
     pageSize: number,
     tenantGroupId: string,
   ): Promise<IProjectGroup[]> {
     const url = `${PROJECT_ENDPOINTS.GETS}?page=${page}&pageSize=${pageSize}&tenantGroupId=${tenantGroupId}`;
-    return this.httpClient.get(url);
+    return this.logicClient.get(url);
   }
 
   getProject(payload: IGetProjectPayload): Promise<IGetProjectResponse> {
     const url = `${PROJECT_ENDPOINTS.GET}?projectId=${payload.projectId}`;
-    return this.httpClient.get(url);
+    return this.logicClient.get(url);
   }
 
   getEnvRepositories(projectKey: string): Promise<{

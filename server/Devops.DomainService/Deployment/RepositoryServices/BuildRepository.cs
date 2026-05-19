@@ -13,18 +13,35 @@ public class BuildRepository : IBuildRepository
     private readonly ILogger<BuildRepository> _logger;
     private readonly IConfiguration _configuration;
     private readonly IDbContextProvider _dbContextProvider;
+    private readonly IBlocksSecret _blocksSecret;
+    private readonly IMongoDatabase _clientDb;
     private readonly IMongoCollection<Build> _buildsCollection;
-    public BuildRepository(IDbContextProvider dbContextProvider, ILogger<BuildRepository> logger, IConfiguration configuration)
+    public BuildRepository(IDbContextProvider dbContextProvider, ILogger<BuildRepository> logger, IConfiguration configuration, IBlocksSecret blocksSecret)
     {
         _logger = logger;
         _configuration = configuration;
         _dbContextProvider = dbContextProvider;
-        _buildsCollection = _dbContextProvider.GetCollection<Build>("Builds");
+        _blocksSecret = blocksSecret;
+        _clientDb = ResolvedClientDb();
+        _buildsCollection = _clientDb.GetCollection<Build>("Builds");
+    }
+
+    private IMongoDatabase ResolvedClientDb()
+    {
+        var blocksContext = BlocksContext.GetContext()
+            ?? throw new InvalidOperationException("BlocksContext is required to resolve the client database.");
+
+        if (blocksContext.Impersonated)
+        {
+            return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksRootDb");
+        }
+
+        return _dbContextProvider.GetDatabase(blocksContext.TenantId);
     }
 
     public async Task<Build?> GetBuild(string buildId)
     {
-        var buildCollection = _dbContextProvider.GetCollection<Build>("Builds");
+        var buildCollection = _clientDb.GetCollection<Build>("Builds");
         var filter = Builders<Build>.Filter.Eq(b => b.ItemId, buildId);
         var build = buildCollection.Find(filter).FirstOrDefault();
         return build;
@@ -42,7 +59,7 @@ public class BuildRepository : IBuildRepository
     public async Task<List<Build>?> GetBuilds(string repoId)
     {
 
-        var collection = _dbContextProvider.GetCollection<Build>("Builds");
+        var collection = _clientDb.GetCollection<Build>("Builds");
         var filter = Builders<Build>.Filter.Eq(b => b.RepoId, repoId);
         var builds = await collection.Find(filter).ToListAsync();
         return builds;
@@ -50,7 +67,7 @@ public class BuildRepository : IBuildRepository
 
     public async Task SaveBuild(Build build)
     {
-        var collection = _dbContextProvider.GetCollection<Build>("Builds");
+        var collection = _clientDb.GetCollection<Build>("Builds");
         try
         {
             await collection.InsertOneAsync(build);
@@ -133,7 +150,7 @@ public class BuildRepository : IBuildRepository
         try
         {
             var _dbContext = _dbContextProvider.GetDatabase(_configuration["RootTenantId"]);
-            var providersCollection = _dbContextProvider.GetCollection<HostingProvider>("HostingProviders");
+            var providersCollection = _clientDb.GetCollection<HostingProvider>("HostingProviders");
 
             var filter = Builders<HostingProvider>.Filter.Eq(p => p.Status, "active");
 

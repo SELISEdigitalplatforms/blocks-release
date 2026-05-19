@@ -1,5 +1,6 @@
 import react from "@vitejs/plugin-react";
 import fs from "fs";
+// import { get } from "http";
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
 
@@ -38,7 +39,7 @@ export default defineConfig(({ mode }) => {
   const idpProxyTarget = env.BLOCKS_IDP_BASE_URL;
   const devHost = env.BLOCKS_DEV_HOST || true;
   const httpsConfig = getHttpsConfig();
-
+  getHttpsConfig();
   return {
     envPrefix: ["BLOCKS_"],
     plugins: [react()],

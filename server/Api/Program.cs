@@ -172,7 +172,7 @@ static string BuildContentSecurityPolicy(IConfiguration configuration)
     foreach (var fallback in new[]
     {
         "https://dev-idp.blocksdevelopers.com",
-        "http://dev-deployment.blocksdevelopers.com",
+        "https://dev-deployment.blocksdevelopers.com",
         "https://dev-construct.seliseblocks.com",
         "https://dev-logic.blocksdevelopers.com"
     })
@@ -229,7 +229,7 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
 
     var replacements = new Dictionary<string, string?>
     {
-        ["__BLOCKS_API_BASE_URL__"] = "http://dev-deployment.blocksdevelopers.com",
+        ["__BLOCKS_API_BASE_URL__"] = "https://dev-deployment.blocksdevelopers.com",
         ["__BLOCKS_X_BLOCKS_KEY__"] = "f080a1bea04280a72149fd689d50a48c",
         ["__BLOCKS_GOOGLE_SITE_KEY__"] = "6LeE8uEqAAAAAM-9mzdFO8sajdin-DsVdxh3RT8c",
         ["__BLOCKS_CONSTRUCT_URL__"] = "https://dev-construct.seliseblocks.com",

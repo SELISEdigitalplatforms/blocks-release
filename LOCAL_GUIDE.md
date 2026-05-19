@@ -44,7 +44,7 @@ npm install
 
 ## Local HTTPS setup (mkcert)
 
-Both the frontend (Vite, port **4000**) and backend (.NET Kestrel, port **5002**) serve HTTPS
+Both the frontend (Vite, port **4000**) and backend (.NET Kestrel, port **5000**) serve HTTPS
 under the named domain when **two machine environment variables** point at an mkcert certificate.
 If either is unset or its file is missing, **everything falls back to HTTP automatically** — no
 errors. This procedure is reusable across projects; only the domain/cert changes.
@@ -93,8 +93,8 @@ errors. This procedure is reusable across projects; only the domain/cert changes
 
 | Both vars set + files exist | Result                                                                                     |
 | --------------------------- | ------------------------------------------------------------------------------------------ |
-| Yes                         | FE `https://dev-deployment.blocksdevelopers.com:4000`, API `https://…:5002` (trusted cert) |
-| No                          | FE `http://…:4000`, API `http://…:5002` (automatic fallback)                               |
+| Yes                         | FE `https://dev-deployment.blocksdevelopers.com:4000`, API `https://…:5000` (trusted cert) |
+| No                          | FE `http://…:4000`, API `http://…:5000` (automatic fallback)                               |
 
 This applies to every launch method: `npm run dev` (from `client/`), `./run.sh -f|-b|-a`, and the
 `run.ps1` equivalents. The frontend reads the vars in `client/vite.config.ts`; the run scripts map
@@ -118,7 +118,7 @@ All development workflows are handled via:
 ### Available Commands
 
 - `./run.sh -b` or `--backend`
-  Run only the .NET API (default port: 5002)
+  Run only the .NET API (default port: 5000)
 
 - `./run.sh -w` or `--worker`
   Run only the .NET Worker service

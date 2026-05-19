@@ -1,5 +1,7 @@
 import { Navigate, type RouteObject } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/dashboard-layout/dashboard-layout";
+import { ConsoleLayout } from "@/layouts/console-layout/console-layout";
+import { Console } from "@/pages/console/console";
 import LoginPage from "./auth/login";
 import CallbackPage from "./callback";
 import ProfilePage from "./dashboard/profile";
@@ -15,6 +17,10 @@ export const routes = [
       { index: true, element: <LoginPage /> },
       { path: "callback", element: <CallbackPage /> },
     ],
+  },
+  {
+    element: <ConsoleLayout />,
+    children: [{ path: "/console", element: <Console /> }],
   },
   {
     element: <DashboardLayout />,
@@ -35,6 +41,6 @@ export const routes = [
       { path: "/profile", element: <ProfilePage /> },
     ],
   },
-  { path: "/", element: <Navigate to="/deployment" replace /> },
+  { path: "/", element: <Navigate to="/console" replace /> },
   { path: "*", element: <Navigate to="/login" replace /> },
 ] as const satisfies RouteObject[];

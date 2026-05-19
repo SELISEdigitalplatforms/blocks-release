@@ -35,7 +35,11 @@ const pillars = [
     label: "Real-time Monitoring",
     desc: "Live logs & build status",
   },
-  { icon: History, label: "Build History", desc: "Analytics & past deployments" },
+  {
+    icon: History,
+    label: "Build History",
+    desc: "Analytics & past deployments",
+  },
   { icon: ShieldCheck, label: "Security Scans", desc: "SAST, SCA & DAST" },
   { icon: Eye, label: "Observability", desc: "Dependency Track insights" },
   { icon: Globe, label: "Custom Domains", desc: "Flexible hosting config" },
@@ -394,9 +398,9 @@ export default function LoginPage() {
       // (browser sees a same-origin request; Vite forwards it to BLOCKS_IDP_BASE_URL).
       // In production, fall back to the absolute IDP URL.
       const idpBaseUrl = getRuntimeEnv("BLOCKS_IDP_BASE_URL");
-      const apiBaseUrl = getRuntimeEnv("BLOCKS_API_BASE_URL");
+      const apiBaseUrl = getRuntimeEnv("BLOCKS_APP_URL");
       const redirectUri = apiBaseUrl + "/login/callback";
-      const initiateUrl = `${idpBaseUrl}/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${clientId}&redirectUri=${encodeURIComponent(redirectUri)}`;
+      const initiateUrl = `${idpBaseUrl}/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${clientId}&redirectUri=${redirectUri}`;
       const headers: Record<string, string> = {};
       if (blocksKey) headers["X-Blocks-Key"] = blocksKey;
 
@@ -457,10 +461,10 @@ export default function LoginPage() {
           </div>
 
           <p className="max-w-lg text-lg leading-relaxed tracking-tight text-muted-foreground">
-            Deployment provides a streamlined way to deploy,
-            monitor, and analyze your applications—all from one place. Connect
-            your repositories, automate deployments, and get detailed
-            observability insights for every build.
+            Deployment provides a streamlined way to deploy, monitor, and
+            analyze your applications—all from one place. Connect your
+            repositories, automate deployments, and get detailed observability
+            insights for every build.
           </p>
 
           <div className="flex flex-wrap gap-2">

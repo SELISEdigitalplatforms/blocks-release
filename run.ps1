@@ -81,7 +81,7 @@ $ApiProject = Join-Path $ScriptDir "server/Api/Api.csproj"
 $WorkerProject = Join-Path $ScriptDir "server/Worker/Worker.csproj"
 $Wwwroot = Join-Path $ScriptDir "server/Api/wwwroot"
 
-$ApiPort = 5002
+$ApiPort = 5000
 
 # ---- Helpers ----
 

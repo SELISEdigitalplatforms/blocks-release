@@ -8,7 +8,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui-kits/tooltip/tooltip";
-import { environmentOptions } from "@/constants/environment-options";
+import { environmentOptions } from "@/constants/environment-options.constant";
 import { useProjectStore } from "@/store/project.store";
 import { ChevronRight, Settings2 } from "lucide-react";
 

@@ -234,7 +234,7 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
         ["__BLOCKS_GOOGLE_SITE_KEY__"] = "***REMOVED***",
         ["__BLOCKS_CONSTRUCT_URL__"] = "https://dev-construct.seliseblocks.com",
         ["__BLOCKS_GITHUB_SSO_CLIENT_ID__"] = "Ov23liqWywFtITPvQ4Z9",
-        ["__BLOCKS_APP_URL__"] = "http://dev-deployment.blocksdevelopers.com",
+        ["__BLOCKS_APP_URL__"] = "https://dev-deployment.blocksdevelopers.com",
         ["__BLOCKS_LOGIC_APP_URL__"] = "https://dev-logic.blocksdevelopers.com",
         ["__BLOCKS_IDP_BASE_URL__"] = "https://dev-idp.blocksdevelopers.com",
         ["__BLOCKS_OIDC_CLIENT_ID__"] = "6523b311-256f-4b9a-a88a-2ac4e02bad25",

@@ -8,7 +8,7 @@ API_PROJECT="$SCRIPT_DIR/server/Api/Api.csproj"
 WORKER_PROJECT="$SCRIPT_DIR/server/Worker/Worker.csproj"
 WWWROOT_DIR="$SCRIPT_DIR/server/Api/wwwroot"
 
-API_PORT=5000
+API_PORT=5002
 FRONTEND_PORT=4000
 
 API_PID=""

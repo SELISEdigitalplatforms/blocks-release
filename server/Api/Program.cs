@@ -16,12 +16,10 @@ using Cloud.LmtService.Models.Trace;
 
 var serviceName = "blocks-os-api";
 var vaultType = ResolveVaultType();
-Console.WriteLine($"Using Genesis vault type: {vaultType}");
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
 var cloudBuildSecret = await CloudBuildSecret.ProcessBlocksSecret(vaultType);
 var builder = WebApplication.CreateBuilder(args);
-Console.WriteLine(secret.DatabaseConnectionString);
-Console.WriteLine(secret.AllowedCorsOrigins);
+
 ApplicationConfigurations.ConfigureServices(builder.Services, IdpConstants.GetMessageConfiguration(secret.MessageConnectionString));
 
 builder.Services.Configure<FormOptions>(options =>

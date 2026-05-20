@@ -56,6 +56,7 @@ namespace Devops.DomainService.AnalyticsTool.Services.Sca
         {
             try
             {
+                projectId = BlocksContext.GetContext().TenantId;
                 var dbContext = _dbContextProvider.GetDatabase(projectId);
                 var collection = dbContext.GetCollection<DependencyTrackProjects>("DependencyTrackProjects");
                 var filter = Builders<DependencyTrackProjects>.Filter.Eq(x => x.ProjectId, projectId);

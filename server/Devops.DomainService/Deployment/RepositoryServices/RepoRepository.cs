@@ -19,7 +19,6 @@ public class RepoRepository : IRepoRepository
     private readonly IDbContextProvider _dbContextProvider;
     private readonly IConfiguration _configuration;
     private readonly IBlocksSecret _blocksSecret;
-    private readonly IMongoDatabase _clientDb;
 
     public RepoRepository(IDbContextProvider dbContextProvider, IConfiguration configuration, ILogger<RepoRepository> logger, IBlocksSecret blocksSecret)
     {
@@ -27,25 +26,11 @@ public class RepoRepository : IRepoRepository
         _dbContextProvider = dbContextProvider;
         _configuration = configuration;
         _blocksSecret = blocksSecret;
-        _clientDb = ResolvedClientDb();
-    }
-
-    private IMongoDatabase ResolvedClientDb()
-    {
-        var blocksContext = BlocksContext.GetContext()
-            ?? throw new InvalidOperationException("BlocksContext is required to resolve the client database.");
-
-        if (blocksContext.Impersonated)
-        {
-            return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksRootDb");
-        }
-
-        return _dbContextProvider.GetDatabase(blocksContext.TenantId);
     }
 
     public async Task<Repo?> GetRepo(string repoId)
     {
-        var collection = _clientDb.GetCollection<Repo>("Repos");
+        var collection = _dbContextProvider.GetCollection<Repo>("Repos");
         var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
         var repo = await collection.Find(filter).FirstOrDefaultAsync();
         return repo;
@@ -72,13 +57,13 @@ public class RepoRepository : IRepoRepository
 
     public async Task<List<Repo>?> GetRepos()
     {
-        var collection = _clientDb.GetCollection<Repo>("Repos");
+        var collection = _dbContextProvider.GetCollection<Repo>("Repos");
         return await collection.Find(_ => true).ToListAsync();
     }
 
     public async Task<List<Build>?> GetRepoBuildList(string repoId)
     {
-        var collection = _clientDb.GetCollection<Build>("Builds");
+        var collection = _dbContextProvider.GetCollection<Build>("Builds");
         var filter = Builders<Build>.Filter.Eq(r => r.RepoId, repoId);
         return await collection.Find(filter).ToListAsync();
     }
@@ -87,8 +72,8 @@ public class RepoRepository : IRepoRepository
     {
         CancellationToken ct = default;
         var blocksUserId = BlocksContext.GetContext().UserId;
-        var repoCollection = _clientDb.GetCollection<Repo>("Repos");
-        var buildsCollection = _clientDb.GetCollection<Build>("Builds");
+        var repoCollection = _dbContextProvider.GetCollection<Repo>("Repos");
+        var buildsCollection = _dbContextProvider.GetCollection<Build>("Builds");
         var pipeline = repoCollection.Aggregate()                        // FROM repos
             .Match(r => r.BlocksUserId == blocksUserId &&
                         r.ProjectId == projectId)          // only this user
@@ -115,7 +100,7 @@ public class RepoRepository : IRepoRepository
 
     public async Task SaveRepo(Repo repo)
     {
-        var collection = _clientDb.GetCollection<Repo>("Repos");
+        var collection = _dbContextProvider.GetCollection<Repo>("Repos");
         try
         {
             // var existingRepo = await collection.Find(r => r.Name == repo.Name).FirstOrDefaultAsync();
@@ -137,7 +122,7 @@ public class RepoRepository : IRepoRepository
     {
         try
         {
-            var collection = _clientDb.GetCollection<Repo>("Repos");
+            var collection = _dbContextProvider.GetCollection<Repo>("Repos");
 
             var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, request.RepoId);
             var updateBuilder = Builders<Repo>.Update;
@@ -225,7 +210,7 @@ public class RepoRepository : IRepoRepository
 
     public async Task<bool> UpdateRepo(Repo repo)
     {
-        var collection = _clientDb.GetCollection<Repo>("Repos");
+        var collection = _dbContextProvider.GetCollection<Repo>("Repos");
         var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repo.ItemId);
         var result = await collection.ReplaceOneAsync(filter, repo, cancellationToken: default);
         return result.MatchedCount == 1;
@@ -233,7 +218,7 @@ public class RepoRepository : IRepoRepository
 
     public async Task<BulkOperationSummary> UpdateRepoDomain(RepoDomainUpdateRequest request)
     {
-        var collection = _clientDb.GetCollection<Repo>("Repos");
+        var collection = _dbContextProvider.GetCollection<Repo>("Repos");
 
         var bulkOps = request.repoWithDomains
             .Where(rd => !string.IsNullOrWhiteSpace(rd.RepoId) && !string.IsNullOrWhiteSpace(rd.CustomDeploymentDomain))

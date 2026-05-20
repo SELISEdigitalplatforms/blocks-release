@@ -19,7 +19,7 @@ export function Logo({
   const { resolvedTheme } = useTheme();
 
   const onLogoClick = () => {
-    window.location.href = "/console";
+    // window.location.href = "/console";
   };
 
   if (src) {

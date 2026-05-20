@@ -20,7 +20,6 @@ var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(service
 var cloudBuildSecret = await CloudBuildSecret.ProcessBlocksSecret(vaultType);
 var builder = WebApplication.CreateBuilder(args);
 Console.WriteLine($"Database Connection String: {secret.DatabaseConnectionString}");
-
 ApplicationConfigurations.ConfigureServices(builder.Services, IdpConstants.GetMessageConfiguration(secret.MessageConnectionString));
 
 builder.Services.Configure<FormOptions>(options =>
@@ -138,7 +137,7 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
 
     var replacements = new Dictionary<string, string?>
     {
-        ["__BLOCKS_API_BASE_URL__"] = "https://dev-deployment.blocksdevelopers.com",
+        ["__BLOCKS_API_BASE_URL__"] = "https://dev-deployment.blocksdevelopers.com:5000",
         ["__BLOCKS_X_BLOCKS_KEY__"] = "f080a1bea04280a72149fd689d50a48c",
         ["__BLOCKS_GOOGLE_SITE_KEY__"] = "6LeE8uEqAAAAAM-9mzdFO8sajdin-DsVdxh3RT8c",
         ["__BLOCKS_CONSTRUCT_URL__"] = "https://dev-construct.seliseblocks.com",

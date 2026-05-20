@@ -1,8 +1,8 @@
 import { ErrorBoundary } from "@/components/error-boundary";
 import { DashboardLayoutProvider } from "@/contexts/dashboard-layout-provider";
 import {
-  ImpersonateGuard,
   ImpersonationChecker,
+  ImpersonationSynchronizer,
   ProtectedGuard,
 } from "@/guards/protected-guard";
 import { DashboardHeader } from "@/layouts/dashboard-header/dashboard-header";
@@ -13,7 +13,7 @@ export function DashboardLayout() {
   return (
     <ProtectedGuard>
       <ImpersonationChecker>
-        <ImpersonateGuard>
+        <ImpersonationSynchronizer>
           <DashboardLayoutProvider isOpen={true} persist>
             <div className="relative flex h-screen overflow-hidden bg-[hsl(var(--surface-app))]">
               <SidebarMenuDesktop />
@@ -27,7 +27,7 @@ export function DashboardLayout() {
               </div>
             </div>
           </DashboardLayoutProvider>
-        </ImpersonateGuard>
+        </ImpersonationSynchronizer>
       </ImpersonationChecker>
     </ProtectedGuard>
   );

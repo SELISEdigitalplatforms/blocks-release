@@ -6,19 +6,18 @@ interface ImpersonateState {
   originalTenantId: string | null;
 
   isInitialized: boolean;
+  isTriggered: boolean;
 
   setImpersonation: (
     isImpersonated: boolean,
     originalTenantId: string | null,
     impersonatedTenantId: string | null,
   ) => void;
-  startImpersonation: (
-    impersonatedTenantId: string,
-    originalTenantId: string,
-  ) => void;
-  stopImpersonation: () => void;
+  impersonate: (impersonatedTenantId: string, originalTenantId: string) => void;
+  terminate: (originalTenantId: string) => void;
 
   setInitialized: (isInitialized: boolean) => void;
+  setTriggered: (isTriggered: boolean) => void;
 
   reset: () => void;
 }
@@ -28,12 +27,7 @@ export const useImpersonateStore = create<ImpersonateState>()((set) => ({
   impersonatedTenantId: null,
   originalTenantId: null,
   isInitialized: false,
-  startImpersonation: (
-    impersonatedTenantId: string,
-    originalTenantId: string,
-  ) => {
-    set({ isImpersonated: true, impersonatedTenantId, originalTenantId });
-  },
+  isTriggered: false,
   setImpersonation: (
     isImpersonated: boolean,
     originalTenantId: string | null,
@@ -41,21 +35,30 @@ export const useImpersonateStore = create<ImpersonateState>()((set) => ({
   ) => {
     set({ isImpersonated, impersonatedTenantId, originalTenantId });
   },
-  stopImpersonation: () => {
+  impersonate: (impersonatedTenantId: string, originalTenantId: string) => {
+    set({ isImpersonated: true, impersonatedTenantId, originalTenantId });
+  },
+  terminate: (originalTenantId: string) => {
     set((state) => ({
       ...state,
       isImpersonated: false,
       impersonatedTenantId: null,
+      originalTenantId: originalTenantId,
     }));
   },
   setInitialized: (isInitialized: boolean) => {
     set({ isInitialized });
+  },
+  setTriggered: (isTriggered: boolean) => {
+    set({ isTriggered: isTriggered });
   },
   reset: () => {
     set({
       isImpersonated: false,
       impersonatedTenantId: null,
       originalTenantId: null,
+      isInitialized: false,
+      isTriggered: false,
     });
   },
 }));

@@ -9,7 +9,7 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 import { useAuthStore } from "@/store/auth.store";
 import { useImpersonateStore } from "@/store/impersonate.store";
 import { useProjectStore } from "@/store/project.store";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppState } from "./public-guard";
 
@@ -36,6 +36,7 @@ export const ImpersonationChecker = ({
   const { data, isLoading, isSuccess } = useImpersonationStatusChecker();
   const { setImpersonation, isInitialized, setInitialized } =
     useImpersonateStore();
+
   useEffect(() => {
     if (!data) return;
     setImpersonation(
@@ -54,28 +55,24 @@ export function ImpersonationTerminator({
 }: {
   children: React.ReactNode;
 }) {
-  const { terminate, isImpersonated, isTriggered, setTriggered } =
-    useImpersonateStore();
-
-  const { mutate } = useStopImpersonation();
+  const { terminate, isImpersonated } = useImpersonateStore();
+  const { mutateAsync } = useStopImpersonation();
+  const isTriggering = useRef(false);
 
   useEffect(() => {
-    if (isTriggered || !isImpersonated) return;
-    setTriggered(true);
-    mutate(undefined, {
-      onSuccess: () => {
+    if (isTriggering.current || !isImpersonated) return;
+    isTriggering.current = true;
+    mutateAsync(undefined)
+      .then(() => {
         terminate(getRuntimeEnv("BLOCKS_X_BLOCKS_KEY"));
-        setTriggered(false);
-      },
-      onError: () => {
-        // add logic if termination fails
-        setTriggered(false);
-      },
-    });
-  }, [mutate, terminate, isImpersonated]);
+        isTriggering.current = false;
+      })
+      .catch(() => {
+        isTriggering.current = false;
+      });
+  }, [mutateAsync, terminate, isImpersonated, isTriggering]);
 
-  if (isImpersonated || isTriggered) return null;
-
+  if (isImpersonated || isTriggering.current) return null;
   return <>{children}</>;
 }
 
@@ -84,50 +81,38 @@ export function ImpersonationSynchronizer({
 }: {
   children: React.ReactNode;
 }) {
-  const {
-    impersonate,
-    isImpersonated,
-    impersonatedTenantId,
-    isTriggered,
-    setTriggered,
-  } = useImpersonateStore();
-  const { mutate: startImpersonationMutate } = useStartImpersonation();
+  const { impersonate, isImpersonated, impersonatedTenantId } =
+    useImpersonateStore();
+  const { mutateAsync } = useStartImpersonation();
 
   const { selectedProject } = useProjectStore();
+  const isTriggering = useRef(false);
 
   useEffect(() => {
     if (!selectedProject?.tenantId) return;
     if (selectedProject.tenantId === impersonatedTenantId) return;
-    if (isTriggered) return;
+    if (isTriggering.current) return;
 
-    setTriggered(true);
+    isTriggering.current = true;
     const payload: ImpersonationRequest = {
       targetTenantId: selectedProject.tenantId,
     };
-
-    startImpersonationMutate(payload, {
-      onSuccess: () => {
+    mutateAsync(payload)
+      .then(() => {
         impersonate(
-          payload.targetTenantId,
+          selectedProject.tenantId,
           getRuntimeEnv("BLOCKS_X_BLOCKS_KEY"),
         );
-        setTriggered(false);
-      },
-      onError: () => {
-        // add logic if impersonation fails
-        setTriggered(false);
-      },
-    });
+        isTriggering.current = false;
+      })
+      .catch(() => {});
   }, [
     selectedProject?.tenantId,
-    startImpersonationMutate,
+    mutateAsync,
     impersonate,
-    isTriggered,
-    setTriggered,
     impersonatedTenantId,
+    isTriggering,
   ]);
-
-  if (!isImpersonated || isTriggered) return null;
-
+  if (!isImpersonated || isTriggering.current) return null;
   return <>{children}</>;
 }

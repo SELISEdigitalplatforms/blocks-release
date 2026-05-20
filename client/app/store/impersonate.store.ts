@@ -6,7 +6,6 @@ interface ImpersonateState {
   originalTenantId: string | null;
 
   isInitialized: boolean;
-  isTriggered: boolean;
 
   setImpersonation: (
     isImpersonated: boolean,
@@ -17,7 +16,6 @@ interface ImpersonateState {
   terminate: (originalTenantId: string) => void;
 
   setInitialized: (isInitialized: boolean) => void;
-  setTriggered: (isTriggered: boolean) => void;
 
   reset: () => void;
 }
@@ -27,7 +25,6 @@ export const useImpersonateStore = create<ImpersonateState>()((set) => ({
   impersonatedTenantId: null,
   originalTenantId: null,
   isInitialized: false,
-  isTriggered: false,
   setImpersonation: (
     isImpersonated: boolean,
     originalTenantId: string | null,
@@ -49,16 +46,12 @@ export const useImpersonateStore = create<ImpersonateState>()((set) => ({
   setInitialized: (isInitialized: boolean) => {
     set({ isInitialized });
   },
-  setTriggered: (isTriggered: boolean) => {
-    set({ isTriggered: isTriggered });
-  },
   reset: () => {
     set({
       isImpersonated: false,
       impersonatedTenantId: null,
       originalTenantId: null,
       isInitialized: false,
-      isTriggered: false,
     });
   },
 }));

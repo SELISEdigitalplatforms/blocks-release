@@ -1,6 +1,8 @@
-import { useProjectStore } from "@/store/project.store";
+// TEMP (debugging): unused while the refresh-failure reset/redirect is commented
+// out below. Restore together with that block.
+// import { useProjectStore } from "@/store/project.store";
 import { getRuntimeEnv } from "@/lib/runtime-env";
-import { getQueryClient } from "@/providers/query-provider";
+// import { getQueryClient } from "@/providers/query-provider";
 import { useAuthStore } from "@/store/auth.store";
 
 class HttpError extends Error {
@@ -140,12 +142,17 @@ class HttpClient {
         this.request(url, requestOption).then(resolve).catch(reject);
       }
     } catch (_error) {
-      const queryClient = getQueryClient();
-      useAuthStore.getState().reset();
-      useProjectStore.getState().reset();
-      queryClient.cancelQueries();
-      queryClient.clear();
-      window.location.href = "/login";
+      // TEMP (debugging): do NOT wipe stores / clear query cache / hard-redirect
+      // to /login on a failed token refresh. That destroys all state and masks
+      // the underlying 401. Just log it so the 401 stays visible in the Network
+      // tab. Re-enable the reset+redirect once the root cause is fixed.
+      console.error("[http-client] token refresh failed", _error);
+      // const queryClient = getQueryClient();
+      // useAuthStore.getState().reset();
+      // useProjectStore.getState().reset();
+      // queryClient.cancelQueries();
+      // queryClient.clear();
+      // window.location.href = "/login";
     } finally {
       isRefreshing = false;
       requestQueue = [];

@@ -17,6 +17,7 @@ namespace DomainService.Projects
         private readonly IBlocksSecret _blocksSecret;
         private readonly IConfiguration _configuration;
         private readonly IEncodingService _urlEncodingService;
+        private readonly IMongoDatabase _clientDb;
 
         public ProjectRepository(IDbContextProvider dbContextProvider,
                                  IConfiguration configuration,
@@ -27,11 +28,25 @@ namespace DomainService.Projects
             _blocksSecret = blocksSecret;
             _configuration = configuration;
             _urlEncodingService = urlEncodingService;
+            _clientDb = ResolvedClientDb();
+        }
+
+        private IMongoDatabase ResolvedClientDb()
+        {
+            var blocksContext = BlocksContext.GetContext()
+                ?? throw new InvalidOperationException("BlocksContext is required to resolve the client database.");
+
+            if (blocksContext.Impersonated)
+            {
+                return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksRootDb");
+            }
+
+            return _dbContextProvider.GetDatabase(blocksContext.TenantId);
         }
 
         public async Task<Tenant> GetByIdAsync(string itemId)
         {
-            var collection = _dbContextProvider.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
+            var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
             var filter = Builders<Tenant>.Filter.Eq(mc => mc.ItemId, itemId);
             return await collection.Find(filter).FirstOrDefaultAsync();
@@ -39,7 +54,7 @@ namespace DomainService.Projects
 
         public async Task<List<Tenant>> GetByGroupIdAsync(string tenantGroupId)
         {
-            var collection = _dbContextProvider.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
+            var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
             var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantGroupId, tenantGroupId);
             return await collection.Find(filter).ToListAsync();
@@ -47,7 +62,7 @@ namespace DomainService.Projects
 
         public async Task<Tenant> GetByDomainAsync(string name)
         {
-            var collection = _dbContextProvider.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
+            var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
             var filter = Builders<Tenant>.Filter.ElemMatch(t => t.Applications, a => a.Domain == name);
             return await collection.Find(filter).FirstOrDefaultAsync();
@@ -55,14 +70,14 @@ namespace DomainService.Projects
 
         public async Task InsertProjectAsync(Tenant project)
         {
-            var collection = _dbContextProvider.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
+            var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
             await collection.InsertOneAsync(project);
         }
 
         public async Task UpdateTenantAssetAsync(TenantAsset asset)
         {
-            var collection = _dbContextProvider.GetCollection<TenantAsset>(IdentifierConstants.TenantAssetCollectionName);
+            var collection = _clientDb.GetCollection<TenantAsset>(IdentifierConstants.TenantAssetCollectionName);
             await collection.InsertOneAsync(asset);
         }
 
@@ -74,7 +89,7 @@ namespace DomainService.Projects
                 return (null, 0);
             }
 
-            var collection = _dbContextProvider.GetCollection<TenantAsset>(IdentifierConstants.TenantAssetCollectionName);
+            var collection = _clientDb.GetCollection<TenantAsset>(IdentifierConstants.TenantAssetCollectionName);
             var documentFilter = Builders<TenantAsset>.Filter.Eq(mc => mc.TenantGroupId, request.TenantGroupId);
             var tenantAsset = await collection.Find(documentFilter).FirstOrDefaultAsync();
 
@@ -111,7 +126,7 @@ namespace DomainService.Projects
 
         public async Task UpdateProjectAsync(Tenant project)
         {
-            var collection = _dbContextProvider.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
+            var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
             var filter = Builders<Tenant>.Filter.Eq(mc => mc.ItemId, project.ItemId);
 
             await collection.ReplaceOneAsync(filter, project);
@@ -119,7 +134,7 @@ namespace DomainService.Projects
 
         public async Task<List<GroupedProjectsDto>> GetAllByLastModifiedDateAsync(GetProjectsRequest request)
         {
-            var collection = _dbContextProvider.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
+            var collection = _clientDb.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
 
             var filter = !string.IsNullOrEmpty(request.TenantGroupId) ?
 
@@ -166,7 +181,7 @@ namespace DomainService.Projects
 
         private async Task<List<Project>> GetNosharedProjectsAsync(List<Project> sharedProjects, string tenantGroupId)
         {
-            var projectCollection = _dbContextProvider.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
+            var projectCollection = _clientDb.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
             var filter = Builders<Project>.Filter.Nin(p => p.TenantId, sharedProjects?.Select(doc => doc?.TenantId)) &
                          Builders<Project>.Filter.Where(p => p.IsDisabled == false) &
                          Builders<Project>.Filter.Where(p => p.TenantGroupId == tenantGroupId);
@@ -181,7 +196,7 @@ namespace DomainService.Projects
 
         public async Task<List<Project>> GetSharedProjectsAsync(string? tenantGroupId = null)
         {
-            var projectPeopleCollection = _dbContextProvider.GetCollection<ProjectPeople>(IdentifierConstants.ProjectPeopleCollectionName);
+            var projectPeopleCollection = _clientDb.GetCollection<ProjectPeople>(IdentifierConstants.ProjectPeopleCollectionName);
 
             var projectPeopleFilter = Builders<ProjectPeople>.Filter.And(
                 Builders<ProjectPeople>.Filter.Eq(mc => mc.UserId, BlocksContext.GetContext()?.UserId),
@@ -192,7 +207,7 @@ namespace DomainService.Projects
             var documentsCursor = await projectPeopleCollection.FindAsync(projectPeopleFilter);
             var documents = await documentsCursor.ToListAsync();
 
-            var projectCollection = _dbContextProvider.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
+            var projectCollection = _clientDb.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
             var filter = Builders<Project>.Filter.In(p => p.TenantId, documents?.Select(doc => doc?.TenantId)) &
                          Builders<Project>.Filter.Where(p => p.IsDisabled == false) &
                          Builders<Project>.Filter.Ne(p => p.CreatedBy, BlocksContext.GetContext().UserId);
@@ -212,7 +227,7 @@ namespace DomainService.Projects
 
         public async Task<List<Project>> GetProjectPeoplesAsync(string tenantGroupId)
         {
-            var projectPeopleCollection = _dbContextProvider.GetCollection<ProjectPeople>(IdentifierConstants.ProjectPeopleCollectionName);
+            var projectPeopleCollection = _clientDb.GetCollection<ProjectPeople>(IdentifierConstants.ProjectPeopleCollectionName);
 
             var projectPeopleFilter = Builders<ProjectPeople>.Filter.And(
                 Builders<ProjectPeople>.Filter.Eq(mc => mc.UserId, BlocksContext.GetContext()?.UserId),
@@ -223,7 +238,7 @@ namespace DomainService.Projects
             var documentsCursor = await projectPeopleCollection.FindAsync(projectPeopleFilter);
             var documents = await documentsCursor.ToListAsync();
 
-            var projectCollection = _dbContextProvider.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
+            var projectCollection = _clientDb.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
             var filter = Builders<Project>.Filter.In(p => p.TenantId, documents?.Select(doc => doc?.TenantId)) &
                          Builders<Project>.Filter.Where(p => p.IsDisabled == false);
 
@@ -239,7 +254,7 @@ namespace DomainService.Projects
 
         public async Task SaveStatusTracerAsync(ProjectStatusTracer statusTrace)
         {
-            var collection = _dbContextProvider.GetCollection<ProjectStatusTracer>(IdentifierConstants.ProjectStatusTracerCollectionName);
+            var collection = _clientDb.GetCollection<ProjectStatusTracer>(IdentifierConstants.ProjectStatusTracerCollectionName);
 
             var filter = Builders<ProjectStatusTracer>.Filter.Eq(tracer => tracer.ProjectId, statusTrace.ProjectId);
             await collection.ReplaceOneAsync(filter, statusTrace, new ReplaceOptions { IsUpsert = true });
@@ -247,7 +262,7 @@ namespace DomainService.Projects
 
         public async Task<List<ProjectStatusTracer>> GetAllUnfinishedProjectAsync()
         {
-            var collection = _dbContextProvider.GetCollection<ProjectStatusTracer>(IdentifierConstants.ProjectStatusTracerCollectionName);
+            var collection = _clientDb.GetCollection<ProjectStatusTracer>(IdentifierConstants.ProjectStatusTracerCollectionName);
 
             var filter = Builders<ProjectStatusTracer>.Filter.Eq(mc => mc.IsProjectCreationSuccess, false);
             var unfinishedList = await collection.FindAsync(filter);
@@ -427,7 +442,7 @@ namespace DomainService.Projects
 
         public async Task<long> GetProjectCountAsync()
         {
-            var collection = _dbContextProvider.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
+            var collection = _clientDb.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
 
             var filter = Builders<Project>.Filter.And(Builders<Project>.Filter.Eq(mc => mc.CreatedBy, BlocksContext.GetContext()?.UserId),
                                                       Builders<Project>.Filter.Eq(mc => mc.IsDisabled, false));
@@ -437,7 +452,7 @@ namespace DomainService.Projects
 
         public async Task<bool> IsExistingEnviroment(List<string> enviroments, string tenantGroupId)
         {
-            var collection = _dbContextProvider.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
+            var collection = _clientDb.GetCollection<Project>(IdentifierConstants.TenantCollectionName);
             var filter = Builders<Project>.Filter.And(Builders<Project>.Filter.In(mc => mc.Environment, enviroments),
                                                       Builders<Project>.Filter.Eq(mc => mc.TenantGroupId, tenantGroupId),
                                                       Builders<Project>.Filter.Eq(mc => mc.IsDisabled, false));
@@ -447,12 +462,12 @@ namespace DomainService.Projects
 
         public async Task InsertPeopleAsync(ProjectPeople projectPeople)
         {
-            await _dbContextProvider.GetCollection<ProjectPeople>("ProjectPeoples").InsertOneAsync(projectPeople);
+            await _clientDb.GetCollection<ProjectPeople>("ProjectPeoples").InsertOneAsync(projectPeople);
         }
 
         public async Task<bool> SaveTenantCertificate(TenantCertificate tenantCertificate)
         {
-            await _dbContextProvider.GetCollection<TenantCertificate>("TenantCertificates")
+            await _clientDb.GetCollection<TenantCertificate>("TenantCertificates")
                 .ReplaceOneAsync(x => x.ItemId == tenantCertificate.ItemId, tenantCertificate, new ReplaceOptions { IsUpsert = true });
 
             return true;
@@ -460,7 +475,7 @@ namespace DomainService.Projects
 
         public async Task<Tenant> GetByTenantIdAsync(string tenantId)
         {
-            var collection = _dbContextProvider.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
+            var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
             var filter = Builders<Tenant>.Filter.Eq(mc => mc.TenantId, tenantId);
             return await (await collection.FindAsync(filter)).FirstOrDefaultAsync();
@@ -468,7 +483,7 @@ namespace DomainService.Projects
 
         public async Task<List<SsoInfo>> GetSsoInfoAsync()
         {
-            var collection = _dbContextProvider.GetCollection<SsoInfo>("SocialLoginCredentials");
+            var collection = _clientDb.GetCollection<SsoInfo>("SocialLoginCredentials");
 
             var filter = Builders<SsoInfo>.Filter.Eq(mc => mc.IsDisabled, false);
             return await (await collection.FindAsync(filter)).ToListAsync();
@@ -476,21 +491,21 @@ namespace DomainService.Projects
 
         public async Task SaveTenantAssetAsync(TenantAsset asset)
         {
-            var collection = _dbContextProvider.GetCollection<TenantAsset>(IdentifierConstants.TenantAssetCollectionName);
+            var collection = _clientDb.GetCollection<TenantAsset>(IdentifierConstants.TenantAssetCollectionName);
             var filter = Builders<TenantAsset>.Filter.Eq(mc => mc.TenantGroupId, asset.TenantGroupId);
             await collection.ReplaceOneAsync(filter, asset, new ReplaceOptions { IsUpsert = true });
         }
 
         public async Task<BlocksGuid> GetBlocksGuidAsync(string tenantGroupId)
         {
-            var collection = _dbContextProvider.GetCollection<BlocksGuid>($"{nameof(BlocksGuid)}s");
+            var collection = _clientDb.GetCollection<BlocksGuid>($"{nameof(BlocksGuid)}s");
             var filter = Builders<BlocksGuid>.Filter.Eq(mc => mc.TenantGroupId, tenantGroupId);
             return await collection.Find(filter).FirstOrDefaultAsync();
         }
 
         public async Task<BaseResponse> SaveJWTClaimsAsync(ThirdPartyJWTClaims mapper)
         {
-            var collection = _dbContextProvider.GetCollection<ThirdPartyJWTClaims>("ThirdPartyJWTClaims");
+            var collection = _clientDb.GetCollection<ThirdPartyJWTClaims>("ThirdPartyJWTClaims");
             var filter = Builders<ThirdPartyJWTClaims>.Filter.Eq(m => m.ItemId, mapper.ItemId);
             await collection.ReplaceOneAsync(filter, mapper, new ReplaceOptions { IsUpsert = true });
 
@@ -499,7 +514,7 @@ namespace DomainService.Projects
 
         public async Task<ThirdPartyJWTClaims> GetThirdPartyJWTClaimsAsync(string itemId)
         {
-            var collection = _dbContextProvider.GetCollection<ThirdPartyJWTClaims>("ThirdPartyJWTClaims");
+            var collection = _clientDb.GetCollection<ThirdPartyJWTClaims>("ThirdPartyJWTClaims");
 
             var filter = !string.IsNullOrWhiteSpace(itemId) ?
                          Builders<ThirdPartyJWTClaims>.Filter.Eq(mc => mc.ItemId, itemId) :
@@ -512,7 +527,7 @@ namespace DomainService.Projects
         {
             var filter = Builders<Tenant>.Filter.Eq(x => x.TenantGroupId, projectGroupId);
 
-            var tenantIds = await _dbContextProvider.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName)
+            var tenantIds = await _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName)
                 .Find(filter)
                 .Project(x => x.TenantId)
                 .ToListAsync();
@@ -523,7 +538,7 @@ namespace DomainService.Projects
         public async Task UpdateTenantGroupAsync(UpdateTenantGroupRequest request)
         {
             var tenantIds = await GetProjectIdsByGroupId(request.TenantGroupId);
-            var collection = _dbContextProvider.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
+            var collection = _clientDb.GetCollection<Tenant>(IdentifierConstants.TenantCollectionName);
 
            await collection.UpdateManyAsync(
                 Builders<Tenant>.Filter.In(t => t.TenantId, tenantIds),

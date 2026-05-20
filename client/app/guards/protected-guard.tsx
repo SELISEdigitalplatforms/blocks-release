@@ -8,6 +8,7 @@ import { useImpersonateStore } from "@/store/impersonate.store";
 import { useProjectStore } from "@/store/project.store";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
+import { useImpersonationStatusChecker } from "@/cross-modules/idp/authentication/hooks/use-impersonation";
 
 export function ProtectedGuard({ children }: { children: React.ReactNode }) {
   const { isMounted } = useAppState();
@@ -31,6 +32,26 @@ export function ProtectedGuard({ children }: { children: React.ReactNode }) {
   if (!isMounted || isLoading || !user) return null;
   return <>{children}</>;
 }
+
+export const ImpersonationChecker = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
+  const { data, isLoading, isSuccess } = useImpersonationStatusChecker();
+  const { setImpersonation } = useImpersonateStore();
+
+  useEffect(() => {
+    if (!data) return;
+    setImpersonation(
+      data.impersonated,
+      data.originalTenantId,
+      data.impersonated ? data.impersonatedTenantId : null,
+    );
+  }, [data, setImpersonation]);
+  if (isLoading || !isSuccess) return null;
+  return <>{children}</>;
+};
 
 export function ImpersonateGuard({ children }: { children: React.ReactNode }) {
   const { startImpersonation, stopImpersonation } = useImpersonateStore();

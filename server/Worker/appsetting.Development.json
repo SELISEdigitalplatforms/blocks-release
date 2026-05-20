@@ -26,11 +26,9 @@
     "XmlCommentsFilePath": "Blocks.CloudBuild.xml"
   },
   "NotificationServiceUrl": "https://dev-api.seliseblocks.com/communication/v1/Notifier/SendSecretNotification",
-  "GithubWebhookUrl": "https://dev-api.seliseblocks.com/cloudbuild/v1/github/webhook?x-blocks-key=",
+  "GithubWebhookUrl": "https://dev-deployment.blocksdevelopers.com/api/github/webhook?x-blocks-key=",
   "BlocksAppNotificationReceiver": "BuildLogNotification",
   "RootTenantId": "***REMOVED***",
   "ImageReference": "blocksacr.azurecr.io/dev/",
-  "DependencyTrackBaseUrl": "https://api-dt.seliseblocks.com/api/v1",
-  "DatagatewayClusterNames": "aks-blocks-dev",
-  "DatagatewayClusterRevision": "dev"
+  "DependencyTrackBaseUrl": "https://api-dt.seliseblocks.com/api/v1"
 }

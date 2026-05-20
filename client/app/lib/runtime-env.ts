@@ -9,6 +9,7 @@ type RuntimeKey =
   | "BLOCKS_APP_URL"
   | "BLOCKS_LOGIC_APP_URL"
   | "BLOCKS_IDP_BASE_URL"
+  | "BLOCKS_OS_URL"
   | "BLOCKS_OIDC_CLIENT_ID";
 
 declare global {

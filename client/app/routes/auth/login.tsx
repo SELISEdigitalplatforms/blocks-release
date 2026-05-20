@@ -86,7 +86,7 @@ const services: Service[] = [
     description:
       "Build, deploy, and scale your applications with automated CI/CD pipelines. Connect your GitHub repositories and go live in minutes.",
     features: ["Auto CI/CD", "GitHub Integration", "Multi-env", "Build Logs"],
-    url: "https://dev-deployment.blocksdevelopers.com:5000",
+    url: "https://dev-deployment.blocksdevelopers.com",
     cta: "Visit Cloud Build",
     gradient: "from-sky-500 to-cyan-500",
   },

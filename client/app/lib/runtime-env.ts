@@ -30,7 +30,7 @@ const stripPortFromUrl = (url: string) => {
     parsedUrl.port = "";
     return parsedUrl.toString();
   } catch (error) {
-    console.warn(`Failed to parse URL: ${url}`, error);
+    console.error(`Failed to parse URL: ${url}`, error);
     return url;
   }
 };
@@ -38,14 +38,14 @@ export const getRuntimeEnv = (
   key: RuntimeKey,
   options: GetRuntimeEnvOptions = { stripPort: false },
 ): string => {
-  let value: string;
+  let value = "";
   const windowValue =
     typeof window !== "undefined" ? window.__BLOCKS_ENV__?.[key] : undefined;
   if (windowValue && !isPlaceholder(windowValue)) {
     value = windowValue;
+  } else {
+    value = import.meta.env[key] || "";
   }
-
-  value = import.meta.env[key] || "";
 
   if (options.stripPort) {
     value = stripPortFromUrl(value);

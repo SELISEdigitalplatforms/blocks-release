@@ -93,7 +93,7 @@ errors. This procedure is reusable across projects; only the domain/cert changes
 
 | Both vars set + files exist | Result                                                                                     |
 | --------------------------- | ------------------------------------------------------------------------------------------ |
-| Yes                         | FE `https://dev-deployment.blocksdevelopers.com:4000`, API `https://…:5000` (trusted cert) |
+| Yes                         | FE `https://dev-deployment.blocksdevelopers.com:5000:4000`, API `https://…:5000` (trusted cert) |
 | No                          | FE `http://…:4000`, API `http://…:5000` (automatic fallback)                               |
 
 This applies to every launch method: `npm run dev` (from `client/`), `./run.sh -f|-b|-a`, and the

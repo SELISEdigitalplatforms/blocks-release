@@ -12,6 +12,7 @@ public class
 {
     private readonly ILogger<TokenRepository> _logger;
     private readonly IDbContextProvider _dbContextProvider;
+    private readonly IMongoDatabase _clientDb;
     private readonly IBlocksSecret _blocksSecret;
 
     public TokenRepository(IDbContextProvider dbContextProvider, ILogger<TokenRepository> logger,  IBlocksSecret blocksSecret)
@@ -19,14 +20,21 @@ public class
         _logger = logger;
         _dbContextProvider = dbContextProvider;
         _blocksSecret = blocksSecret;
+        _clientDb = ResolvedClientDb();
     }
 
+    private IMongoDatabase ResolvedClientDb()
+    {
+        Console.WriteLine($"Database Connection String in Repository: {_blocksSecret.DatabaseConnectionString}");
+
+        return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksRootDb");
+    }
     public async Task<bool> saveToken(RepositoryToken repositoryToken)
     {
         try
         {
             var blocksUserId = BlocksContext.GetContext().UserId;
-            var collection = _dbContextProvider.GetCollection<RepositoryToken>("RepositoryTokens");
+            var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
 
             var filter = Builders<RepositoryToken>.Filter.Eq(x => x.BlocksUserId, blocksUserId);
             var options = new ReplaceOptions { IsUpsert = true };
@@ -63,7 +71,7 @@ public class
     public async Task<RepositoryToken> getToken()
     {
         var blocksUserId = BlocksContext.GetContext().UserId;
-        var collection = _dbContextProvider.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
         var filter = Builders<RepositoryToken>.Filter.Eq(nameof(RepositoryToken.BlocksUserId), blocksUserId);
         var dbToken = await collection.FindAsync(filter);
         var token = dbToken.FirstOrDefault();
@@ -81,7 +89,7 @@ public class
     public async Task<string> getToken(string userId)
     {
         var blocksUserId = userId;
-        var collection = _dbContextProvider.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
         var filter = Builders<RepositoryToken>.Filter.Eq(nameof(RepositoryToken.BlocksUserId), blocksUserId);
         var dbToken = await collection.FindAsync(filter);
         var token = dbToken.FirstOrDefault();
@@ -98,13 +106,13 @@ public class
     
     public async Task<List<RepositoryToken>> getTokens()
     {
-        var collection = _dbContextProvider.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
         return await collection.Find(_ => true).ToListAsync();
     }
     
     public async Task UpdateUsernameAsync(string id, List<UserOrganizations> orgs)
     {
-        var collection = _dbContextProvider.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
     
         var filter = Builders<RepositoryToken>.Filter.Eq(x => x.ItemId, id);
         var update = Builders<RepositoryToken>.Update.Set(x => x.Organizations, orgs);
@@ -117,7 +125,7 @@ public class
     public async Task<bool> DeleteTokenAsync()
     {
         var blocksUserId = BlocksContext.GetContext().UserId;
-        var collection = _dbContextProvider.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
 
         var filter = Builders<RepositoryToken>.Filter.Eq(nameof(RepositoryToken.BlocksUserId), blocksUserId);
 
@@ -128,7 +136,7 @@ public class
 
     public async Task<bool> DeleteTokenAsync(string blocksUserId)
     {
-        var collection = _dbContextProvider.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
 
         var filter = Builders<RepositoryToken>.Filter.Eq(nameof(RepositoryToken.BlocksUserId), blocksUserId);
 

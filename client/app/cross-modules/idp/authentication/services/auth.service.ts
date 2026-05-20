@@ -1,6 +1,5 @@
 import { serviceInstances } from "@/lib/http-client";
 import { getRuntimeEnv } from "@/lib/runtime-env";
-import { useAuthStore } from "@/store/auth.store";
 import {
   ISigninByEmailPayload,
   ISigninByEmailResponse,
@@ -54,14 +53,7 @@ export class AuthService {
   }
 
   logout() {
-    // For localhost, send actual refresh token; for remote, send empty (uses cookie)
-    const isLocalhost = getRuntimeEnv("BLOCKS_API_BASE_URL")?.includes(
-      "localhost",
-    );
-    const refreshToken = isLocalhost
-      ? useAuthStore.getState().refreshToken || ""
-      : "";
-    return this.idpHttpClient.post(AUTH_ENDPOINTS.LOGOUT, { refreshToken });
+    return this.idpHttpClient.post(AUTH_ENDPOINTS.LOGOUT, {});
   }
 }
 

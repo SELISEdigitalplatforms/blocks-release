@@ -1,6 +1,5 @@
-import { useTheme } from "@/hooks/use-theme";
 import { RenderAlternatively } from "@/components/render-elements";
-import { useNavigate } from "react-router-dom";
+import { useTheme } from "@/hooks/use-theme";
 
 interface LogoProps {
   src?: string;
@@ -18,10 +17,9 @@ export function Logo({
   className,
 }: LogoProps) {
   const { resolvedTheme } = useTheme();
-  const navigate = useNavigate();
 
   const onLogoClick = () => {
-    navigate("/console");
+    window.location.href = "/console";
   };
 
   if (src) {

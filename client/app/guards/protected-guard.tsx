@@ -15,13 +15,13 @@ import { useAppState } from "./public-guard";
 
 export function ProtectedGuard({ children }: { children: React.ReactNode }) {
   const { isMounted } = useAppState();
-  const { data } = useGetUser();
+  const { data, isError } = useGetUser();
   const { setUser } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!isMounted) return;
-    if (!data) return navigate(`/login`, { replace: true });
+    if (!data || isError) return navigate(`/login`, { replace: true });
     setUser(data.data);
   }, [data, navigate, setUser]);
   if (!isMounted || !data) return null;

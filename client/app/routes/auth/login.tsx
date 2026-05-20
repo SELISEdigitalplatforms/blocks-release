@@ -399,7 +399,12 @@ export default function LoginPage() {
       // In production, fall back to the absolute IDP URL.
       const idpBaseUrl = getRuntimeEnv("BLOCKS_IDP_BASE_URL");
       const apiBaseUrl = getRuntimeEnv("BLOCKS_APP_URL", { stripPort: true });
-      const redirectUri = `${apiBaseUrl}` + "login/callback";
+      const redirectUrlBase =
+        getRuntimeEnv("BLOCKS_APP_URL", {
+          stripPort: true,
+          ensureTrailingSlash: true,
+        }) || "https://dev-deployment.blocksdevelopers.com/";
+      const redirectUri = `${redirectUrlBase}login/callback`;
       const initiateUrl = `${idpBaseUrl}/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${clientId}&redirectUri=${redirectUri}`;
       const headers: Record<string, string> = {};
       if (blocksKey) headers["X-Blocks-Key"] = blocksKey;

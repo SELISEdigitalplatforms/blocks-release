@@ -39,8 +39,8 @@ export const ImpersonationChecker = ({
   children: React.ReactNode;
 }) => {
   const { data, isLoading, isSuccess } = useImpersonationStatusChecker();
-  const { setImpersonation } = useImpersonateStore();
-
+  const { setImpersonation, isInitialized, setInitialized } =
+    useImpersonateStore();
   useEffect(() => {
     if (!data) return;
     setImpersonation(
@@ -48,8 +48,9 @@ export const ImpersonationChecker = ({
       data.originalTenantId,
       data.impersonated ? data.impersonatedTenantId : null,
     );
-  }, [data, setImpersonation]);
-  if (isLoading || !isSuccess) return null;
+    setInitialized(true);
+  }, [data, setImpersonation, setInitialized]);
+  if (isLoading || !isSuccess || !isInitialized) return null;
   return <>{children}</>;
 };
 

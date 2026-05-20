@@ -398,8 +398,8 @@ export default function LoginPage() {
       // (browser sees a same-origin request; Vite forwards it to BLOCKS_IDP_BASE_URL).
       // In production, fall back to the absolute IDP URL.
       const idpBaseUrl = getRuntimeEnv("BLOCKS_IDP_BASE_URL");
-      const apiBaseUrl = getRuntimeEnv("BLOCKS_APP_URL");
-      const redirectUri = apiBaseUrl + "/login/callback";
+      const apiBaseUrl = getRuntimeEnv("BLOCKS_APP_URL", { stripPort: true });
+      const redirectUri = `${apiBaseUrl}` + "/login/callback";
       const initiateUrl = `${idpBaseUrl}/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${clientId}&redirectUri=${redirectUri}`;
       const headers: Record<string, string> = {};
       if (blocksKey) headers["X-Blocks-Key"] = blocksKey;

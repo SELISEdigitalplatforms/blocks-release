@@ -12,21 +12,35 @@ public class
 {
     private readonly ILogger<TokenRepository> _logger;
     private readonly IDbContextProvider _dbContextProvider;
-    private readonly IConfiguration _config;
+    private readonly IMongoDatabase _clientDb;
+    private readonly IBlocksSecret _blocksSecret;
 
-    public TokenRepository(IDbContextProvider dbContextProvider,IConfiguration config, ILogger<TokenRepository> logger)
+    public TokenRepository(IDbContextProvider dbContextProvider, ILogger<TokenRepository> logger,  IBlocksSecret blocksSecret)
     {
         _logger = logger;
         _dbContextProvider = dbContextProvider;
-        _config = config;
+        _blocksSecret = blocksSecret;
+        _clientDb = ResolvedClientDb();
+    }
+
+    private IMongoDatabase ResolvedClientDb()
+    {
+        var blocksContext = BlocksContext.GetContext()
+            ?? throw new InvalidOperationException("BlocksContext is required to resolve the client database.");
+        
+        if (blocksContext.Impersonated)
+        {
+            return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksRootDb");
+        }
+
+        return _dbContextProvider.GetDatabase(blocksContext.TenantId);
     }
     public async Task<bool> saveToken(RepositoryToken repositoryToken)
     {
         try
         {
             var blocksUserId = BlocksContext.GetContext().UserId;
-            var dbContext = _dbContextProvider.GetDatabase(_config["RootTenantId"]);
-            var collection = dbContext.GetCollection<RepositoryToken>("RepositoryTokens");
+            var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
 
             var filter = Builders<RepositoryToken>.Filter.Eq(x => x.BlocksUserId, blocksUserId);
             var options = new ReplaceOptions { IsUpsert = true };
@@ -63,8 +77,7 @@ public class
     public async Task<RepositoryToken> getToken()
     {
         var blocksUserId = BlocksContext.GetContext().UserId;
-        var _dbContext = _dbContextProvider.GetDatabase(_config["RootTenantId"]);
-        var collection = _dbContext.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
         var filter = Builders<RepositoryToken>.Filter.Eq(nameof(RepositoryToken.BlocksUserId), blocksUserId);
         var dbToken = await collection.FindAsync(filter);
         var token = dbToken.FirstOrDefault();
@@ -82,8 +95,7 @@ public class
     public async Task<string> getToken(string userId)
     {
         var blocksUserId = userId;
-        var _dbContext = _dbContextProvider.GetDatabase(_config["RootTenantId"]);
-        var collection = _dbContext.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
         var filter = Builders<RepositoryToken>.Filter.Eq(nameof(RepositoryToken.BlocksUserId), blocksUserId);
         var dbToken = await collection.FindAsync(filter);
         var token = dbToken.FirstOrDefault();
@@ -100,15 +112,13 @@ public class
     
     public async Task<List<RepositoryToken>> getTokens()
     {
-        var _dbContext = _dbContextProvider.GetDatabase(_config["RootTenantId"]);
-        var collection = _dbContext.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
         return await collection.Find(_ => true).ToListAsync();
     }
     
     public async Task UpdateUsernameAsync(string id, List<UserOrganizations> orgs)
     {
-        var db = _dbContextProvider.GetDatabase(_config["RootTenantId"]);
-        var collection = db.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
     
         var filter = Builders<RepositoryToken>.Filter.Eq(x => x.ItemId, id);
         var update = Builders<RepositoryToken>.Update.Set(x => x.Organizations, orgs);
@@ -121,8 +131,7 @@ public class
     public async Task<bool> DeleteTokenAsync()
     {
         var blocksUserId = BlocksContext.GetContext().UserId;
-        var _dbContext = _dbContextProvider.GetDatabase(_config["RootTenantId"]);
-        var collection = _dbContext.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
 
         var filter = Builders<RepositoryToken>.Filter.Eq(nameof(RepositoryToken.BlocksUserId), blocksUserId);
 
@@ -133,8 +142,7 @@ public class
 
     public async Task<bool> DeleteTokenAsync(string blocksUserId)
     {
-        var _dbContext = _dbContextProvider.GetDatabase(_config["RootTenantId"]);
-        var collection = _dbContext.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
 
         var filter = Builders<RepositoryToken>.Filter.Eq(nameof(RepositoryToken.BlocksUserId), blocksUserId);
 

@@ -2,8 +2,10 @@
 // out below. Restore together with that block.
 // import { useProjectStore } from "@/store/project.store";
 import { getRuntimeEnv } from "@/lib/runtime-env";
+import { getQueryClient } from "@/providers/query-provider";
 // import { getQueryClient } from "@/providers/query-provider";
 import { useAuthStore } from "@/store/auth.store";
+import { useProjectStore } from "@/store/project.store";
 
 class HttpError extends Error {
   status: number;
@@ -147,11 +149,11 @@ class HttpClient {
       // the underlying 401. Just log it so the 401 stays visible in the Network
       // tab. Re-enable the reset+redirect once the root cause is fixed.
       console.error("[http-client] token refresh failed", _error);
-      // const queryClient = getQueryClient();
-      // useAuthStore.getState().reset();
-      // useProjectStore.getState().reset();
-      // queryClient.cancelQueries();
-      // queryClient.clear();
+      const queryClient = getQueryClient();
+      useAuthStore.getState().reset();
+      useProjectStore.getState().reset();
+      queryClient.cancelQueries();
+      queryClient.clear();
       window.location.href = "/login";
     } finally {
       isRefreshing = false;

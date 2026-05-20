@@ -23,7 +23,8 @@ export function ProtectedGuard({ children }: { children: React.ReactNode }) {
     if (!isMounted) return;
     if (!data || isError) return navigate(`/login`, { replace: true });
     setUser(data.data);
-  }, [data, navigate, setUser]);
+  }, [data, navigate, setUser, isError, isMounted]);
+
   if (!isMounted || !data) return null;
   return <>{children}</>;
 }

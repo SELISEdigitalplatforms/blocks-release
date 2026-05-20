@@ -22,6 +22,7 @@ const isPlaceholder = (value?: string) =>
 
 type GetRuntimeEnvOptions = {
   stripPort?: boolean;
+  ensureTrailingSlash?: boolean;
 };
 
 const stripPortFromUrl = (url: string) => {
@@ -30,13 +31,28 @@ const stripPortFromUrl = (url: string) => {
     parsedUrl.port = "";
     return parsedUrl.toString();
   } catch (error) {
-    console.error(`Failed to parse URL: ${url}`, error);
+    console.warn(`Failed to parse URL: ${url}`, error);
     return url;
   }
 };
+
+const ensureTrailingSlash = (url: string) =>
+  url.endsWith("/") ? url : `${url}/`;
+
+const isLocalEnv = () => {
+  if (import.meta.env.DEV) return true;
+
+  if (typeof window !== "undefined") {
+    const { hostname } = window.location;
+    return hostname === "localhost" || hostname === "127.0.0.1";
+  }
+
+  return false;
+};
+
 export const getRuntimeEnv = (
   key: RuntimeKey,
-  options: GetRuntimeEnvOptions = { stripPort: false },
+  options: GetRuntimeEnvOptions = {},
 ): string => {
   let value = "";
   const windowValue =
@@ -47,8 +63,12 @@ export const getRuntimeEnv = (
     value = import.meta.env[key] || "";
   }
 
-  if (options.stripPort) {
+  if (options.stripPort && !isLocalEnv()) {
     value = stripPortFromUrl(value);
+  }
+
+  if (value && options.ensureTrailingSlash) {
+    value = ensureTrailingSlash(value);
   }
 
   return value;

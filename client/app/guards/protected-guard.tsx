@@ -95,12 +95,15 @@ export function ImpersonateGuard({ children }: { children: React.ReactNode }) {
       if (!stateRef.current.impersonatedTenantId) return;
       stateRef.current.impersonatedTenantId = null;
       stateRef.current.requestedTenantId = null;
-      impersonationService
-        .stopImpersonation()
-        .then(() => stopImpersonation())
-        .catch((err) =>
-          console.error("[ImpersonateGuard] stopImpersonation failed", err),
-        );
+      // TEMP (debugging): do NOT call server-side stop-impersonation on unmount.
+      // It deletes the auth/impersonation cookies and masks the underlying 401.
+      // Re-enable once the 401 root cause is found.
+      // impersonationService
+      //   .stopImpersonation()
+      //   .then(() => stopImpersonation())
+      //   .catch((err) =>
+      //     console.error("[ImpersonateGuard] stopImpersonation failed", err),
+      //   );
     };
   }, [stopImpersonation]);
 

@@ -14,7 +14,7 @@ using CloudConfiguration.DomainService.Shared.Utilities;
 using Microsoft.IdentityModel.Tokens;
 using Cloud.LmtService.Models.Trace;
 
-var serviceName = "blocks-os-api";
+var serviceName = "blocks-os";
 var vaultType = ResolveVaultType();
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
 var cloudBuildSecret = await CloudBuildSecret.ProcessBlocksSecret(vaultType);
@@ -87,24 +87,6 @@ if (File.Exists(indexHtml))
 
 }
 
-// Genesis 10's SecurityHeadersMiddleware stamps a hardcoded
-// "Content-Security-Policy: default-src 'self'; frame-ancestors 'none'" with no
-// connect-src, which blocks the SPA's cross-origin calls to the IDP and other
-// Blocks services. Override only that header (Genesis's other security headers
-// are left intact) with a config-derived connect-src allowlist. OnStarting runs
-// just before headers flush, so it deterministically wins over Genesis's
-// directly-set value regardless of middleware ordering.
-var contentSecurityPolicy = BuildContentSecurityPolicy(builder.Configuration);
-app.Use(async (context, next) =>
-{
-    context.Response.OnStarting(() =>
-    {
-        context.Response.Headers["Content-Security-Policy"] = contentSecurityPolicy;
-        return Task.CompletedTask;
-    });
-    await next();
-});
-
 ApplicationConfigurations.ConfigureMiddleware(app);
 
 await app.RunAsync();
@@ -124,78 +106,6 @@ static VaultType ResolveVaultType()
     return string.Equals(environment, "Development", StringComparison.OrdinalIgnoreCase)
         ? VaultType.OnPrem
         : VaultType.Azure;
-}
-
-static string BuildContentSecurityPolicy(IConfiguration configuration)
-{
-    static string? ResolveEnvOrConfig(IConfiguration config, string key) =>
-        Environment.GetEnvironmentVariable(key) ?? config[$"FrontendRuntime:{key}"];
-
-    string[] urlKeys =
-    [
-        "BLOCKS_IDP_BASE_URL",
-        "BLOCKS_API_BASE_URL",
-        "BLOCKS_CONSTRUCT_URL",
-        "BLOCKS_LOGIC_APP_URL",
-        "BLOCKS_APP_URL"
-    ];
-
-    var origins = new List<string>();
-
-    void AddOrigin(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return;
-        if (!Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)) return;
-
-        var origin = uri.IsDefaultPort
-            ? $"{uri.Scheme}://{uri.Host}"
-            : $"{uri.Scheme}://{uri.Host}:{uri.Port}";
-        if (!origins.Contains(origin, StringComparer.OrdinalIgnoreCase))
-        {
-            origins.Add(origin);
-        }
-    }
-
-    foreach (var key in urlKeys)
-    {
-        AddOrigin(ResolveEnvOrConfig(configuration, key));
-    }
-
-    // Fallback baseline: the connect-src allowlist is only useful if the
-    // FrontendRuntime config (or matching env vars) is actually loaded. When the
-    // running environment name does not match an appsettings.{env}.json that
-    // carries the FrontendRuntime section, origins would otherwise be empty and
-    // the browser would block the cross-origin call to the IDP. These mirror the
-    // canonical URLs used for token replacement in ApplyFrontendRuntimeSettings.
-    foreach (var fallback in new[]
-    {
-        "https://dev-idp.blocksdevelopers.com",
-        "https://dev-deployment.blocksdevelopers.com",
-        "https://dev-construct.seliseblocks.com",
-        "https://dev-logic.blocksdevelopers.com"
-    })
-    {
-        AddOrigin(fallback);
-    }
-
-    var connectSrc = origins.Count > 0
-        ? $"connect-src 'self' {string.Join(' ', origins)}"
-        : "connect-src 'self'";
-
-    // Genesis only emits "default-src 'self'", which (with no script-src/style-src)
-    // also blocks the inline window.__BLOCKS_ENV__ bootstrap script in index.html
-    // and the app's runtime-injected styles, leaving every getRuntimeEnv() value
-    // empty. The inline config script's content is rewritten at startup by token
-    // replacement, so a static hash is not stable -> use 'unsafe-inline' for
-    // scripts. Google Fonts is loaded from fonts.googleapis.com / fonts.gstatic.com.
-    return string.Join("; ",
-        "default-src 'self'",
-        "frame-ancestors 'none'",
-        "script-src 'self' 'unsafe-inline'",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com",
-        "img-src 'self' data:",
-        connectSrc);
 }
 
 static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string webRootPath)
@@ -227,12 +137,12 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
 
     var replacements = new Dictionary<string, string?>
     {
-        ["__BLOCKS_API_BASE_URL__"] = "https://dev-deployment.blocksdevelopers.com",
+        ["__BLOCKS_API_BASE_URL__"] = "https://dev-deployment.blocksdevelopers.com:5000",
         ["__BLOCKS_X_BLOCKS_KEY__"] = "f080a1bea04280a72149fd689d50a48c",
         ["__BLOCKS_GOOGLE_SITE_KEY__"] = "6LeE8uEqAAAAAM-9mzdFO8sajdin-DsVdxh3RT8c",
         ["__BLOCKS_CONSTRUCT_URL__"] = "https://dev-construct.seliseblocks.com",
         ["__BLOCKS_GITHUB_SSO_CLIENT_ID__"] = "Ov23liqWywFtITPvQ4Z9",
-        ["__BLOCKS_APP_URL__"] = "https://dev-deployment.blocksdevelopers.com",
+        ["__BLOCKS_APP_URL__"] = "https://dev-deployment.blocksdevelopers.com:5000",
         ["__BLOCKS_LOGIC_APP_URL__"] = "https://dev-logic.blocksdevelopers.com",
         ["__BLOCKS_IDP_BASE_URL__"] = "https://dev-idp.blocksdevelopers.com",
         ["__BLOCKS_OIDC_CLIENT_ID__"] = "6523b311-256f-4b9a-a88a-2ac4e02bad25",

@@ -152,7 +152,7 @@ class HttpClient {
       // useProjectStore.getState().reset();
       // queryClient.cancelQueries();
       // queryClient.clear();
-      // window.location.href = "/login";
+      window.location.href = "/login";
     } finally {
       isRefreshing = false;
       requestQueue = [];

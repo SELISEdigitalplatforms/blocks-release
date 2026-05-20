@@ -21,6 +21,7 @@ export const OIDC_FLOW_ENDPOINTS = {
 } as const;
 
 export const IMPERSONATION_ENDPOINTS = {
+  IMPERSONATION_STATUS: `${API_BASE}${AUTH_SUBPATH}/impersonation/status`,
   IMPERSONATE: `${API_BASE}${AUTH_SUBPATH}/impersonate`,
   STOP_IMPERSONATION: `${API_BASE}${AUTH_SUBPATH}/impersonation/stop`,
 } as const;

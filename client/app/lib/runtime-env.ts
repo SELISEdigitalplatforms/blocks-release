@@ -20,12 +20,36 @@ declare global {
 const isPlaceholder = (value?: string) =>
   !!value && value.startsWith(PLACEHOLDER_PREFIX) && value.endsWith("__");
 
-export const getRuntimeEnv = (key: RuntimeKey): string => {
+type GetRuntimeEnvOptions = {
+  stripPort?: boolean;
+};
+
+const stripPortFromUrl = (url: string) => {
+  try {
+    const parsedUrl = new URL(url);
+    parsedUrl.port = "";
+    return parsedUrl.toString();
+  } catch (error) {
+    console.warn(`Failed to parse URL: ${url}`, error);
+    return url;
+  }
+};
+export const getRuntimeEnv = (
+  key: RuntimeKey,
+  options: GetRuntimeEnvOptions = { stripPort: false },
+): string => {
+  let value: string;
   const windowValue =
     typeof window !== "undefined" ? window.__BLOCKS_ENV__?.[key] : undefined;
   if (windowValue && !isPlaceholder(windowValue)) {
-    return windowValue;
+    value = windowValue;
   }
 
-  return import.meta.env[key] || "";
+  value = import.meta.env[key] || "";
+
+  if (options.stripPort) {
+    value = stripPortFromUrl(value);
+  }
+
+  return value;
 };

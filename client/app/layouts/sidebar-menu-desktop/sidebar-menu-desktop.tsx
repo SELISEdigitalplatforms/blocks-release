@@ -9,6 +9,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 import { PanelLeft } from "lucide-react";
 import { Fragment, useContext } from "react";
+import { Link } from "react-router-dom";
 
 export function SidebarMenuDesktop() {
   const { isSidebarOpen, toggleSidebar } = useContext(SidebarContext);
@@ -26,9 +27,11 @@ export function SidebarMenuDesktop() {
     <div
       className={`hidden h-[calc(100vh)] flex-col border-r bg-background transition-all md:flex ${isSidebarOpen ? "min-w-60" : "w-14"}`}>
       <div className="flex h-[60px] shrink-0 items-center justify-between border-b bg-background px-3">
-        <div
+        <Link
+          to="/console"
+          aria-label="Go to Console"
           className={cn(
-            "relative inline-block cursor-auto overflow-hidden transition-all",
+            "relative inline-block cursor-pointer overflow-hidden transition-all",
             isSidebarOpen ? "h-[36px] w-[72px]" : "h-8 w-8",
           )}>
           <Logo
@@ -36,7 +39,7 @@ export function SidebarMenuDesktop() {
             alt="Logo"
             className="h-full w-full object-contain"
           />
-        </div>
+        </Link>
         {isSidebarOpen && (
           <Button
             variant="ghost"

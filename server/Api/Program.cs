@@ -137,7 +137,7 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
 
     var replacements = new Dictionary<string, string?>
     {
-        ["__BLOCKS_API_BASE_URL__"] = "https://dev-deployment.blocksdevelopers.com:5000",
+        ["__BLOCKS_API_BASE_URL__"] = "https://dev-deployment.blocksdevelopers.com",
         ["__BLOCKS_X_BLOCKS_KEY__"] = "***REMOVED***",
         ["__BLOCKS_GOOGLE_SITE_KEY__"] = "***REMOVED***",
         ["__BLOCKS_CONSTRUCT_URL__"] = "https://dev-construct.seliseblocks.com",

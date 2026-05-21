@@ -4,6 +4,7 @@ import {
   HubConnectionState,
   HttpTransportType,
 } from "@microsoft/signalr";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 
 const HUB_PATH = "/deploymentHub";
 
@@ -11,10 +12,20 @@ let connection: HubConnection | null = null;
 let currentUserId: string | null = null;
 let startPromise: Promise<void> | null = null;
 
-const hubBaseUrl = (): string => (typeof window !== "undefined" ? window.location.origin : "");
+// The hub lives on the deployment API server. Resolve its origin from runtime
+// env (same source the http-client uses), falling back to the current origin so
+// the vite dev proxy can still forward /deploymentHub when the value is unset.
+const hubBaseUrl = (): string => {
+  const fromEnv = getRuntimeEnv("BLOCKS_API_BASE_URL").trim().replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  return typeof window !== "undefined" ? window.location.origin : "";
+};
 
 const buildConnection = (userId: string): HubConnection => {
-  const url = `${hubBaseUrl()}${HUB_PATH}?userId=${encodeURIComponent(userId)}`;
+  const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
+  const url = `${hubBaseUrl()}${HUB_PATH}?x-blocks-key=${encodeURIComponent(
+    blocksKey,
+  )}&userId=${encodeURIComponent(userId)}`;
   const conn = new HubConnectionBuilder()
     .withUrl(url, { transport: HttpTransportType.WebSockets })
     .withAutomaticReconnect()

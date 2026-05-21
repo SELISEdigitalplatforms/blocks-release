@@ -9,7 +9,7 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 import { useAuthStore } from "@/store/auth.store";
 import { useImpersonateStore } from "@/store/impersonate.store";
 import { useProjectStore } from "@/store/project.store";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppState } from "./public-guard";
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
@@ -83,9 +83,11 @@ export function ImpersonationSynchronizer({
 }: {
   children: React.ReactNode;
 }) {
+  const [isImpersonating, setIsImpersonating] = useState(false);
+
   const { impersonate, isImpersonated, impersonatedTenantId } =
     useImpersonateStore();
-  const { mutateAsync, isPending: isImpersonating } = useStartImpersonation();
+  const { mutateAsync } = useStartImpersonation();
 
   const { selectedProject } = useProjectStore();
   const isTriggering = useRef(false);
@@ -96,6 +98,8 @@ export function ImpersonationSynchronizer({
     if (isTriggering.current) return;
 
     isTriggering.current = true;
+    setIsImpersonating(true);
+
     const payload: ImpersonationRequest = {
       targetTenantId: selectedProject.tenantId,
     };
@@ -106,8 +110,12 @@ export function ImpersonationSynchronizer({
           getRuntimeEnv("BLOCKS_X_BLOCKS_KEY"),
         );
         isTriggering.current = false;
+        setIsImpersonating(false);
       })
-      .catch(() => {});
+      .catch(() => {
+        isTriggering.current = false;
+        setIsImpersonating(false);
+      });
   }, [
     selectedProject?.tenantId,
     mutateAsync,

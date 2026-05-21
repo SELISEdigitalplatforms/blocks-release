@@ -14,14 +14,19 @@ import {
 } from "@/cross-modules/deployment/hooks/use-github-info";
 import BranchVerificationModal from "@blocks-deployment/components/deployment-details/shared/unmatched-branch-modal";
 import { DEPLOYMENT_OPTIONS_DETAILS } from "@blocks-deployment/models/deployment-settings";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui-kits/dialog/dialog";
-import ProviderButtons from "@blocks-deployment/components/deployment-steps/render-repos/render-provider";
+import { RepositoryAccessModal } from "./repository-access-modal";
+// Original "Connect repository" provider-picker modal — temporarily replaced
+// by RepositoryAccessModal (redirect-to-Blocks-OS + retry flow). Keep these
+// imports referenced below in the commented JSX so re-enabling is a one-step
+// flip.
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogDescription,
+//   DialogHeader,
+//   DialogTitle,
+// } from "@/components/ui-kits/dialog/dialog";
+// import ProviderButtons from "@blocks-deployment/components/deployment-steps/render-repos/render-provider";
 
 export interface IRepoResponse {
   sourceRepoId: string;
@@ -84,8 +89,16 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
     }
   };
 
-  const handleProviderClose = () => {
+  // Kept for reference alongside the commented-out provider-picker modal below.
+  // const handleProviderClose = () => {
+  //   setRepositoryModalOpen(false);
+  // };
+
+  const handleAccessGranted = () => {
     setRepositoryModalOpen(false);
+    setSkipInitialVerification(false);
+    setIsLoading(true);
+    setShowBranchModal(true);
   };
 
   const handleModalClose = () => {
@@ -277,22 +290,39 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
         isProcessing={isLoading}
         skipInitialVerification={skipInitialVerification}
       />
-      <Dialog open={repositoryModalOpen} onOpenChange={setRepositoryModalOpen}>
-        <DialogContent className="w-[425px] p-6">
-          <DialogHeader>
-            <DialogTitle>Connect repository</DialogTitle>
-            <DialogDescription>
-              Select a Git provider to import an existing project from a Git
-              Repository.
-            </DialogDescription>
-          </DialogHeader>
-          <ProviderButtons
-            destination="/intermediate-page"
-            onClose={handleProviderClose}
-            closeOnProviderSelect={true}
-          />
-        </DialogContent>
-      </Dialog>
+      <RepositoryAccessModal
+        isOpen={repositoryModalOpen}
+        onOpenChange={setRepositoryModalOpen}
+        onAuthorized={handleAccessGranted}
+        refetchAuthorization={async () => {
+          const result = await refetchAuthorization();
+          return { data: result.data };
+        }}
+      />
+
+      {/*
+        Original "Connect repository" provider-picker modal — temporarily
+        replaced by RepositoryAccessModal above. To restore: uncomment the
+        Dialog/ProviderButtons imports at the top, the handleProviderClose
+        handler, and this block; then remove the RepositoryAccessModal mount.
+
+        <Dialog open={repositoryModalOpen} onOpenChange={setRepositoryModalOpen}>
+          <DialogContent className="w-[425px] p-6">
+            <DialogHeader>
+              <DialogTitle>Connect repository</DialogTitle>
+              <DialogDescription>
+                Select a Git provider to import an existing project from a Git
+                Repository.
+              </DialogDescription>
+            </DialogHeader>
+            <ProviderButtons
+              destination="/intermediate-page"
+              onClose={handleProviderClose}
+              closeOnProviderSelect={true}
+            />
+          </DialogContent>
+        </Dialog>
+      */}
     </>
   );
 };

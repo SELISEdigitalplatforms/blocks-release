@@ -14,7 +14,7 @@ using CloudConfiguration.DomainService.Shared.Utilities;
 using Microsoft.IdentityModel.Tokens;
 using Cloud.LmtService.Models.Trace;
 
-var serviceName = "blocks-os";
+var serviceName = "blocks-deployment-api";
 var vaultType = ResolveVaultType();
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
 var cloudBuildSecret = await CloudBuildSecret.ProcessBlocksSecret(vaultType);
@@ -110,18 +110,29 @@ static VaultType ResolveVaultType()
 
 static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string webRootPath)
 {
-    //  var envFilePath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
-    //var section = configuration.GetSection("FrontendRuntime");
-    //var replacements = new Dictionary<string, string?>
-    //{
-    //    ["__BLOCKS_API_BASE_URL__"] = section["BLOCKS_API_BASE_URL"],
-    //    ["__BLOCKS_X_BLOCKS_KEY__"] = section["BLOCKS_X_BLOCKS_KEY"],
-    //    ["__BLOCKS_GOOGLE_SITE_KEY__"] = section["BLOCKS_GOOGLE_SITE_KEY"],
-    //    ["__BLOCKS_CONSTRUCT_URL__"] = section["BLOCKS_CONSTRUCT_URL"]
-    //};
+    // ACTIVE path: read frontend runtime values from the "FrontendRuntime" section in
+    // appsettings.{Environment}.json. Standard .NET config layering still applies, so
+    // env vars named "FrontendRuntime__BLOCKS_*" override individual keys at deploy time.
+    var section = configuration.GetSection("FrontendRuntime");
+    var replacements = new Dictionary<string, string?>
+    {
+        ["__BLOCKS_API_BASE_URL__"] = section["BLOCKS_API_BASE_URL"],
+        ["__BLOCKS_X_BLOCKS_KEY__"] = section["BLOCKS_X_BLOCKS_KEY"],
+        ["__BLOCKS_GOOGLE_SITE_KEY__"] = section["BLOCKS_GOOGLE_SITE_KEY"],
+        ["__BLOCKS_CONSTRUCT_URL__"] = section["BLOCKS_CONSTRUCT_URL"],
+        ["__BLOCKS_GITHUB_SSO_CLIENT_ID__"] = section["BLOCKS_GITHUB_SSO_CLIENT_ID"],
+        ["__BLOCKS_APP_URL__"] = section["BLOCKS_APP_URL"],
+        ["__BLOCKS_LOGIC_APP_URL__"] = section["BLOCKS_LOGIC_APP_URL"],
+        ["__BLOCKS_IDP_BASE_URL__"] = section["BLOCKS_IDP_BASE_URL"],
+        ["__BLOCKS_OS_URL__"] = section["BLOCKS_OS_URL"],
+        ["__BLOCKS_OIDC_CLIENT_ID__"] = section["BLOCKS_OIDC_CLIENT_ID"],
+    };
 
-    DotNetEnv.Env.Load();
-
+    // PREVIOUS path (kept for reference — flip back to this if we need to read bare
+    // process env vars / .env files again instead of the appsettings section):
+    //
+    // DotNetEnv.Env.Load();
+    //
     // var replacements = new Dictionary<string, string?>
     // {
     //     ["__BLOCKS_API_BASE_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_API_BASE_URL"),
@@ -132,22 +143,9 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
     //     ["__BLOCKS_APP_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_APP_URL"),
     //     ["__BLOCKS_LOGIC_APP_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_LOGIC_APP_URL"),
     //     ["__BLOCKS_IDP_BASE_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_IDP_BASE_URL"),
+    //     ["__BLOCKS_OS_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_OS_URL"),
     //     ["__BLOCKS_OIDC_CLIENT_ID__"] = Environment.GetEnvironmentVariable("BLOCKS_OIDC_CLIENT_ID"),
     // };
-
-    var replacements = new Dictionary<string, string?>
-    {
-        ["__BLOCKS_API_BASE_URL__"] = "https://dev-deployment.blocksdevelopers.com",
-        ["__BLOCKS_X_BLOCKS_KEY__"] = "f080a1bea04280a72149fd689d50a48c",
-        ["__BLOCKS_GOOGLE_SITE_KEY__"] = "6LeE8uEqAAAAAM-9mzdFO8sajdin-DsVdxh3RT8c",
-        ["__BLOCKS_CONSTRUCT_URL__"] = "https://dev-construct.seliseblocks.com",
-        ["__BLOCKS_GITHUB_SSO_CLIENT_ID__"] = "Ov23liqWywFtITPvQ4Z9",
-        ["__BLOCKS_APP_URL__"] = "https://dev-deployment.blocksdevelopers.com",
-        ["__BLOCKS_LOGIC_APP_URL__"] = "https://dev-logic.blocksdevelopers.com",
-        ["__BLOCKS_IDP_BASE_URL__"] = "https://dev-idp.blocksdevelopers.com",
-        ["__BLOCKS_OIDC_CLIENT_ID__"] = "6523b311-256f-4b9a-a88a-2ac4e02bad25",
-    };
-
 
     var files = Directory.EnumerateFiles(webRootPath, "*", SearchOption.AllDirectories)
         .Where(path =>

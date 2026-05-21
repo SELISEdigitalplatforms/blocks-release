@@ -11,6 +11,10 @@ WWWROOT_DIR="$SCRIPT_DIR/server/Api/wwwroot"
 API_PORT=5000
 FRONTEND_PORT=4000
 
+# Ensure SSL vars are explicitly in scope for Vite
+export DEPLOYMENT_SSL_CERT="${DEPLOYMENT_SSL_CERT:-}"
+export DEPLOYMENT_SSL_KEY="${DEPLOYMENT_SSL_KEY:-}"
+
 API_PID=""
 WORKER_PID=""
 

@@ -12,6 +12,7 @@ import { useProjectStore } from "@/store/project.store";
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppState } from "./public-guard";
+import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 
 export function ProtectedGuard({ children }: { children: React.ReactNode }) {
   const { isMounted } = useAppState();
@@ -23,7 +24,7 @@ export function ProtectedGuard({ children }: { children: React.ReactNode }) {
     if (!isMounted) return;
     if (!data || isError) return navigate(`/login`, { replace: true });
     setUser(data.data);
-  }, [data, navigate, setUser, isError]);
+  }, [data, navigate, setUser, isError, isMounted]);
 
   if (!isMounted || !data) return null;
   return <>{children}</>;
@@ -47,7 +48,7 @@ export const ImpersonationChecker = ({
     );
     setInitialized(true);
   }, [data, setImpersonation, setInitialized]);
-  if (isLoading || !isSuccess || !isInitialized) return null;
+  if (isLoading || !isSuccess || !isInitialized) return <LoadingSpinner />;
   return <>{children}</>;
 };
 
@@ -84,7 +85,7 @@ export function ImpersonationSynchronizer({
 }) {
   const { impersonate, isImpersonated, impersonatedTenantId } =
     useImpersonateStore();
-  const { mutateAsync } = useStartImpersonation();
+  const { mutateAsync, isPending: isImpersonating } = useStartImpersonation();
 
   const { selectedProject } = useProjectStore();
   const isTriggering = useRef(false);
@@ -114,6 +115,8 @@ export function ImpersonationSynchronizer({
     impersonatedTenantId,
     isTriggering,
   ]);
+  if (isImpersonating) return <LoadingSpinner />;
+
   if (!isImpersonated || isTriggering.current) return null;
   return <>{children}</>;
 }

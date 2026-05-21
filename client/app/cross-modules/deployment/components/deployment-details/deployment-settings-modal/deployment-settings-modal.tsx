@@ -182,11 +182,7 @@ const DeploymentSettingsModal = ({
   };
 
   const isFormValid = () => {
-    return !!(
-      deploymentData.providerId &&
-      deploymentData.regionId &&
-      deploymentData.machineConfigId
-    );
+    return true;
   };
 
   const handleSave = () => {

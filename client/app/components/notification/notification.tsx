@@ -1,5 +1,9 @@
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
-import { notificationClientService } from "@/notifications/services/notification-client.service";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui-kits/popover/popover";
+import { notificationClientService } from "@blocks-communication/notification/services/notification-client.service";
 import { Bell } from "lucide-react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
@@ -7,13 +11,13 @@ import {
   useGetNotifications,
   useMarkAllAsRead,
   useMarkAsRead,
-} from "@/notifications/hooks/use-notifications";
+} from "@blocks-communication/notification/hooks/use-notifications";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   IDenormalizedPayload,
   INotification,
-} from "@/notifications/models/notification.model";
-import { notificationService } from "@/notifications/services/notification.service";
+} from "@blocks-communication/notification/models/notification.model";
+import { notificationService } from "@blocks-communication/notification/services/notification.service";
 
 export function Notification() {
   const { data: configData } = useGetBlocksNotificationConfig(0, 100);
@@ -21,36 +25,41 @@ export function Notification() {
 
   useEffect(() => {
     configData?.configurations.forEach((config) => {
-      notificationClientService.connection.on(`${config.notifyMethod}`, (message: string) => {
-        notificationService.getNotificationConfig(config, message);
-        try {
-          let notice;
-          if (typeof message === "string") {
-            notice = JSON.parse(message);
-          } else {
-            notice = message;
-          }
+      notificationClientService.connection.on(
+        `${config.notifyMethod}`,
+        (message: string) => {
+          notificationService.getNotificationConfig(config, message);
+          try {
+            let notice;
+            if (typeof message === "string") {
+              notice = JSON.parse(message);
+            } else {
+              notice = message;
+            }
 
-          let denom: IDenormalizedPayload = {
-            title: "",
-            description: "",
-            redirectPath: "",
-            toastable: false,
-            meta: "",
-          };
-          denom = JSON.parse(notice.denormalizedPayload) as IDenormalizedPayload;
-          if (
-            denom &&
-            denom.title &&
-            denom.description &&
-            (denom.title != "" || denom.description != "")
-          ) {
-            queryClient.invalidateQueries({ queryKey: ["notifications"] });
+            let denom: IDenormalizedPayload = {
+              title: "",
+              description: "",
+              redirectPath: "",
+              toastable: false,
+              meta: "",
+            };
+            denom = JSON.parse(
+              notice.denormalizedPayload,
+            ) as IDenormalizedPayload;
+            if (
+              denom &&
+              denom.title &&
+              denom.description &&
+              (denom.title != "" || denom.description != "")
+            ) {
+              queryClient.invalidateQueries({ queryKey: ["notifications"] });
+            }
+          } catch (error) {
+            console.error("Error invalidating queries:", error);
           }
-        } catch (error) {
-          console.error("Error invalidating queries:", error);
-        }
-      });
+        },
+      );
     });
   }, [configData, queryClient]);
 
@@ -72,13 +81,14 @@ export function Notification() {
         });
         merged.sort(
           (a, b) =>
-            new Date(b.createdTime || 0).getTime() - new Date(a.createdTime || 0).getTime(),
+            new Date(b.createdTime || 0).getTime() -
+            new Date(a.createdTime || 0).getTime(),
         );
         return merged;
       });
       setHasMore(pageNumber * 10 < (data?.totalNotificationsCount || 0));
     }
-  }, [data]);
+  }, [data, pageNumber]);
 
   const listRef = useRef<HTMLDivElement>(null);
   const handleScroll = useCallback(() => {
@@ -103,7 +113,9 @@ export function Notification() {
       markAsRead.mutate(notificationId, {
         onSuccess: () => {
           setNotifications((prev) =>
-            prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)),
+            prev.map((n) =>
+              n.id === notificationId ? { ...n, isRead: true } : n,
+            ),
           );
           queryClient.invalidateQueries({ queryKey: ["notifications"] });
         },
@@ -113,10 +125,14 @@ export function Notification() {
 
   function formatKBTitle(str: string) {
     if (!str) return "No Title";
-    if (str === "agent_kb_processing_status") return "AI Agent Knowledge Update Status";
+    if (str === "agent_kb_processing_status")
+      return "AI Agent Knowledge Update Status";
     return str
       .split("_")
-      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map(
+        (word: string) =>
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+      )
       .join(" ");
   }
 
@@ -150,35 +166,46 @@ export function Notification() {
           <Bell className="h-5 w-5 cursor-pointer text-muted-foreground transition-colors hover:text-primary" />
           {data && data.unReadNotificationsCount > 0 && (
             <span
-              className={`absolute -right-[6px] -top-[8px] flex items-center justify-center rounded-full bg-blue-500 font-medium text-white ${data.unReadNotificationsCount > 99 ? "h-[18px] w-[18px] text-[8px]" : "h-[16px] w-[16px] text-[10px]"}`}
-            >
-              {data.unReadNotificationsCount > 99 ? "99+" : data.unReadNotificationsCount}
+              className={`absolute -right-[6px] -top-[8px] flex items-center justify-center rounded-full bg-blue-500 font-medium text-white ${data.unReadNotificationsCount > 99 ? "h-[18px] w-[18px] text-[8px]" : "h-[16px] w-[16px] text-[10px]"}`}>
+              {data.unReadNotificationsCount > 99
+                ? "99+"
+                : data.unReadNotificationsCount}
             </span>
           )}
         </div>
       </PopoverTrigger>
       <PopoverContent className="w-[370px] p-0">
         <div className="flex items-center justify-between border-b px-4 py-3">
-          <div className="text-base font-semibold text-primary">Notifications</div>
+          <div className="text-base font-semibold text-primary">
+            Notifications
+          </div>
           <button
             onClick={() => {
               markAllAsRead.mutate(undefined, {
                 onSuccess: () => {
-                  setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-                  queryClient.invalidateQueries({ queryKey: ["notifications"] });
+                  setNotifications((prev) =>
+                    prev.map((n) => ({ ...n, isRead: true })),
+                  );
+                  queryClient.invalidateQueries({
+                    queryKey: ["notifications"],
+                  });
                 },
               });
             }}
-            className="text-xs text-muted-foreground hover:text-primary hover:underline"
-          >
+            className="text-xs text-muted-foreground hover:text-primary hover:underline">
             Mark all as read
           </button>
         </div>
-        <div className="max-h-[400px] overflow-y-auto" ref={listRef} onScroll={handleScroll}>
+        <div
+          className="max-h-[400px] overflow-y-auto"
+          ref={listRef}
+          onScroll={handleScroll}>
           {isLoading && notifications.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground"></div>
           ) : notifications.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">No notifications</div>
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              No notifications
+            </div>
           ) : (
             notifications.map((notification, idx) => (
               <div
@@ -188,9 +215,9 @@ export function Notification() {
                   (!notification.isRead ? " bg-muted/60" : "")
                 }
                 onMouseEnter={() => {
-                  if (!notification.isRead) MarkNotificationAsRead(notification.id)();
-                }}
-              >
+                  if (!notification.isRead)
+                    MarkNotificationAsRead(notification.id)();
+                }}>
                 <div className="min-w-0 flex-1">
                   {(() => {
                     let denorm: IDenormalizedPayload = {
@@ -216,11 +243,16 @@ export function Notification() {
                           {formatKBTitle(denorm.title) || "No Title"}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {formatKBMetaDescription(denorm.meta, denorm.description)}
+                          {formatKBMetaDescription(
+                            denorm.meta,
+                            denorm.description,
+                          )}
                         </div>
                         <div className="mt-1 text-[11px] text-muted-foreground">
                           {notification.createdTime
-                            ? new Date(notification.createdTime).toLocaleString()
+                            ? new Date(
+                                notification.createdTime,
+                              ).toLocaleString()
                             : ""}
                         </div>
                       </>
@@ -231,7 +263,9 @@ export function Notification() {
             ))
           )}
           {isFetching && notifications.length > 0 && (
-            <div className="p-2 text-center text-xs text-muted-foreground">Loading ...</div>
+            <div className="p-2 text-center text-xs text-muted-foreground">
+              Loading ...
+            </div>
           )}
         </div>
       </PopoverContent>

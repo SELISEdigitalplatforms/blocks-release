@@ -101,7 +101,7 @@ export function ImpersonationSynchronizer({
     setIsImpersonating(true);
 
     const payload: ImpersonationRequest = {
-      targetTenantId: selectedProject.tenantId,
+      TargetTenantId: selectedProject.tenantId,
     };
     mutateAsync(payload)
       .then(() => {

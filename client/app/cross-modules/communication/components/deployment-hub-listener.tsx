@@ -17,7 +17,6 @@ export const DeploymentHubListener = () => {
 
     let cancelled = false;
     const handler = (message: unknown) => {
-      console.log(`[DeploymentHub] Received ${EVENT_NAME}:`, message);
       window.dispatchEvent(
         new CustomEvent(EVENT_NAME, {
           detail: {

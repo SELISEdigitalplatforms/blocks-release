@@ -6,7 +6,7 @@ import {
 } from "@/guards/protected-guard";
 import { Logo } from "@/components/logo";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
-import { Notification } from "@/components/notification/notification";
+import { Notification } from "@blocks-communication/components/notification/notification";
 import { BlocksAppLauncher } from "@/components/blocks-app-launcher/blocks-app-launcher";
 import { UserDropdownMenu } from "@/components/user-dropdown-menu/user-dropdown-menu";
 

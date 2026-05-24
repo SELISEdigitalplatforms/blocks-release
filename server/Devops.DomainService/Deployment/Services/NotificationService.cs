@@ -60,12 +60,11 @@ namespace Devops.DomainService.Deployment.Services
                 ResponseValue = "sent"
             };
 
-            await _deploymentHubService.SendBuildLogAsync(requestData, UserIds);
+            // await _deploymentHubService.SendBuildLogAsync(requestData, UserIds);
 
             var blocksKey = _configuration["RootTenantId"];
             var tenantId = _configuration["RootTenantId"];
-            // var salt = _tenants.GetTenantByID(tenantId)?.TenantSalt;
-            var salt = "aG6eKPQVWkiEH5CpwUSOrQEzRqtAktvU6sBzsvq0Q3Gw";
+            var salt = _tenants.GetTenantByID(tenantId)?.TenantSalt;
             var actulalSecret = _cryptoService.Hash(tenantId, salt);
 
             var url = _configuration["NotificationServiceUrl"];
@@ -116,7 +115,7 @@ namespace Devops.DomainService.Deployment.Services
                 ResponseValue = "sent"
             };
 
-            await _deploymentHubService.SendBuildLogAsync(requestData, UserIds);
+            // await _deploymentHubService.SendBuildLogAsync(requestData, UserIds);
 
             var blocksKey = _configuration["RootTenantId"];
             var tenantId = _configuration["RootTenantId"];

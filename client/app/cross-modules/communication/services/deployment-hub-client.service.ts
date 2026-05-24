@@ -43,6 +43,12 @@ const buildConnection = (userId: string): HubConnection => {
 export const getDeploymentHubConnection = (): HubConnection | null => connection;
 
 export const connectDeploymentHub = async (userId: string): Promise<HubConnection | null> => {
+  // Paused: build-log notifications now arrive via the central blocks-logic
+  // NotificationHub. Remove this early return to re-enable the local hub.
+  console.info("[DeploymentHub] connect skipped — central NotificationHub is the active source.");
+  return null;
+
+  // eslint-disable-next-line no-unreachable
   if (!userId) {
     console.warn("[DeploymentHub] connect called without userId; skipping.");
     return null;

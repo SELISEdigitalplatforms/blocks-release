@@ -11,7 +11,7 @@ namespace Devops.DomainService.Shared.Utilities
         public static readonly string GITHUB_API_BASE_URI = "https://api.github.com";
         public static readonly string[] SONARQUBE_PERMISSIONS = new[] { "codeviewer", "issueadmin", "securityhotspotadmin", "user" };
         public static readonly string NOTIFICATION_LISTENER = "blocks_cloudbuild_notification_listener";
-        public static readonly string POST_BUILD_LISTENER = "blocks_cloudbuild_post_build_listener";
+        public static readonly string POST_BUILD_LISTENER = "blocks_cloudbuild_post_build_listener_asif_local";
         public static readonly string ProjectCreateSuccessQueue = "blocks_identifier_project_create_listener";
 
         public static readonly string[] SAST_METRIC_KEYS = new string[]

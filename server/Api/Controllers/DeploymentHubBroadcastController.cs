@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Devops.DomainService.Deployment.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers;
@@ -10,6 +11,7 @@ namespace Api.Controllers;
 /// a shared <c>X-Internal-Secret</c> header — never expose to public traffic.
 /// </summary>
 [ApiController]
+[AllowAnonymous]
 [Route("[controller]")]
 public class DeploymentHubBroadcastController : ControllerBase
 {

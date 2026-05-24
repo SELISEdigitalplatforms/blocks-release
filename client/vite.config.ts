@@ -175,12 +175,15 @@ export default defineConfig(({ mode }) => {
                 changeOrigin: true,
                 secure: false,
               },
-              "/deploymentHub": {
-                target: proxyTarget,
-                changeOrigin: true,
-                secure: false,
-                ws: true,
-              },
+              // DeploymentHub WebSocket proxy paused while build-log notifications
+              // are received via the central blocks-logic NotificationHub. Restore
+              // by uncommenting this block.
+              // "/deploymentHub": {
+              //   target: proxyTarget,
+              //   changeOrigin: true,
+              //   secure: false,
+              //   ws: true,
+              // },
             }
           : {}),
       },

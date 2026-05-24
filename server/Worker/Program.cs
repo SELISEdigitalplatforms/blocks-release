@@ -23,6 +23,7 @@ using Worker.Configuration;
 using Worker.Consumers;
 using Worker.Consumers.Identifier;
 using Worker.Consumers.Users;
+using SeliseBlocks.ConfigurationDriver;
 
 const string _serviceName = "blocks-deployment-worker";
 
@@ -37,6 +38,13 @@ IHostBuilder CreateHostBuilder(string[] args) =>
         .ConfigureAppConfiguration((context, builder) =>
         {
             // ApplicationConfigurations.ConfigureWorkerEnv(builder, args);
+            builder.AddMongoDbConfiguration(options =>
+            {
+                options.ConnectionString = secret.DatabaseConnectionString;
+                options.DatabaseName     = secret.RootDatabaseName;
+                options.CollectionName   = "Secrets";
+                options.SecretKey        = "blocks-Secret";
+            });
         })
         .ConfigureServices((services) =>
         {

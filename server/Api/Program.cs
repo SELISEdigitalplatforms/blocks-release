@@ -13,12 +13,22 @@ using Cloud.LmtService.Utilities;
 using CloudConfiguration.DomainService.Shared.Utilities;
 using Microsoft.IdentityModel.Tokens;
 using Cloud.LmtService.Models.Trace;
+using SeliseBlocks.ConfigurationDriver;
 
 var serviceName = "blocks-deployment-api";
 var vaultType = ResolveVaultType();
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
 var cloudBuildSecret = await CloudBuildSecret.ProcessBlocksSecret(vaultType);
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddMongoDbConfiguration(options =>
+{
+    options.ConnectionString = secret.DatabaseConnectionString;
+    options.DatabaseName     = secret.RootDatabaseName;
+    options.CollectionName   = "Secrets";
+    options.SecretKey        = "blocks-Secret-deployment";
+});
+
 ApplicationConfigurations.ConfigureServices(builder.Services, IdpConstants.GetMessageConfiguration(secret.MessageConnectionString));
 
 builder.Services.Configure<FormOptions>(options =>

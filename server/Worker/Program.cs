@@ -61,7 +61,9 @@ IHostBuilder CreateHostBuilder(string[] args) =>
 
             services.RegisterAllServices();
             services.RegisterApplicationServices(cloudBuildSecret);
-            services.AddSingleton<IDeploymentHubService, NullDeploymentHubService>();
+            // Worker doesn't host the SignalR hub itself — fan out via HTTP POST to the API's
+            // internal broadcast endpoint, which forwards to connected DeploymentLogHub clients.
+            services.AddSingleton<IDeploymentHubService, HttpDeploymentHubService>();
 
             services.AddSingleton<IConsumer<PostBuildQueue>, PostBuildConsumer>();
             services.AddSingleton<IConsumer<LogNotificationQueue>, LogNotificationConsumer>();

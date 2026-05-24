@@ -2,7 +2,7 @@ import { BlocksAppLauncher } from "@/components/blocks-app-launcher/blocks-app-l
 import { EnvironmentList } from "@/components/environment-list/environment-list";
 import { LanguageSelector } from "@/components/language-selector/language-selector";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
-import { Notification } from "@/components/notification/notification";
+import { Notification } from "@blocks-communication/components/notification/notification";
 import { ProjectList } from "@/components/project-list/project-list";
 import { Button } from "@/components/ui-kits/button/button";
 import { UserDropdownMenu } from "@/components/user-dropdown-menu/user-dropdown-menu";

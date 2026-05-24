@@ -3,7 +3,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui-kits/popover/popover";
-import { notificationClientService } from "@blocks-communication/notification/services/notification-client.service";
+import { notificationClientService } from "@blocks-communication/services/notification-client.service";
 import { Bell } from "lucide-react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
@@ -11,13 +11,13 @@ import {
   useGetNotifications,
   useMarkAllAsRead,
   useMarkAsRead,
-} from "@blocks-communication/notification/hooks/use-notifications";
+} from "@/cross-modules/communication/hooks/use-notifications";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   IDenormalizedPayload,
   INotification,
-} from "@blocks-communication/notification/models/notification.model";
-import { notificationService } from "@blocks-communication/notification/services/notification.service";
+} from "@/cross-modules/communication/models/notification.model";
+import { notificationService } from "@blocks-communication/services/notification.service";
 
 export function Notification() {
   const { data: configData } = useGetBlocksNotificationConfig(0, 100);

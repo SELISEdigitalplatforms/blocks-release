@@ -60,15 +60,15 @@ errors. This procedure is reusable across projects; only the domain/cert changes
 2. **Generate the cert + key** for the domain (pick any stable directory):
 
    ```bash
-   mkcert -cert-file C:/SSL_Certificates/dev-deployment.blocksdevelopers.com.pem \
-          -key-file  C:/SSL_Certificates/dev-deployment.blocksdevelopers.com-key.pem \
-          dev-deployment.blocksdevelopers.com
+   mkcert -cert-file C:/SSL_Certificates/dev-release.blocksdevelopers.com.pem \
+          -key-file  C:/SSL_Certificates/dev-release.blocksdevelopers.com-key.pem \
+          dev-release.blocksdevelopers.com
    ```
 
 3. **Add a hosts entry** so the domain resolves locally:
 
    ```
-   127.0.0.1 dev-deployment.blocksdevelopers.com
+   127.0.0.1 dev-release.blocksdevelopers.com
    ```
 
    - Windows: `C:\Windows\System32\drivers\etc\hosts`
@@ -78,22 +78,22 @@ errors. This procedure is reusable across projects; only the domain/cert changes
    - Windows (PowerShell):
 
      ```powershell
-     setx DEPLOYMENT_SSL_CERT "C:\SSL_Certificates\dev-deployment.blocksdevelopers.com.pem"
-     setx DEPLOYMENT_SSL_KEY  "C:\SSL_Certificates\dev-deployment.blocksdevelopers.com-key.pem"
+     setx DEPLOYMENT_SSL_CERT "C:\SSL_Certificates\dev-release.blocksdevelopers.com.pem"
+     setx DEPLOYMENT_SSL_KEY  "C:\SSL_Certificates\dev-release.blocksdevelopers.com-key.pem"
      ```
 
    - macOS/Linux (add to `~/.bashrc` / `~/.zshrc`):
 
      ```bash
-     export DEPLOYMENT_SSL_CERT="$HOME/.ssl/dev-deployment.blocksdevelopers.com.pem"
-     export DEPLOYMENT_SSL_KEY="$HOME/.ssl/dev-deployment.blocksdevelopers.com-key.pem"
+     export DEPLOYMENT_SSL_CERT="$HOME/.ssl/dev-release.blocksdevelopers.com.pem"
+     export DEPLOYMENT_SSL_KEY="$HOME/.ssl/dev-release.blocksdevelopers.com-key.pem"
      ```
 
 ### Behavior
 
 | Both vars set + files exist | Result                                                                                     |
 | --------------------------- | ------------------------------------------------------------------------------------------ |
-| Yes                         | FE `https://dev-deployment.blocksdevelopers.com:4000`, API `https://…:5000` (trusted cert) |
+| Yes                         | FE `https://dev-release.blocksdevelopers.com:4000`, API `https://…:5000` (trusted cert) |
 | No                          | FE `http://…:4000`, API `http://…:5000` (automatic fallback)                               |
 
 This applies to every launch method: `npm run dev` (from `client/`), `./run.sh -f|-b|-a`, and the

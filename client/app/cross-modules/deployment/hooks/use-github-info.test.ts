@@ -155,7 +155,6 @@ describe("Github Info Hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(githubInfoService.getCardRepoAndBranches).toHaveBeenCalledWith(
         MOCK_BUILD_ID,
-        TEST_PROJECT_KEY,
       );
     });
   });
@@ -192,9 +191,7 @@ describe("Github Info Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockRepositoryUser);
-      expect(githubInfoService.getRepositoryUser).toHaveBeenCalledWith(
-        TEST_PROJECT_KEY,
-      );
+      expect(githubInfoService.getRepositoryUser).toHaveBeenCalledWith();
     });
   });
 
@@ -234,7 +231,6 @@ describe("Github Info Hooks", () => {
       expect(result.current.data).toEqual(mockBranches);
       expect(githubInfoService.getGithubBranches).toHaveBeenCalledWith(
         "repo-name",
-        TEST_PROJECT_KEY,
       );
     });
   });
@@ -258,7 +254,6 @@ describe("Github Info Hooks", () => {
       expect(result.current.data).toEqual(mockSuccessResponse);
       expect(githubInfoService.getRepoAndGitBranchMatch).toHaveBeenCalledWith(
         MOCK_REPO_ID,
-        TEST_PROJECT_KEY,
       );
     });
   });
@@ -337,15 +332,13 @@ describe("Github Info Hooks", () => {
         mockProjects as any,
       );
 
-      const { result } = renderHook(() => useGetAllProjects(TEST_PROJECT_KEY), {
+      const { result } = renderHook(() => useGetAllProjects(), {
         wrapper: createWrapper(),
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockProjects);
-      expect(githubInfoService.getAllProjects).toHaveBeenCalledWith(
-        TEST_PROJECT_KEY,
-      );
+      expect(githubInfoService.getAllProjects).toHaveBeenCalledWith();
     });
   });
 
@@ -358,17 +351,13 @@ describe("Github Info Hooks", () => {
         mockDetails as any,
       );
 
-      const { result } = renderHook(
-        () => useGetRepoDetails(TEST_PROJECT_KEY, MOCK_REPO_ID),
-        {
-          wrapper: createWrapper(),
-        },
-      );
+      const { result } = renderHook(() => useGetRepoDetails(MOCK_REPO_ID), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockDetails);
       expect(githubInfoService.getRepoDetails).toHaveBeenCalledWith(
-        TEST_PROJECT_KEY,
         MOCK_REPO_ID,
       );
     });

@@ -86,7 +86,7 @@ const services: Service[] = [
     description:
       "Build, deploy, and scale your applications with automated CI/CD pipelines. Connect your GitHub repositories and go live in minutes.",
     features: ["Auto CI/CD", "GitHub Integration", "Multi-env", "Build Logs"],
-    url: "https://dev-deployment.blocksdevelopers.com",
+    url: "https://dev-release.blocksdevelopers.com",
     cta: "Visit Cloud Build",
     gradient: "from-sky-500 to-cyan-500",
   },
@@ -402,7 +402,7 @@ export default function LoginPage() {
         getRuntimeEnv("BLOCKS_APP_URL", {
           stripPort: true,
           ensureTrailingSlash: true,
-        }) || "https://dev-deployment.blocksdevelopers.com/";
+        }) || "https://dev-release.blocksdevelopers.com/";
       const redirectUri = `${redirectUrlBase}login/callback`;
       const initiateUrl = `${idpBaseUrl}/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${clientId}&redirectUri=${redirectUri}`;
       const headers: Record<string, string> = {};

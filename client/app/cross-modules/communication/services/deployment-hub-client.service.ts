@@ -42,58 +42,16 @@ const buildConnection = (userId: string): HubConnection => {
 
 export const getDeploymentHubConnection = (): HubConnection | null => connection;
 
-export const connectDeploymentHub = async (userId: string): Promise<HubConnection | null> => {
+export const connectDeploymentHub = async (
+  _userId: string,
+): Promise<HubConnection | null> => {
   // Paused: build-log notifications now arrive via the central blocks-logic
-  // NotificationHub. Remove this early return to re-enable the local hub.
-  console.info("[DeploymentHub] connect skipped — central NotificationHub is the active source.");
+  // NotificationHub. To re-enable the local hub, restore the connect logic
+  // (build, start, reuse-or-rebuild) using buildConnection().
+  console.info(
+    "[DeploymentHub] connect skipped — central NotificationHub is the active source.",
+  );
   return null;
-
-  // eslint-disable-next-line no-unreachable
-  if (!userId) {
-    console.warn("[DeploymentHub] connect called without userId; skipping.");
-    return null;
-  }
-
-  // Already connected (or connecting) for this user — reuse it.
-  if (connection && currentUserId === userId) {
-    if (
-      connection.state === HubConnectionState.Connected ||
-      connection.state === HubConnectionState.Connecting ||
-      connection.state === HubConnectionState.Reconnecting
-    ) {
-      if (startPromise) await startPromise;
-      return connection;
-    }
-  }
-
-  // Different user (or stale connection) — tear down and rebuild.
-  if (connection) {
-    await disconnectDeploymentHub();
-  }
-
-  currentUserId = userId;
-  connection = buildConnection(userId);
-
-  console.log(`[DeploymentHub] Connecting to ${HUB_PATH} as user ${userId}...`);
-  startPromise = connection
-    .start()
-    .then(() => {
-      console.log("[DeploymentHub] Connected. State:", connection?.state);
-    })
-    .catch((err) => {
-      console.error("[DeploymentHub] Connection failed:", err);
-      throw err;
-    })
-    .finally(() => {
-      startPromise = null;
-    });
-
-  try {
-    await startPromise;
-  } catch {
-    // already logged
-  }
-  return connection;
 };
 
 export const disconnectDeploymentHub = async (): Promise<void> => {

@@ -4,7 +4,13 @@ type RuntimeKey =
   | "BLOCKS_API_BASE_URL"
   | "BLOCKS_X_BLOCKS_KEY"
   | "BLOCKS_GOOGLE_SITE_KEY"
-  | "BLOCKS_CONSTRUCT_URL";
+  | "BLOCKS_CONSTRUCT_URL"
+  | "BLOCKS_GITHUB_SSO_CLIENT_ID"
+  | "BLOCKS_APP_URL"
+  | "BLOCKS_LOGIC_APP_URL"
+  | "BLOCKS_IDP_BASE_URL"
+  | "BLOCKS_OS_URL"
+  | "BLOCKS_OIDC_CLIENT_ID";
 
 declare global {
   interface Window {
@@ -15,11 +21,56 @@ declare global {
 const isPlaceholder = (value?: string) =>
   !!value && value.startsWith(PLACEHOLDER_PREFIX) && value.endsWith("__");
 
-export const getRuntimeEnv = (key: RuntimeKey): string => {
-  const windowValue = typeof window !== "undefined" ? window.__BLOCKS_ENV__?.[key] : undefined;
-  if (windowValue && !isPlaceholder(windowValue)) {
-    return windowValue;
+type GetRuntimeEnvOptions = {
+  stripPort?: boolean;
+  ensureTrailingSlash?: boolean;
+};
+
+const stripPortFromUrl = (url: string) => {
+  try {
+    const parsedUrl = new URL(url);
+    parsedUrl.port = "";
+    return parsedUrl.toString();
+  } catch (error) {
+    console.warn(`Failed to parse URL: ${url}`, error);
+    return url;
+  }
+};
+
+const ensureTrailingSlash = (url: string) =>
+  url.endsWith("/") ? url : `${url}/`;
+
+const isLocalEnv = () => {
+  if (import.meta.env.DEV) return true;
+
+  if (typeof window !== "undefined") {
+    const { hostname } = window.location;
+    return hostname === "localhost" || hostname === "127.0.0.1";
   }
 
-  return import.meta.env[key] || "";
+  return false;
+};
+
+export const getRuntimeEnv = (
+  key: RuntimeKey,
+  options: GetRuntimeEnvOptions = {},
+): string => {
+  let value = "";
+  const windowValue =
+    typeof window !== "undefined" ? window.__BLOCKS_ENV__?.[key] : undefined;
+  if (windowValue && !isPlaceholder(windowValue)) {
+    value = windowValue;
+  } else {
+    value = import.meta.env[key] || "";
+  }
+
+  if (options.stripPort && !isLocalEnv()) {
+    value = stripPortFromUrl(value);
+  }
+
+  if (value && options.ensureTrailingSlash) {
+    value = ensureTrailingSlash(value);
+  }
+
+  return value;
 };

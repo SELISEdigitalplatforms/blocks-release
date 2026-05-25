@@ -11,6 +11,10 @@ WWWROOT_DIR="$SCRIPT_DIR/server/Api/wwwroot"
 API_PORT=5000
 FRONTEND_PORT=4000
 
+# Ensure SSL vars are explicitly in scope for Vite
+export RELEASE_SSL_CERT="${RELEASE_SSL_CERT:-}"
+export RELEASE_SSL_KEY="${RELEASE_SSL_KEY:-}"
+
 API_PID=""
 WORKER_PID=""
 
@@ -80,32 +84,58 @@ run_frontend() {
 
     if [ ! -d "$CLIENT_DIR/node_modules" ]; then
         echo "Installing dependencies..."
-        npm --prefix "$CLIENT_DIR" install
+        (cd "$CLIENT_DIR" && npm clean-install)
     fi
 
     free_port $FRONTEND_PORT
 
-    npm --prefix "$CLIENT_DIR" run dev
+    cd "$CLIENT_DIR" && npm run dev
 }
 
 build_frontend() {
     echo "Building frontend..."
 
-    npm --prefix "$CLIENT_DIR" install
-    npm --prefix "$CLIENT_DIR" run build
+    pushd "$CLIENT_DIR" > /dev/null
+    npm install
+    npm run build
+    popd > /dev/null
 
     mkdir -p "$WWWROOT_DIR"
 
     if [ -d "$CLIENT_DIR/dist" ]; then
         echo "Syncing dist → wwwroot..."
-        rsync -a --delete "$CLIENT_DIR/dist/" "$WWWROOT_DIR/"
+        if command -v rsync >/dev/null 2>&1; then
+            rsync -a --delete "$CLIENT_DIR/dist/" "$WWWROOT_DIR/"
+        else
+            rm -rf "$WWWROOT_DIR"/*
+            cp -r "$CLIENT_DIR/dist/"* "$WWWROOT_DIR/"
+        fi
     fi
 }
 
 # ---------- BACKEND ----------
+# HTTPS is driven by the machine env vars RELEASE_SSL_CERT / RELEASE_SSL_KEY.
+# Both set + both files present -> HTTPS on $API_PORT; otherwise -> HTTP (fallback).
+configure_backend_tls() {
+    if [ -n "${RELEASE_SSL_CERT:-}" ] && [ -n "${RELEASE_SSL_KEY:-}" ] \
+       && [ -f "$RELEASE_SSL_CERT" ] && [ -f "$RELEASE_SSL_KEY" ]; then
+        export Kestrel__Certificates__Default__Path="$RELEASE_SSL_CERT"
+        export Kestrel__Certificates__Default__KeyPath="$RELEASE_SSL_KEY"
+        export ASPNETCORE_URLS="https://0.0.0.0:$API_PORT"
+        echo "Backend TLS: HTTPS on $API_PORT"
+    else
+        export ASPNETCORE_URLS="http://0.0.0.0:$API_PORT"
+        echo "Backend TLS: cert env not set/found — HTTP on $API_PORT"
+    fi
+}
+
 run_backend() {
+    configure_backend_tls
     echo "Running .NET API on port $API_PORT..."
-    dotnet run --project "$API_PROJECT"
+    # Pass the URL on the command line: it has higher precedence than the
+    # launchSettings.json applicationUrl, which would otherwise override
+    # the ASPNETCORE_URLS we exported above.
+    dotnet run --project "$API_PROJECT" -- --urls "$ASPNETCORE_URLS"
 }
 
 run_worker() {
@@ -159,7 +189,7 @@ case "$1" in
     -n|--npm)
         shift
         [ $# -eq 0 ] && echo "Usage: $0 -n <args>" && exit 1
-        npm --prefix "$CLIENT_DIR" "$@"
+        (cd "$CLIENT_DIR" && npm "$@")
         ;;
 
     -h|--help)

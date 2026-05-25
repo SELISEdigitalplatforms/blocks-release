@@ -66,7 +66,7 @@ namespace DomainService.OAuth
                 ExpiresUtc = jwtAccessToken.Expires,
                 RefreshToken = newRefreshToken,
                 RefreshExpiresUtc = refreshTokenExpiry,
-                CookieDomain = tenant.CookieDomain,
+                CookieDomain = tenant.Applications.FirstOrDefault()?.CookieDomain ?? string.Empty,
             };
         }
     }

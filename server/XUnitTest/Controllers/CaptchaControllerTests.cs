@@ -16,11 +16,10 @@ namespace XUnitTest.Controllers
         private readonly Mock<IValidator<CreateCaptchaRequest>> _createCaptchaValidator = new();
         private readonly CaptchaController _captchaController;
         private readonly Mock<IConfigurationService> _cloudConfig = new();
-        private readonly Mock<ChangeControllerContext> _context = new(new Mock<ITenants>().Object, new Mock<IDbContextProvider>().Object, new Mock<IHttpContextAccessor>().Object);
 
         public CaptchaControllerTests()
         {
-            _captchaController = new CaptchaController(_captchaService.Object, _cloudConfig.Object, _context.Object);
+            _captchaController = new CaptchaController(_captchaService.Object, _cloudConfig.Object);
         }
 
         [Fact]

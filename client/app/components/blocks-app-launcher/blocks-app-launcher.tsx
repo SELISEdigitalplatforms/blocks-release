@@ -10,6 +10,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui-kits/popover/popover";
 import { cn } from "@/lib/utils";
+import { getRuntimeEnv } from "@/lib/runtime-env";
+import { showErrorToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 
@@ -19,6 +21,8 @@ interface BlocksApp {
   description: string;
   url: string;
   icon: React.ReactNode;
+  clientId: string;
+  redirectUri: string;
 }
 
 // IDP icon – shield with lock
@@ -104,56 +108,180 @@ function DataGatewayIcon() {
   );
 }
 
+function BlocksOsIcon() {
+  return (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-9 w-9">
+      <rect width="40" height="40" rx="10" fill="#059669" />
+      <rect x="8" y="8" width="24" height="18" rx="2" stroke="white" strokeWidth="1.5" fill="none" />
+      <rect x="8" y="28" width="24" height="2" fill="white" opacity="0.8" />
+      <circle cx="15" cy="14" r="1.5" fill="white" opacity="0.7" />
+      <circle cx="20" cy="14" r="1.5" fill="white" opacity="0.7" />
+      <circle cx="25" cy="14" r="1.5" fill="white" opacity="0.7" />
+    </svg>
+  );
+}
+
+function UtilityIcon() {
+  return (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-9 w-9">
+      <rect width="40" height="40" rx="10" fill="#64748B" />
+      <path
+        d="M27.5 9a5.5 5.5 0 00-5.24 7.18l-10.5 10.5a2 2 0 002.83 2.83l10.5-10.5A5.5 5.5 0 1027.5 9z"
+        fill="white"
+        opacity="0.9"
+      />
+      <circle cx="27.5" cy="14.5" r="2.5" fill="#64748B" />
+    </svg>
+  );
+}
+
+function LogicIcon() {
+  return (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-9 w-9">
+      <rect width="40" height="40" rx="10" fill="#4F46E5" />
+      <rect x="8" y="17" width="6" height="6" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="26" y="11" width="6" height="6" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="26" y="23" width="6" height="6" rx="1.5" fill="white" opacity="0.9" />
+      <path d="M14 20h5l3-6h2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
+      <path d="M19 20l3 6h2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
+    </svg>
+  );
+}
+
+function ObservabilityIcon() {
+  return (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-9 w-9">
+      <rect width="40" height="40" rx="10" fill="#0891B2" />
+      <path
+        d="M20 12c-6 0-10 8-10 8s4 8 10 8 10-8 10-8-4-8-10-8z"
+        fill="white"
+        opacity="0.9"
+      />
+      <circle cx="20" cy="20" r="3.5" fill="#0891B2" />
+      <circle cx="20" cy="20" r="1.5" fill="white" opacity="0.8" />
+      <path d="M10 30l4-5M30 30l-4-5" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
+    </svg>
+  );
+}
+
+function DeploymentsIcon() {
+  return (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-9 w-9">
+      <rect width="40" height="40" rx="10" fill="#DC2626" />
+      <path
+        d="M20 7c-2 4-6 6-9 7l1 8c1 5 5 9 8 10 3-1 7-5 8-10l1-8c-3-1-7-3-9-7z"
+        fill="white"
+        opacity="0.9"
+      />
+      <path d="M20 14v8M16 18l4-4 4 4" stroke="#DC2626" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 const SELISE_APPS: BlocksApp[] = [
   {
-    key: "idp",
-    label: "IDP",
+    key: "iam",
+    label: "IAM",
     description: "Identity & Access",
-    url: "https://idp.seliseblocks.io",
+    url: getRuntimeEnv("BLOCKS_IAM_BASE_URL"),
     icon: <IdpIcon />,
+    clientId: "a5831e15-e193-4a4f-8e10-d04a4ad1705b",
+    redirectUri: getRuntimeEnv("BLOCKS_IAM_CALLBACK_URL"),
   },
   {
-    key: "uilm",
-    label: "UILM",
+    key: "localization",
+    label: "Localization",
     description: "Localization",
-    url: "https://uilm.seliseblocks.io",
+    url: getRuntimeEnv("BLOCKS_LOCALIZATION_BASE_URL"),
     icon: <UilmIcon />,
+    clientId: "57214b67-aa9c-4307-92ab-a25e35180fac",
+    redirectUri: getRuntimeEnv("BLOCKS_LOCALIZATION_CALLBACK_URL"),
   },
   {
-    key: "ai",
-    label: "AI",
+    key: "agents",
+    label: "Agents",
     description: "AI Platform",
-    url: "https://ai.seliseblocks.io",
+    url: getRuntimeEnv("BLOCKS_AGENTS_BASE_URL"),
     icon: <AiIcon />,
+    clientId: "c1565dbc-de65-4966-a427-0ed9e542c678",
+    redirectUri: getRuntimeEnv("BLOCKS_AGENTS_CALLBACK_URL"),
   },
   {
-    key: "data-gateway",
-    label: "Data Gateway",
+    key: "data",
+    label: "Data",
     description: "Data Integration",
-    url: "https://data-gateway.seliseblocks.io",
+    url: getRuntimeEnv("BLOCKS_DATA_BASE_URL"),
     icon: <DataGatewayIcon />,
+    clientId: "e76867a8-37a1-483e-a15e-875c3884b8e8",
+    redirectUri: getRuntimeEnv("BLOCKS_DATA_CALLBACK_URL"),
+  },
+  {
+    key: "os",
+    label: "OS",
+    description: "Operating System",
+    url: getRuntimeEnv("BLOCKS_OS_BASE_URL"),
+    icon: <BlocksOsIcon />,
+    clientId: "5225b9c1-15bc-41b0-bdc6-d3ceb180ccc5",
+    redirectUri: getRuntimeEnv("BLOCKS_OS_CALLBACK_URL"),
+  },
+  {
+    key: "utilities",
+    label: "Utilities",
+    description: "Utility Tools",
+    url: getRuntimeEnv("BLOCKS_UTILITIES_BASE_URL"),
+    icon: <UtilityIcon />,
+    clientId: "4f7ae2b9-4b42-4770-9138-63db08538629",
+    redirectUri: getRuntimeEnv("BLOCKS_UTILITIES_CALLBACK_URL"),
+  },
+  {
+    key: "logic",
+    label: "Logic",
+    description: "Business Logic",
+    url: getRuntimeEnv("BLOCKS_LOGIC_BASE_URL"),
+    icon: <LogicIcon />,
+    clientId: "a25aee32-73ae-484b-b813-522a8d091f89",
+    redirectUri: getRuntimeEnv("BLOCKS_LOGIC_CALLBACK_URL"),
+  },
+  {
+    key: "monitor",
+    label: "Monitor",
+    description: "Monitoring & Logs",
+    url: getRuntimeEnv("BLOCKS_MONITOR_BASE_URL"),
+    icon: <ObservabilityIcon />,
+    clientId: "1bd234da-1fa1-4264-982e-3debb1078be5",
+    redirectUri: getRuntimeEnv("BLOCKS_MONITOR_CALLBACK_URL"),
+  },
+  {
+    key: "release",
+    label: "Release",
+    description: "CI/CD & Releases",
+    url: getRuntimeEnv("BLOCKS_RELEASE_BASE_URL"),
+    icon: <DeploymentsIcon />,
+    clientId: "6523b311-256f-4b9a-a88a-2ac4e02bad25",
+    redirectUri: getRuntimeEnv("BLOCKS_RELEASE_CALLBACK_URL"),
   },
 ];
 
 interface AppTileProps {
   app: BlocksApp;
+  onClick: () => void;
+  isLoading: boolean;
 }
 
-function AppTile({ app }: AppTileProps) {
+function AppTile({ app, onClick, isLoading }: AppTileProps) {
   return (
-    <a
-      href={app.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex flex-col items-center gap-2 rounded-xl p-3 text-center transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    <button
+      onClick={onClick}
+      disabled={isLoading}
+      className="group flex flex-col items-center gap-2 rounded-xl p-3 text-center transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
     >
       <div className="flex h-12 w-12 items-center justify-center overflow-hidden">
         {app.icon}
       </div>
-      <span className="line-clamp-1 max-w-[72px] text-[12px] font-medium leading-tight text-foreground">
-        {app.label}
+      <span className="line-clamp-1 max-w-[90px] text-[12px] font-medium leading-tight text-foreground">
+        {isLoading ? "Opening…" : app.label}
       </span>
-    </a>
+    </button>
   );
 }
 
@@ -215,16 +343,15 @@ export function BlocksAppLauncher() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [favouriteKeys, setFavouriteKeys] = useState<Set<string>>(new Set());
   const [isHydrated, setIsHydrated] = useState(false);
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const location = useLocation();
-
-
 
   // Load favourites from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem("blocks-app-favourites");
     const keys = stored
       ? new Set<string>(JSON.parse(stored) as string[])
-      : new Set<string>(["idp", "uilm"]);
+      : new Set<string>(["iam", "localization"]);
     setFavouriteKeys(keys);
     setIsHydrated(true);
   }, []);
@@ -242,6 +369,32 @@ export function BlocksAppLauncher() {
       newFavourites.add(key);
     }
     saveFavourites(newFavourites);
+  };
+
+  const initiateLogin = async (app: BlocksApp) => {
+    if (loadingKey) return;
+    try {
+      setLoadingKey(app.key);
+      const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
+      const idpBaseUrl = getRuntimeEnv("BLOCKS_IAM_BASE_URL") || getRuntimeEnv("BLOCKS_IDP_BASE_URL");
+      const initiateUrl = `${idpBaseUrl}/api/idp/initiate?x-blocks-key=${blocksKey}&clientId=${app.clientId}&redirectUri=${app.redirectUri}`;
+      const headers: Record<string, string> = {};
+      if (blocksKey) headers["X-Blocks-Key"] = blocksKey;
+
+      const response = await fetch(initiateUrl, { headers });
+      const data = await response.json();
+
+      if (data.redirect_uri) {
+        window.location.href = data.redirect_uri as string;
+      } else {
+        showErrorToast({ errors: "Failed to get authorization URL" });
+        setLoadingKey(null);
+      }
+    } catch (error) {
+      console.error("App login initiation error:", error);
+      showErrorToast({ errors: "Unable to open app. Please try again." });
+      setLoadingKey(null);
+    }
   };
 
   if (!isHydrated) return null;
@@ -286,7 +439,12 @@ export function BlocksAppLauncher() {
           <div className="px-3 pb-2 pt-3">
             <div className="grid grid-cols-3">
               {favourites.map((app) => (
-                <AppTile key={app.key} app={app} />
+                <AppTile
+                  key={app.key}
+                  app={app}
+                  onClick={() => initiateLogin(app)}
+                  isLoading={loadingKey === app.key}
+                />
               ))}
             </div>
           </div>
@@ -299,7 +457,12 @@ export function BlocksAppLauncher() {
               </p>
               <div className="grid grid-cols-3">
                 {moreApps.map((app) => (
-                  <AppTile key={app.key} app={app} />
+                  <AppTile
+                    key={app.key}
+                    app={app}
+                    onClick={() => initiateLogin(app)}
+                    isLoading={loadingKey === app.key}
+                  />
                 ))}
               </div>
             </div>

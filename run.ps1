@@ -118,9 +118,27 @@ function Build-Frontend {
     }
 }
 
+# HTTPS is driven by the machine env vars RELEASE_SSL_CERT / RELEASE_SSL_KEY.
+# Both set + both files present -> HTTPS on $ApiPort; otherwise -> HTTP (fallback).
+function Set-BackendTls {
+    if ($env:RELEASE_SSL_CERT -and $env:RELEASE_SSL_KEY `
+        -and (Test-Path $env:RELEASE_SSL_CERT) -and (Test-Path $env:RELEASE_SSL_KEY)) {
+        $env:Kestrel__Certificates__Default__Path    = $env:RELEASE_SSL_CERT
+        $env:Kestrel__Certificates__Default__KeyPath = $env:RELEASE_SSL_KEY
+        $env:ASPNETCORE_URLS = "https://0.0.0.0:$ApiPort"
+        Write-Host "Backend TLS: HTTPS on $ApiPort"
+    } else {
+        $env:ASPNETCORE_URLS = "http://0.0.0.0:$ApiPort"
+        Write-Host "Backend TLS: cert env not set/found - HTTP on $ApiPort"
+    }
+}
+
 function Run-Backend {
+    Set-BackendTls
     Write-Host "Running .NET API..."
-    dotnet run --project $ApiProject
+    # --urls on the command line outranks the launchSettings.json applicationUrl,
+    # which would otherwise override the ASPNETCORE_URLS set in Set-BackendTls.
+    dotnet run --project $ApiProject -- --urls $env:ASPNETCORE_URLS
 }
 
 function Run-Worker {
@@ -169,10 +187,12 @@ if ($All) {
     Restore-Dotnet
     Build-Frontend
 
+    Set-BackendTls
+
     Write-Host "Starting API + Worker..."
 
     $api = Start-Process powershell `
-        -ArgumentList "-NoExit", "-Command", "dotnet run --project '$ApiProject'" `
+        -ArgumentList "-NoExit", "-Command", "dotnet run --project '$ApiProject' -- --urls '$env:ASPNETCORE_URLS'" `
         -PassThru
 
     $worker = Start-Process powershell `

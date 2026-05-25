@@ -37,7 +37,7 @@ namespace Api.Controllers
         /// <param name="command"></param>
         /// <returns></returns>
         [HttpPost]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<MigrationOtpGenerationResponse> Migrate([FromBody] MigrationRequest command)
         {
             return await _migrationService.Migrate(command);
@@ -49,7 +49,7 @@ namespace Api.Controllers
         /// <param name="command">The OTP verification request containing the verification ID and code.</param>
         /// <returns>An <see cref="MigrationOtpVerificationResponse"/> indicating whether the OTP is valid.</returns>
         [HttpPost]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<MigrationOtpVerificationResponse> Verify([FromBody] MigrationVerifyOtpRequest request)
         {
             return await _migrationService.VerifyAsync(request);
@@ -61,7 +61,7 @@ namespace Api.Controllers
         /// <param name="tenantGroupId">The tenant group ID to check for migrations.</param>
         /// <returns>List of migration trackers with incomplete services.</returns>
         [HttpGet]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<IActionResult> GetMigrationStatus([FromQuery] string tenantGroupId)
         {
             if (string.IsNullOrEmpty(tenantGroupId))
@@ -74,7 +74,7 @@ namespace Api.Controllers
         }
 
         [HttpPost]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<IActionResult> DataCleanup([FromBody] DataCleanupRequest request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.ProjectKey))

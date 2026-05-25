@@ -20,7 +20,6 @@ namespace XUnitTest.Controllers
     {
         private readonly Mock<IMfaManagementService> _mfaService = new();
         private readonly Mock<TotpService> _totpService;
-        private readonly Mock<ChangeControllerContext> _changeContext;
         private readonly MfaController _controller;
         private readonly Mock<ITenants> _tenants = new();
         private readonly Mock<IDbContextProvider> _dbContextProvider = new();
@@ -29,14 +28,8 @@ namespace XUnitTest.Controllers
 
         public MfaControllerTests()
         {
-            _changeContext = new Mock<ChangeControllerContext>(_tenants.Object, _dbContextProvider.Object, _httpContextAccessor.Object)
-            {
-                CallBase = true
-            };
-
             _totpService = new Mock<TotpService>(Mock.Of<IMfaManagementRepository>(), Mock.Of<ILogger<TotpService>>(), Mock.Of<IHttpContextAccessor>(), Mock.Of<IConfiguration>(), Mock.Of<ICacheClient>(), Mock.Of<IValidator<VerifyOtpRequest>>(), Mock.Of<ITenants>());
-            //_changeContext = new Mock<ChangeControllerContext>( Mock.Of<ITenants>(),Mock.Of<IDbContextProvider>(), Mock.Of<IHttpContextAccessor>());
-            _controller = new MfaController(_mfaService.Object, _totpService.Object, _changeContext.Object, _cloudConfig.Object);
+            _controller = new MfaController(_mfaService.Object, _totpService.Object, _cloudConfig.Object);
         }
 
         private MfaController CreateController()
@@ -44,7 +37,6 @@ namespace XUnitTest.Controllers
             var controller = new MfaController(
                 _mfaService.Object,
                 _totpService.Object,
-                _changeContext.Object,
                 _cloudConfig.Object
             );
 

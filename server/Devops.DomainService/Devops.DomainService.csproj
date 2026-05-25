@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="KubernetesClient" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="MongoDB.Driver" />
+    <PackageReference Include="SeliseBlocks.Genesis" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+	<ItemGroup>
+	    <Content Include="Assets\**\*.*">
+		    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    </Content>
+	</ItemGroup>
+
+</Project>

@@ -10,12 +10,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui-kits/dropdown-menu/dropdown-menu";
-import { useGetUser } from "@/idp/iam/hooks/use-user";
+import { useGetUser } from "@blocks-idp/iam/hooks/use-user";
 
 function UserDropdownMenuLogo() {
   const { data } = useGetUser({ enabled: true });
-  const userData = data?.data || { firstName: "", lastName: "", profileImageUrl: "" };
-  const initials = `${userData.firstName?.[0] || ""}${userData.lastName?.[0] || ""}`.toUpperCase();
+  const userData = data?.data || {
+    firstName: "",
+    lastName: "",
+    profileImageUrl: "",
+  };
+  const initials =
+    `${userData.firstName?.[0] || ""}${userData.lastName?.[0] || ""}`.toUpperCase();
 
   if (userData.profileImageUrl) {
     return (
@@ -41,8 +46,7 @@ export function UserDropdownMenu() {
         <Button
           variant="link"
           size="icon"
-          className="relative h-10 w-10 overflow-hidden rounded-full bg-[hsl(var(--avatar-surface-default))] p-0 text-base font-normal text-[hsl(var(--avatar-text-high-emphasis))] hover:no-underline"
-        >
+          className="relative h-10 w-10 overflow-hidden rounded-full bg-[hsl(var(--avatar-surface-default))] p-0 text-base font-normal text-[hsl(var(--avatar-text-high-emphasis))] hover:no-underline">
           <UserDropdownMenuLogo />
         </Button>
       </DropdownMenuTrigger>

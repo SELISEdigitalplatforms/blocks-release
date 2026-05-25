@@ -22,13 +22,12 @@ namespace XUnitTest.Controllers
         private readonly Mock<IUserManagementMutationService> _userMutationService = new();
         private readonly Mock<IResourceMutationService> _resourceMutationService = new();
         private readonly Mock<IResourceQueryService> _resourceQueryService = new();
-        private readonly Mock<ChangeControllerContext> _changeContext = new(new Mock<ITenants>().Object, new Mock<IDbContextProvider>().Object, new Mock<IHttpContextAccessor>().Object);
         private readonly IamController _controller;
         private readonly Mock<IConfigurationService> _cloudConfig = new();
 
         public IamControllerTests()
         {
-            _controller = new IamController(_accountService.Object, _activityService.Object, _resourceMutationService.Object, _resourceQueryService.Object, _userQueryService.Object, _userMutationService.Object, _changeContext.Object, _cloudConfig.Object);
+            _controller = new IamController(_accountService.Object, _activityService.Object, _resourceMutationService.Object, _resourceQueryService.Object, _userQueryService.Object, _userMutationService.Object, _cloudConfig.Object);
         }
 
         private IamController CreateController()
@@ -40,7 +39,6 @@ namespace XUnitTest.Controllers
                 _resourceQueryService.Object,
                 _userQueryService.Object,
                 _userMutationService.Object,
-                _changeContext.Object,
                 _cloudConfig.Object
             );
 

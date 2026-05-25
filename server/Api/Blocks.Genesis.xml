@@ -4,6 +4,13 @@
         <name>Api</name>
     </assembly>
     <members>
+        <member name="T:Api.Controllers.DeploymentHubBroadcastController">
+            <summary>
+            Internal endpoint used by non-API processes (e.g. the Worker) to fan out
+            notifications through this API instance's SignalR hub. Authenticated via
+            a shared <c>X-Internal-Secret</c> header — never expose to public traffic.
+            </summary>
+        </member>
         <member name="T:Api.Controllers.MigrationController">
             <summary>
             Controller for handling migration operations between projects.

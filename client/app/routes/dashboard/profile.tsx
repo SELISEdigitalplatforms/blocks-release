@@ -1,5 +1,6 @@
-import { Profile } from "@blocks-idp/iam/modules/user-management/profile";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 
 export default function ProfilePage() {
-	return <Profile />;
+	window.location.replace(`${getRuntimeEnv("BLOCKS_IDP_BASE_URL")}/profile`);
+	return null;
 }

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Version>10.0.0-preview.2</Version>
+    <PackageId>SeliseBlocks.DeploymentDriver</PackageId>
+    <Authors>SeliseBlocks</Authors>
+    <Company>SeliseBlocks</Company>
+    <Description>Blocks Deployment Driver</Description>
+    <IncludeBuildOutput>true</IncludeBuildOutput>
+    <IncludeOutputAssemblies>true</IncludeOutputAssemblies>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>Genesis, BlocksGenesis, SeliseBlocksGenesis, Deployment, Driver</PackageTags>
+    <RepositoryUrl>https://github.com/SELISEdigitalplatforms/blocks-deployment</RepositoryUrl>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Transitive dependencies of Devops.DomainService bundled in this package -->
+    <PackageReference Include="KubernetesClient" />
+    <PackageReference Include="MongoDB.Driver" />
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="SeliseBlocks.Genesis" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <ProjectReference Include="..\Devops.DomainService\Devops.DomainService.csproj" PrivateAssets="All" />
+    <None Remove="bin\Release\net10.0\Devops.DomainService.dll" />
+    <None Include="$(OutputPath)Devops.DomainService.dll" Pack="true" PackagePath="lib/net10.0/" />
+  </ItemGroup>
+
+</Project>

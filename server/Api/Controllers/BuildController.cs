@@ -37,7 +37,7 @@ public class BuildController : ControllerBase
 
     [HttpGet]
     [Authorize]
-    public async Task<IActionResult> GetById([FromQuery] string buildId, string ProjectKey)
+    public async Task<IActionResult> GetById([FromQuery] string buildId)
     {
         var builds = await _buildService.GetBuildWithRepo(buildId);
         if(builds != null)
@@ -80,7 +80,7 @@ public class BuildController : ControllerBase
 
     [HttpGet("repos-list")]
     [Authorize]
-    public async Task<IActionResult> GetReposList([FromQuery] string ProjectKey)
+    public async Task<IActionResult> GetReposList()
     {
         var repoList = await _repoRepository.GetRepos();
         if (repoList != null)
@@ -102,7 +102,7 @@ public class BuildController : ControllerBase
 
     [HttpGet("repo-details")]
     [Authorize]
-    public async Task<IActionResult> GetRepoDetails([FromQuery] string ProjectKey, string RepoId)
+    public async Task<IActionResult> GetRepoDetails([FromQuery] string RepoId)
     {
         try
         {
@@ -209,7 +209,7 @@ public class BuildController : ControllerBase
     
     [HttpGet("reports")]
     [Authorize]
-    public async Task<IActionResult> GetReports([FromQuery]  string buildId, string type, string ProjectKey)
+    public async Task<IActionResult> GetReports([FromQuery] string buildId, string type)
     {
         var result = await _testReportService.GetReport(buildId, type);
         return Ok(new BaseApiResponse()

@@ -39,11 +39,9 @@ export const useGetGithubRepos = (
   page?: number,
   perPage?: number,
 ) => {
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   return useQuery({
     queryKey: ["github-repos", isVerificationSuccessful, search, page, perPage],
-    queryFn: () =>
-      githubInfoService.getGithubRepos(projectKey, search, page, perPage),
+    queryFn: () => githubInfoService.getGithubRepos(search, page, perPage),
     enabled: isVerificationSuccessful,
     retry: false,
     staleTime: 0, // Always fetch fresh data
@@ -53,11 +51,9 @@ export const useGetGithubRepos = (
 };
 
 export const useGetRepositoryUser = (isVerificationSuccessful: boolean) => {
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
-
   return useQuery({
     queryKey: ["repository-user", isVerificationSuccessful],
-    queryFn: () => githubInfoService.getRepositoryUser(projectKey),
+    queryFn: () => githubInfoService.getRepositoryUser(),
     enabled: isVerificationSuccessful,
     retry: false,
     staleTime: 5 * 60 * 1000,
@@ -83,11 +79,9 @@ export const useRemoveAuthorization = () => {
 };
 
 export const useGithubBranches = (repo: string) => {
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
-
   return useQuery({
     queryKey: ["github-branches", repo],
-    queryFn: () => githubInfoService.getGithubBranches(repo, projectKey),
+    queryFn: () => githubInfoService.getGithubBranches(repo),
     enabled: !!repo,
     retry: false,
     staleTime: 5 * 60 * 1000,
@@ -98,35 +92,23 @@ export const useRepoAndGitBranchMatch = (
   repoId: string,
   enabled: boolean = true,
 ) => {
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
-
   return useQuery({
     queryKey: ["git-branch-match", repoId],
-    queryFn: () =>
-      githubInfoService.getRepoAndGitBranchMatch(repoId, projectKey),
+    queryFn: () => githubInfoService.getRepoAndGitBranchMatch(repoId),
     enabled: !!repoId && enabled,
     retry: false,
     refetchOnMount: true,
   });
 };
 
-export const useGetAllProjects = (
-  projectId: string,
-  options?: {
-    refetchOnMount: boolean;
-    refetchOnWindowFocus: boolean;
-    forceRefresh?: boolean;
-  },
-) => {
+export const useGetAllProjects = (options?: {
+  refetchOnMount: boolean;
+  refetchOnWindowFocus: boolean;
+  forceRefresh?: boolean;
+}) => {
   return useQuery({
-    queryKey: ["projects", projectId],
-    queryFn: () => {
-      if (!projectId) {
-        throw new Error("Project ID is required");
-      }
-      return githubInfoService.getAllProjects(projectId);
-    },
-    enabled: !!projectId,
+    queryKey: ["projects"],
+    queryFn: () => githubInfoService.getAllProjects(),
     retry: false,
     staleTime: options?.forceRefresh ? 0 : 5 * 60 * 1000,
     refetchOnMount: options?.refetchOnMount ? "always" : true,
@@ -159,7 +141,6 @@ export const useGetAllRepoBuilds = (
 };
 
 export const useGetRepoDetails = (
-  projectKey: string,
   repoId: string,
   options?: {
     refetchOnMount: boolean;
@@ -168,14 +149,14 @@ export const useGetRepoDetails = (
   },
 ) => {
   return useQuery({
-    queryKey: ["repo-details", projectKey, repoId],
+    queryKey: ["repo-details", repoId],
     queryFn: () => {
-      if (!projectKey || !repoId) {
-        throw new Error("Project Key and Repo ID are required");
+      if (!repoId) {
+        throw new Error("Repo ID is required");
       }
-      return githubInfoService.getRepoDetails(projectKey, repoId);
+      return githubInfoService.getRepoDetails(repoId);
     },
-    enabled: !!projectKey && !!repoId,
+    enabled: !!repoId,
     staleTime: options?.forceRefresh ? 0 : 5 * 60 * 1000,
     refetchOnMount: options?.refetchOnMount ? "always" : true,
     refetchOnWindowFocus: options?.refetchOnWindowFocus ?? false,
@@ -226,15 +207,13 @@ export const useGetSpecs = () => {
 };
 
 export const useGetCardProjectAndBranch = (buildId: string) => {
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
-
   return useQuery<IBuildApiResponse>({
     queryKey: ["project-repo", buildId],
     queryFn: () => {
       if (!buildId) {
-        throw new Error("Project ID is required");
+        throw new Error("Build ID is required");
       }
-      return githubInfoService.getCardRepoAndBranches(buildId, projectKey);
+      return githubInfoService.getCardRepoAndBranches(buildId);
     },
     enabled: !!buildId,
     retry: false,

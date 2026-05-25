@@ -30,7 +30,7 @@ namespace Api.Controllers
 
         [HttpGet]
         [Authorize]
-        public async Task<IActionResult> ProcessDependencyTrackUser([FromQuery] string ProjectKey, string buildId)
+        public async Task<IActionResult> ProcessDependencyTrackUser([FromQuery] string buildId)
         {
             var userName = BlocksContext.GetContext().UserName;
             var userId = BlocksContext.GetContext().UserId;

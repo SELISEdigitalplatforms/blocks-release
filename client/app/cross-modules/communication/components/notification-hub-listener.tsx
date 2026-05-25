@@ -1,19 +1,27 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import {
-  connectDeploymentHub,
-  disconnectDeploymentHub,
-  getDeploymentHubConnection,
-} from "../services/deployment-hub-client.service";
+  connectNotificationHub,
+  disconnectNotificationHub,
+  getNotificationHubConnection,
+} from "../services/notification-hub-client.service";
 
 const EVENT_NAME = "BuildLogNotification";
 
-export const DeploymentHubListener = () => {
+const safeParse = (value: unknown): unknown => {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+
+export const NotificationHubListener = () => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const userId = useAuthStore((s) => s.user?.itemId ?? null);
 
   useEffect(() => {
-    if (!isAuthenticated || !userId) return;
+    if (!isAuthenticated) return;
 
     let cancelled = false;
     const handler = (message: unknown) => {
@@ -21,7 +29,7 @@ export const DeploymentHubListener = () => {
         new CustomEvent(EVENT_NAME, {
           detail: {
             method: EVENT_NAME,
-            message,
+            message: safeParse(message),
             timestamp: new Date().toISOString(),
           },
         }),
@@ -29,22 +37,21 @@ export const DeploymentHubListener = () => {
     };
 
     (async () => {
-      const conn = await connectDeploymentHub(userId);
+      const conn = await connectNotificationHub();
       if (cancelled || !conn) return;
       conn.on(EVENT_NAME, handler);
     })();
 
     return () => {
       cancelled = true;
-      const conn = getDeploymentHubConnection();
+      const conn = getNotificationHubConnection();
       conn?.off(EVENT_NAME, handler);
     };
-  }, [isAuthenticated, userId]);
+  }, [isAuthenticated]);
 
-  // Tear the socket down on logout so the next user gets a fresh, correctly-scoped connection.
   useEffect(() => {
     if (isAuthenticated) return;
-    void disconnectDeploymentHub();
+    void disconnectNotificationHub();
   }, [isAuthenticated]);
 
   return null;

@@ -12,16 +12,13 @@ describe("ObservabilityService", () => {
   // ─── SASTData ──────────────────────────────────────────────────────────────
 
   describe("SASTData", () => {
-    it("should call correct endpoint with buildId and projectKey", async () => {
+    it("should call correct endpoint with buildId", async () => {
       const mockResponse = "sast-report-url";
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
-      const result = await observabilityService.SASTData(
-        MOCK_BUILD_ID,
-        TEST_PROJECT_KEY,
-      );
+      const result = await observabilityService.SASTData(MOCK_BUILD_ID);
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.REPORTS}?buildId=${encodeURIComponent(MOCK_BUILD_ID)}&type=sast&ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}`;
+      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.REPORTS}?buildId=${encodeURIComponent(MOCK_BUILD_ID)}&type=sast`;
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockResponse);
     });
@@ -30,18 +27,14 @@ describe("ObservabilityService", () => {
   // ─── SCAData ───────────────────────────────────────────────────────────────
 
   describe("SCAData", () => {
-    it("should call correct endpoint with buildId, projectKey and type", async () => {
+    it("should call correct endpoint with buildId and type", async () => {
       const type = "npm";
       const mockResponse = "sca-report-url";
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
-      const result = await observabilityService.SCAData(
-        MOCK_BUILD_ID,
-        TEST_PROJECT_KEY,
-        type,
-      );
+      const result = await observabilityService.SCAData(MOCK_BUILD_ID, type);
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.REPORTS}?buildId=${encodeURIComponent(MOCK_BUILD_ID)}&type=sca-${encodeURIComponent(type)}&ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}`;
+      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.REPORTS}?buildId=${encodeURIComponent(MOCK_BUILD_ID)}&type=sca-${encodeURIComponent(type)}`;
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockResponse);
     });
@@ -50,16 +43,13 @@ describe("ObservabilityService", () => {
   // ─── SCARedirect ───────────────────────────────────────────────────────────
 
   describe("SCARedirect", () => {
-    it("should call correct endpoint with buildId and projectKey", async () => {
+    it("should call correct endpoint with buildId", async () => {
       const mockResponse = "redirect-url";
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
-      const result = await observabilityService.SCARedirect(
-        MOCK_BUILD_ID,
-        TEST_PROJECT_KEY,
-      );
+      const result = await observabilityService.SCARedirect(MOCK_BUILD_ID);
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.PROCESS_DEPENDENCY_TRACK_USER}?ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}&buildId=${encodeURIComponent(MOCK_BUILD_ID)}`;
+      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.PROCESS_DEPENDENCY_TRACK_USER}?buildId=${encodeURIComponent(MOCK_BUILD_ID)}`;
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockResponse);
     });

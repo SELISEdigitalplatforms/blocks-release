@@ -79,7 +79,7 @@ const DeploymentSettingsModal = ({
     data: repoDetails,
     isError,
     error,
-  } = useGetRepoDetails(projectKey, repoId);
+  } = useGetRepoDetails(repoId);
   const { data: specs, isLoading: isSpecsLoading } = useGetSpecs() as any;
   const { mutate: updateRepoSettings, isPending } = useUpdateRepoSettings({
     onSuccess: () => {
@@ -182,11 +182,7 @@ const DeploymentSettingsModal = ({
   };
 
   const isFormValid = () => {
-    return !!(
-      deploymentData.providerId &&
-      deploymentData.regionId &&
-      deploymentData.machineConfigId
-    );
+    return true;
   };
 
   const handleSave = () => {

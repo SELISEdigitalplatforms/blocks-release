@@ -4,6 +4,7 @@ import {
   HubConnectionState,
   HttpTransportType,
 } from "@microsoft/signalr";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 
 const HUB_PATH = "/deploymentHub";
 
@@ -11,10 +12,20 @@ let connection: HubConnection | null = null;
 let currentUserId: string | null = null;
 let startPromise: Promise<void> | null = null;
 
-const hubBaseUrl = (): string => (typeof window !== "undefined" ? window.location.origin : "");
+// The hub lives on the deployment API server. Resolve its origin from runtime
+// env (same source the http-client uses), falling back to the current origin so
+// the vite dev proxy can still forward /deploymentHub when the value is unset.
+const hubBaseUrl = (): string => {
+  const fromEnv = getRuntimeEnv("BLOCKS_API_BASE_URL").trim().replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  return typeof window !== "undefined" ? window.location.origin : "";
+};
 
 const buildConnection = (userId: string): HubConnection => {
-  const url = `${hubBaseUrl()}${HUB_PATH}?userId=${encodeURIComponent(userId)}`;
+  const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
+  const url = `${hubBaseUrl()}${HUB_PATH}?x-blocks-key=${encodeURIComponent(
+    blocksKey,
+  )}&userId=${encodeURIComponent(userId)}`;
   const conn = new HubConnectionBuilder()
     .withUrl(url, { transport: HttpTransportType.WebSockets })
     .withAutomaticReconnect()
@@ -31,52 +42,16 @@ const buildConnection = (userId: string): HubConnection => {
 
 export const getDeploymentHubConnection = (): HubConnection | null => connection;
 
-export const connectDeploymentHub = async (userId: string): Promise<HubConnection | null> => {
-  if (!userId) {
-    console.warn("[DeploymentHub] connect called without userId; skipping.");
-    return null;
-  }
-
-  // Already connected (or connecting) for this user — reuse it.
-  if (connection && currentUserId === userId) {
-    if (
-      connection.state === HubConnectionState.Connected ||
-      connection.state === HubConnectionState.Connecting ||
-      connection.state === HubConnectionState.Reconnecting
-    ) {
-      if (startPromise) await startPromise;
-      return connection;
-    }
-  }
-
-  // Different user (or stale connection) — tear down and rebuild.
-  if (connection) {
-    await disconnectDeploymentHub();
-  }
-
-  currentUserId = userId;
-  connection = buildConnection(userId);
-
-  console.log(`[DeploymentHub] Connecting to ${HUB_PATH} as user ${userId}...`);
-  startPromise = connection
-    .start()
-    .then(() => {
-      console.log("[DeploymentHub] Connected. State:", connection?.state);
-    })
-    .catch((err) => {
-      console.error("[DeploymentHub] Connection failed:", err);
-      throw err;
-    })
-    .finally(() => {
-      startPromise = null;
-    });
-
-  try {
-    await startPromise;
-  } catch {
-    // already logged
-  }
-  return connection;
+export const connectDeploymentHub = async (
+  _userId: string,
+): Promise<HubConnection | null> => {
+  // Paused: build-log notifications now arrive via the central blocks-logic
+  // NotificationHub. To re-enable the local hub, restore the connect logic
+  // (build, start, reuse-or-rebuild) using buildConnection().
+  console.info(
+    "[DeploymentHub] connect skipped — central NotificationHub is the active source.",
+  );
+  return null;
 };
 
 export const disconnectDeploymentHub = async (): Promise<void> => {

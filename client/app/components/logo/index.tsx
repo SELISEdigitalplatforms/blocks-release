@@ -18,10 +18,6 @@ export function Logo({
 }: LogoProps) {
   const { resolvedTheme } = useTheme();
 
-  const onLogoClick = () => {
-    // window.location.href = "/console";
-  };
-
   if (src) {
     return (
       <img
@@ -30,7 +26,6 @@ export function Logo({
         width={width}
         height={height}
         className={className}
-        onClick={onLogoClick}
       />
     );
   }
@@ -43,7 +38,6 @@ export function Logo({
         width={width}
         height={height}
         className={className}
-        onClick={onLogoClick}
       />
       <img
         src="/Logo.svg"
@@ -51,7 +45,6 @@ export function Logo({
         width={width}
         height={height}
         className={className}
-        onClick={onLogoClick}
       />
     </RenderAlternatively>
   );

@@ -23,6 +23,7 @@ using Worker.Configuration;
 using Worker.Consumers;
 using Worker.Consumers.Identifier;
 using Worker.Consumers.Users;
+using SeliseBlocks.ConfigurationDriver;
 
 const string _serviceName = "blocks-deployment-worker";
 
@@ -37,6 +38,13 @@ IHostBuilder CreateHostBuilder(string[] args) =>
         .ConfigureAppConfiguration((context, builder) =>
         {
             // ApplicationConfigurations.ConfigureWorkerEnv(builder, args);
+            builder.AddMongoDbConfiguration(options =>
+            {
+                options.ConnectionString = secret.DatabaseConnectionString;
+                options.DatabaseName     = secret.RootDatabaseName;
+                options.CollectionName   = "Secrets";
+                options.SecretKey        = "blocks-secret-release";
+            });
         })
         .ConfigureServices((services) =>
         {
@@ -61,7 +69,9 @@ IHostBuilder CreateHostBuilder(string[] args) =>
 
             services.RegisterAllServices();
             services.RegisterApplicationServices(cloudBuildSecret);
-            services.AddSingleton<IDeploymentHubService, NullDeploymentHubService>();
+            // Worker doesn't host the SignalR hub itself — fan out via HTTP POST to the API's
+            // internal broadcast endpoint, which forwards to connected DeploymentLogHub clients.
+            services.AddSingleton<IDeploymentHubService, HttpDeploymentHubService>();
 
             services.AddSingleton<IConsumer<PostBuildQueue>, PostBuildConsumer>();
             services.AddSingleton<IConsumer<LogNotificationQueue>, LogNotificationConsumer>();

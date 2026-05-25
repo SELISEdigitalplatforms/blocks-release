@@ -87,7 +87,7 @@ export default defineConfig(({ mode }) => {
       https: httpsConfig || undefined,
       allowedHosts: [
         "dev-cloud.seliseblocks.com",
-        "dev-deployment.blocksdevelopers.com",
+        "dev-release.blocksdevelopers.com",
         "localhost",
         ".seliseblocks.com",
         ".blocksdevelopers.com",

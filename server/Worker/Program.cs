@@ -1,4 +1,10 @@
 using Blocks.Genesis;
+using Devops.DomainService;
+using Devops.DomainService.AnalyticsTool.Models;
+using Devops.DomainService.Deployment.Interfaces;
+using Devops.DomainService.Deployment.Services;
+using Devops.DomainService.Shared.Utilities;
+using Devops.DomainService.Shared.Models;
 using DomainService.Dtos;
 using DomainService.Migration;
 using DomainService.Projects;
@@ -17,12 +23,13 @@ using Worker.Configuration;
 using Worker.Consumers;
 using Worker.Consumers.Identifier;
 using Worker.Consumers.Users;
+using SeliseBlocks.ConfigurationDriver;
 
-const string _serviceName = "blocks-os-worker";
+const string _serviceName = "blocks-deployment-worker";
 
 var vaultType = ResolveVaultType();
-Console.WriteLine($"Using Genesis vault type: {vaultType}");
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(_serviceName, vaultType);
+var cloudBuildSecret = await CloudBuildSecret.ProcessBlocksSecret(vaultType);
 
 await CreateHostBuilder(args).Build().RunAsync();
 
@@ -31,6 +38,13 @@ IHostBuilder CreateHostBuilder(string[] args) =>
         .ConfigureAppConfiguration((context, builder) =>
         {
             // ApplicationConfigurations.ConfigureWorkerEnv(builder, args);
+            builder.AddMongoDbConfiguration(options =>
+            {
+                options.ConnectionString = secret.DatabaseConnectionString;
+                options.DatabaseName     = secret.RootDatabaseName;
+                options.CollectionName   = "Secrets";
+                options.SecretKey        = "blocks-secret-release";
+            });
         })
         .ConfigureServices((services) =>
         {
@@ -54,8 +68,13 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.AddHostedService<PeriodicPingBackgroundService>();
 
             services.RegisterAllServices();
+            services.RegisterApplicationServices(cloudBuildSecret);
+            // Worker doesn't host the SignalR hub itself — fan out via HTTP POST to the API's
+            // internal broadcast endpoint, which forwards to connected DeploymentLogHub clients.
+            services.AddSingleton<IDeploymentHubService, HttpDeploymentHubService>();
 
-           
+            services.AddSingleton<IConsumer<PostBuildQueue>, PostBuildConsumer>();
+            services.AddSingleton<IConsumer<LogNotificationQueue>, LogNotificationConsumer>();
 
             #region Identifier Service Consumers
             services.AddApplicationServices();
@@ -69,7 +88,15 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.AddSingleton<IConsumer<PublishScheduleCommand>, DataCleanupConsumer>();
             services.AddSingleton<IConsumer<UpdateResourceUsageCommand_Identifier>, UpdateResourceUsageConsumer>();
 
-            ApplicationConfigurations.ConfigureWorker(services, IdpConstants.GetMessageConfiguration(secret.MessageConnectionString));
+            var workerMessageConfig = IdpConstants.GetMessageConfiguration(secret.MessageConnectionString);
+            var cloudBuildMessageConfig = CloudBuildConstants.GetWorkerMessageConfiguration(secret.MessageConnectionString);
+
+            if (workerMessageConfig.RabbitMqConfiguration != null && cloudBuildMessageConfig.RabbitMqConfiguration != null)
+                workerMessageConfig.RabbitMqConfiguration.ConsumerSubscriptions.AddRange(cloudBuildMessageConfig.RabbitMqConfiguration.ConsumerSubscriptions);
+            else if (workerMessageConfig.AzureServiceBusConfiguration != null && cloudBuildMessageConfig.AzureServiceBusConfiguration != null)
+                workerMessageConfig.AzureServiceBusConfiguration.Queues.AddRange(cloudBuildMessageConfig.AzureServiceBusConfiguration.Queues);
+
+            ApplicationConfigurations.ConfigureWorker(services, workerMessageConfig);
             //ApplicationConfigurations.ConfigureWorker(services, IdentifierConstants.GetMessageConfiguration(secret.MessageConnectionString));
             #endregion
         });

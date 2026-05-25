@@ -1,42 +1,48 @@
-// API Request/Response types based on actual endpoints
-export interface ServiceRegistrationRequest {
-  serviceName: string;
-  serviceUrl: string;
-  environment: string;
-  serviceType: string;
-  description: string;
-  metadata: string;
-  projectId: string;
-}
+// // API Request/Response types based on actual endpoints
+// export interface ServiceRegistrationRequest {
+//   serviceName: string;
+//   serviceUrl: string;
+//   environment: string;
+//   serviceType: string;
+//   description: string;
+//   metadata: string;
+//   projectId: string;
+// }
 
-export interface ServiceRegistrationResponse {
-  id?: string;
-  serviceName?: string;
-  serviceUrl?: string;
-  environment?: string;
-  serviceType?: string;
-  description?: string;
-  metadata?: string;
-  projectId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+// export interface ServiceRegistrationResponse {
+//   id?: string;
+//   serviceName?: string;
+//   serviceUrl?: string;
+//   environment?: string;
+//   serviceType?: string;
+//   description?: string;
+//   metadata?: string;
+//   projectId?: string;
+//   createdAt?: string;
+//   updatedAt?: string;
+// }
 
-export interface ServiceListResponse {
-  data?: RegisteredService[];
-  total?: number;
-  success?: boolean;
-  message?: string;
-}
+// export interface ServiceListResponse {
+//   data?: RegisteredService[];
+//   total?: number;
+//   success?: boolean;
+//   message?: string;
+// }
 
-// Internal UI types
-export type ServiceType = "api" | "worker" | "web" | "mobile" | "database" | "microservice";
+// // Internal UI types
+// export type ServiceType =
+//   | "api"
+//   | "worker"
+//   | "web"
+//   | "mobile"
+//   | "database"
+//   | "microservice";
 
-export type Environment = "production" | "staging" | "development" | "testing";
+// export type Environment = "production" | "staging" | "development" | "testing";
 
-export interface ServiceMetadata {
-  [key: string]: string | number | boolean;
-}
+// export interface ServiceMetadata {
+//   [key: string]: string | number | boolean;
+// }
 
 export interface RegisteredService {
   itemId: string;
@@ -59,55 +65,91 @@ export interface RegisteredService {
   serviceType: string;
 }
 
-export interface LogEntry {
-  id: string;
-  service_id: string;
-  timestamp: string;
-  level: "debug" | "info" | "warn" | "error" | "fatal";
-  message: string;
-  source?: string;
-  metadata?: Record<string, unknown>;
+// export interface LogEntry {
+//   id: string;
+//   service_id: string;
+//   timestamp: string;
+//   level: "debug" | "info" | "warn" | "error" | "fatal";
+//   message: string;
+//   source?: string;
+//   metadata?: Record<string, unknown>;
+// }
+
+// export interface TraceEntry {
+//   id: string;
+//   service_id: string;
+//   trace_id: string;
+//   span_id: string;
+//   parent_span_id?: string;
+//   operation_name: string;
+//   start_time: string;
+//   end_time: string;
+//   duration_ms: number;
+//   status: "ok" | "error" | "timeout";
+//   tags?: Record<string, string>;
+//   logs?: Array<{
+//     timestamp: string;
+//     fields: Record<string, unknown>;
+//   }>;
+// }
+
+// export interface TraceEntry {
+//   id: string;
+//   service_id: string;
+//   trace_id: string;
+//   span_id: string;
+//   parent_span_id?: string;
+//   operation_name: string;
+//   start_time: string;
+//   end_time: string;
+//   duration_ms: number;
+//   status: "ok" | "error" | "timeout";
+//   tags?: Record<string, string>;
+//   logs?: Array<{
+//     timestamp: string;
+//     fields: Record<string, unknown>;
+//   }>;
+// }
+
+// export interface ServicesSummary {
+//   services: RegisteredService[];
+//   total_count: number;
+//   active_count: number;
+//   error_count: number;
+// }
+// // Service Registration
+// export interface IRegisterServicePayload {
+//   serviceName: string;
+//   description?: string;
+//   metadata?: string;
+//   projectKey: string;
+//   tags: string[];
+// }
+
+// export interface IRegisterServiceResponse {
+//   itemId: string;
+//   isSuccess: boolean;
+//   errors: unknown;
+// }
+
+// // Get All Services
+export interface IGetAllServicesPayload {
+  page: number;
+  pageSize: number;
+  sort?: {
+    property: string;
+    isDescending: boolean;
+  };
+  filter?: {
+    serviceId: string;
+    serviceName: string;
+    serviceType: number | string;
+  };
+  projectKey: string;
 }
 
-export interface TraceEntry {
-  id: string;
-  service_id: string;
-  trace_id: string;
-  span_id: string;
-  parent_span_id?: string;
-  operation_name: string;
-  start_time: string;
-  end_time: string;
-  duration_ms: number;
-  status: "ok" | "error" | "timeout";
-  tags?: Record<string, string>;
-  logs?: Array<{
-    timestamp: string;
-    fields: Record<string, unknown>;
-  }>;
-}
-
-export interface TraceEntry {
-  id: string;
-  service_id: string;
-  trace_id: string;
-  span_id: string;
-  parent_span_id?: string;
-  operation_name: string;
-  start_time: string;
-  end_time: string;
-  duration_ms: number;
-  status: "ok" | "error" | "timeout";
-  tags?: Record<string, string>;
-  logs?: Array<{
-    timestamp: string;
-    fields: Record<string, unknown>;
-  }>;
-}
-
-export interface ServicesSummary {
-  services: RegisteredService[];
-  total_count: number;
-  active_count: number;
-  error_count: number;
+export interface IGetAllServicesResponse {
+  data: RegisteredService[];
+  totalCount: number;
+  errors?: unknown;
 }

@@ -425,7 +425,7 @@ namespace DomainService.People
                 : $"{user.FirstName} {user.LastName}".Trim();
 
             var projectName = string.IsNullOrWhiteSpace(project.Name)
-                ? project.ApplicationDomain
+                ? project.Applications.FirstOrDefault()?.Domain ?? string.Empty
                 : project.Name;
 
             return new SendMail

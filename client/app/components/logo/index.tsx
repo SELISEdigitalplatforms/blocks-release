@@ -1,3 +1,6 @@
+import { RenderAlternatively } from "@/components/render-elements";
+import { useTheme } from "@/hooks/use-theme";
+
 interface LogoProps {
   src?: string;
   alt?: string;
@@ -6,31 +9,43 @@ interface LogoProps {
   className?: string;
 }
 
-import { useTheme } from "@/hooks/use-theme";
-
-export function Logo({ src, alt, width, height, className }: LogoProps) {
+export function Logo({
+  src,
+  alt = "SELISE Logo",
+  width,
+  height,
+  className,
+}: LogoProps) {
   const { resolvedTheme } = useTheme();
 
   if (src) {
-    return <img src={src} alt={alt ?? "SELISE Logo"} width={width} height={height} className={className} />;
+    return (
+      <img
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        className={className}
+      />
+    );
   }
 
   return (
-    <>
-      <img
-        src="/Logo.svg"
-        alt={alt ?? "SELISE Logo"}
-        width={width}
-        height={height}
-        className={`${className ?? ""} dark:hidden`}
-      />
+    <RenderAlternatively condition={resolvedTheme === "dark"}>
       <img
         src="/Logo_White.svg"
-        alt={alt ?? "SELISE Logo"}
+        alt={alt}
         width={width}
         height={height}
-        className={`${className ?? ""} hidden dark:block`}
+        className={className}
       />
-    </>
+      <img
+        src="/Logo.svg"
+        alt={alt}
+        width={width}
+        height={height}
+        className={className}
+      />
+    </RenderAlternatively>
   );
 }

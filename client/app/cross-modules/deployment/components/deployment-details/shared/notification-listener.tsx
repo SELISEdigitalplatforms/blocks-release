@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useNotificationListener } from "@blocks-communication/notification/hooks/use-notification-listener";
+import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { getDeploymentLogEventBadgeClassName } from "@blocks-deployment/utils/deployment-logs.utils";
 

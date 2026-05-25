@@ -9,9 +9,10 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 import { useAuthStore } from "@/store/auth.store";
 import { useImpersonateStore } from "@/store/impersonate.store";
 import { useProjectStore } from "@/store/project.store";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppState } from "./public-guard";
+import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 
 export function ProtectedGuard({ children }: { children: React.ReactNode }) {
   const { isMounted } = useAppState();
@@ -47,7 +48,7 @@ export const ImpersonationChecker = ({
     );
     setInitialized(true);
   }, [data, setImpersonation, setInitialized]);
-  if (isLoading || !isSuccess || !isInitialized) return null;
+  if (isLoading || !isSuccess || !isInitialized) return <LoadingSpinner />;
   return <>{children}</>;
 };
 
@@ -82,6 +83,8 @@ export function ImpersonationSynchronizer({
 }: {
   children: React.ReactNode;
 }) {
+  const [isImpersonating, setIsImpersonating] = useState(false);
+
   const { impersonate, isImpersonated, impersonatedTenantId } =
     useImpersonateStore();
   const { mutateAsync } = useStartImpersonation();
@@ -95,8 +98,10 @@ export function ImpersonationSynchronizer({
     if (isTriggering.current) return;
 
     isTriggering.current = true;
+    setIsImpersonating(true);
+
     const payload: ImpersonationRequest = {
-      targetTenantId: selectedProject.tenantId,
+      targeted_tenant_id: selectedProject.tenantId,
     };
     mutateAsync(payload)
       .then(() => {
@@ -105,8 +110,12 @@ export function ImpersonationSynchronizer({
           getRuntimeEnv("BLOCKS_X_BLOCKS_KEY"),
         );
         isTriggering.current = false;
+        setIsImpersonating(false);
       })
-      .catch(() => {});
+      .catch(() => {
+        isTriggering.current = false;
+        setIsImpersonating(false);
+      });
   }, [
     selectedProject?.tenantId,
     mutateAsync,
@@ -114,6 +123,8 @@ export function ImpersonationSynchronizer({
     impersonatedTenantId,
     isTriggering,
   ]);
+  if (isImpersonating) return <LoadingSpinner />;
+
   if (!isImpersonated || isTriggering.current) return null;
   return <>{children}</>;
 }

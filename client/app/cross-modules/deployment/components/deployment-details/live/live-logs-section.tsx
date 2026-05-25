@@ -11,7 +11,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useStatusIcon } from "@blocks-deployment/hooks/use-log-status-icon";
 import { LiveLogsService } from "@blocks-deployment/services/live-logs.service";
-import { useNotificationListener } from "@blocks-communication/notification/hooks/use-notification-listener";
+import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
 
 interface LiveDeploymentLogsProps {
   buildId?: string;

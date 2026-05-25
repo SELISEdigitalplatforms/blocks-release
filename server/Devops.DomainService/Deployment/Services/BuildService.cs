@@ -102,7 +102,7 @@ public class BuildService : IBuildService
                     PipelineType = PipelineTypes.RepoDeployment,
                     PipelineEventType = PipelineEventTypes.RetrieveLog
                 };
-                // await _messageClient.SendToConsumerAsync(new ConsumerMessage<PostBuildQueue> { ConsumerName = CloudBuildConstants.POST_BUILD_LISTENER, Payload = postBuildQueue});
+                await _messageClient.SendToConsumerAsync(new ConsumerMessage<PostBuildQueue> { ConsumerName = CloudBuildConstants.POST_BUILD_LISTENER, Payload = postBuildQueue});
             }
             catch (Exception ex)
             {
@@ -122,18 +122,18 @@ public class BuildService : IBuildService
             //    }
             //});
 
-             _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await _logRetrievalService.CheckPodLogsAsync(build);
-                }
-                catch (Exception ex)
-                {
-                    // TODO: replace with your logger
-                    Console.WriteLine(ex);
-                }
-            });
+            //  _ = Task.Run(async () =>
+            // {
+            //     try
+            //     {
+            //         await _logRetrievalService.CheckPodLogsAsync(build);
+            //     }
+            //     catch (Exception ex)
+            //     {
+            //         // TODO: replace with your logger
+            //         Console.WriteLine(ex);
+            //     }
+            // });
 
             BuildResponse buildResponse = new BuildResponse
             {

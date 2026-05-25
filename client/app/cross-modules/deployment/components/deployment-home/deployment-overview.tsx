@@ -40,18 +40,6 @@ const DeploymentOverview = ({ projects, refetch }: DeploymentOverviewProps) => {
     <div className="mx-auto min-h-screen w-full">
       <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
         <h1 className="text-xl font-semibold">Deployment Overview</h1>
-
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            onClick={() => navigate("/deployment/alerts")}
-            disabled={true}>
-            <div className="flex h-8 w-8 items-center justify-center">
-              <AlertTriangle size={20} />
-            </div>
-            <span className="hidden sm:inline">Observability</span>
-          </Button>
-        </div>
       </div>
 
       {GetProjectOverview(projects, refetch)}

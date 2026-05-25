@@ -3,7 +3,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui-kits/popover/popover";
-import { notificationClientService } from "@blocks-communication/services/notification-client.service";
+import {
+  connectNotificationHub,
+  getNotificationHubConnection,
+} from "@blocks-communication/services/notification-hub-client.service";
 import { Bell } from "lucide-react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
@@ -24,10 +27,17 @@ export function Notification() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    configData?.configurations.forEach((config) => {
-      notificationClientService.connection.on(
-        `${config.notifyMethod}`,
-        (message: string) => {
+    if (!configData?.configurations?.length) return;
+
+    let cancelled = false;
+    const handlersByMethod = new Map<string, (message: string) => void>();
+
+    (async () => {
+      const conn = await connectNotificationHub();
+      if (cancelled || !conn) return;
+
+      configData.configurations.forEach((config) => {
+        const handler = (message: string) => {
           notificationService.getNotificationConfig(config, message);
           try {
             let notice;
@@ -58,9 +68,20 @@ export function Notification() {
           } catch (error) {
             console.error("Error invalidating queries:", error);
           }
-        },
-      );
-    });
+        };
+        handlersByMethod.set(config.notifyMethod, handler);
+        conn.on(config.notifyMethod, handler);
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      const conn = getNotificationHubConnection();
+      if (!conn) return;
+      handlersByMethod.forEach((handler, method) => {
+        conn.off(method, handler);
+      });
+    };
   }, [configData, queryClient]);
 
   const [pageNumber, setPageNumber] = useState(1);

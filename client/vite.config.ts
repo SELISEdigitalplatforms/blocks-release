@@ -4,15 +4,15 @@ import fs from "fs";
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
 
-// HTTPS is driven solely by the machine env vars DEPLOYMENT_SSL_CERT / DEPLOYMENT_SSL_KEY.
+// HTTPS is driven solely by the machine env vars RELEASE_SSL_CERT / RELEASE_SSL_KEY.
 // If either is unset/empty, or the file it points to is missing, fall back to HTTP (no throw).
 function getHttpsConfig(): false | { key: Buffer; cert: Buffer } {
-  const certPath = process.env.DEPLOYMENT_SSL_CERT;
-  const keyPath = process.env.DEPLOYMENT_SSL_KEY;
+  const certPath = process.env.RELEASE_SSL_CERT;
+  const keyPath = process.env.RELEASE_SSL_KEY;
 
   if (!certPath || !keyPath) {
     console.warn(
-      "[vite] DEPLOYMENT_SSL_CERT / DEPLOYMENT_SSL_KEY not set — serving over HTTP.",
+      "[vite] RELEASE_SSL_CERT / RELEASE_SSL_KEY not set — serving over HTTP.",
     );
     return false;
   }
@@ -87,7 +87,7 @@ export default defineConfig(({ mode }) => {
       https: httpsConfig || undefined,
       allowedHosts: [
         "dev-cloud.seliseblocks.com",
-        "dev-deployment.blocksdevelopers.com",
+        "dev-release.blocksdevelopers.com",
         "localhost",
         ".seliseblocks.com",
         ".blocksdevelopers.com",
@@ -95,11 +95,11 @@ export default defineConfig(({ mode }) => {
       proxy: {
         ...(idpProxyTarget
           ? {
-              "/dev-idp-proxy": {
+              "/dev-iam-proxy": {
                 target: idpProxyTarget,
                 changeOrigin: true,
                 secure: true,
-                rewrite: (path) => path.replace(/^\/dev-idp-proxy/, ""),
+                rewrite: (path) => path.replace(/^\/dev-iam-proxy/, ""),
               },
             }
           : {}),
@@ -175,12 +175,15 @@ export default defineConfig(({ mode }) => {
                 changeOrigin: true,
                 secure: false,
               },
-              "/deploymentHub": {
-                target: proxyTarget,
-                changeOrigin: true,
-                secure: false,
-                ws: true,
-              },
+              // DeploymentHub WebSocket proxy paused while build-log notifications
+              // are received via the central blocks-logic NotificationHub. Restore
+              // by uncommenting this block.
+              // "/deploymentHub": {
+              //   target: proxyTarget,
+              //   changeOrigin: true,
+              //   secure: false,
+              //   ws: true,
+              // },
             }
           : {}),
       },

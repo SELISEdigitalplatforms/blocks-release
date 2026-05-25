@@ -5,19 +5,11 @@ import DeploymentOverview from "@blocks-deployment/components/deployment-home/de
 import { useGetAllProjects } from "@/cross-modules/deployment/hooks/use-github-info";
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 import { toast } from "@/hooks/use-toast";
-import { useProjectStore } from "@/store/project.store";
 
 const Deployment = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [, setRefreshKey] = useState(0);
-  let projectId = "";
-  const persistedData = localStorage.getItem("project-store");
-  const tenantId = useProjectStore().selectedProject?.tenantId || "";
-
-  if (persistedData) {
-    projectId = tenantId;
-  }
 
   useEffect(() => {
     if (searchParams.get("refresh")) {
@@ -32,7 +24,7 @@ const Deployment = () => {
     isError,
     error,
     refetch,
-  } = useGetAllProjects(projectId, {
+  } = useGetAllProjects({
     refetchOnMount: true,
     refetchOnWindowFocus: true,
     forceRefresh: true,

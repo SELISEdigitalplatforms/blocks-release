@@ -60,31 +60,31 @@ namespace Devops.DomainService.Deployment.Services
                 ResponseValue = "sent"
             };
 
-            await _deploymentHubService.SendBuildLogAsync(requestData, UserIds);
+            // await _deploymentHubService.SendBuildLogAsync(requestData, UserIds);
 
-            // var blocksKey = _configuration["RootTenantId"];
-            // var tenantId = _configuration["RootTenantId"];
-            // var salt = _tenants.GetTenantByID(tenantId)?.TenantSalt;
-            // var actulalSecret = _cryptoService.Hash(tenantId, salt);
+            var blocksKey = _configuration["RootTenantId"];
+            var tenantId = _configuration["RootTenantId"];
+            var salt = _tenants.GetTenantByID(tenantId)?.TenantSalt;
+            var actulalSecret = _cryptoService.Hash(tenantId, salt);
 
-            // var url = _configuration["NotificationServiceUrl"];
-            // var headers = new Dictionary<string, string>
-            // {
-            //     { "x-blocks-key", blocksKey },
-            //     { "Secret", actulalSecret}
-            // };
+            var url = _configuration["NotificationServiceUrl"];
+            var headers = new Dictionary<string, string>
+            {
+                { "x-blocks-key", blocksKey },
+                { "Secret", actulalSecret}
+            };
 
-            // var (response, result) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
-            //      requestData, url, headers);
+            var (response, result) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
+                 requestData, url, headers);
 
-            // if (response.isSuccess)
-            // {
-            //     _logger.LogInformation($"Successfully sent notification to users : {string.Join(", ", UserIds)} -- {TenantId}");
-            // }
-            // else
-            // {
-            //     _logger.LogError($"Failed to sent notification to users : {string.Join(", ", UserIds)} -- {TenantId}. Error :  {response.errors}");
-            // }
+            if (response.isSuccess)
+            {
+                _logger.LogInformation($"Successfully sent notification to users : {string.Join(", ", UserIds)} -- {TenantId}");
+            }
+            else
+            {
+                _logger.LogError($"Failed to sent notification to users : {string.Join(", ", UserIds)} -- {TenantId}. Error :  {response.errors}");
+            }
             return true;
         }
 
@@ -115,7 +115,7 @@ namespace Devops.DomainService.Deployment.Services
                 ResponseValue = "sent"
             };
 
-            await _deploymentHubService.SendBuildLogAsync(requestData, UserIds);
+            // await _deploymentHubService.SendBuildLogAsync(requestData, UserIds);
 
             var blocksKey = _configuration["RootTenantId"];
             var tenantId = _configuration["RootTenantId"];

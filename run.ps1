@@ -118,13 +118,13 @@ function Build-Frontend {
     }
 }
 
-# HTTPS is driven by the machine env vars DEPLOYMENT_SSL_CERT / DEPLOYMENT_SSL_KEY.
+# HTTPS is driven by the machine env vars RELEASE_SSL_CERT / RELEASE_SSL_KEY.
 # Both set + both files present -> HTTPS on $ApiPort; otherwise -> HTTP (fallback).
 function Set-BackendTls {
-    if ($env:DEPLOYMENT_SSL_CERT -and $env:DEPLOYMENT_SSL_KEY `
-        -and (Test-Path $env:DEPLOYMENT_SSL_CERT) -and (Test-Path $env:DEPLOYMENT_SSL_KEY)) {
-        $env:Kestrel__Certificates__Default__Path    = $env:DEPLOYMENT_SSL_CERT
-        $env:Kestrel__Certificates__Default__KeyPath = $env:DEPLOYMENT_SSL_KEY
+    if ($env:RELEASE_SSL_CERT -and $env:RELEASE_SSL_KEY `
+        -and (Test-Path $env:RELEASE_SSL_CERT) -and (Test-Path $env:RELEASE_SSL_KEY)) {
+        $env:Kestrel__Certificates__Default__Path    = $env:RELEASE_SSL_CERT
+        $env:Kestrel__Certificates__Default__KeyPath = $env:RELEASE_SSL_KEY
         $env:ASPNETCORE_URLS = "https://0.0.0.0:$ApiPort"
         Write-Host "Backend TLS: HTTPS on $ApiPort"
     } else {

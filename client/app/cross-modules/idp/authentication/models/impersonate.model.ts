@@ -1,5 +1,5 @@
 export interface ImpersonationRequest {
-  targetTenantId: string;
+  targeted_tenant_id: string;
   orgId?: string;
   organizationId?: string;
 }
@@ -12,7 +12,7 @@ export interface ImpersonationStatusResponse {
 
 export interface ImpersonationState {
   rootTenantId: string;
-  targetTenantId: string;
+  targeted_tenant_id: string;
   orgId: string;
   startedAtUtc: string;
 }

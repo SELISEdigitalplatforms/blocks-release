@@ -78,15 +78,15 @@ errors. This procedure is reusable across projects; only the domain/cert changes
    - Windows (PowerShell):
 
      ```powershell
-     setx DEPLOYMENT_SSL_CERT "C:\SSL_Certificates\dev-release.blocksdevelopers.com.pem"
-     setx DEPLOYMENT_SSL_KEY  "C:\SSL_Certificates\dev-release.blocksdevelopers.com-key.pem"
+     setx RELEASE_SSL_CERT "C:\SSL_Certificates\dev-release.blocksdevelopers.com.pem"
+     setx RELEASE_SSL_KEY  "C:\SSL_Certificates\dev-release.blocksdevelopers.com-key.pem"
      ```
 
    - macOS/Linux (add to `~/.bashrc` / `~/.zshrc`):
 
      ```bash
-     export DEPLOYMENT_SSL_CERT="$HOME/.ssl/dev-release.blocksdevelopers.com.pem"
-     export DEPLOYMENT_SSL_KEY="$HOME/.ssl/dev-release.blocksdevelopers.com-key.pem"
+     export RELEASE_SSL_CERT="$HOME/.ssl/dev-release.blocksdevelopers.com.pem"
+     export RELEASE_SSL_KEY="$HOME/.ssl/dev-release.blocksdevelopers.com-key.pem"
      ```
 
 ### Behavior
@@ -101,8 +101,8 @@ This applies to every launch method: `npm run dev` (from `client/`), `./run.sh -
 them to Kestrel for the backend. Run the backend via `./run.sh -b|-a` or `run.ps1 -b|-a` (not bare
 `dotnet run`, which has no cert mapping and stays HTTP).
 
-> **Reuse for another project:** keep the env var names `DEPLOYMENT_SSL_CERT` /
-> `DEPLOYMENT_SSL_KEY` identical; only generate a cert for that project's domain and update the
+> **Reuse for another project:** keep the env var names `RELEASE_SSL_CERT` /
+> `RELEASE_SSL_KEY` identical; only generate a cert for that project's domain and update the
 > hosts entry.
 
 ---

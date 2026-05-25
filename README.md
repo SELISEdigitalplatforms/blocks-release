@@ -69,7 +69,7 @@ This repository does **not** embed Compose files or hard-require an external inf
 
 `launchSettings.json` is what Visual Studio / `dotnet run` use from the IDE; keep it in mind if your IDE profile differs from the scripts.
 
-**Local HTTPS:** both the Vite dev server (4000) and the API (5000) serve HTTPS automatically when the machine env vars `DEPLOYMENT_SSL_CERT` / `DEPLOYMENT_SSL_KEY` point at an mkcert cert; otherwise they fall back to HTTP. One-time setup is documented in **[LOCAL_GUIDE.md → "Local HTTPS setup (mkcert)"](LOCAL_GUIDE.md)**.
+**Local HTTPS:** both the Vite dev server (4000) and the API (5000) serve HTTPS automatically when the machine env vars `RELEASE_SSL_CERT` / `RELEASE_SSL_KEY` point at an mkcert cert; otherwise they fall back to HTTP. One-time setup is documented in **[LOCAL_GUIDE.md → "Local HTTPS setup (mkcert)"](LOCAL_GUIDE.md)**.
 
 ### Unix (`run.sh`)
 

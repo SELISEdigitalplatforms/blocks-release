@@ -43,7 +43,7 @@ IHostBuilder CreateHostBuilder(string[] args) =>
                 options.ConnectionString = secret.DatabaseConnectionString;
                 options.DatabaseName     = secret.RootDatabaseName;
                 options.CollectionName   = "Secrets";
-                options.SecretKey        = "blocks-Secret";
+                options.SecretKey        = "blocks-secret-release";
             });
         })
         .ConfigureServices((services) =>

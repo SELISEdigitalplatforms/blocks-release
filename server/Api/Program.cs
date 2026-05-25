@@ -26,7 +26,7 @@ builder.Configuration.AddMongoDbConfiguration(options =>
     options.ConnectionString = secret.DatabaseConnectionString;
     options.DatabaseName     = secret.RootDatabaseName;
     options.CollectionName   = "Secrets";
-    options.SecretKey        = "blocks-Secret-deployment";
+    options.SecretKey        = "blocks-secret-release";
 });
 
 ApplicationConfigurations.ConfigureServices(builder.Services, IdpConstants.GetMessageConfiguration(secret.MessageConnectionString));

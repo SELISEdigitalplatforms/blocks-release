@@ -394,7 +394,7 @@ export default function LoginPage() {
 
       const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
       const clientId = getRuntimeEnv("BLOCKS_OIDC_CLIENT_ID");
-      // In Vite dev, route through the /dev-idp-proxy to avoid CORS
+      // In Vite dev, route through the /dev-iam-proxy to avoid CORS
       // (browser sees a same-origin request; Vite forwards it to BLOCKS_IDP_BASE_URL).
       // In production, fall back to the absolute IDP URL.
       const idpBaseUrl = getRuntimeEnv("BLOCKS_IDP_BASE_URL");

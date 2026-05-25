@@ -302,17 +302,7 @@ public class LogRetrievalService
         // await _notificationService.NotifyPipeLineLogData(logArray, userIdLists, tenantId, repoId, buildStatus);
         for (int i = 0; i< logArray.Count(); i++)
         {
-
             await _notificationService.NotifyPipeLineLogData(logArray[i], userIdLists, tenantId, repoId, buildStatus);
-            //var buildNotification = new LogNotificationQueue
-            //{
-            //    Message = logArray[i],
-            //    UserIds = userIdLists,
-            //    TenantId = tenantId,
-            //    RepoId = repoId,
-            //    BuildStatus = buildStatus
-            //};
-            //await _messageClient.SendToConsumerAsync(new ConsumerMessage<LogNotificationQueue> { ConsumerName = CloudBuildConstants.NOTIFICATION_LISTENER, Payload = azureTask });
         }
         return true;
     }

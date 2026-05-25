@@ -102,14 +102,22 @@ const DeploymentGeneralInfo = ({
             <p className="mb-2 text-sm font-medium text-medium-emphasis">
               Repo URL
             </p>
-            <a
-              href={selectedRepoURL || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block truncate text-sm text-blue-600 hover:underline"
-              onClick={(e) => e.stopPropagation()}>
-              {"N/A"}
-            </a>
+            {selectedRepoURL ? (
+              <CopyToClipboardButton
+                textToCopy={selectedRepoURL}
+                isHoverable={false}>
+                <a
+                  href={selectedRepoURL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block truncate text-sm text-blue-600 hover:underline"
+                  onClick={(e) => e.stopPropagation()}>
+                  {selectedRepoURL}
+                </a>
+              </CopyToClipboardButton>
+            ) : (
+              <span className="block truncate text-sm font-medium">N/A</span>
+            )}
           </div>
 
           <div>

@@ -12,8 +12,8 @@ API_PORT=5000
 FRONTEND_PORT=4000
 
 # Ensure SSL vars are explicitly in scope for Vite
-export DEPLOYMENT_SSL_CERT="${DEPLOYMENT_SSL_CERT:-}"
-export DEPLOYMENT_SSL_KEY="${DEPLOYMENT_SSL_KEY:-}"
+export RELEASE_SSL_CERT="${RELEASE_SSL_CERT:-}"
+export RELEASE_SSL_KEY="${RELEASE_SSL_KEY:-}"
 
 API_PID=""
 WORKER_PID=""
@@ -114,13 +114,13 @@ build_frontend() {
 }
 
 # ---------- BACKEND ----------
-# HTTPS is driven by the machine env vars DEPLOYMENT_SSL_CERT / DEPLOYMENT_SSL_KEY.
+# HTTPS is driven by the machine env vars RELEASE_SSL_CERT / RELEASE_SSL_KEY.
 # Both set + both files present -> HTTPS on $API_PORT; otherwise -> HTTP (fallback).
 configure_backend_tls() {
-    if [ -n "${DEPLOYMENT_SSL_CERT:-}" ] && [ -n "${DEPLOYMENT_SSL_KEY:-}" ] \
-       && [ -f "$DEPLOYMENT_SSL_CERT" ] && [ -f "$DEPLOYMENT_SSL_KEY" ]; then
-        export Kestrel__Certificates__Default__Path="$DEPLOYMENT_SSL_CERT"
-        export Kestrel__Certificates__Default__KeyPath="$DEPLOYMENT_SSL_KEY"
+    if [ -n "${RELEASE_SSL_CERT:-}" ] && [ -n "${RELEASE_SSL_KEY:-}" ] \
+       && [ -f "$RELEASE_SSL_CERT" ] && [ -f "$RELEASE_SSL_KEY" ]; then
+        export Kestrel__Certificates__Default__Path="$RELEASE_SSL_CERT"
+        export Kestrel__Certificates__Default__KeyPath="$RELEASE_SSL_KEY"
         export ASPNETCORE_URLS="https://0.0.0.0:$API_PORT"
         echo "Backend TLS: HTTPS on $API_PORT"
     else

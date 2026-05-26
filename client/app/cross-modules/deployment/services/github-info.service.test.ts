@@ -85,7 +85,7 @@ describe("GithubInfoService", () => {
   // ─── getGithubRepos ────────────────────────────────────────────────────────
 
   describe("getGithubRepos", () => {
-    it("should call correct endpoint with projectKey and search params", async () => {
+    it("should call correct endpoint with search params", async () => {
       const mockResponse = {
         data: { items: [mockRepository], total_count: 1 },
         ...mockSuccessResponse,
@@ -96,13 +96,12 @@ describe("GithubInfoService", () => {
       const pageNumber = 1;
       const pageSize = 10;
       const result = await githubInfoService.getGithubRepos(
-        TEST_PROJECT_KEY,
         search,
         pageNumber,
         pageSize,
       );
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.GITHUB_REPOS}?ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}&search=${encodeURIComponent(search)}&pageNumber=${pageNumber}&pageSize=${pageSize}`;
+      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.GITHUB_REPOS}?search=${encodeURIComponent(search)}&pageNumber=${pageNumber}&pageSize=${pageSize}`;
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockResponse);
     });
@@ -114,24 +113,21 @@ describe("GithubInfoService", () => {
       };
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
-      await githubInfoService.getGithubRepos(TEST_PROJECT_KEY);
+      await githubInfoService.getGithubRepos();
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.GITHUB_REPOS}?ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}`;
-      expect(http.get).toHaveBeenCalledWith(expectedUrl);
+      expect(http.get).toHaveBeenCalledWith(CLOUD_BUILD_ENDPOINTS.GITHUB_REPOS);
     });
   });
 
   // ─── getRepositoryUser ─────────────────────────────────────────────────────
 
   describe("getRepositoryUser", () => {
-    it("should call correct endpoint with projectKey", async () => {
+    it("should call correct endpoint", async () => {
       vi.mocked(http.get).mockResolvedValue(mockRepositoryUser);
 
-      const result =
-        await githubInfoService.getRepositoryUser(TEST_PROJECT_KEY);
+      const result = await githubInfoService.getRepositoryUser();
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.GITHUB_USER}?ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}`;
-      expect(http.get).toHaveBeenCalledWith(expectedUrl);
+      expect(http.get).toHaveBeenCalledWith(CLOUD_BUILD_ENDPOINTS.GITHUB_USER);
       expect(result).toEqual(mockRepositoryUser);
     });
   });
@@ -139,17 +135,14 @@ describe("GithubInfoService", () => {
   // ─── getGithubBranches ─────────────────────────────────────────────────────
 
   describe("getGithubBranches", () => {
-    it("should call correct endpoint with repo and projectKey", async () => {
+    it("should call correct endpoint with repo", async () => {
       const mockResponse = [mockBranch];
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
       const repo = "test-repo";
-      const result = await githubInfoService.getGithubBranches(
-        repo,
-        TEST_PROJECT_KEY,
-      );
+      const result = await githubInfoService.getGithubBranches(repo);
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.GITHUB_BRANCHES}?repo=${encodeURIComponent(repo)}&ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}`;
+      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.GITHUB_BRANCHES}?repo=${encodeURIComponent(repo)}`;
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockResponse);
     });
@@ -158,15 +151,13 @@ describe("GithubInfoService", () => {
   // ─── getRepoAndGitBranchMatch ──────────────────────────────────────────────
 
   describe("getRepoAndGitBranchMatch", () => {
-    it("should call correct endpoint with repoId and projectKey", async () => {
+    it("should call correct endpoint with repoId", async () => {
       vi.mocked(http.get).mockResolvedValue(mockSuccessResponse);
 
-      const result = await githubInfoService.getRepoAndGitBranchMatch(
-        MOCK_REPO_ID,
-        TEST_PROJECT_KEY,
-      );
+      const result =
+        await githubInfoService.getRepoAndGitBranchMatch(MOCK_REPO_ID);
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.GITHUB_BRANCH_EXISTS}?repoId=${encodeURIComponent(MOCK_REPO_ID)}&ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}`;
+      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.GITHUB_BRANCH_EXISTS}?repoId=${encodeURIComponent(MOCK_REPO_ID)}`;
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockSuccessResponse);
     });
@@ -277,14 +268,13 @@ describe("GithubInfoService", () => {
   // ─── getAllProjects ────────────────────────────────────────────────────────
 
   describe("getAllProjects", () => {
-    it("should call correct endpoint with projectKey", async () => {
+    it("should call correct endpoint", async () => {
       const mockResponse: any[] = [];
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
-      const result = await githubInfoService.getAllProjects(TEST_PROJECT_KEY);
+      const result = await githubInfoService.getAllProjects();
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.REPOS_LIST}?ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}`;
-      expect(http.get).toHaveBeenCalledWith(expectedUrl);
+      expect(http.get).toHaveBeenCalledWith(CLOUD_BUILD_ENDPOINTS.REPOS_LIST);
       expect(result).toEqual(mockResponse);
     });
   });
@@ -292,16 +282,13 @@ describe("GithubInfoService", () => {
   // ─── getRepoDetails ────────────────────────────────────────────────────────
 
   describe("getRepoDetails", () => {
-    it("should call correct endpoint with projectKey and repoId", async () => {
+    it("should call correct endpoint with repoId", async () => {
       const mockResponse = {};
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
-      const result = await githubInfoService.getRepoDetails(
-        TEST_PROJECT_KEY,
-        MOCK_REPO_ID,
-      );
+      const result = await githubInfoService.getRepoDetails(MOCK_REPO_ID);
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.REPO_DETAILS}?ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}&RepoId=${encodeURIComponent(MOCK_REPO_ID)}`;
+      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.REPO_DETAILS}?RepoId=${encodeURIComponent(MOCK_REPO_ID)}`;
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockResponse);
     });
@@ -310,16 +297,14 @@ describe("GithubInfoService", () => {
   // ─── getCardRepoAndBranches ────────────────────────────────────────────────
 
   describe("getCardRepoAndBranches", () => {
-    it("should call correct endpoint with buildId and projectKey", async () => {
+    it("should call correct endpoint with buildId", async () => {
       const mockResponse = {};
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
-      const result = await githubInfoService.getCardRepoAndBranches(
-        MOCK_BUILD_ID,
-        TEST_PROJECT_KEY,
-      );
+      const result =
+        await githubInfoService.getCardRepoAndBranches(MOCK_BUILD_ID);
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.BUILD}?buildId=${encodeURIComponent(MOCK_BUILD_ID)}&ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}`;
+      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.BUILD}?buildId=${encodeURIComponent(MOCK_BUILD_ID)}`;
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockResponse);
     });
@@ -413,15 +398,13 @@ describe("GithubInfoService", () => {
   // ─── getRepoCardsAndBranches ───────────────────────────────────────────────
 
   describe("getRepoCardsAndBranches", () => {
-    it("should call correct endpoint with projectKey", async () => {
+    it("should call correct endpoint", async () => {
       const mockResponse = {};
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
-      const result =
-        await githubInfoService.getRepoCardsAndBranches(TEST_PROJECT_KEY);
+      const result = await githubInfoService.getRepoCardsAndBranches();
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.GITHUB_REPOS}?ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}`;
-      expect(http.get).toHaveBeenCalledWith(expectedUrl);
+      expect(http.get).toHaveBeenCalledWith(CLOUD_BUILD_ENDPOINTS.GITHUB_REPOS);
       expect(result).toEqual(mockResponse);
     });
   });

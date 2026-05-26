@@ -119,7 +119,7 @@ export default function RepoDetails() {
     isLoading,
     isError,
     error,
-  } = useGetRepoDetails(projectKey, repoId, {
+  } = useGetRepoDetails(repoId, {
     refetchOnMount: true,
     refetchOnWindowFocus: false,
     forceRefresh: forceRefresh,

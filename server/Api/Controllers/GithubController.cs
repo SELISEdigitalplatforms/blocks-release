@@ -44,22 +44,21 @@ public class GithubController: ControllerBase
 
     [HttpGet("user")]
     [Authorize]
-    public async Task<ActionResult> GetUser([FromQuery] string? ProjectKey)
+    public async Task<ActionResult> GetUser()
     {
         var user = await _githubService.GetUser();
         if(user!=null)
             return Ok(user);
         return BadRequest("User not found");
     }
-    
+
     [HttpGet("repos")]
     [Authorize]
-    public async Task<ActionResult> GetRepos([FromQuery] string? ProjectKey, [FromQuery] string? Search, [FromQuery] int PageNumber = 1, [FromQuery] int PageSize = 30)
+    public async Task<ActionResult> GetRepos([FromQuery] string? Search, [FromQuery] int PageNumber = 1, [FromQuery] int PageSize = 30)
     {
 
         SearchRepositoryListRequest request = new SearchRepositoryListRequest()
         {
-            ProjectKey = ProjectKey,
             Search = Search,
             PageNumber = PageNumber,
             PageSize = PageSize
@@ -77,7 +76,7 @@ public class GithubController: ControllerBase
     //expects full repo name
     [HttpGet("branches")]
     [Authorize]
-    public async Task<ActionResult> GetBranches([FromQuery] string repo, [FromQuery] string? ProjectKey)
+    public async Task<ActionResult> GetBranches([FromQuery] string repo)
     {
         var branches = await _githubService.GetBranches(repo);
         if(branches!=null)
@@ -87,16 +86,8 @@ public class GithubController: ControllerBase
 
     [HttpGet("GithubBranchExists")]
     [Authorize]
-    public async Task<ActionResult> GithubBranchExists([FromQuery] string repoId, [FromQuery] string? ProjectKey)
+    public async Task<ActionResult> GithubBranchExists([FromQuery] string repoId)
     {
-        if (!string.IsNullOrEmpty(ProjectKey))
-        {
-            ProjectKeyQuery query = new ProjectKeyQuery()
-            {
-                ProjectKey = ProjectKey
-            };
-        }
-
         Repo repo = await _repoRepository.GetRepo(repoId);
         if (repo is null)
         {
@@ -120,15 +111,8 @@ public class GithubController: ControllerBase
 
     [HttpGet("clone")]
     [Authorize]
-    public async Task<ActionResult> Clone([FromQuery] string repo, [FromQuery] string ProjectKey)
+    public async Task<ActionResult> Clone([FromQuery] string repo)
     {
-        if (!string.IsNullOrEmpty(ProjectKey))
-        {
-            ProjectKeyQuery query = new ProjectKeyQuery()
-            {
-                ProjectKey = ProjectKey
-            };
-        }
         var result = await _githubService.Clone(repo);
         if (result)
             return Ok("Successfully cloned repo");
@@ -171,15 +155,8 @@ public class GithubController: ControllerBase
 
     [HttpGet("CreateWebhook")]
     [Authorize]
-    public async Task<ActionResult> CreateWebhook([FromQuery] string? ProjectKey, string RepoId)
+    public async Task<ActionResult> CreateWebhook([FromQuery] string RepoId)
     {
-        ProjectKeyQuery query = new ProjectKeyQuery()
-        {
-            ProjectKey = ProjectKey
-        };
-        if (!string.IsNullOrEmpty(query.ProjectKey))
-        {
-        }
         var repo = await _repoRepository.GetRepo(RepoId);
         if (repo is null)
         {

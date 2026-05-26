@@ -284,7 +284,7 @@ public class AuthService : IAuthService
                     };
                 }
             }
-
+            await DeleteToken();
             return new BaseApiResponse
             {
                 IsSuccess = false,

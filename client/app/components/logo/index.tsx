@@ -33,14 +33,14 @@ export function Logo({
   return (
     <RenderAlternatively condition={resolvedTheme === "dark"}>
       <img
-        src="/Logo_White.svg"
+        src="/Logo_Dark.svg"
         alt={alt}
         width={width}
         height={height}
         className={className}
       />
       <img
-        src="/Logo.svg"
+        src="/Logo_Light.svg"
         alt={alt}
         width={width}
         height={height}

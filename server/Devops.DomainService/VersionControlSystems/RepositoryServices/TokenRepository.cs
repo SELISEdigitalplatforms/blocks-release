@@ -25,8 +25,6 @@ public class
 
     private IMongoDatabase ResolvedClientDb()
     {
-        Console.WriteLine($"Database Connection String in Repository: {_blocksSecret.DatabaseConnectionString}");
-
         return _dbContextProvider.GetDatabase(_blocksSecret.DatabaseConnectionString, "BlocksRootDb");
     }
     public async Task<bool> saveToken(RepositoryToken repositoryToken)

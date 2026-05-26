@@ -118,11 +118,11 @@ spec:
   params:
     # Existing build parameters
     - name: repo-url
-      value: https://github.com/SELISEdigitalplatforms/l3-react-blocks-construct.git
+      value: https://github.com/SELISEdigitalplatforms/blocks-construct-react.git
     - name: revision
-      value: "main"
+      value: "dev"
     - name: image-reference
-      value: blocksacr.azurecr.io/demo:v10
+      value: blocksacr.azurecr.io/demo:nonroot1
 
     # Dockerfile location
     - name: dockerfile
@@ -138,11 +138,11 @@ spec:
     - name: namespace
       value: "demo-apps"  # Change this to your target namespace
     - name: domains
-      value: "demo.seliseblocks.com,site2.seliseblocks.com,handle-all.seliseblocks.com"
+      value: "bak-dp.dev.blocksdevelopers.com,site2.dev.blocksdevelopers.com"
     - name: cpu-request
-      value: "200m"
+      value: "40m"
     - name: memory-request
-      value: "256Mi"
+      value: "80Mi"
     - name: cpu-limit
       value: "500m"
     - name: memory-limit
@@ -214,7 +214,34 @@ spec:
       value: "1"
     - name: startup-failure-threshold
       value: "60"  # Allow up to 10 minutes for startup (60 * 10s)
-
+    - name: run-as-non-root
+      value: "true"
+    - name: run-as-user
+      value: "1000"
+    - name: read-only-root-fs
+      value: "true"
+    - name: drop-capabilities
+      value: '["ALL"]'
+    - name: enable-network-policy
+      value: "true"
+    - name: allow-k8s-api
+      value: "false"
+    - name: k8s-api-cidr
+      value: "10.100.0.1/32"
+    - name: dns-service-cidr
+      value: "10.100.0.10/32"
+    - name: blocked-private-cidrs
+      value: '["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16"]'
+    - name: ingress-controller-namespace
+      value: "nginx-ingress"
+    - name: ingress-controller-label
+      value: "app.kubernetes.io/name=ingress-nginx"
+    - name: enable-rollback
+      value: "true"
+    - name: rollback-timeout
+      value: "300"
+    - name: deploy-timeout
+      value: "120"
     # --- SonarQube Parameters ---
     - name: sonar-project-key
       value: "l3-react-blocks-construct"

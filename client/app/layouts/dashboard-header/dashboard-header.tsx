@@ -1,19 +1,27 @@
+import { BackToConsoleNavigator } from "@/components/back-to-console-navigator";
 import { BlocksAppLauncher } from "@/components/blocks-app-launcher/blocks-app-launcher";
-import { EnvironmentList } from "@/components/environment-list/environment-list";
+import { SelectedEnvironment } from "@/components/environment-list/selected-environment";
 import { LanguageSelector } from "@/components/language-selector/language-selector";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
 import { Notification } from "@blocks-communication/components/notification/notification";
-import { ProjectList } from "@/components/project-list/project-list";
+import { SelectedProject } from "@/components/project-list/selected-project";
 import { Button } from "@/components/ui-kits/button/button";
 import { UserDropdownMenu } from "@/components/user-dropdown-menu/user-dropdown-menu";
 import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import { SidebarMobileView } from "@/layouts/sidebar-mobile-view/sidebar-mobile-view";
+import { useProjectStore } from "@/store/project.store.ts";
 import { cn } from "@/lib/utils";
-import { PanelLeft } from "lucide-react";
+import { ChevronRight, PanelLeft } from "lucide-react";
 import { useContext } from "react";
+import { useLocation } from "react-router-dom";
 
 export function DashboardHeader() {
   const { isSidebarOpen, toggleSidebar } = useContext(SidebarContext);
+  const { pathname } = useLocation();
+  const { selectedProject } = useProjectStore();
+  const projectName = selectedProject?.name;
+  const environment = selectedProject?.environment;
+  const isProjectOverviewRoute = pathname.startsWith("/project-overview");
 
   return (
     <>
@@ -33,15 +41,21 @@ export function DashboardHeader() {
             onClick={toggleSidebar}>
             <PanelLeft className="h-6 w-6" />
           </Button>
-          <div className="w-52">
-            <ProjectList />
-          </div>
+          {!isProjectOverviewRoute &&
+            !isSidebarOpen &&
+            (projectName || environment) && (
+              <div className="ml-3 flex min-w-0 items-center gap-1.5">
+                <SelectedProject />
+                {projectName && environment && (
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                )}
+                <SelectedEnvironment />
+              </div>
+            )}
         </div>
 
         <div className="relative z-50 flex items-center gap-4">
-          <div className="hidden h-fit w-fit-content md:flex">
-            <EnvironmentList />
-          </div>
+          <BackToConsoleNavigator />
           <div className="pointer-events-auto flex items-center">
             <ModeToggle />
           </div>
@@ -60,12 +74,14 @@ export function DashboardHeader() {
         </div>
       </header>
       {/* Mobile project/environment selectors */}
-      <div className="border-b bg-background px-5 sm:px-6 py-3 md:hidden">
-        <div className="grid gap-3">
-          <ProjectList />
-          <EnvironmentList />
+      {!isProjectOverviewRoute && (projectName || environment) && (
+        <div className="border-b bg-background px-5 py-3 sm:px-6 md:hidden">
+          <div className="flex flex-col gap-2">
+            <SelectedProject />
+            <SelectedEnvironment />
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

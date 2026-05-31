@@ -112,7 +112,7 @@ function OidcLayoutContent({ children: _children }: { children: ReactNode }) {
       style={{ "--theme-color": themeColor } as React.CSSProperties}>
       <div className="flex w-full items-center justify-center">
         <Logo
-          src={logoUrl || "/Logo.svg"}
+          src={logoUrl || "/Logo_Light.svg"}
           alt="OIDC Logo"
           width={128}
           height={55}

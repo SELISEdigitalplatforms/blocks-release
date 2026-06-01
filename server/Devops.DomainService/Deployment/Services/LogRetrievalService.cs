@@ -50,6 +50,7 @@ public class LogRetrievalService
         var stopwatch = Stopwatch.StartNew();
         int eventFinishedCount = 0;
         int iteration = 0;
+        PipelineRunStatus? pipeLineStatus = null;
         await Task.Delay(pollingInterval);
 
         while (stopwatch.ElapsedMilliseconds < maxPollingDuration)
@@ -59,7 +60,7 @@ public class LogRetrievalService
             Console.WriteLine($"Iteration {iteration} for pipeline {pipelineRunName} | Elapsed: {stopwatch.Elapsed.TotalMinutes:F2} minutes");
             try
             {
-                PipelineRunStatus pipeLineStatus = await _pipelineRunService.GetPipelineRunStatusAsync(pipelineRunName, namespaceName);
+                pipeLineStatus = await _pipelineRunService.GetPipelineRunStatusAsync(pipelineRunName, namespaceName);
 
                 if (pipeLineStatus is null && iteration > 20)
                 {
@@ -98,7 +99,7 @@ public class LogRetrievalService
                             await _messageClient.SendToConsumerAsync(new ConsumerMessage<PostBuildQueue> { ConsumerName = CloudBuildConstants.POST_BUILD_LISTENER, Payload = postBuildQueue, SccheduledEnqueueTimeUtc = DateTimeOffset.UtcNow.AddMinutes(10) });
                         }
                         catch(Exception ex){
-                            Console.WriteLine($"Failed to push data to queue.");
+                            Console.WriteLine($"Failed to push data to queue for pipeline {pipelineRunName}: {ex.Message}");
                         }
                         Console.WriteLine($"All tasks reached a terminal state for pipeline {pipelineRunName}. Count {eventFinishedCount} Stopping polling.");
                         break;
@@ -133,7 +134,7 @@ public class LogRetrievalService
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Failed to push data to queue.");
+                    Console.WriteLine($"Failed to push data to queue for pipeline {pipelineRunName}: {ex.Message}");
                 }
                 Console.WriteLine($"Pipeline {pipelineRunName} monitoring timed out, status updated");
                 return;
@@ -143,7 +144,7 @@ public class LogRetrievalService
                 Console.WriteLine($"Failed to update timeout status for {pipelineRunName}: {ex.Message}");
             }
         }
-        await UpdateDeploymentStatus(pipelineRunName, tenantId);
+        await UpdateDeploymentStatus(pipelineRunName, tenantId, pipeLineStatus);
         try
         {
             PostBuildQueue postBuildQueue = new PostBuildQueue
@@ -158,7 +159,7 @@ public class LogRetrievalService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to push data to queue.");
+            Console.WriteLine($"Failed to push data to queue for pipeline {pipelineRunName}: {ex.Message}");
         }
     }
 
@@ -369,29 +370,37 @@ public class LogRetrievalService
         return (EventNames.UNKNOWN, EventNames.UNKNOWN);
     }
 
-    public async Task UpdateDeploymentStatus(string pipelineRunName, string tenantId)
+    public async Task UpdateDeploymentStatus(string pipelineRunName, string tenantId, PipelineRunStatus? pipeLineStatus)
     {
         Console.WriteLine("Updating DeploymentStatus of Repo");
         try
         {
+            var finalStatus = ResolveFinalBuildStatus(pipeLineStatus?.Status);
+            await _buildRepository.UpdateBuildStatus(pipelineRunName, finalStatus, tenantId);
+
             Build build = await _buildRepository.GetBuildByPipelineRunName(pipelineRunName, tenantId);
-            string lastDeploymentStatus = build.Status;
             Repo repo = await _repoRepository.GetRepo(build.RepoId, tenantId);
-            if (repo != null) 
+            if (repo != null)
             {
                 var repoUpdate = new RepoUpdateRequest()
                 {
                     RepoId = repo.ItemId,
-                    LastDeploymentStatus = lastDeploymentStatus
+                    LastDeploymentStatus = finalStatus
                 };
                 await _repoRepository.UpdateRepo(repoUpdate, tenantId);
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error updating deploymentStatus: {ex.Message}");
+            Console.WriteLine($"Error updating deploymentStatus for {pipelineRunName}: {ex.Message}");
         }
     }
+
+    private static string ResolveFinalBuildStatus(string? tektonStatus) => tektonStatus switch
+    {
+        "Succeeded" => EventStatus.SUCCEEDED,
+        _ => EventStatus.FAILED,
+    };
 
     public async Task UpdateDeploymentStatus(string pipelineRunName, string tenantId, string timedOutStatus)
     {

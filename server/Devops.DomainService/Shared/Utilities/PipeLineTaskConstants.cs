@@ -4,7 +4,19 @@ namespace Devops.DomainService.Shared.Utilities
 {
     public static class PipeLineTaskConstants
     {
-        public static readonly string[] TermialStatus = { "Succeeded", "Failed", "Error" };
+        public static readonly string[] TermialStatus =
+        {
+            "Succeeded",
+            "Failed",
+            "Error",
+            "PipelineRunStopping",
+            "PipelineRunCancelled",
+            "PipelineRunCouldntCancel",
+            "Cancelled",
+            "CancelledRunFinally",
+            "StoppedRunFinally",
+            "PipelineRunTimeout",
+        };
         public static readonly string[] PriorityTaskList = { "fetch-source", "build-push", "deploy-app" };
 
         public static readonly IReadOnlyDictionary<string, string> EventGroupMapping = new Dictionary<string, string>

@@ -376,18 +376,28 @@ public class LogRetrievalService
         try
         {
             var finalStatus = ResolveFinalBuildStatus(pipeLineStatus?.Status);
-            await _buildRepository.UpdateBuildStatus(pipelineRunName, finalStatus, tenantId);
+            var terminalEventType = ResolveTerminalEventType(finalStatus);
 
             Build build = await _buildRepository.GetBuildByPipelineRunName(pipelineRunName, tenantId);
-            Repo repo = await _repoRepository.GetRepo(build.RepoId, tenantId);
-            if (repo != null)
+            var events = build?.Events ?? new List<BuildEventResponse>();
+
+            CloseOutNonTerminalEventGroups(events, build?.ItemId, terminalEventType);
+
+            var (lastEventGroup, _) = checkBuildEventName(events);
+            await _buildRepository.UpdateBuildEvents(pipelineRunName, events, lastEventGroup, finalStatus, tenantId);
+
+            if (build != null)
             {
-                var repoUpdate = new RepoUpdateRequest()
+                Repo repo = await _repoRepository.GetRepo(build.RepoId, tenantId);
+                if (repo != null)
                 {
-                    RepoId = repo.ItemId,
-                    LastDeploymentStatus = finalStatus
-                };
-                await _repoRepository.UpdateRepo(repoUpdate, tenantId);
+                    var repoUpdate = new RepoUpdateRequest()
+                    {
+                        RepoId = repo.ItemId,
+                        LastDeploymentStatus = finalStatus
+                    };
+                    await _repoRepository.UpdateRepo(repoUpdate, tenantId);
+                }
             }
         }
         catch (Exception ex)
@@ -402,22 +412,67 @@ public class LogRetrievalService
         _ => EventStatus.FAILED,
     };
 
+    private static string ResolveTerminalEventType(string finalStatus) =>
+        finalStatus == EventStatus.SUCCEEDED ? EventTypes.EventFinished : EventTypes.EventFailed;
+
+    private static void CloseOutNonTerminalEventGroups(
+        List<BuildEventResponse> events,
+        string? buildItemId,
+        string terminalEventType)
+    {
+        var terminalTypes = new HashSet<string>
+        {
+            EventTypes.EventFinished,
+            EventTypes.EventFailed,
+            EventTypes.EventCancelled,
+        };
+
+        var groupsNeedingClose = events
+            .GroupBy(e => e.EventGroup)
+            .Where(g => !g.Any(e => terminalTypes.Contains(e.EventType)))
+            .Select(g => new { EventGroup = g.Key, LastMessage = g.Last().Message })
+            .ToList();
+
+        foreach (var g in groupsNeedingClose)
+        {
+            events.Add(new BuildEventResponse
+            {
+                Id = Guid.NewGuid().ToString(),
+                BuildId = buildItemId ?? string.Empty,
+                EventType = terminalEventType,
+                Message = g.LastMessage,
+                EventGroup = g.EventGroup,
+                CreatedAt = DateTime.UtcNow,
+                LastUpdateDate = DateTime.UtcNow,
+            });
+        }
+    }
+
     public async Task UpdateDeploymentStatus(string pipelineRunName, string tenantId, string timedOutStatus)
     {
         Console.WriteLine("Updating DeploymentStatus of Repo");
         try
         {
             Build build = await _buildRepository.GetBuildByPipelineRunName(pipelineRunName, tenantId);
-            await _buildRepository.UpdateBuildStatus(pipelineRunName, EventStatus.FAILED, tenantId);
-            Repo repo = await _repoRepository.GetRepo(build.RepoId, tenantId);
-            if (repo != null)
+            var events = build?.Events ?? new List<BuildEventResponse>();
+
+            CloseOutNonTerminalEventGroups(events, build?.ItemId, EventTypes.EventFailed);
+
+            var (lastEventGroup, _) = checkBuildEventName(events);
+            await _buildRepository.UpdateBuildEvents(pipelineRunName, events, lastEventGroup, EventStatus.FAILED, tenantId);
+
+            if (build != null)
             {
-                var repoUpdate = new RepoUpdateRequest()
+                Repo repo = await _repoRepository.GetRepo(build.RepoId, tenantId);
+                if (repo != null)
                 {
-                    RepoId = repo.ItemId,
-                    LastDeploymentStatus = EventStatus.FAILED,
-                };
-                await _repoRepository.UpdateRepo(repoUpdate, tenantId);
+                    var repoUpdate = new RepoUpdateRequest()
+                    {
+                        RepoId = repo.ItemId,
+                        LastDeploymentStatus = EventStatus.FAILED,
+                    };
+                    await _repoRepository.UpdateRepo(repoUpdate, tenantId);
+                }
             }
         }
         catch (Exception ex)

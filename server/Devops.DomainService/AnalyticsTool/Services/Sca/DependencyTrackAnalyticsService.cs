@@ -138,6 +138,7 @@ public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
                 _logger.LogInformation("Successfully fetched sca data for build {RepoName}", build.RepoName);
                 bool repoUpdateResult = await _repoRepository.UpdateRepoDependencyTrackProjectUuid(build.RepoId, apiCallResult.uuid, build.ProjectId);
                 bool buildUpdateResult = await _buildRepository.UpdateBuildDependencyTrackProjectId(build.ItemId, apiCallResult.uuid, build.ProjectId);
+                bool checkProjectEntry = await EnsureRepoProjectEntry(build, apiCallResult);
                 _logger.LogInformation("Dependency Track Project Uuid Repo update result: {RepoUpdateResult}, Build update result: {BuildUpdateResult}", repoUpdateResult, buildUpdateResult);
             }
             if (response.StatusCode == HttpStatusCode.Unauthorized)

@@ -29,7 +29,7 @@ public class SASTStrategy : IStrategy
         var headers = new Dictionary<string, string>
             {
                 { "Accept", "application/vnd.github.v3+json" },
-                { "Authorization", $"Basic {_cloudBuildSecret.SastBasicAuthToken}" },
+                { "Authorization", $"Bearer {_cloudBuildSecret.SastBasicAuthToken}" },
             };
         var (apiCallResult, _) = await _httpHelperServices.MakeHttpGetRequest<SASTResponse>(url, null, headers);
 

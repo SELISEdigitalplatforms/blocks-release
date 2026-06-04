@@ -1,6 +1,7 @@
 using Blocks.Genesis;
 using Devops.DomainService.VersionControlSystems.Entities;
 using Devops.DomainService.VersionControlSystems.Interfaces;
+using Devops.DomainService.Shared.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
@@ -141,6 +142,13 @@ public class
         var deleteResult = await collection.DeleteOneAsync(filter);
 
         return deleteResult.DeletedCount > 0;
+    }
+
+    public async Task<User> GetUserByIdAsync(string itemId)
+    {
+        var collection = _clientDb.GetCollection<User>("Users");
+
+        return await collection.Find(x => x.ItemId == itemId).FirstOrDefaultAsync();
     }
 
 }

@@ -35,15 +35,18 @@ namespace Devops.DomainService.AnalyticsTool.Services.Sast
 
         public async Task<bool> ProcessSonarQubeUser(string userName, string repoName, string projectGroupKey)
         {
-            // Step 1 — User Handling
-            var existingUser = await SearchUser(userName);
-            string userId;
-            string userLogin;
+
             if(repoName == null)
             {
                 _logger.LogWarning("Repository name is null. Cannot assign permissions without a valid repository name.");
                 return false;
             }
+
+            // Step 1 — User Handling
+            var existingUser = await SearchUser(userName);
+            string userId;
+            string userLogin;
+            
 
             repoName = repoName.Replace("/", "-");
 

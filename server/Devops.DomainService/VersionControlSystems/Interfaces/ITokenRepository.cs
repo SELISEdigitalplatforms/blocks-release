@@ -1,3 +1,4 @@
+using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.VersionControlSystems.Entities;
 using Devops.DomainService.VersionControlSystems.Models.Response;
 
@@ -12,4 +13,5 @@ public interface ITokenRepository
     public Task UpdateUsernameAsync(string id, List<UserOrganizations> orgs);
     public Task<bool> DeleteTokenAsync();
     public Task<bool> DeleteTokenAsync(string blocksUserId);
+    public Task<User> GetUserByIdAsync(string itemId);
 }

@@ -33,7 +33,7 @@ namespace Devops.DomainService.AnalyticsTool.Services.Sca
             var userCreated = await CreateDependencyTrackOidcUser(username);
             if (!userCreated)
             {
-                _logger.LogWarning("Failed to create or user : {Username}", username);
+                _logger.LogWarning("Failed to create user : {Username}", username);
             }
 
             var dependencyTrackDefaultTeamId = _cloudBuildSecret.DependencyTrackDefaultTeamId;
@@ -46,9 +46,13 @@ namespace Devops.DomainService.AnalyticsTool.Services.Sca
             var dependencyTrackProject = await EnsureDependencyTrackProjectExists(projectName);
             if (dependencyTrackProject is not null)
             {
-                _logger.LogWarning("Failed to add user {Username} to team {TeamId} or membership already exists.", username, dependencyTrackDefaultTeamId);
                 if (dependencyTrackProject.ProjectTeamUuid is not null && dependencyTrackProject.RepoProjects.Count > 0)
                 {
+                    var projectTeamAdded = await AddDependencyTrackOidcTeam(username, dependencyTrackProject.ProjectTeamUuid);
+                    if (!projectTeamAdded)
+                    {
+                        _logger.LogWarning("Failed to add user {Username} to team {TeamId} or membership already exists.", username, dependencyTrackProject.ProjectTeamUuid);
+                    }
                     foreach (var repo in dependencyTrackProject.RepoProjects)
                     {
                         var teamMapped = await MapDependencyTrackTeamToProject(dependencyTrackProject.ProjectTeamUuid, repo.ProjectUuid);
@@ -70,7 +74,7 @@ namespace Devops.DomainService.AnalyticsTool.Services.Sca
             DependencyTrackProjects existingProject = await _dependencyTrackRepositoryService.GetDependencyTrackProject(projectId);
             if (existingProject is not null && existingProject.ProjectTeamUuid is not null)
             {
-                _logger?.LogInformation("DependencyTrack project already exists for projectId {ProjectId}", projectId);
+                _logger.LogInformation("DependencyTrack project already exists for projectId {ProjectId}", projectId);
                 return existingProject;
             }
 
@@ -97,7 +101,7 @@ namespace Devops.DomainService.AnalyticsTool.Services.Sca
             }
 
             await _dependencyTrackRepositoryService.SaveDependencyTrackProject(existingProject);
-            _logger?.LogInformation("DependencyTrack project created for projectId {ProjectId}", projectId);
+            _logger.LogInformation("DependencyTrack project created for projectId {ProjectId}", projectId);
 
             return existingProject;
         }

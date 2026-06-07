@@ -6,11 +6,6 @@ using Devops.DomainService.Deployment.Interfaces;
 using Devops.DomainService.Shared.Utilities;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Mvc;
-using Cloud.LmtService.Utilities;
-using CloudConfiguration.DomainService.Shared.Utilities;
-using Microsoft.IdentityModel.Tokens;
-using Cloud.LmtService.Models.Trace;
 using SeliseBlocks.ConfigurationDriver;
 
 var serviceName = "blocks-deployment-api";
@@ -63,8 +58,6 @@ services.AddSignalR().AddJsonProtocol(options =>
 });
 
 services.RegisterApplicationServices(cloudBuildSecret);
-services.AddCloudLmtServices();
-services.AddCloudConfigurationServices();
 
 // Replace the Null implementation registered by the domain service with the
 // real SignalR-backed hub service so notifications actually reach connected clients.

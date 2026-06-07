@@ -17,7 +17,8 @@ export class AuthService {
     body.append("username", payload.username);
     body.append("password", payload.password);
 
-    return this.httpClient.post(
+    // Login is issued by the IDP, not the deployment API.
+    return this.idpHttpClient.post(
       AUTH_ENDPOINTS.TOKEN,
       body,
       {

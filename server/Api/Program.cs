@@ -1,11 +1,9 @@
 using BlocksTemplate.Api;
 using BlocksTemplate.Api.Hubs;
 using Blocks.Genesis;
-using Cloud.DomainService.Utilities;
 using Devops.DomainService;
 using Devops.DomainService.Deployment.Interfaces;
-using DomainService.Utilities;
-using DomainService.Shared;
+using Devops.DomainService.Shared.Utilities;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
@@ -29,7 +27,7 @@ builder.Configuration.AddMongoDbConfiguration(options =>
     options.SecretKey        = "blocks-secret-release";
 });
 
-ApplicationConfigurations.ConfigureServices(builder.Services, IdpConstants.GetMessageConfiguration(secret.MessageConnectionString));
+ApplicationConfigurations.ConfigureServices(builder.Services, CloudBuildConstants.GetApiMessageConfiguration(secret.MessageConnectionString));
 
 builder.Services.Configure<FormOptions>(options =>
 {
@@ -64,10 +62,7 @@ services.AddSignalR().AddJsonProtocol(options =>
     options.PayloadSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 
-services.RegisterAllServices();
-services.AddApplicationServices();
 services.RegisterApplicationServices(cloudBuildSecret);
-services.AddCloudDomainServices();
 services.AddCloudLmtServices();
 services.AddCloudConfigurationServices();
 
@@ -125,7 +120,8 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
     var section = configuration.GetSection("FrontendRuntime");
     var replacements = new Dictionary<string, string?>
     {
-        ["__BLOCKS_API_BASE_URL__"] = section["BLOCKS_API_BASE_URL"],
+        // ["__BLOCKS_API_BASE_URL__"] = section["BLOCKS_API_BASE_URL"],
+        ["__BLOCKS_API_BASE_URL__"] = "https://dev-release.blocksdevelopers.com:5000",
         ["__BLOCKS_X_BLOCKS_KEY__"] = section["BLOCKS_X_BLOCKS_KEY"],
         ["__BLOCKS_GOOGLE_SITE_KEY__"] = section["BLOCKS_GOOGLE_SITE_KEY"],
         ["__BLOCKS_CONSTRUCT_URL__"] = section["BLOCKS_CONSTRUCT_URL"],

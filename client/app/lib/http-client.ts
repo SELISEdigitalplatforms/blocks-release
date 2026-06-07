@@ -111,7 +111,10 @@ class HttpClient {
       const refreshToken = isLocalhost ? authStore.refreshToken || '""' : '""';
       formData.append("refresh_token", refreshToken);
 
-      const url = `${this.baseURL}/api/Authentication/Token`;
+      // Token issuance/refresh is owned by the IDP, not the deployment API
+      // (the deployment backend no longer hosts an Authentication controller).
+      // Always refresh against the IDP's OAuth token endpoint.
+      const url = `${getRuntimeEnv("BLOCKS_IDP_BASE_URL")}/api/auth/Token`;
 
       const response = await fetch(url, {
         method: "POST",

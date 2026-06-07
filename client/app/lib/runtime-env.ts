@@ -7,7 +7,7 @@ type RuntimeKey =
   | "BLOCKS_CONSTRUCT_URL"
   | "BLOCKS_GITHUB_SSO_CLIENT_ID"
   | "BLOCKS_APP_URL"
-  | "BLOCKS_LOGIC_APP_URL"
+  | "BLOCKS_LOGIC_BASE_URL"
   | "BLOCKS_IDP_BASE_URL"
   | "BLOCKS_OS_URL"
   | "BLOCKS_OIDC_CLIENT_ID"
@@ -33,11 +33,10 @@ type RuntimeKey =
   | "BLOCKS_STUDIO_BASE_URL"
   | "BLOCKS_STUDIO_CALLBACK_URL";
 
-declare global {
-  interface Window {
-    __BLOCKS_ENV__?: Partial<Record<RuntimeKey, string>>;
-  }
-}
+// NOTE: the `Window.__BLOCKS_ENV__` global is declared by @seliseblocks/blocks-kit.
+// We intentionally do not re-declare it here to avoid a conflicting augmentation
+// (blocks-kit types it against its own RuntimeKey union); we read it via a
+// string-keyed cast below so deployment's own keys continue to work.
 
 const isPlaceholder = (value?: string) =>
   !!value && value.startsWith(PLACEHOLDER_PREFIX) && value.endsWith("__");
@@ -77,8 +76,11 @@ export const getRuntimeEnv = (
   options: GetRuntimeEnvOptions = {},
 ): string => {
   let value = "";
-  const windowValue =
-    typeof window !== "undefined" ? window.__BLOCKS_ENV__?.[key] : undefined;
+  const runtimeEnv =
+    typeof window !== "undefined"
+      ? (window.__BLOCKS_ENV__ as Partial<Record<string, string>> | undefined)
+      : undefined;
+  const windowValue = runtimeEnv?.[key];
   if (windowValue && !isPlaceholder(windowValue)) {
     value = windowValue;
   } else {

@@ -1,18 +1,11 @@
 using BlocksTemplate.Api;
 using BlocksTemplate.Api.Hubs;
 using Blocks.Genesis;
-using Cloud.DomainService.Utilities;
 using Devops.DomainService;
 using Devops.DomainService.Deployment.Interfaces;
-using DomainService.Utilities;
-using DomainService.Shared;
+using Devops.DomainService.Shared.Utilities;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Mvc;
-using Cloud.LmtService.Utilities;
-using CloudConfiguration.DomainService.Shared.Utilities;
-using Microsoft.IdentityModel.Tokens;
-using Cloud.LmtService.Models.Trace;
 using SeliseBlocks.ConfigurationDriver;
 
 var serviceName = "blocks-deployment-api";
@@ -29,7 +22,7 @@ builder.Configuration.AddMongoDbConfiguration(options =>
     options.SecretKey        = "blocks-secret-release";
 });
 
-ApplicationConfigurations.ConfigureServices(builder.Services, IdpConstants.GetMessageConfiguration(secret.MessageConnectionString));
+ApplicationConfigurations.ConfigureServices(builder.Services, CloudBuildConstants.GetApiMessageConfiguration(secret.MessageConnectionString));
 
 builder.Services.Configure<FormOptions>(options =>
 {
@@ -64,12 +57,7 @@ services.AddSignalR().AddJsonProtocol(options =>
     options.PayloadSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 
-services.RegisterAllServices();
-services.AddApplicationServices();
 services.RegisterApplicationServices(cloudBuildSecret);
-services.AddCloudDomainServices();
-services.AddCloudLmtServices();
-services.AddCloudConfigurationServices();
 
 // Replace the Null implementation registered by the domain service with the
 // real SignalR-backed hub service so notifications actually reach connected clients.
@@ -131,7 +119,7 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
         ["__BLOCKS_CONSTRUCT_URL__"] = section["BLOCKS_CONSTRUCT_URL"],
         ["__BLOCKS_GITHUB_SSO_CLIENT_ID__"] = section["BLOCKS_GITHUB_SSO_CLIENT_ID"],
         ["__BLOCKS_APP_URL__"] = section["BLOCKS_APP_URL"],
-        ["__BLOCKS_LOGIC_APP_URL__"] = section["BLOCKS_LOGIC_APP_URL"],
+        // ["__BLOCKS_LOGIC_BASE_URL__"] = section["BLOCKS_LOGIC_BASE_URL"],
         ["__BLOCKS_IDP_BASE_URL__"] = section["BLOCKS_IDP_BASE_URL"],
         ["__BLOCKS_OS_URL__"] = section["BLOCKS_OS_URL"],
         ["__BLOCKS_OIDC_CLIENT_ID__"] = section["BLOCKS_OIDC_CLIENT_ID"],
@@ -171,7 +159,7 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
     //     ["__BLOCKS_CONSTRUCT_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_CONSTRUCT_URL"),
     //     ["__BLOCKS_GITHUB_SSO_CLIENT_ID__"] = Environment.GetEnvironmentVariable("BLOCKS_GITHUB_SSO_CLIENT_ID"),
     //     ["__BLOCKS_APP_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_APP_URL"),
-    //     ["__BLOCKS_LOGIC_APP_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_LOGIC_APP_URL"),
+    //     ["__BLOCKS_LOGIC_BASE_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_LOGIC_BASE_URL"),
     //     ["__BLOCKS_IDP_BASE_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_IDP_BASE_URL"),
     //     ["__BLOCKS_OS_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_OS_URL"),
     //     ["__BLOCKS_OIDC_CLIENT_ID__"] = Environment.GetEnvironmentVariable("BLOCKS_OIDC_CLIENT_ID"),

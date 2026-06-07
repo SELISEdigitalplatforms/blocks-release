@@ -1,5 +1,5 @@
 // These hit the logic server, which `serviceInstances.logicService` is already
-// pointed at (baseURL = BLOCKS_LOGIC_APP_URL), so the paths are relative to it.
+// pointed at (baseURL = BLOCKS_LOGIC_BASE_URL), so the paths are relative to it.
 const NOTIFIER_BASE = "/api/Notifier";
 const NOTIFICATION_BASE = "/api/Notification";
 

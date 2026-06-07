@@ -27,13 +27,14 @@ import {
   getCurrentOIDCParams,
 } from "@blocks-idp/authentication/utils/oidc.util";
 import { PasswordInput } from "@/components/password-input";
-import { getApiUrl } from "@/lib/get-api-path";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 
 export const signinByEmail = async (
   payload: ISigninByEmailPayload & { projectKey: string },
 ): Promise<ISigninByEmailResponse> => {
   try {
-    const url = getApiUrl("idp/v1", "Authentication/Login");
+    // Login is issued by the IDP, not the deployment API.
+    const url = `${getRuntimeEnv("BLOCKS_IDP_BASE_URL")}/api/Authentication/Login`;
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",

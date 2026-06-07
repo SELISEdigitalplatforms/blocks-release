@@ -12,12 +12,17 @@ import { toast } from "@/hooks/use-toast";
 import { useStatusIcon } from "@blocks-deployment/hooks/use-log-status-icon";
 import { LiveLogsService } from "@blocks-deployment/services/live-logs.service";
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
+import { IDeploymentEvent } from "@blocks-deployment/pages/deployment-details";
 
 interface LiveDeploymentLogsProps {
   buildId?: string;
+  historicalEvents?: IDeploymentEvent[];
 }
 
-const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({ buildId }) => {
+const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
+  buildId,
+  historicalEvents,
+}) => {
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
   const [notificationSteps, setNotificationSteps] = useState<IBuildStep[]>([]);
   const [, setHasIncorrectBuildId] = useState<boolean>(false);
@@ -72,37 +77,36 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({ buildId }) => {
   }, [buildId]);
 
   useEffect(() => {
-    const fetchHistoricalLogs = async () => {
-      if (!buildId || hasLoadedHistorical) return;
+    // Historical logs come from the build's persisted events (GET /api/build?buildId=),
+    // which the page already fetches and passes in — no separate historical request.
+    // Wait until the events are available; an empty array still counts as "loaded".
+    if (!buildId || hasLoadedHistorical || !historicalEvents) return;
 
-      try {
-        setIsLoadingHistorical(true);
-        const response = await fetch(`/api/deployment-live/${buildId}`);
-        const historicalData = await response.json();
+    setIsLoadingHistorical(true);
 
-        if (historicalData.logs && historicalData.logs.length > 0) {
-          const processedSteps = LiveLogsService.processHistoricalLogs(
-            historicalData.logs,
-          );
-          setNotificationSteps(processedSteps);
+    // processHistoricalLogs expects PascalCase keys; the build events are camelCase.
+    const mappedLogs = historicalEvents.map((event) => ({
+      BuildId: event.buildId,
+      EventGroup: event.eventGroup,
+      EventType: event.eventType,
+      Message: event.message,
+      CreatedAt: event.createdAt,
+    }));
 
-          processedSteps.forEach((step) => {
-            if (step.status === "success") {
-              setSuccessfulSteps((prev) => new Set(prev).add(step.id));
-            }
-          });
+    if (mappedLogs.length > 0) {
+      const processedSteps = LiveLogsService.processHistoricalLogs(mappedLogs);
+      setNotificationSteps(processedSteps);
+
+      processedSteps.forEach((step) => {
+        if (step.status === "success") {
+          setSuccessfulSteps((prev) => new Set(prev).add(step.id));
         }
+      });
+    }
 
-        setHasLoadedHistorical(true);
-      } catch {
-        setHasLoadedHistorical(true);
-      } finally {
-        setIsLoadingHistorical(false);
-      }
-    };
-
-    fetchHistoricalLogs();
-  }, [buildId, hasLoadedHistorical]);
+    setHasLoadedHistorical(true);
+    setIsLoadingHistorical(false);
+  }, [buildId, hasLoadedHistorical, historicalEvents]);
 
   const showSuccessToast = (buildId: string) => {
     if (!completedBuilds.has(buildId)) {

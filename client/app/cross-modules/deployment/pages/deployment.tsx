@@ -5,11 +5,13 @@ import DeploymentOverview from "@blocks-deployment/components/deployment-home/de
 import { useGetAllProjects } from "@/cross-modules/deployment/hooks/use-github-info";
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 import { toast } from "@/hooks/use-toast";
+import { useProjectStore } from "@/store/project.store";
 
 const Deployment = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [, setRefreshKey] = useState(0);
+  const projectKey = useProjectStore((s) => s.selectedProject?.tenantId) ?? "";
 
   useEffect(() => {
     if (searchParams.get("refresh")) {
@@ -24,15 +26,14 @@ const Deployment = () => {
     isError,
     error,
     refetch,
-  } = useGetAllProjects({
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    forceRefresh: true,
-  }) as any;
-
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
+  } = useGetAllProjects(
+    {
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+      forceRefresh: true,
+    },
+    projectKey,
+  ) as any;
 
   if (isError && error) {
     toast({

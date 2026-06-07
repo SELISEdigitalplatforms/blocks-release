@@ -113,8 +113,7 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
     var section = configuration.GetSection("FrontendRuntime");
     var replacements = new Dictionary<string, string?>
     {
-        // ["__BLOCKS_API_BASE_URL__"] = section["BLOCKS_API_BASE_URL"],
-        ["__BLOCKS_API_BASE_URL__"] = "https://dev-release.blocksdevelopers.com:5000",
+        ["__BLOCKS_API_BASE_URL__"] = section["BLOCKS_API_BASE_URL"],
         ["__BLOCKS_X_BLOCKS_KEY__"] = section["BLOCKS_X_BLOCKS_KEY"],
         ["__BLOCKS_GOOGLE_SITE_KEY__"] = section["BLOCKS_GOOGLE_SITE_KEY"],
         ["__BLOCKS_CONSTRUCT_URL__"] = section["BLOCKS_CONSTRUCT_URL"],

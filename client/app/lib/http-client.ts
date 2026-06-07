@@ -355,7 +355,11 @@ export const serviceInstances = {
     getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || "",
   ),
   logicService: new HttpClient(
-    getRuntimeEnv("BLOCKS_LOGIC_APP_URL") || "",
+    // Logic app base URL. Use the standardized BLOCKS_LOGIC_BASE_URL key (the same
+    // one the app launcher uses); the legacy BLOCKS_LOGIC_BASE_URL isn't populated in
+    // current environments, which left this empty and made logic calls (e.g.
+    // Project/Gets) fall back to the current origin instead of the logic app.
+    getRuntimeEnv("BLOCKS_LOGIC_BASE_URL") || "",
     getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || "",
   ),
   idpService: new HttpClient(

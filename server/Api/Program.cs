@@ -113,13 +113,14 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
     var section = configuration.GetSection("FrontendRuntime");
     var replacements = new Dictionary<string, string?>
     {
-        ["__BLOCKS_API_BASE_URL__"] = section["BLOCKS_API_BASE_URL"],
+        // ["__BLOCKS_API_BASE_URL__"] = section["BLOCKS_API_BASE_URL"],
+        ["__BLOCKS_API_BASE_URL__"] = "https://dev-release.blocksdevelopers.com:5000",
         ["__BLOCKS_X_BLOCKS_KEY__"] = section["BLOCKS_X_BLOCKS_KEY"],
         ["__BLOCKS_GOOGLE_SITE_KEY__"] = section["BLOCKS_GOOGLE_SITE_KEY"],
         ["__BLOCKS_CONSTRUCT_URL__"] = section["BLOCKS_CONSTRUCT_URL"],
         ["__BLOCKS_GITHUB_SSO_CLIENT_ID__"] = section["BLOCKS_GITHUB_SSO_CLIENT_ID"],
         ["__BLOCKS_APP_URL__"] = section["BLOCKS_APP_URL"],
-        ["__BLOCKS_LOGIC_APP_URL__"] = section["BLOCKS_LOGIC_APP_URL"],
+        // ["__BLOCKS_LOGIC_BASE_URL__"] = section["BLOCKS_LOGIC_BASE_URL"],
         ["__BLOCKS_IDP_BASE_URL__"] = section["BLOCKS_IDP_BASE_URL"],
         ["__BLOCKS_OS_URL__"] = section["BLOCKS_OS_URL"],
         ["__BLOCKS_OIDC_CLIENT_ID__"] = section["BLOCKS_OIDC_CLIENT_ID"],
@@ -159,7 +160,7 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
     //     ["__BLOCKS_CONSTRUCT_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_CONSTRUCT_URL"),
     //     ["__BLOCKS_GITHUB_SSO_CLIENT_ID__"] = Environment.GetEnvironmentVariable("BLOCKS_GITHUB_SSO_CLIENT_ID"),
     //     ["__BLOCKS_APP_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_APP_URL"),
-    //     ["__BLOCKS_LOGIC_APP_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_LOGIC_APP_URL"),
+    //     ["__BLOCKS_LOGIC_BASE_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_LOGIC_BASE_URL"),
     //     ["__BLOCKS_IDP_BASE_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_IDP_BASE_URL"),
     //     ["__BLOCKS_OS_URL__"] = Environment.GetEnvironmentVariable("BLOCKS_OS_URL"),
     //     ["__BLOCKS_OIDC_CLIENT_ID__"] = Environment.GetEnvironmentVariable("BLOCKS_OIDC_CLIENT_ID"),

@@ -1,5 +1,10 @@
 import { RenderAlternatively } from "@/components/render-elements";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppSettingsStore } from "@seliseblocks/blocks-kit/store";
+
+function getSystemTheme(): "light" | "dark" {
+  if (typeof window === "undefined") return "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
 
 interface LogoProps {
   src?: string;
@@ -16,7 +21,9 @@ export function Logo({
   height,
   className,
 }: LogoProps) {
-  const { resolvedTheme } = useTheme();
+  const { settings } = useAppSettingsStore();
+  const theme = settings.theme ?? "system";
+  const resolvedTheme = theme === "system" ? getSystemTheme() : theme;
 
   if (src) {
     return (

@@ -1,12 +1,15 @@
 import { BackToConsoleNavigator } from "@/components/back-to-console-navigator";
-import { BlocksAppLauncher } from "@/components/blocks-app-launcher/blocks-app-launcher";
+// Replaced by blocks-kit package components (AppSwitcher / ThemeSwitcher / UserDropdownMenu).
+// Local references kept commented for reference.
+// import { BlocksAppLauncher } from "@/components/blocks-app-launcher/blocks-app-launcher";
 import { SelectedEnvironment } from "@/components/environment-list/selected-environment";
 import { LanguageSelector } from "@/components/language-selector/language-selector";
-import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
+// import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
 import { Notification } from "@blocks-communication/components/notification/notification";
 import { SelectedProject } from "@/components/project-list/selected-project";
 import { Button } from "@/components/ui-kits/button/button";
-import { UserDropdownMenu } from "@/components/user-dropdown-menu/user-dropdown-menu";
+// import { UserDropdownMenu } from "@/components/user-dropdown-menu/user-dropdown-menu";
+import { AppSwitcher, ThemeSwitcher, UserDropdownMenu } from "@seliseblocks/blocks-kit";
 import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import { SidebarMobileView } from "@/layouts/sidebar-mobile-view/sidebar-mobile-view";
 import { useProjectStore } from "@/store/project.store.ts";
@@ -57,7 +60,7 @@ export function DashboardHeader() {
         <div className="relative z-50 flex items-center gap-4">
           <BackToConsoleNavigator />
           <div className="pointer-events-auto flex items-center">
-            <ModeToggle />
+            <ThemeSwitcher />
           </div>
           <div className="pointer-events-auto flex items-center">
             <Notification />
@@ -66,7 +69,7 @@ export function DashboardHeader() {
             <LanguageSelector />
           </div>
           <div className="pointer-events-auto flex items-center">
-            <BlocksAppLauncher />
+            <AppSwitcher forwardedTo="/console" />
           </div>
           <div className="pointer-events-auto flex items-center">
             <UserDropdownMenu />

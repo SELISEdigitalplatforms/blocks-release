@@ -44,7 +44,9 @@ export class ProjectService {
     errors: unknown | null;
     isSuccess: boolean;
   }> {
-    return this.httpClient.post(PROJECT_ENDPOINTS.ADD_ASSET, payload);
+    // Project management is owned by the logic app, not the deployment API
+    // (the deployment backend no longer hosts a Project controller).
+    return this.logicClient.post(PROJECT_ENDPOINTS.ADD_ASSET, payload);
   }
 }
 

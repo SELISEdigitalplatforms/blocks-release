@@ -150,7 +150,7 @@ spec:
     - name: replicas
       value: "1"
     - name: port
-      value: "80"  # Adjust based on your app port
+      value: "8080"  # Adjust based on your app port
     
     # Custom command and args (example for .NET app)
     - name: command

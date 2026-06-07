@@ -47,7 +47,10 @@ const DeploymentLogsTab = ({
         <>
           {cardData?.status == DEPLOYMENT_LOG_EVENT_STATUS.STARTED ||
           cardData?.status == DEPLOYMENT_LOG_EVENT_STATUS.RUNNING ? (
-            <LiveDeploymentLogs buildId={buildId} />
+            <LiveDeploymentLogs
+              buildId={buildId}
+              historicalEvents={cardData?.events}
+            />
           ) : (
             <DeployedLogs
               buildId={buildId}

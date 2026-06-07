@@ -14,17 +14,25 @@ import { router } from "./router";
 import "./styles/globals.css";
 import { TooltipProvider } from "./components/ui-kits/tooltip/tooltip";
 import { BlocksAppLayout } from "@seliseblocks/blocks-kit";
+import { getRuntimeEnv } from "./lib/runtime-env";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryProvider>
-      <ThemeProvider>
-        <TooltipProvider>
-          <NuqsAdapter>
+      {/* <ThemeProvider> */}
+        <NuqsAdapter>
+          <TooltipProvider>
             <BlocksAppLayout
               config={{
                 userBaseUrlKey: "BLOCKS_IDP_BASE_URL",
-                projectBaseUrlKey: "BLOCKS_API_BASE_URL",
+                // Projects are owned by the logic app, so blocks-kit's ConsolePage
+                // (useGetProjects) must read the logic base URL, not the deployment
+                // API (which is the current origin / dev-release).
+                projectBaseUrlKey: "BLOCKS_LOGIC_BASE_URL",
+                appLogoUrl:{
+                  dark: "/Logo_Dark.svg",
+                  light: "/Logo_Light.svg",
+                }
               }}
             >
               <RouterProvider router={router} />
@@ -32,9 +40,9 @@ createRoot(document.getElementById("root")!).render(
             <Toaster />
             {/* <DeploymentHubListener /> */}
             <NotificationHubListener />
-          </NuqsAdapter>
-        </TooltipProvider>
-      </ThemeProvider>
+          </TooltipProvider>
+        </NuqsAdapter>
+      {/* </ThemeProvider> */}
     </QueryProvider>
   </StrictMode>,
 );

@@ -101,13 +101,19 @@ export const useRepoAndGitBranchMatch = (
   });
 };
 
-export const useGetAllProjects = (options?: {
-  refetchOnMount: boolean;
-  refetchOnWindowFocus: boolean;
-  forceRefresh?: boolean;
-}) => {
+export const useGetAllProjects = (
+  options?: {
+    refetchOnMount: boolean;
+    refetchOnWindowFocus: boolean;
+    forceRefresh?: boolean;
+  },
+  projectKey: string = "",
+) => {
   return useQuery({
-    queryKey: ["projects"],
+    // repos-list is scoped to the currently-impersonated tenant, so isolate the
+    // cache per project. Switching projects yields a query with no data for the new
+    // key -> isPending is true -> the loader shows instead of the previous project's list.
+    queryKey: ["projects", projectKey],
     queryFn: () => githubInfoService.getAllProjects(),
     retry: false,
     staleTime: options?.forceRefresh ? 0 : 5 * 60 * 1000,

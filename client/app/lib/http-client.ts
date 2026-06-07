@@ -111,7 +111,10 @@ class HttpClient {
       const refreshToken = isLocalhost ? authStore.refreshToken || '""' : '""';
       formData.append("refresh_token", refreshToken);
 
-      const url = `${this.baseURL}/api/Authentication/Token`;
+      // Token issuance/refresh is owned by the IDP, not the deployment API
+      // (the deployment backend no longer hosts an Authentication controller).
+      // Always refresh against the IDP's OAuth token endpoint.
+      const url = `${getRuntimeEnv("BLOCKS_IDP_BASE_URL")}/api/auth/Token`;
 
       const response = await fetch(url, {
         method: "POST",
@@ -352,7 +355,11 @@ export const serviceInstances = {
     getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || "",
   ),
   logicService: new HttpClient(
-    getRuntimeEnv("BLOCKS_LOGIC_APP_URL") || "",
+    // Logic app base URL. Use the standardized BLOCKS_LOGIC_BASE_URL key (the same
+    // one the app launcher uses); the legacy BLOCKS_LOGIC_BASE_URL isn't populated in
+    // current environments, which left this empty and made logic calls (e.g.
+    // Project/Gets) fall back to the current origin instead of the logic app.
+    getRuntimeEnv("BLOCKS_LOGIC_BASE_URL") || "",
     getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || "",
   ),
   idpService: new HttpClient(

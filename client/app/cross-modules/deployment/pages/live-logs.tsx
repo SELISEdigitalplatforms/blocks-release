@@ -85,7 +85,10 @@ const LiveLogs = () => {
             isSuccess={isSuccess}
             showStatus={false}
           />
-          <LiveDeploymentLogs buildId={buildIdStr} />
+          <LiveDeploymentLogs
+            buildId={buildIdStr}
+            historicalEvents={cardData?.events}
+          />
         </div>
       </div>
     </>

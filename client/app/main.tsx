@@ -13,6 +13,7 @@ import { NotificationHubListener } from "./cross-modules/communication/component
 import { router } from "./router";
 import "./styles/globals.css";
 import { TooltipProvider } from "./components/ui-kits/tooltip/tooltip";
+import { BlocksAppLayout } from "@seliseblocks/blocks-kit";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -20,7 +21,14 @@ createRoot(document.getElementById("root")!).render(
       <ThemeProvider>
         <TooltipProvider>
           <NuqsAdapter>
-            <RouterProvider router={router} />
+            <BlocksAppLayout
+              config={{
+                userBaseUrlKey: "BLOCKS_IDP_BASE_URL",
+                projectBaseUrlKey: "BLOCKS_API_BASE_URL",
+              }}
+            >
+              <RouterProvider router={router} />
+            </BlocksAppLayout>
             <Toaster />
             {/* <DeploymentHubListener /> */}
             <NotificationHubListener />

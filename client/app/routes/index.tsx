@@ -79,7 +79,10 @@ export const routes = [
                     <Outlet />
                   </ConsoleLayout>
                 ),
-                children: [{ path: "/console", element: <ConsolePage /> }],
+                children: [
+                  { path: "/console", element: <ConsolePage /> },
+                  { path: "/profile", element: <ProfilePage /> },
+                ],
               },
             ],
           },

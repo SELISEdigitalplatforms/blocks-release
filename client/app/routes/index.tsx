@@ -48,7 +48,7 @@ export const routes = [
           {
             path: "/login",
             children: [
-              { index: true, element: <LoginPage /> },
+              { index: true, element: <LoginPage name="blocks-release" /> },
               { path: "callback", element: <CallbackPage redirectUrl="/console" /> },
             ],
           },

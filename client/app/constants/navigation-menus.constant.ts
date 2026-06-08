@@ -1,5 +1,5 @@
 import { Menu } from "@/models/menu.model";
-import { GitBranch, Home } from "lucide-react";
+import { GitBranch, Home, Package } from "lucide-react";
 
 export const navigationMenus: Menu[] = [
   {
@@ -19,5 +19,13 @@ export const navigationMenus: Menu[] = [
     name: "Deployment",
     path: "/deployment",
     icon: GitBranch,
+  },
+  // Project-overview-scoped menu (shown only on /project-overview routes).
+  {
+    id: "environments",
+    type: "menu",
+    name: "Environments",
+    path: "/project-overview/environments",
+    icon: Package,
   },
 ];

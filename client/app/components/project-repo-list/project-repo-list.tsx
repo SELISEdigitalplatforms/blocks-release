@@ -3,9 +3,13 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Card, CardTitle } from "@/components/ui-kits/card/card";
 import { IProject } from "@blocks-identifier/models/project.model";
 import { Button } from "@/components/ui-kits/button/button";
+import { useProjectStore } from "@/store/project.store";
+import { useGetAllProjects } from "@blocks-deployment/hooks/use-github-info";
+import type { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
 
 // Lighter than the uds version: the edit-domain dialog (EditDomainForm) is not
-// ported here. Repositories for a project are managed on the /deployment page.
+// ported here. The repository list is fetched from the deployment repos-list
+// endpoint (scoped to the selected project's tenant).
 export const ProjectRepoList = ({
   project,
   isLoading,
@@ -13,7 +17,18 @@ export const ProjectRepoList = ({
   project?: IProject;
   isLoading: boolean;
 }) => {
-  if (isLoading) {
+  const projectKey = useProjectStore().selectedProject?.tenantId || "";
+  const { data: reposResponse, isPending: isReposLoading } = useGetAllProjects(
+    {
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+      forceRefresh: true,
+    },
+    projectKey,
+  );
+  const repositories: IRepoResponse[] = reposResponse?.data ?? [];
+
+  if (isLoading || isReposLoading) {
     return (
       <div className="mt-6 rounded-lg border bg-card px-2 py-2 shadow-sm md:mt-0">
         <div className="grid-col-1 grid gap-3 px-2 py-4 md:grid-cols-2 md:gap-4 lg:gap-6">
@@ -41,9 +56,34 @@ export const ProjectRepoList = ({
         </Button>
       </div>
       <div className="mt-4">
-        <div className="text-medium-emphasis">
-          No repositories found for this project.
-        </div>
+        {repositories.length === 0 ? (
+          <div className="text-medium-emphasis">
+            No repositories found for this project.
+          </div>
+        ) : (
+          <ul className="divide-y">
+            {repositories.map((repo) => (
+              <li
+                key={repo.itemId}
+                className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0"
+              >
+                <span className="font-medium">
+                  {repo.repoName?.split("/").pop() || repo.repoName}
+                </span>
+                {repo.repoUrl && (
+                  <a
+                    href={repo.repoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate text-sm text-blue-600 hover:underline"
+                  >
+                    {repo.repoUrl}
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </Card>
   );

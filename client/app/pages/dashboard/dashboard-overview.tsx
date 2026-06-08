@@ -2,8 +2,10 @@ import { useProjectStore } from "@/store/project.store";
 import { useGetProject } from "@blocks-identifier/hooks/use-project";
 import { ProjectDetail } from "@/components/project-detail/project-detail";
 import { ProjectRepoList } from "@/components/project-repo-list/project-repo-list";
-import { ProjectCliSnippet } from "@/components/project-cli-snippet/project-cli-snippet";
-import { GitCommandSnippet } from "@/components/git-command-snippet/git-command-snippet";
+// Frontend Setup commands (ProjectCliSnippet) and Git Commands (GitCommandSnippet)
+// are temporarily hidden. Re-enable by restoring the imports and the JSX below.
+// import { ProjectCliSnippet } from "@/components/project-cli-snippet/project-cli-snippet";
+// import { GitCommandSnippet } from "@/components/git-command-snippet/git-command-snippet";
 
 // Mirrors the uds Environment Overview layout (detail + repos + CLI + git
 // snippets). The uds ActionsListProject (archive/edit-project) and cName
@@ -21,8 +23,8 @@ export const DashboardOverview = () => {
       </div>
       <ProjectDetail project={data?.data} isLoading={isLoading} />
       <ProjectRepoList project={data?.data} isLoading={isLoading} />
-      <ProjectCliSnippet />
-      <GitCommandSnippet />
+      {/* <ProjectCliSnippet /> */}
+      {/* <GitCommandSnippet /> */}
     </main>
   );
 };

@@ -74,4 +74,17 @@ public class AuthController : ControllerBase
         }
         return BadRequest(response);
     }
+
+    [HttpGet]
+    public async Task<IActionResult> TestPing()
+    {
+        var response = new BaseApiResponse()
+        {
+            IsSuccess = true,
+            Message = "Pong",
+            StatusCode = HttpStatusCode.OK
+        };
+        return Ok(response);
+        
+    }
 }

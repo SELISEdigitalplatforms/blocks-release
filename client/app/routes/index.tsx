@@ -22,7 +22,7 @@ import { ProjectOverviewLayout } from "@/layouts/project-overview-layout";
 // import CallbackPage from "./callback";
 import { EnvironmentsPage } from "@/pages/environments/environments";
 import { DashboardOverview } from "@/pages/dashboard/dashboard-overview";
-import ProfilePage from "./dashboard/profile";
+import { ProfilePage } from "@seliseblocks/blocks-kit";
 import DeploymentPage from "./deployment/deployment";
 import DeploymentRepoDetailsPage from "./deployment/deployment-repo-details";
 import DeploymentLogsPage from "./deployment/deployment-logs";
@@ -48,7 +48,7 @@ export const routes = [
           {
             path: "/login",
             children: [
-              { index: true, element: <LoginPage name="blocks-release" /> },
+              { index: true, element: <LoginPage /> },
               { path: "callback", element: <CallbackPage redirectUrl="/console" /> },
             ],
           },

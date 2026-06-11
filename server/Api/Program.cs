@@ -13,6 +13,7 @@ var vaultType = ResolveVaultType();
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
 var cloudBuildSecret = await CloudBuildSecret.ProcessBlocksSecret(vaultType);
 var builder = WebApplication.CreateBuilder(args);
+ApplicationConfigurations.ConfigureApiEnv(builder, args);
 
 builder.Configuration.AddMongoDbConfiguration(options =>
 {
@@ -44,13 +45,9 @@ Directory.CreateDirectory(wwwrootPath);
 
 ApplyFrontendRuntimeSettings(builder.Configuration, wwwrootPath);
 
-services.AddEndpointsApiExplorer();
-services.AddBlocksSwagger(new BlocksSwaggerOptions
-{
-    Title = "Blocks Deployment API",
-    Version = "v1",
-    EnableBearerAuth = true
-});
+// Swagger is registered by ApplicationConfigurations from the "SwaggerOptions"
+// config section (see ConfigureApiEnv -> ConfigureServices -> ConfigureMiddleware),
+// mirroring the blocks-idp setup. No manual AddBlocksSwagger call is needed here.
 
 services.AddSignalR().AddJsonProtocol(options =>
 {

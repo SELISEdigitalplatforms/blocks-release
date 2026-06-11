@@ -43,7 +43,7 @@ namespace DeploymentDriver
             return MapResponse(response);
         }
 
-        public async Task<BaseApiResponse> GetReposListAsync(string projectKey)
+        public async Task<BaseApiResponse> GetReposListAsync()
         {
             var repoList = await _repoRepository.GetRepos();
             if (repoList != null)

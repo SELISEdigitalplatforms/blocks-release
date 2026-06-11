@@ -35,6 +35,6 @@ namespace DeploymentDriver
         /// </summary>
         /// <param name="projectKey">The project key used to scope the tenant context.</param>
         /// <returns>A response containing the list of repositories.</returns>
-        Task<BaseApiResponse> GetReposListAsync(string projectKey);
+        Task<BaseApiResponse> GetReposListAsync();
     }
 }

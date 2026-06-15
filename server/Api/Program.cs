@@ -8,13 +8,12 @@ using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Http.Features;
 using SeliseBlocks.ConfigurationDriver;
 
-var serviceName = "blocks-deployment-api";
+var serviceName = "blocks-release-api";
 var vaultType = ResolveVaultType();
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
 var cloudBuildSecret = await CloudBuildSecret.ProcessBlocksSecret(vaultType);
 var builder = WebApplication.CreateBuilder(args);
 ApplicationConfigurations.ConfigureApiEnv(builder, args);
-
 builder.Configuration.AddMongoDbConfiguration(options =>
 {
     options.ConnectionString = secret.DatabaseConnectionString;
@@ -38,7 +37,7 @@ services.AddHealthChecks();
 // IDP issues tokens whose service_access claim grants the canonical service name
 // "blocks-os". Genesis 10's HasServiceAccess check requires an exact match, so the
 // service-access resource name is set explicitly to "blocks-os" to accept those tokens.
-ApplicationConfigurations.ConfigureApi(services, serviceName, serviceAccessResourceName: "blocks-os");
+ApplicationConfigurations.ConfigureApi(services, serviceName, serviceAccessResourceName: "blocks-release");
 
 var wwwrootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
 Directory.CreateDirectory(wwwrootPath);

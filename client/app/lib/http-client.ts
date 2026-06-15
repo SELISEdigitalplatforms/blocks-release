@@ -59,12 +59,6 @@ class HttpClient {
     private BLOCKS_KEY: string,
   ) {}
 
-  private isLocalhost(): boolean {
-    return (
-      this.baseURL.includes("localhost") || this.baseURL.includes("127.0.0.1")
-    );
-  }
-
   private normalizeHeaders(
     headers?: HeadersInit,
     skipBlocksKey?: boolean,
@@ -74,14 +68,6 @@ class HttpClient {
       "Content-Type": "application/json",
       ...(!skipBlocksKey && { "X-Blocks-Key": this.BLOCKS_KEY }),
     });
-
-    // Add Authorization Bearer token for localhost
-    if (this.isLocalhost()) {
-      const accessToken = useAuthStore.getState().accessToken;
-      if (accessToken) {
-        normalizedHeaders.set("Authorization", `Bearer ${accessToken}`);
-      }
-    }
 
     if (headers) {
       if (headers instanceof Headers) {
@@ -102,14 +88,12 @@ class HttpClient {
     if (isRefreshing) return;
     isRefreshing = true;
     try {
-      const isLocalhost = this.isLocalhost();
-      const authStore = useAuthStore.getState();
       const formData = new URLSearchParams();
       formData.append("grant_type", "refresh_token");
 
-      // For localhost, use stored refresh token; for remote, use empty string (cookie-based)
-      const refreshToken = isLocalhost ? authStore.refreshToken || '""' : '""';
-      formData.append("refresh_token", refreshToken);
+      // Cookie-based refresh: the refresh token lives in an HttpOnly cookie sent
+      // with `credentials: "include"`, so the body value is an empty placeholder.
+      formData.append("refresh_token", '""');
 
       // Token issuance/refresh is owned by the IDP, not the deployment API
       // (the deployment backend no longer hosts an Authentication controller).
@@ -122,24 +106,12 @@ class HttpClient {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           "X-Blocks-Key": this.BLOCKS_KEY,
-          ...(isLocalhost &&
-            authStore.accessToken && {
-              Authorization: `Bearer ${authStore.accessToken}`,
-            }),
         },
-        credentials: isLocalhost ? "same-origin" : "include",
+        credentials: "include",
       });
 
       if (!response.ok) {
         throw new Error("Failed to refresh token");
-      }
-
-      // For localhost, save the new tokens
-      if (isLocalhost) {
-        const data = await response.json();
-        if (data.access_token && data.refresh_token) {
-          authStore.setTokens(data.access_token, data.refresh_token);
-        }
       }
 
       while (requestQueue.length > 0) {
@@ -179,12 +151,8 @@ class HttpClient {
     } = requestOption;
     const fullUrl = absoluteUrl ? url : `${this.baseURL}${url}`;
     const normalizedHeaders = this.normalizeHeaders(headers, skipBlocksKey);
-    // Use same-origin for localhost (token in header), include for remote (cookie-based)
-    const credentialsMode = this.isLocalhost()
-      ? "same-origin"
-      : withCredentials
-        ? "include"
-        : "same-origin";
+    // Cookie-based auth: send credentials cross-site unless explicitly opted out.
+    const credentialsMode = withCredentials ? "include" : "same-origin";
     const config: RequestInit = {
       method,
       headers: normalizedHeaders,
@@ -320,12 +288,8 @@ class HttpClient {
 
     const fullUrl = absoluteUrl ? url : `${this.baseURL}${url}`;
     const normalizedHeaders = this.normalizeHeaders(headers, skipBlocksKey);
-    // Use same-origin for localhost (token in header), include for remote (cookie-based)
-    const credentialsMode = this.isLocalhost()
-      ? "same-origin"
-      : withCredentials
-        ? "include"
-        : "same-origin";
+    // Cookie-based auth: send credentials cross-site unless explicitly opted out.
+    const credentialsMode = withCredentials ? "include" : "same-origin";
 
     const response = await fetch(fullUrl, {
       method: "POST",

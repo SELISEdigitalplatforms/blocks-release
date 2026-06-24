@@ -125,8 +125,8 @@ class HttpClient {
       // tab. Re-enable the reset+redirect once the root cause is fixed.
       console.error("[http-client] token refresh failed", _error);
       const queryClient = getQueryClient();
-      useAuthStore.getState().reset();
-      useProjectStore.getState().reset();
+      useAuthStore.getState().resetAuthStore();
+      useProjectStore.getState().resetProjectStore();
       queryClient.cancelQueries();
       queryClient.clear();
       window.location.href = "/login";

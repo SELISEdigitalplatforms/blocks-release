@@ -12,7 +12,8 @@ import {
   ConsolePage,
   ProjectOverviewLayout,
   DashboardLayout,
-  EnvironmentsPage
+  EnvironmentsPage,
+  DashboardOverview
   // blocks-kit DashboardLayout is a generic shell (expects sidebar/header/children
   // props), so the deployment dashboard uses the local DashboardLayout below.
   // DashboardLayout
@@ -24,7 +25,6 @@ import {
 // import LoginPage from "./auth/login";
 // import CallbackPage from "./callback";
 // import { EnvironmentsPage } from "@/pages/environments/environments";
-import { DashboardOverview } from "@/pages/dashboard/dashboard-overview";
 import { ProfilePage } from "@seliseblocks/blocks-kit";
 import DeploymentPage from "./deployment/deployment";
 import DeploymentRepoDetailsPage from "./deployment/deployment-repo-details";

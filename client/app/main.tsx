@@ -25,11 +25,6 @@ createRoot(document.getElementById("root")!).render(
             <BlocksAppLayout
               config={{
                 name: "blocks-release",
-                userBaseUrlKey: "BLOCKS_IDP_BASE_URL",
-                // Projects are owned by the logic app, so blocks-kit's ConsolePage
-                // (useGetProjects) must read the logic base URL, not the deployment
-                // API (which is the current origin / dev-release).
-                projectBaseUrlKey: "BLOCKS_LOGIC_BASE_URL",
                 appLogoUrl:{
                   dark: "/Logo_Dark.svg",
                   light: "/Logo_Light.svg",

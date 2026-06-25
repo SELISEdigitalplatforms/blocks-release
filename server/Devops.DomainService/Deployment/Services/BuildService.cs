@@ -106,7 +106,7 @@ public class BuildService : IBuildService
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Failed to push data to queue.");
+                _logger.LogError($"Failed to push data to queue. Error: {ex.Message}");
             }
             //_ = Task.Run(async () =>
             //{

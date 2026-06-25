@@ -6,7 +6,7 @@ import {
 } from "@microsoft/signalr";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 
-const HUB_PATH = "/NotificationHub";
+const HUB_PATH = "/api/NotificationHub";
 
 let connection: HubConnection | null = null;
 let startPromise: Promise<void> | null = null;

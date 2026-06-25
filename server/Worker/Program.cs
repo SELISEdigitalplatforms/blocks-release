@@ -10,7 +10,7 @@ using Worker.Configuration;
 using Worker.Consumers;
 using SeliseBlocks.ConfigurationDriver;
 
-const string _serviceName = "blocks-deployment-worker";
+const string _serviceName = "blocks-release-worker";
 
 var vaultType = ResolveVaultType();
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(_serviceName, vaultType);

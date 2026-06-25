@@ -10,23 +10,33 @@ import {
   CallbackPage,
   ConsoleLayout,
   ConsolePage,
+  ProjectOverviewLayout,
+  DashboardLayout,
+  EnvironmentsPage,
+  DashboardOverview
   // blocks-kit DashboardLayout is a generic shell (expects sidebar/header/children
   // props), so the deployment dashboard uses the local DashboardLayout below.
   // DashboardLayout
 } from "@seliseblocks/blocks-kit";
-import { DashboardLayout } from "@/layouts/dashboard-layout/dashboard-layout";
-import { ProjectOverviewLayout } from "@/layouts/project-overview-layout";
+// import { DashboardLayout } from "@/layouts/dashboard-layout/dashboard-layout";
+// import { ProjectOverviewLayout } from "@/layouts/project-overview-layout";
 // import { ConsoleLayout } from "@/layouts/console-layout/console-layout";
 // import { Console } from "@/pages/console/console";
 // import LoginPage from "./auth/login";
 // import CallbackPage from "./callback";
-import { EnvironmentsPage } from "@/pages/environments/environments";
-import { DashboardOverview } from "@/pages/dashboard/dashboard-overview";
+// import { EnvironmentsPage } from "@/pages/environments/environments";
 import { ProfilePage } from "@seliseblocks/blocks-kit";
 import DeploymentPage from "./deployment/deployment";
 import DeploymentRepoDetailsPage from "./deployment/deployment-repo-details";
 import DeploymentLogsPage from "./deployment/deployment-logs";
 import DeploymentLivePage from "./deployment/deployment-live";
+import { navigationMenus } from "@/constants/navigation-menus.constant";
+
+
+const redirectPaths: Record<string, string> = {
+  "/release/monitor/*": "/release",
+  "/release/monitor/incidents/*": "/release",
+};
 
 export const routes = [
   {
@@ -97,7 +107,13 @@ export const routes = [
             ),
             children: [
               {
-                element: <DashboardLayout />,
+                element:  (
+                  <DashboardLayout
+                    redirectPaths={redirectPaths}
+                    navigationMenus={navigationMenus}>
+                    <Outlet />
+                  </DashboardLayout>
+                ),
                 children: [
                   { path: "/dashboard", element: <DashboardOverview /> },
                   { path: "/deployment", element: <DeploymentPage /> },
@@ -121,7 +137,13 @@ export const routes = [
           // Project overview: environments listing for the selected project group.
           {
             path: "/project-overview",
-            element: <ProjectOverviewLayout />,
+            element: (
+                  <ProjectOverviewLayout
+                    redirectPaths={redirectPaths}
+                    navigationMenus={navigationMenus}>
+                    <Outlet />
+                  </ProjectOverviewLayout>
+                ),
             children: [
               { path: "environments", element: <EnvironmentsPage /> },
             ],

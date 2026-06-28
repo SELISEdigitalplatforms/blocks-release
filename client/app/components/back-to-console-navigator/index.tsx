@@ -3,7 +3,7 @@ import { Button } from "@/components/ui-kits/button/button";
 
 export function BackToConsoleNavigator() {
   return (
-    <Link to="/console">
+    <Link to="/app/console">
       <Button
         variant="outline"
         className="bg-transparent hover:bg-slate-200 dark:hover:bg-gray-800"

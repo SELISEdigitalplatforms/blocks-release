@@ -56,28 +56,6 @@ public class BuildController : ControllerBase
         });
     }
 
-    [HttpGet("repos")]
-    [Authorize]
-    public async Task<IActionResult> GetRepos([FromQuery] string ProjectKey)
-    {
-        var repoWithBuilds = await _buildService.GetRepos(ProjectKey);
-        if(repoWithBuilds != null)
-        {
-            return Ok(new BaseApiResponse()
-            {
-                Data = repoWithBuilds,
-                IsSuccess = true,
-                StatusCode = HttpStatusCode.OK
-            });
-        }
-            
-        return BadRequest(new BaseApiResponse()
-        {
-            IsSuccess = false,
-            Message = "Failed to get repos.",
-        });
-    }
-
     [HttpGet("repos-list")]
     [Authorize]
     public async Task<IActionResult> GetReposList()

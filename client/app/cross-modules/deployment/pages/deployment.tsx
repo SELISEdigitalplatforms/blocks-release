@@ -15,7 +15,7 @@ const Deployment = () => {
 
   useEffect(() => {
     if (searchParams.get("refresh")) {
-      navigate("/deployment", { replace: true });
+      navigate("/app/deployment", { replace: true });
       setRefreshKey((prev) => prev + 1);
     }
   }, [searchParams, navigate]);

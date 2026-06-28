@@ -20,7 +20,7 @@ export const NoBranch = ({ projectEnvironment }: { projectEnvironment: string })
                     Please create a repository with ${projectEnvironment} environment or select the proper environment from above.`}
               </p>
             </div>
-            <Button onClick={() => navigate("/project-overview")} size={"sm"}>
+            <Button onClick={() => navigate("/app/project-overview")} size={"sm"}>
               Go to Deployment Overview
             </Button>
           </div>

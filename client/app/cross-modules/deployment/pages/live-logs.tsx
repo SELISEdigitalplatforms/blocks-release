@@ -37,7 +37,7 @@ const LiveLogs = () => {
       const errorResponse = httpError.errors;
 
       if (errorResponse.data === null && errorResponse.isSuccess === false) {
-        navigate("/deployment");
+        navigate("/app/deployment");
       }
     }
   }, [isError, error, navigate]);
@@ -59,7 +59,7 @@ const LiveLogs = () => {
   }, [isError]);
 
   const handleSubmit = () => {
-    navigate(`/deployment/repo/${repoId}?refresh=true`);
+    navigate(`/app/deployment/repo/${repoId}?refresh=true`);
   };
 
   return (

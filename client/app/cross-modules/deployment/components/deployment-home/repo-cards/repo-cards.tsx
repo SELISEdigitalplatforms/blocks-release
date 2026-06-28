@@ -108,7 +108,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
   const handleSuccess = () => {
     setShowBranchModal(false);
     setIsLoading(false);
-    navigate(`/deployment/repo/${repo.itemId}`);
+    navigate(`/app/deployment/repo/${repo.itemId}`);
   };
 
   const handleApiComplete = () => {

@@ -8,7 +8,7 @@ export function useFilteredMenus(menus: Menu[]): Menu[] {
   return useMemo(() => {
     const blockedMenu = import.meta.env.BLOCKS_BLOCKED_MENU || "[]";
     let parsedBlockedMenu: string[] = [];
-    const isProjectOverviewRoute = pathname.startsWith("/project-overview");
+    const isProjectOverviewRoute = pathname.startsWith("/app/project-overview");
     const projectOverviewMenuIds = new Set([
       "environments",
       "people",

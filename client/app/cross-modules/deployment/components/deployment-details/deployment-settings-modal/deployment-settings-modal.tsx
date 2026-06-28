@@ -109,7 +109,7 @@ const DeploymentSettingsModal = ({
         errorResponse.data?.repo === null &&
         errorResponse.isSuccess === false
       ) {
-        navigate("/deployment");
+        navigate("/app/deployment");
       }
     }
   }, [isError, error, navigate]);

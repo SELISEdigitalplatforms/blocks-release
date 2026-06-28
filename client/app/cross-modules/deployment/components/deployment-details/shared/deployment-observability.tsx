@@ -43,13 +43,13 @@ const DeploymentObservability = ({
   ) => {
     event.stopPropagation();
     navigate(
-      `/deployment/repo/${repoId}/deployment-logs/${buildId}?tab=${action.toLowerCase()}`,
+      `/app/deployment/repo/${repoId}/deployment-logs/${buildId}?tab=${action.toLowerCase()}`,
     );
   };
 
   const handleDeployedItem = (repoId: string, buildId: string) => {
     navigate(
-      `/deployment/repo/${repoId}/deployment-logs/${buildId}?tab=deployment-logs`,
+      `/app/deployment/repo/${repoId}/deployment-logs/${buildId}?tab=deployment-logs`,
     );
   };
 

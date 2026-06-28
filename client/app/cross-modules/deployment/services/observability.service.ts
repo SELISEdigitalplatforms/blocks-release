@@ -15,8 +15,8 @@ class ObservabilityService {
     const url = `${CLOUD_BUILD_ENDPOINTS.PROCESS_DEPENDENCY_TRACK_USER}?buildId=${encodeURIComponent(buildId)}`;
     return this.httpClient.get(url);
   }
-  async SASTRedirect(buildId: string, projectKey: string): Promise<string> {
-    const url = `${CLOUD_BUILD_ENDPOINTS.PROCESS_SONARQUBE_USER}?ProjectKey=${encodeURIComponent(projectKey)}&buildId=${encodeURIComponent(buildId)}`;
+  async SASTRedirect(buildId: string): Promise<string> {
+    const url = `${CLOUD_BUILD_ENDPOINTS.PROCESS_SONARQUBE_USER}?buildId=${encodeURIComponent(buildId)}`;
     return this.httpClient.get(url);
   }
 }

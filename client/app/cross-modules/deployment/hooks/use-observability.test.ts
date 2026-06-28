@@ -10,7 +10,6 @@ import { useProjectStore } from "@/modules/identifier/state/use-project-store";
 import {
   useGetSASTData,
   useGetSCALibraryData,
-  useGetSCADContainerData,
   useSCARedirectLink,
   useSASTRedirectLink,
 } from "./observability";
@@ -92,31 +91,6 @@ describe("Observability Hooks", () => {
     });
   });
 
-  // ─── useGetSCADContainerData ───────────────────────────────────────────────
-
-  describe("useGetSCADContainerData", () => {
-    it("should fetch SCA container data successfully", async () => {
-      vi.mocked(observabilityService.SCAData).mockResolvedValue(
-        "sca-container-report",
-      );
-
-      const { result } = renderHook(
-        () => useGetSCADContainerData(MOCK_BUILD_ID),
-        {
-          wrapper: createWrapper(),
-        },
-      );
-
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(result.current.data).toBe("sca-container-report");
-      expect(observabilityService.SCAData).toHaveBeenCalledWith(
-        MOCK_BUILD_ID,
-        TEST_PROJECT_KEY,
-        "container",
-      );
-    });
-  });
-
   // ─── useSASTRedirectLink ───────────────────────────────────────────────────
 
   describe("useSASTRedirectLink", () => {
@@ -133,7 +107,6 @@ describe("Observability Hooks", () => {
       expect(result.current.data).toBe("sast-redirect-url");
       expect(observabilityService.SASTRedirect).toHaveBeenCalledWith(
         MOCK_BUILD_ID,
-        TEST_PROJECT_KEY,
       );
     });
   });

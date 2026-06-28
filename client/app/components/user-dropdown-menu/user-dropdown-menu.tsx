@@ -53,7 +53,7 @@ export function UserDropdownMenu() {
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link to="/profile">My profile</Link>
+            <Link to="/app/profile">My profile</Link>
           </DropdownMenuItem>
           <DropdownMenuItem disabled>Privacy</DropdownMenuItem>
           <DropdownMenuItem disabled>Support</DropdownMenuItem>

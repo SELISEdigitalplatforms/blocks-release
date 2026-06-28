@@ -51,7 +51,7 @@ const DeploymentInstruction = () => {
               Repository.
             </DialogDescription>
           </DialogHeader>
-          <ProviderButtons destination={"/deployment/configure"} />
+          <ProviderButtons destination={"/app/deployment/configure"} />
         </DialogContent>
       </Dialog>
     </div>

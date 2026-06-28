@@ -34,8 +34,8 @@ import { navigationMenus } from "@/constants/navigation-menus.constant";
 
 
 const redirectPaths: Record<string, string> = {
-  "/release/monitor/*": "/release",
-  "/release/monitor/incidents/*": "/release",
+  "/app/release/monitor/*": "/app/release",
+  "/app/release/monitor/incidents/*": "/app/release",
 };
 
 export const routes = [
@@ -59,14 +59,18 @@ export const routes = [
             path: "/login",
             children: [
               { index: true, element: <LoginPage /> },
-              { path: "callback", element: <CallbackPage redirectUrl="/console" /> },
+              {
+                path: "callback",
+                element: <CallbackPage defaultRedirectUrl="/app/console" />,
+              },
             ],
           },
         ],
       },
 
-      // ── Protected routes ──
+      // ── Protected routes ── (all live under the /app prefix)
       {
+        path: "/app",
         element: (
           <ProtectedGuard>
             <Outlet />
@@ -90,8 +94,8 @@ export const routes = [
                   </ConsoleLayout>
                 ),
                 children: [
-                  { path: "/console", element: <ConsolePage /> },
-                  { path: "/profile", element: <ProfilePage /> },
+                  { path: "console", element: <ConsolePage /> },
+                  { path: "profile", element: <ProfilePage /> },
                 ],
               },
             ],
@@ -115,28 +119,28 @@ export const routes = [
                   </DashboardLayout>
                 ),
                 children: [
-                  { path: "/dashboard", element: <DashboardOverview /> },
-                  { path: "/deployment", element: <DeploymentPage /> },
+                  { path: "dashboard", element: <DashboardOverview /> },
+                  { path: "deployment", element: <DeploymentPage /> },
                   {
-                    path: "/deployment/repo/:repoId",
+                    path: "deployment/repo/:repoId",
                     element: <DeploymentRepoDetailsPage />,
                   },
                   {
-                    path: "/deployment/repo/:repoId/deployment-logs/:buildId",
+                    path: "deployment/repo/:repoId/deployment-logs/:buildId",
                     element: <DeploymentLogsPage />,
                   },
                   {
-                    path: "/deployment/repo/:repoId/deployment-live/:buildId",
+                    path: "deployment/repo/:repoId/deployment-live/:buildId",
                     element: <DeploymentLivePage />,
                   },
-                  { path: "/profile", element: <ProfilePage /> },
+                  { path: "profile", element: <ProfilePage /> },
                 ],
               },
             ],
           },
           // Project overview: environments listing for the selected project group.
           {
-            path: "/project-overview",
+            path: "project-overview",
             element: (
                   <ProjectOverviewLayout
                     redirectPaths={redirectPaths}
@@ -151,7 +155,7 @@ export const routes = [
         ],
       },
 
-      { path: "/", element: <Navigate to="/console" replace /> },
+      { path: "/", element: <Navigate to="/app/console" replace /> },
       // ── Catch-all: redirect to login ──
       { path: "*", element: <Navigate to="/login" replace /> },
     ],

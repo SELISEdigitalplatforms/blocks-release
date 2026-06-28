@@ -4,7 +4,6 @@ import { http } from "@/lib/http-client";
 import { CLOUD_BUILD_ENDPOINTS } from "@blocks-deployment/constants/endpoint.constant";
 import { observabilityService } from "./observability.service";
 import { MOCK_BUILD_ID } from "../test-utils/__mocks__";
-import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
 
 vi.mock("@/lib/http-client", () => mockHttpClientFactory());
 
@@ -58,16 +57,13 @@ describe("ObservabilityService", () => {
   // ─── SASTRedirect ──────────────────────────────────────────────────────────
 
   describe("SASTRedirect", () => {
-    it("should call correct endpoint with buildId and projectKey", async () => {
+    it("should call correct endpoint with buildId", async () => {
       const mockResponse = "redirect-url";
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
-      const result = await observabilityService.SASTRedirect(
-        MOCK_BUILD_ID,
-        TEST_PROJECT_KEY,
-      );
+      const result = await observabilityService.SASTRedirect(MOCK_BUILD_ID);
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.PROCESS_SONARQUBE_USER}?ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}&buildId=${encodeURIComponent(MOCK_BUILD_ID)}`;
+      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.PROCESS_SONARQUBE_USER}?buildId=${encodeURIComponent(MOCK_BUILD_ID)}`;
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockResponse);
     });

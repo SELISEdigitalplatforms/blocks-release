@@ -17,7 +17,7 @@ import { IProject } from "@blocks-identifier/models/project.model";
 import { useProjectStore } from "@/store/project.store";
 
 const redirectPaths: Record<string, string> = {
-  "/deployment/repo/*": "/deployment",
+  "/app/deployment/repo/*": "/app/deployment",
 };
 
 const wildcardToRegex = (pattern: string) => {

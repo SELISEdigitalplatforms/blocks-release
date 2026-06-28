@@ -20,7 +20,7 @@ export const NoDeploymentAvailable = () => {
                 first deployment.
               </p>
             </div>
-            <Button onClick={() => navigate("/project-overview")} size={"sm"}>
+            <Button onClick={() => navigate("/app/project-overview")} size={"sm"}>
               Go to project overview
             </Button>
           </div>

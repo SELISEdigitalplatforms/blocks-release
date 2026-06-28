@@ -54,7 +54,7 @@ namespace Api.Controllers
 
         [HttpGet]
         [Authorize]
-        public async Task<IActionResult> ProcessSonarQubeUser([FromQuery] string ProjectKey, string buildId)
+        public async Task<IActionResult> ProcessSonarQubeUser([FromQuery] string buildId)
         {
             var userId = BlocksContext.GetContext()?.UserId;
             var user = await _tokenRepository.GetUserByIdAsync(userId);
@@ -68,7 +68,7 @@ namespace Api.Controllers
                     Message = "Invalid buildId"
                 });
             }
-            bool result = await _sonarQubeAuthService.ProcessSonarQubeUser(userName, build.RepoName, ProjectKey);
+            bool result = await _sonarQubeAuthService.ProcessSonarQubeUser(userName, build.RepoName, build.ProjectId);
             return Ok(new BaseResponse()
             {
                 IsSuccess = result

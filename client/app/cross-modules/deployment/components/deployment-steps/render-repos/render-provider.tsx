@@ -32,8 +32,8 @@ const ProviderButtons = ({
   const { data: verifyAuth } = useValidateAuthorization();
   const [, setSelectedProvider] = useState<string | null>(null);
   if (!destination || destination === "") {
-    localStorage.setItem("destination", "/deployment/configure");
-    destination = "/deployment/configure";
+    localStorage.setItem("destination", "/app/deployment/configure");
+    destination = "/app/deployment/configure";
   } else {
     localStorage.setItem("destination", destination);
   }

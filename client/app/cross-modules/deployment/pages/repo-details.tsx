@@ -150,7 +150,7 @@ export default function RepoDetails() {
         errorResponse.data?.repo === null &&
         errorResponse.isSuccess === false
       ) {
-        navigate("/deployment");
+        navigate("/app/deployment");
       }
     }
   }, [isError, error, navigate]);
@@ -170,7 +170,7 @@ export default function RepoDetails() {
       });
 
       const redirectTimer = setTimeout(() => {
-        navigate("/project-overview");
+        navigate("/app/project-overview");
       }, 5000);
 
       return () => clearTimeout(redirectTimer);
@@ -212,7 +212,7 @@ export default function RepoDetails() {
   }, [filteredBuilds]);
 
   const handleGoBack = () => {
-    navigate("/deployment");
+    navigate("/app/deployment");
   };
 
   const handleDeploy = (e: React.MouseEvent) => {
@@ -239,11 +239,11 @@ export default function RepoDetails() {
         onSuccess: (deployResponse) => {
           if (deployResponse && deployResponse.buildId) {
             navigate(
-              `/deployment/repo/${repoId}/deployment-live/${deployResponse.buildId}`,
+              `/app/deployment/repo/${repoId}/deployment-live/${deployResponse.buildId}`,
             );
             setIsDeploying(false);
           } else {
-            navigate("/deployment");
+            navigate("/app/deployment");
             setIsDeploying(false);
           }
           setIsSettingsModalOpen(false);
@@ -283,11 +283,11 @@ export default function RepoDetails() {
         onSuccess: (response) => {
           if (response && response.buildId) {
             navigate(
-              `/deployment/repo/${repoId}/deployment-live/${response.buildId}`,
+              `/app/deployment/repo/${repoId}/deployment-live/${response.buildId}`,
             );
             setIsDeploying(false);
           } else {
-            navigate("/deployment");
+            navigate("/app/deployment");
             setIsDeploying(false);
           }
           setIsModalOpen(false);

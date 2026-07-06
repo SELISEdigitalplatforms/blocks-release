@@ -151,7 +151,7 @@ static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string we
                 || ext.Equals(".css", StringComparison.OrdinalIgnoreCase)
                 || ext.Equals(".json", StringComparison.OrdinalIgnoreCase);
         });
-
+    Console.WriteLine("Replacing Index html");
     foreach (var filePath in files)
     {
         var content = File.ReadAllText(filePath);

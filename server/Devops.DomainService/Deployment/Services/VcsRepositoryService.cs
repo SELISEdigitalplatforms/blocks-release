@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using Blocks.Genesis;
 using Microsoft.Extensions.Logging;
 
 using Devops.DomainService.Shared.Entities;
@@ -161,10 +162,11 @@ public class VcsRepositoryService
         try
         {
 
-            if (request?.repoWithDomains == null || string.IsNullOrWhiteSpace(request.ProjectKey))
+            var projectId = BlocksContext.GetContext()?.TenantId;
+            if (request?.repoWithDomains == null || string.IsNullOrWhiteSpace(projectId))
                 return result;
 
-            var existingDomains = await _repoRepository.GetRepoCustomDomainsAsync(request.repoWithDomains, request.ProjectKey);
+            var existingDomains = await _repoRepository.GetRepoCustomDomainsAsync(request.repoWithDomains, projectId);
 
             foreach (var repo in request.repoWithDomains)
             {
@@ -173,7 +175,7 @@ public class VcsRepositoryService
 
                 var existing = existingDomains.FirstOrDefault(e =>
                     e.RepoId == repo.RepoId &&
-                    e.ProjectId == request.ProjectKey &&
+                    e.ProjectId == projectId &&
                     e.ProjectEnv == request.ProjectEnv
                 );
 
@@ -187,7 +189,7 @@ public class VcsRepositoryService
                     var domainEntry = new RepoCustomDomain
                     {
                         ItemId = Guid.NewGuid().ToString(),
-                        ProjectId = request.ProjectKey,
+                        ProjectId = projectId,
                         ProjectEnv = request.ProjectEnv,
                         RepoId = repo.RepoId,
                         RepoUrl = repo.RepoUrl,

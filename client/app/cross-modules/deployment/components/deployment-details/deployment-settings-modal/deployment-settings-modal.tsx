@@ -47,7 +47,6 @@ const DeploymentSettingsModal = ({
 }: IDeploymentSettingsModalProps) => {
   const navigate = useNavigate();
 
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const projectEnvironment =
     useProjectStore().selectedProject?.environment || "";
   const projectName = useProjectStore().selectedProject?.name || "";
@@ -204,7 +203,6 @@ const DeploymentSettingsModal = ({
         regionId: deploymentData.regionId,
         machineConfigId: deploymentData.machineConfigId,
         deploymentType: deploymentData.deploymentType,
-        projectKey: projectKey,
         projectEnv: projectEnvironment,
         projectName: projectName,
       };

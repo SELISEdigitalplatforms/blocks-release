@@ -26,9 +26,6 @@ namespace Devops.DomainService.Validators
                 .Must(uri => Uri.IsWellFormedUriString(uri, UriKind.Absolute))
                 .WithMessage("Invalid deployment URL.");
 
-            RuleFor(x => x.ProjectKey)
-                .NotEmpty().WithMessage("Project Key is required.");
-
             RuleFor(x => x.hostingProviderId)
                 .NotEmpty().WithMessage("Hosting Provider ID is required.");
 

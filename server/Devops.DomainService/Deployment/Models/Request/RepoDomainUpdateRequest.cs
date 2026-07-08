@@ -1,10 +1,7 @@
-﻿using Blocks.Genesis;
-
 namespace Devops.DomainService.Deployment.Models.Request
 {
-    public class RepoDomainUpdateRequest: IProjectKey
+    public class RepoDomainUpdateRequest
     {
-        public string ProjectKey { get; set; }
         public string ProjectEnv { get; set; }
         public List<RepoWithDomain> repoWithDomains {  get; set; }
     }

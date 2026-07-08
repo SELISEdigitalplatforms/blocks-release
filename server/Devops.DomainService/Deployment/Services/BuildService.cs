@@ -255,7 +255,6 @@ public class BuildService : IBuildService
                 repoUrl = repo.RepoUrl,
                 branch = repo.Branch,
                 deploymentUrl = repo.DefaultDeploymentUrl,
-                ProjectKey = repo.ProjectId,
                 projectName = repo.ProjectName,
                 hostingProviderId = repo?.DeploySettings?.HostingProvider.Id,
                 regionId = repo?.DeploySettings?.Region.Id,
@@ -296,7 +295,6 @@ public class BuildService : IBuildService
                     repoUrl = repo.RepoUrl,
                     branch = repo.Branch,
                     deploymentUrl = repo.DefaultDeploymentUrl,
-                    ProjectKey = repo.ProjectId,
                     projectName = repo.ProjectName,
                     hostingProviderId = repo?.DeploySettings?.HostingProvider?.Id ?? request.hostingProviderId,
                     regionId = repo?.DeploySettings?.Region?.Id ?? request.regionId,
@@ -327,6 +325,16 @@ public class BuildService : IBuildService
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(BlocksContext.GetContext()?.TenantId))
+            {
+                return new BuildResponse
+                {
+                    IsSuccess = false,
+                    Message = "Tenant context not found.",
+                    StatusCode = HttpStatusCode.BadRequest
+                };
+            }
+
             var validationResult = await _repoDomainUpdateRequestValidator.ValidateAsync(request);
 
             if (!validationResult.IsValid)
@@ -375,10 +383,11 @@ public class BuildService : IBuildService
     {
         var result = new List<RepoCustomDomain>();
 
-        if (request?.repoWithDomains == null || string.IsNullOrWhiteSpace(request.ProjectKey))
+        var projectId = BlocksContext.GetContext()?.TenantId;
+        if (request?.repoWithDomains == null || string.IsNullOrWhiteSpace(projectId))
             return result;
 
-        var existingDomains = await _repoRepository.GetRepoCustomDomainsAsync(request.repoWithDomains, request.ProjectKey);
+        var existingDomains = await _repoRepository.GetRepoCustomDomainsAsync(request.repoWithDomains, projectId);
 
         foreach (var repo in request.repoWithDomains)
         {
@@ -387,7 +396,7 @@ public class BuildService : IBuildService
 
             var existing = existingDomains.FirstOrDefault(e =>
                 e.RepoId == repo.RepoId &&
-                e.ProjectId == request.ProjectKey &&
+                e.ProjectId == projectId &&
                 e.ProjectEnv == request.ProjectEnv
             );
 
@@ -401,7 +410,7 @@ public class BuildService : IBuildService
                 var domainEntry = new RepoCustomDomain
                 {
                     ItemId = Guid.NewGuid().ToString(),
-                    ProjectId = request.ProjectKey,
+                    ProjectId = projectId,
                     ProjectEnv = request.ProjectEnv,
                     RepoId = repo.RepoId,
                     RepoUrl = repo.RepoUrl,
@@ -453,7 +462,6 @@ public class BuildService : IBuildService
                         repoUrl = repo.RepoUrl,
                         branch = repo.Branch,
                         deploymentUrl = repo.DefaultDeploymentUrl,
-                        ProjectKey = repo.ProjectId,
                         projectName = repo.ProjectName,
                         hostingProviderId = repo?.DeploySettings?.HostingProvider.Id,
                         regionId = repo?.DeploySettings?.Region.Id,

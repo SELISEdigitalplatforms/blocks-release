@@ -125,7 +125,7 @@ public class BuildController : ControllerBase
     public async Task<BaseApiResponse> RepoDomainUpdateRequest([FromBody] RepoDomainUpdateRequest request)
     {
         return await _buildService.UpdateRepoDomain(request);
-  
+
     }
 
     [HttpPost("run-build")]
@@ -198,17 +198,17 @@ public class BuildController : ControllerBase
         });
     }
 
-    [ApiExplorerSettings(IgnoreApi = true)]
-    [HttpGet("DatagatewayPipelineInitiate")]
-    [Authorize]
-    public async Task<IActionResult> DatagatewayPipelineInitiate([FromQuery] string projectKey)
-    {
-        var result = await _dataGatewayDeploymentService.InitiateManualDataGatewayInstanceCreation(projectKey);
-        if (result)
-        {
-            return Ok(result);
-        }
-        return BadRequest(result);
-    }
+    //[ApiExplorerSettings(IgnoreApi = true)]
+    //[HttpGet("DatagatewayPipelineInitiate")]
+    //[Authorize]
+    //public async Task<IActionResult> DatagatewayPipelineInitiate()
+    //{
+    //    var result = await _dataGatewayDeploymentService.InitiateManualDataGatewayInstanceCreation();
+    //    if (result)
+    //    {
+    //        return Ok(result);
+    //    }
+    //    return BadRequest(result);
+    //}
 
 }

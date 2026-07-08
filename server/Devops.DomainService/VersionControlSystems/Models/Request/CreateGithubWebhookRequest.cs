@@ -1,8 +1,6 @@
-using Devops.DomainService.Deployment.Models.Request;
-
 namespace Devops.DomainService.VersionControlSystems.Models.Request;
 
-public class CreateGithubWebhookRequest : ProjectKeyQuery
+public class CreateGithubWebhookRequest
 {
     public string repoName { get; set; }
 }

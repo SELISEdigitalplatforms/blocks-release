@@ -227,7 +227,6 @@ export default function RepoDetails() {
     initialDeploy(
       {
         repoId: repoId,
-        projectKey: projectKey,
         projectEnv: projectEnvironment,
         projectName: projectName,
         deploymentType: deploymentData.deploymentType,
@@ -277,7 +276,6 @@ export default function RepoDetails() {
     deployManually(
       {
         repoId: repoId,
-        projectKey: projectKey,
       },
       {
         onSuccess: (response) => {

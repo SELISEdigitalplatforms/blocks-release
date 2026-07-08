@@ -17,7 +17,7 @@ import {
 
 export class GithubInfoService {
   private readonly httpClient = serviceInstances.deploymentService;
-  async verifyAuthorization(code: string, projectKey: string): Promise<string> {
+  async verifyAuthorization(code: string): Promise<string> {
     const url = `${CLOUD_BUILD_ENDPOINTS.ACCESS_TOKEN}?code=${encodeURIComponent(code)}`;
     return this.httpClient.get(url);
   }
@@ -106,16 +106,12 @@ export class GithubInfoService {
     return this.httpClient.get(url);
   }
 
-  async getAllRepos(
-    projectKey: string,
-  ): Promise<CardRepoAndBranchesResponse[]> {
-    const url = `${CLOUD_BUILD_ENDPOINTS.REPOS}?ProjectKey=${encodeURIComponent(projectKey)}`;
-    return this.httpClient.get(url);
+  async getAllRepos(): Promise<CardRepoAndBranchesResponse[]> {
+    return this.httpClient.get(CLOUD_BUILD_ENDPOINTS.REPOS);
   }
 
-  async getAllRepoBuilds(projectKey: string): Promise<any> {
-    const url = `${CLOUD_BUILD_ENDPOINTS.REPOS}?ProjectKey=${encodeURIComponent(projectKey)}`;
-    return this.httpClient.get(url);
+  async getAllRepoBuilds(): Promise<any> {
+    return this.httpClient.get(CLOUD_BUILD_ENDPOINTS.REPOS);
   }
 
   async getAllProjects(): Promise<any> {
@@ -142,11 +138,8 @@ export class GithubInfoService {
     return this.httpClient.post(url, payload);
   }
 
-  async getBuildLogs(
-    repoId: string,
-    projectKey: string,
-  ): Promise<IBuildApiResponse> {
-    const url = `${CLOUD_BUILD_ENDPOINTS.RUN_BUILD}?repoId=${repoId}&ProjectKey=${encodeURIComponent(projectKey)}`;
+  async getBuildLogs(repoId: string): Promise<IBuildApiResponse> {
+    const url = `${CLOUD_BUILD_ENDPOINTS.RUN_BUILD}?repoId=${repoId}`;
     return this.httpClient.get(url);
   }
 

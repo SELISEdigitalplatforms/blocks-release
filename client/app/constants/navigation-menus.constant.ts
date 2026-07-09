@@ -20,12 +20,13 @@ export const navigationMenus: Menu[] = [
     path: "/app/deployment",
     icon: GitBranch,
   },
-  // Project-overview-scoped menu (shown only on /project-overview routes).
+  // Project-overview-scoped menu (shown only on /app/project routes).
+  // Kept id-less: ProjectOverviewRoute injects the :tenantGroupId at render time.
   {
     id: "environments",
     type: "menu",
     name: "Environments",
-    path: "/app/project-overview/environments",
+    path: "/app/project/environments",
     icon: Package,
   },
 ];

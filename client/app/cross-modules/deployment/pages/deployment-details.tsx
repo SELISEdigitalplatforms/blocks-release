@@ -17,6 +17,7 @@ import {
 } from "@blocks-deployment/models/live-logs";
 import ComingSoonTab from "@blocks-deployment/components/deployment-details/tabs/coming-soon";
 import { IHttpError } from "@blocks-deployment/models/github-info";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 
 export interface IDeploymentEvent {
   id: string;
@@ -66,6 +67,7 @@ export interface IDeploymentResponse {
 
 const DeploymentDetails = () => {
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const { repoId, buildId } = useParams();
   const [searchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
@@ -101,7 +103,7 @@ const DeploymentDetails = () => {
       const errorResponse = httpError.errors;
 
       if (errorResponse.data === null && errorResponse.isSuccess === false) {
-        navigate("/app/deployment");
+        navigate(scoped("deployment"));
       }
     }
   }, [isError, error, navigate]);

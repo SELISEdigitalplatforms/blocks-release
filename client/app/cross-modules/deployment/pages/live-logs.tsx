@@ -11,9 +11,11 @@ import { ChevronLeft } from "lucide-react";
 import { IDeploymentPageData } from "./deployment-details";
 import { IHttpError } from "@blocks-deployment/models/github-info";
 import { useProjectStore } from "@/store/project.store";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 
 const LiveLogs = () => {
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const { repoId, buildId } = useParams();
   const { selectedProject } = useProjectStore();
 
@@ -37,7 +39,7 @@ const LiveLogs = () => {
       const errorResponse = httpError.errors;
 
       if (errorResponse.data === null && errorResponse.isSuccess === false) {
-        navigate("/app/deployment");
+        navigate(scoped("deployment"));
       }
     }
   }, [isError, error, navigate]);
@@ -59,7 +61,7 @@ const LiveLogs = () => {
   }, [isError]);
 
   const handleSubmit = () => {
-    navigate(`/app/deployment/repo/${repoId}?refresh=true`);
+    navigate(scoped(`deployment/repo/${repoId}?refresh=true`));
   };
 
   return (

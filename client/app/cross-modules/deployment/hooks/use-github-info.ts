@@ -7,14 +7,10 @@ import type {
   IManualDeploymentPayload,
   IUpdateRepoSettingsPayload,
 } from "@blocks-deployment/models/utils";
-import { useProjectStore } from "@/store/project.store";
-
 export const useGithubVerification = (code: string) => {
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
-
   return useQuery({
     queryKey: ["github-verification", code],
-    queryFn: () => githubInfoService.verifyAuthorization(code, projectKey),
+    queryFn: () => githubInfoService.verifyAuthorization(code),
   });
 };
 export const useValidateAuthorization = () => {
@@ -136,7 +132,7 @@ export const useGetAllRepoBuilds = (
       if (!projectId) {
         throw new Error("Project ID is required");
       }
-      return githubInfoService.getAllRepoBuilds(projectId);
+      return githubInfoService.getAllRepoBuilds();
     },
     enabled: !!projectId,
     retry: false,

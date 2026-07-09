@@ -31,13 +31,12 @@ export class ProjectService {
     return this.logicClient.get(url);
   }
 
-  getEnvRepositories(projectKey: string): Promise<{
+  getEnvRepositories(): Promise<{
     data: IEnvRepository[];
     errors: unknown | null;
     isSuccess: boolean;
   }> {
-    const url = `${CLOUD_BUILD_ENDPOINTS.REPOS_LIST}?projectkey=${projectKey}`;
-    return this.httpClient.get(url);
+    return this.httpClient.get(CLOUD_BUILD_ENDPOINTS.REPOS_LIST);
   }
 
   addAssets(payload: { tenantGroupId: string; resource: IResource }): Promise<{

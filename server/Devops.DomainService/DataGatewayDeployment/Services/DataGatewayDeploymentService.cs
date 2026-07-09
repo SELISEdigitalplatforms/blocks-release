@@ -32,10 +32,17 @@ namespace Devops.DomainService.DataGetwayDeployment.Services
             _configuration = configuration;
         }
 
-        public async Task<bool> InitiateManualDataGatewayInstanceCreation(string projectKey)
+        public async Task<bool> InitiateManualDataGatewayInstanceCreation()
         {
+            var projectKey = BlocksContext.GetContext()?.TenantId;
             try
             {
+                if (string.IsNullOrWhiteSpace(projectKey))
+                {
+                    _logger.LogError("Tenant context not found while initiating DataGateway pipeline.");
+                    return false;
+                }
+
                 _logger.LogInformation("Initiating DataGateway pipeline for projectId {ProjectName}", projectKey);
 
                 Tenant project = await _repository.GetTenantByIdAsync(projectKey);

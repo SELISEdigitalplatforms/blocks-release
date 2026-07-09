@@ -219,12 +219,13 @@ public class RepoRepository : IRepoRepository
     public async Task<BulkOperationSummary> UpdateRepoDomain(RepoDomainUpdateRequest request)
     {
         var collection = _dbContextProvider.GetCollection<Repo>("Repos");
+        var projectId = BlocksContext.GetContext()?.TenantId;
 
         var bulkOps = request.repoWithDomains
             .Where(rd => !string.IsNullOrWhiteSpace(rd.RepoId) && !string.IsNullOrWhiteSpace(rd.CustomDeploymentDomain))
             .Select(rd => new UpdateOneModel<Repo>(
                 Builders<Repo>.Filter.Eq(r => r.ItemId, rd.RepoId) &
-                Builders<Repo>.Filter.Eq(r => r.ProjectId, request.ProjectKey),
+                Builders<Repo>.Filter.Eq(r => r.ProjectId, projectId),
                 Builders<Repo>.Update.Set(r => r.CustomDeploymentUrl, rd.CustomDeploymentDomain)))
             .ToList();
 

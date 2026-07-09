@@ -64,8 +64,8 @@ export function EnvironmentList() {
       selectedProject.itemId === projectData.data.itemId &&
       // Only update if there are meaningful changes to avoid loops
       (selectedProject.name !== projectData.data.name ||
-        selectedProject.applicationDomain !==
-          projectData.data.applicationDomain ||
+        selectedProject.applications?.[0]?.domain !==
+          projectData.data.applications?.[0]?.domain ||
         selectedProject.environment !== projectData.data.environment)
     ) {
       setSelectedProject(projectData.data);
@@ -89,7 +89,8 @@ export function EnvironmentList() {
   const environment =
     projectData?.data.environment || selectedProject?.environment;
   const applicationDomain =
-    projectData?.data.applicationDomain || selectedProject?.applicationDomain;
+    projectData?.data.applications?.[0]?.domain ||
+    selectedProject?.applications?.[0]?.domain;
 
   const projects = useMemo(() => {
     if (!selectedProject) return [];

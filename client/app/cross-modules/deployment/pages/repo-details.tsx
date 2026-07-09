@@ -22,6 +22,7 @@ import {
 import { Separator } from "@/components/ui-kits/separator/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { toast } from "@/hooks/use-toast";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import { formatFullDate } from "@/utils/date.util";
 import NotificationListener from "@blocks-deployment/components/deployment-details/shared/notification-listener";
 import { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
@@ -95,10 +96,12 @@ export default function RepoDetails() {
 
   const [tabId, setTabId] = useQueryState("tab", { defaultValue: "details" });
 
+  const scoped = useScopedPath();
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const projectEnvironment =
     useProjectStore().selectedProject?.environment || "";
   const projectName = useProjectStore().selectedProject?.name || "";
+  const tenantGroupId = useProjectStore().selectedProject?.tenantGroupId || "";
 
   const [isDeploying, setIsDeploying] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -150,7 +153,7 @@ export default function RepoDetails() {
         errorResponse.data?.repo === null &&
         errorResponse.isSuccess === false
       ) {
-        navigate("/app/deployment");
+        navigate(scoped("deployment"));
       }
     }
   }, [isError, error, navigate]);
@@ -170,7 +173,7 @@ export default function RepoDetails() {
       });
 
       const redirectTimer = setTimeout(() => {
-        navigate("/app/project-overview");
+        navigate(`/app/project/${tenantGroupId}/environments`);
       }, 5000);
 
       return () => clearTimeout(redirectTimer);
@@ -212,7 +215,7 @@ export default function RepoDetails() {
   }, [filteredBuilds]);
 
   const handleGoBack = () => {
-    navigate("/app/deployment");
+    navigate(scoped("deployment"));
   };
 
   const handleDeploy = (e: React.MouseEvent) => {
@@ -238,11 +241,11 @@ export default function RepoDetails() {
         onSuccess: (deployResponse) => {
           if (deployResponse && deployResponse.buildId) {
             navigate(
-              `/app/deployment/repo/${repoId}/deployment-live/${deployResponse.buildId}`,
+              scoped(`deployment/repo/${repoId}/deployment-live/${deployResponse.buildId}`),
             );
             setIsDeploying(false);
           } else {
-            navigate("/app/deployment");
+            navigate(scoped("deployment"));
             setIsDeploying(false);
           }
           setIsSettingsModalOpen(false);
@@ -281,11 +284,11 @@ export default function RepoDetails() {
         onSuccess: (response) => {
           if (response && response.buildId) {
             navigate(
-              `/app/deployment/repo/${repoId}/deployment-live/${response.buildId}`,
+              scoped(`deployment/repo/${repoId}/deployment-live/${response.buildId}`),
             );
             setIsDeploying(false);
           } else {
-            navigate("/app/deployment");
+            navigate(scoped("deployment"));
             setIsDeploying(false);
           }
           setIsModalOpen(false);

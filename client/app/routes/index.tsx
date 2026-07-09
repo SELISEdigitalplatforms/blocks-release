@@ -3,28 +3,20 @@ import {
   AuthResolver,
   PublicGuard,
   ProtectedGuard,
-  ImpersonationChecker,
-  ImpersonationTerminator,
-  ImpersonationSynchronizer,
   LoginPage,
   CallbackPage,
   ConsoleLayout,
   ConsolePage,
-  ProjectOverviewLayout,
-  DashboardLayout,
+  ProjectOverviewRoute,
+  DashboardRoute,
   EnvironmentsPage,
   DashboardOverview
-  // blocks-kit DashboardLayout is a generic shell (expects sidebar/header/children
-  // props), so the deployment dashboard uses the local DashboardLayout below.
-  // DashboardLayout
+  // ProjectOverviewRoute / DashboardRoute are URL-addressable route elements:
+  // they hydrate the selected project from the URL param (:tenantGroupId / :itemId),
+  // validate it (redirecting to /app/console when invalid), inject the id into the
+  // navigation-menu paths, and render ProjectOverviewLayout / DashboardLayout
+  // (which self-wrap the impersonation guards) with an <Outlet /> for children.
 } from "@seliseblocks/blocks-kit";
-// import { DashboardLayout } from "@/layouts/dashboard-layout/dashboard-layout";
-// import { ProjectOverviewLayout } from "@/layouts/project-overview-layout";
-// import { ConsoleLayout } from "@/layouts/console-layout/console-layout";
-// import { Console } from "@/pages/console/console";
-// import LoginPage from "./auth/login";
-// import CallbackPage from "./callback";
-// import { EnvironmentsPage } from "@/pages/environments/environments";
 import { ProfilePage } from "@seliseblocks/blocks-kit";
 import DeploymentPage from "./deployment/deployment";
 import DeploymentRepoDetailsPage from "./deployment/deployment-repo-details";
@@ -77,79 +69,60 @@ export const routes = [
           </ProtectedGuard>
         ),
         children: [
-          // Console: terminate any active impersonation before rendering.
+          // Bare /app → console.
+          { index: true, element: <Navigate to="/app/console" replace /> },
+
+          // Console: ConsoleLayout self-wraps ImpersonationChecker + ImpersonationTerminator.
           {
             element: (
-              <ImpersonationChecker>
-                <ImpersonationTerminator>
-                  <Outlet />
-                </ImpersonationTerminator>
-              </ImpersonationChecker>
+              <ConsoleLayout>
+                <Outlet />
+              </ConsoleLayout>
             ),
             children: [
-              {
-                element: (
-                  <ConsoleLayout>
-                    <Outlet />
-                  </ConsoleLayout>
-                ),
-                children: [
-                  { path: "console", element: <ConsolePage /> },
-                  { path: "profile", element: <ProfilePage /> },
-                ],
-              },
+              { path: "console", element: <ConsolePage /> },
+              { path: "profile", element: <ProfilePage /> },
             ],
           },
-          // Deployment: synchronize impersonation with the selected project.
+          // Project-overview scope: /app/project/:tenantGroupId/*
           {
+            path: "project/:tenantGroupId",
             element: (
-              <ImpersonationChecker>
-                <ImpersonationSynchronizer>
-                  <Outlet />
-                </ImpersonationSynchronizer>
-              </ImpersonationChecker>
+              <ProjectOverviewRoute
+                redirectPaths={redirectPaths}
+                navigationMenus={navigationMenus}
+              />
             ),
-            children: [
-              {
-                element:  (
-                  <DashboardLayout
-                    redirectPaths={redirectPaths}
-                    navigationMenus={navigationMenus}>
-                    <Outlet />
-                  </DashboardLayout>
-                ),
-                children: [
-                  { path: "dashboard", element: <DashboardOverview /> },
-                  { path: "deployment", element: <DeploymentPage /> },
-                  {
-                    path: "deployment/repo/:repoId",
-                    element: <DeploymentRepoDetailsPage />,
-                  },
-                  {
-                    path: "deployment/repo/:repoId/deployment-logs/:buildId",
-                    element: <DeploymentLogsPage />,
-                  },
-                  {
-                    path: "deployment/repo/:repoId/deployment-live/:buildId",
-                    element: <DeploymentLivePage />,
-                  },
-                  { path: "profile", element: <ProfilePage /> },
-                ],
-              },
-            ],
-          },
-          // Project overview: environments listing for the selected project group.
-          {
-            path: "project-overview",
-            element: (
-                  <ProjectOverviewLayout
-                    redirectPaths={redirectPaths}
-                    navigationMenus={navigationMenus}>
-                    <Outlet />
-                  </ProjectOverviewLayout>
-                ),
             children: [
               { path: "environments", element: <EnvironmentsPage /> },
+            ],
+          },
+          // Impersonated project scope: /app/:itemId/*
+          {
+            path: ":itemId",
+            element: (
+              <DashboardRoute
+                redirectPaths={redirectPaths}
+                navigationMenus={navigationMenus}
+              />
+            ),
+            children: [
+              { index: true, element: <Navigate to="dashboard" replace /> },
+              { path: "dashboard", element: <DashboardOverview /> },
+              { path: "deployment", element: <DeploymentPage /> },
+              {
+                path: "deployment/repo/:repoId",
+                element: <DeploymentRepoDetailsPage />,
+              },
+              {
+                path: "deployment/repo/:repoId/deployment-logs/:buildId",
+                element: <DeploymentLogsPage />,
+              },
+              {
+                path: "deployment/repo/:repoId/deployment-live/:buildId",
+                element: <DeploymentLivePage />,
+              },
+              { path: "profile", element: <ProfilePage /> },
             ],
           },
         ],

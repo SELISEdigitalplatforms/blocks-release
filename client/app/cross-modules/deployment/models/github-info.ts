@@ -10,7 +10,6 @@ export interface IGithubBranch {
 export interface ICloneRepo {
   repoName: string;
   branch: string;
-  ProjectKey: string;
   deploymentUrl: string;
   hostingProviderId?: string;
   regionId?: string;

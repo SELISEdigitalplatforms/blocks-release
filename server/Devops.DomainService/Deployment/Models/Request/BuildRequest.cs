@@ -1,5 +1,5 @@
 namespace Devops.DomainService.Deployment.Models.Request;
-public class BuildRequest : ProjectKeyQuery
+public class BuildRequest
 {
     public string repoName { get; set; }
     public string repoUrl { get; set; }

@@ -27,6 +27,7 @@ import { DEPLOYMENT_OPTIONS } from "@blocks-deployment/models/deployment-setting
 import useIsMobile from "@/hooks/use-is-mobile";
 import { useProjectStore } from "@/store/project.store";
 import { useNavigate } from "react-router-dom";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 
 interface IDeploymentSettingsModalProps {
   isOpen: boolean;
@@ -46,8 +47,8 @@ const DeploymentSettingsModal = ({
   isDeploying = false,
 }: IDeploymentSettingsModalProps) => {
   const navigate = useNavigate();
+  const scoped = useScopedPath();
 
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const projectEnvironment =
     useProjectStore().selectedProject?.environment || "";
   const projectName = useProjectStore().selectedProject?.name || "";
@@ -109,7 +110,7 @@ const DeploymentSettingsModal = ({
         errorResponse.data?.repo === null &&
         errorResponse.isSuccess === false
       ) {
-        navigate("/app/deployment");
+        navigate(scoped("deployment"));
       }
     }
   }, [isError, error, navigate]);
@@ -204,7 +205,6 @@ const DeploymentSettingsModal = ({
         regionId: deploymentData.regionId,
         machineConfigId: deploymentData.machineConfigId,
         deploymentType: deploymentData.deploymentType,
-        projectKey: projectKey,
         projectEnv: projectEnvironment,
         projectName: projectName,
       };

@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { GitBranch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useProjectStore } from "@/store/project.store";
 
 export const NoBranch = ({ projectEnvironment }: { projectEnvironment: string }) => {
   const navigate = useNavigate();
+  const tenantGroupId = useProjectStore().selectedProject?.tenantGroupId || "";
 
   return (
     <div className="mx-auto pb-8">
@@ -20,7 +22,12 @@ export const NoBranch = ({ projectEnvironment }: { projectEnvironment: string })
                     Please create a repository with ${projectEnvironment} environment or select the proper environment from above.`}
               </p>
             </div>
-            <Button onClick={() => navigate("/app/project-overview")} size={"sm"}>
+            <Button
+              onClick={() =>
+                navigate(`/app/project/${tenantGroupId}/environments`)
+              }
+              size={"sm"}
+            >
               Go to Deployment Overview
             </Button>
           </div>

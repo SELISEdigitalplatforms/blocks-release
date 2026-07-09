@@ -8,7 +8,6 @@
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "preserveSymlinks": true,
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",

@@ -10,7 +10,6 @@ using Devops.DomainService.Shared.Interfaces;
 using Devops.DomainService.VersionControlSystems.Interfaces;
 using Devops.DomainService.VersionControlSystems.Models.Request;
 using Devops.DomainService.VersionControlSystems.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 namespace Api.Controllers;
 
@@ -43,7 +42,7 @@ public class GithubController: ControllerBase
     }
 
     [HttpGet("user")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release-api::github::get-user")]
     public async Task<ActionResult> GetUser()
     {
         var user = await _githubService.GetUser();
@@ -53,7 +52,7 @@ public class GithubController: ControllerBase
     }
 
     [HttpGet("repos")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release-api::github::get-repos")]
     public async Task<ActionResult> GetRepos([FromQuery] string? Search, [FromQuery] int PageNumber = 1, [FromQuery] int PageSize = 30)
     {
 
@@ -75,7 +74,7 @@ public class GithubController: ControllerBase
     //public async Task<ActionResult<string>> GetAccessToken([FromQuery] string code)
     //expects full repo name
     [HttpGet("branches")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release-api::github::get-branches")]
     public async Task<ActionResult> GetBranches([FromQuery] string repo)
     {
         var branches = await _githubService.GetBranches(repo);
@@ -85,7 +84,7 @@ public class GithubController: ControllerBase
     }
 
     [HttpGet("GithubBranchExists")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release-api::github::get-github-branch-exists")]
     public async Task<ActionResult> GithubBranchExists([FromQuery] string repoId)
     {
         Repo repo = await _repoRepository.GetRepo(repoId);
@@ -110,7 +109,7 @@ public class GithubController: ControllerBase
     }
 
     [HttpGet("clone")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release-api::github::get-clone")]
     public async Task<ActionResult> Clone([FromQuery] string repo)
     {
         var result = await _githubService.Clone(repo);
@@ -154,7 +153,7 @@ public class GithubController: ControllerBase
     }
 
     [HttpGet("CreateWebhook")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release-api::github::get-create-webhook")]
     public async Task<ActionResult> CreateWebhook([FromQuery] string RepoId)
     {
         var repo = await _repoRepository.GetRepo(RepoId);

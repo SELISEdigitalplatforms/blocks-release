@@ -19,7 +19,7 @@ import { getRuntimeEnv } from "./lib/runtime-env";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryProvider>
-      {/* <ThemeProvider> */}
+      <ThemeProvider>
         <NuqsAdapter>
           <TooltipProvider>
             <BlocksAppLayout
@@ -38,7 +38,7 @@ createRoot(document.getElementById("root")!).render(
             <NotificationHubListener />
           </TooltipProvider>
         </NuqsAdapter>
-      {/* </ThemeProvider> */}
+      </ThemeProvider>
     </QueryProvider>
   </StrictMode>,
 );

@@ -35,7 +35,7 @@ public class BuildController : ControllerBase
     }
 
     [HttpGet]
-    [ProtectedEndPoint("blocks-release-api::build::get")]
+    [ProtectedEndPoint("blocks-release::build::details")]
     public async Task<IActionResult> GetById([FromQuery] string buildId)
     {
         var builds = await _buildService.GetBuildWithRepo(buildId);
@@ -56,7 +56,7 @@ public class BuildController : ControllerBase
     }
 
     [HttpGet("repos-list")]
-    [ProtectedEndPoint("blocks-release-api::build::get-repos-list")]
+    [ProtectedEndPoint("blocks-release::build::repos-list")]
     public async Task<IActionResult> GetReposList()
     {
         var repoList = await _repoRepository.GetRepos();
@@ -78,7 +78,7 @@ public class BuildController : ControllerBase
     }
 
     [HttpGet("repo-details")]
-    [ProtectedEndPoint("blocks-release-api::build::get-repo-details")]
+    [ProtectedEndPoint("blocks-release::build::repo-details")]
     public async Task<IActionResult> GetRepoDetails([FromQuery] string RepoId)
     {
         try
@@ -120,7 +120,7 @@ public class BuildController : ControllerBase
     }
 
     [HttpPost("repo-update")]
-    [ProtectedEndPoint("blocks-release-api::build::post-repo-update")]
+    [ProtectedEndPoint("blocks-release::build::repo-domain-update")]
     public async Task<BaseApiResponse> RepoDomainUpdateRequest([FromBody] RepoDomainUpdateRequest request)
     {
         return await _buildService.UpdateRepoDomain(request);
@@ -128,7 +128,7 @@ public class BuildController : ControllerBase
     }
 
     [HttpPost("run-build")]
-    [ProtectedEndPoint("blocks-release-api::build::post-run-build")]
+    [ProtectedEndPoint("blocks-release::build::run-build")]
     public async Task<IActionResult> RunBuild([FromBody] RepoBuildRequest request)
     {
         if (string.IsNullOrEmpty(request.RepoId))
@@ -144,7 +144,7 @@ public class BuildController : ControllerBase
     }
 
     [HttpPost("manual")]
-    [ProtectedEndPoint("blocks-release-api::build::post-manual")]
+    [ProtectedEndPoint("blocks-release::build::manual-build")]
     public async Task<ActionResult<BuildResponse>> ManualBuild([FromBody] RepoBuildRequest request)
     {
         if (string.IsNullOrEmpty(request.RepoId))
@@ -163,7 +163,7 @@ public class BuildController : ControllerBase
     }
 
     [HttpPost("repo-settings-update")]
-    [ProtectedEndPoint("blocks-release-api::build::post-repo-settings-update")]
+    [ProtectedEndPoint("blocks-release::build::repo-settings-update")]
     public async Task<IActionResult> RepoSettingsUpdate([FromBody] RepoUpdateRequest request)
     {
         var response =  await _buildService.UpdateRepo(request);
@@ -171,7 +171,7 @@ public class BuildController : ControllerBase
     }
 
     [HttpGet("settings")]
-    [ProtectedEndPoint("blocks-release-api::build::get-settings")]
+    [ProtectedEndPoint("blocks-release::build::hosting-providers")]
     public async Task<IActionResult> GetHostingProviders()
     {
         List<HostingProvider> providers = await _buildRepository.GetHostingProviders();
@@ -185,7 +185,7 @@ public class BuildController : ControllerBase
     }
     
     [HttpGet("reports")]
-    [ProtectedEndPoint("blocks-release-api::build::get-reports")]
+    [ProtectedEndPoint("blocks-release::build::reports")]
     public async Task<IActionResult> GetReports([FromQuery] string buildId, string type)
     {
         var result = await _testReportService.GetReport(buildId, type);

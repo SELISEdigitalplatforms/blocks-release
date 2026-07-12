@@ -32,7 +32,7 @@ namespace Api.Controllers
         }
 
         [HttpGet]
-        [ProtectedEndPoint("blocks-release-api::analytics-tool::get-process-dependency-track-user")]
+        [ProtectedEndPoint("blocks-release::analytics-tool::dependency-track-user")]
         public async Task<IActionResult> ProcessDependencyTrackUser([FromQuery] string buildId)
         {
             var userId = BlocksContext.GetContext()?.UserId;
@@ -52,7 +52,7 @@ namespace Api.Controllers
         }
 
         [HttpGet]
-        [ProtectedEndPoint("blocks-release-api::analytics-tool::get-process-sonar-qube-user")]
+        [ProtectedEndPoint("blocks-release::analytics-tool::sonar-qube-user")]
         public async Task<IActionResult> ProcessSonarQubeUser([FromQuery] string buildId)
         {
             var userId = BlocksContext.GetContext()?.UserId;

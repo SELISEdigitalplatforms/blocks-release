@@ -5,21 +5,25 @@ Adapted from blocks-iam's `permission-upsert-seed-generic.md` for the
 upsert-ready JSON file at `server/seed/permissions.upsert.json`, one
 document per protected endpoint.
 
-Unlike blocks-idp, this codebase has **no `[ProtectedEndPoint("...")]`
-attribute**. It uses ASP.NET attribute routing plus `[Authorize]` to mark
-protected endpoints, so discovery and resource derivation are adapted
-accordingly (see Step 1 / Step 2).
+Protected endpoints are now marked with `[ProtectedEndPoint("...")]`, the
+same marker blocks-iam uses. The attribute argument **is** the permission's
+`Resource`, so the attribute string and the seed document must always be
+edited together.
 
 ## Codebase-specific deviations from the generic MD
 
 | Concern | Generic (blocks-idp) | blocks-release |
 |---|---|---|
-| Protection marker | `[ProtectedEndPoint("svc::action")]` | `[Authorize]` on the action (or an `[Authorize]` controller) |
-| Public endpoints | absence of the attribute | `[AllowAnonymous]` or absence of `[Authorize]` |
-| Service segment | `blocks-idp-api` | `blocks-release-api` (repo `blocks-release`, `appsettings.json` `ServiceName: "release"`) |
+| Protection marker | `[ProtectedEndPoint("svc::action")]` | same |
+| Public endpoints | absence of the attribute | same (e.g. `Github/webhook`, `Auth/TestPing`) |
+| Service segment | `blocks-idp` | `blocks-release` |
 | `ResourceGroup` | `"idp"` | `"release"` |
-| Resource shape | attribute string, enriched to 3-part | URL/route style: `service::controller::<verb>-<path-slug>` |
 | Controllers dir | `server/Api/Controllers/**/*.cs` | same |
+
+`blocks-release` (not `blocks-release-api`) is the service segment of the
+resource string. `Program.cs` still uses `blocks-release-api` as the
+*service name* for vault, config and log resolution — that is a separate
+identifier and must not be renamed to match.
 
 Everything else (document shape, constants, dedup, emit rules) is
 unchanged from the generic MD.
@@ -28,7 +32,7 @@ unchanged from the generic MD.
 
 ```jsonc
 {
-  "_id": "25bbd2d2-1870-4e57-993f-6957034d4c8d",
+  "_id": "a6b0cc3c-ea31-47cb-8a78-1aa3afb91ab8",
   "CreatedDate": ISODate("2026-07-09T11:38:01.473+0000"),
   "LastUpdatedDate": ISODate("2026-07-09T11:38:01.473+0000"),
   "CreatedBy": "1554751b-e91c-4ea4-8500-cdaf714b248e",
@@ -36,10 +40,10 @@ unchanged from the generic MD.
   "LastUpdatedBy": "1554751b-e91c-4ea4-8500-cdaf714b248e",
   "OrganizationIds": [],
   "Tags": [],
-  "Name": "blocks-release-api::build::get-repos-list",
+  "Name": "View Connected Repositories",
   "Type": NumberInt(1),
-  "Description": "",
-  "Resource": "blocks-release-api::build::get-repos-list",
+  "Description": "List the repositories connected to the tenant for building and deployment. Covers: GET /Build/repos-list.",
+  "Resource": "blocks-release::build::repos-list",
   "ResourceGroup": "release",
   "IsBuiltIn": true,
   "IsArchived": false,
@@ -57,16 +61,13 @@ unchanged from the generic MD.
 ## Step 1 — Discover
 
 Scan `server/Api/Controllers/**/*.cs`. A **protected endpoint** is any
-action method that is authorized:
-
-- The action carries `[Authorize]`, OR its controller carries `[Authorize]`
-  and the action is not `[AllowAnonymous]`.
+action method carrying `[ProtectedEndPoint("...")]`.
 
 Exclude:
 
-- Actions/controllers marked `[AllowAnonymous]` (e.g.
-  `DeploymentHubBroadcastController`).
-- Actions with no `[Authorize]` (e.g. `Auth/TestPing`, `Github/webhook`).
+- Actions without the attribute — they are public by design (e.g.
+  `Github/webhook`, which authenticates via HMAC signature, and
+  `Auth/TestPing`).
 - Commented-out actions (e.g. `Build/DatagatewayPipelineInitiate`).
 
 Emit a per-file count of protected actions found.
@@ -74,41 +75,47 @@ Emit a per-file count of protected actions found.
 ## Step 2 — Derivation rules
 
 For each protected action, `Resource = "<service>::<controller>::<action>"`,
-lowercased:
+lowercase kebab-case throughout:
 
-1. **service** = `blocks-release-api`.
+1. **service** = `blocks-release` (no `-api` suffix).
 2. **controller** = kebab-case of the controller class name minus the
    `Controller` suffix (`AnalyticsToolController` -> `analytics-tool`,
    `AuthController` -> `auth`, `BuildController` -> `build`,
    `GithubController` -> `github`).
-3. **action** = `<http-verb>-<path-slug>` (URL style):
-   - `http-verb` = the action's HTTP method attribute, lowercased
-     (`HttpGet` -> `get`, `HttpPost` -> `post`, `HttpDelete` -> `delete`).
-   - `path-slug` = kebab-case of the route path segment after the
-     controller. For `[Route("[controller]/[action]")]` controllers this
-     is the action name; for explicit templates (`[HttpGet("repos-list")]`)
-     it is that template string. A bare `[HttpGet]` on a
-     `[Route("[controller]")]` controller has no segment, so the action is
-     just the verb (e.g. `build::get`).
-4. **Name** = `Resource` verbatim.
-5. **PermissionSeverity** — int `(None=0, Critical=1, High=2, Medium=3,
-   Low=4)`. First matching rule wins on the **first `-` token of the
-   action** (which is the HTTP verb here):
-   - **High (2):** `delete`, `deactivate`, `disable`, `revoke`, `archive`,
-     `purge`, `terminate`
-   - **Medium (3):** `create`, `update`, `save`, `assign`, `setup`,
-     `verify`, `generate`, `regenerate`, `resend`, `enable`, `activate`,
-     `restore`, `upload`, `import`, `export`, `sync`, `manage`
-   - **Low (4):** `get`, `list`, `read`, `fetch`, `load`, `view`, `search`,
-     `count`, `exists`, `check`
-   - **None (0):** anything else (note: `post`/`put` are not in the tables,
-     so write endpoints fall to `None` and should be reviewed).
-6. **_id** = fresh GUID per entry.
-7. **CreatedDate / LastUpdatedDate** = one UTC timestamp captured once,
+3. **action** = a **meaningful noun phrase for the thing being acted on** —
+   *not* an HTTP verb and *not* prefixed with one. `get-`/`post-`/`delete-`
+   carry no information the `Name` does not already carry, and they make the
+   resource churn whenever a route's verb changes.
+   - Start from the route slug (`[HttpGet("repos-list")]` -> `repos-list`).
+   - If the route has no slug (a bare `[HttpGet]`), or the slug alone is not
+     self-describing, use a noun phrase instead: bare `GET /Build` ->
+     `details`; `POST /Build/manual` -> `manual-build`;
+     `GET /Build/settings` (returns hosting providers) -> `hosting-providers`.
+   - Where verb and noun are the same word, keep the single word: `clone`,
+     `reports`, `branches`.
+4. **Name** = a short human-readable action phrase in title case —
+   `View Connected Repositories`, `Run Build`, `Provision SonarQube User`.
+   It is what an administrator reads in the role editor, so it must state
+   the action and the object without jargon. It is **not** the resource
+   string.
+5. **Description** = one to three sentences: what the permission grants,
+   then `Covers: <METHOD> <route>` naming the exact endpoint(s), then any
+   side effect or blast radius worth flagging (consumes build
+   infrastructure, disconnects GitHub, writes to the build host, …).
+6. **PermissionSeverity** — int `(None=0, Critical=1, High=2, Medium=3,
+   Low=4)`, keyed on the endpoint's **HTTP method attribute** (the resource
+   string no longer carries the verb):
+   - **Low (4):** `HttpGet` — reads.
+   - **High (2):** `HttpDelete`.
+   - **None (0):** `HttpPost` / `HttpPut` (see caveats — these should be
+     reviewed and reclassified).
+7. **_id** = fresh GUID per entry, stable across regenerations (do not
+   re-roll `_id` when only `Name`/`Description`/`Resource` change, or the
+   upsert will duplicate the permission instead of updating it).
+8. **CreatedDate / LastUpdatedDate** = one UTC timestamp captured once,
    reused for every entry, rendered as `ISODate("...")`.
-8. **CreatedBy / LastUpdatedBy** = one synthetic system GUID captured once,
+9. **CreatedBy / LastUpdatedBy** = one synthetic system GUID captured once,
    reused for every entry (not the literal `"system"`).
-9. **Description** = `""` (fill later via the mutation API).
 10. **Constants:** `Type = NumberInt(1)`, `IsBuiltIn = true`,
     `IsArchived = false`, `ResourceGroup = "release"`,
     `OrganizationId = "default"`, `OrganizationIds = []`,
@@ -118,7 +125,10 @@ lowercased:
 ## Step 3 — Deduplicate
 
 Collapse by `Resource`; keep the first occurrence and report drops as
-`Resource -> file:line`.
+`Resource -> file:line`. Because the verb is no longer part of the resource,
+two endpoints on the same route with different verbs would now collide —
+give them distinct noun phrases (`remove-authorization` vs
+`delete-authorization`) rather than reintroducing the verb prefix.
 
 ## Step 4 — Emit
 
@@ -130,6 +140,10 @@ Collapse by `Resource`; keep the first occurrence and report drops as
   OrganizationIds, Tags, Name, Type, Description, Resource, ResourceGroup,
   IsBuiltIn, IsArchived, PermissionSeverity, DependentPermissions, Roles,
   OrganizationId`.
+- Every `Resource` must match a `[ProtectedEndPoint("...")]` argument
+  verbatim, and vice versa. Verify with:
+  `grep -oh 'blocks-release::[^"]*' -r server/Api/Controllers | sort` against
+  the `Resource` values in the seed.
 - Validate by stripping `ISODate(...)` / `NumberInt(...)` and parsing with
   `jq` / `ConvertFrom-Json`, or by loading with `BsonDocument.Parse`.
 
@@ -141,20 +155,45 @@ timestamp used.
 
 ## Current inventory (as generated)
 
-21 protected endpoints, 0 duplicates. Severity: Low = 15 (GET),
-High = 1 (DELETE), None = 5 (POST — review recommended):
+21 protected endpoints, 0 duplicates. Severity: Low = 15 (GET), High = 1
+(DELETE), None = 5 (POST — review recommended).
 
-- `blocks-release-api::auth::post-remove-authorization`
-- `blocks-release-api::build::post-repo-update`
-- `blocks-release-api::build::post-run-build`
-- `blocks-release-api::build::post-manual`
-- `blocks-release-api::build::post-repo-settings-update`
+| Resource | Name |
+|---|---|
+| `blocks-release::analytics-tool::dependency-track-user` | Provision Dependency Track User |
+| `blocks-release::analytics-tool::sonar-qube-user` | Provision SonarQube User |
+| `blocks-release::auth::authorization-status` | View Git Provider Authorization Status |
+| `blocks-release::auth::access-token` | Exchange Git Provider OAuth Code |
+| `blocks-release::auth::remove-authorization` | Revoke Git Provider Authorization |
+| `blocks-release::auth::delete-authorization` | Delete Stored Git Provider Token |
+| `blocks-release::build::details` | View Build Details |
+| `blocks-release::build::repos-list` | View Connected Repositories |
+| `blocks-release::build::repo-details` | View Repository Details |
+| `blocks-release::build::repo-domain-update` | Update Repository Domain |
+| `blocks-release::build::run-build` | Run Build |
+| `blocks-release::build::manual-build` | Trigger Manual Build |
+| `blocks-release::build::repo-settings-update` | Update Repository Build Settings |
+| `blocks-release::build::hosting-providers` | View Hosting Providers |
+| `blocks-release::build::reports` | View Build Test Reports |
+| `blocks-release::github::user` | View GitHub Account |
+| `blocks-release::github::repos` | Search GitHub Repositories |
+| `blocks-release::github::branches` | View GitHub Branches |
+| `blocks-release::github::branch-exists` | Check GitHub Branch Exists |
+| `blocks-release::github::clone` | Clone GitHub Repository |
+| `blocks-release::github::create-webhook` | Create GitHub Webhook |
 
 ## Notes / caveats
 
+- **Renaming a `Resource` is a breaking change.** The seed upserts by `_id`,
+  so an existing permission is updated in place — but any role or client
+  check still referencing the old string stops matching. Re-run the seed and
+  the attribute rename together.
 - **Roles are intentionally empty** — the seed grants nothing. Attach roles
   via the mutation API.
-- **Description is blank** at seed time; fill via `ResourceMutationService`.
-- **POST/PUT verbs map to `None`** under the generic severity tables. Add a
-  rule or override these to Medium/High before shipping.
+- **POST verbs map to `None` (0)** severity. The five POST endpoints
+  (`repo-domain-update`, `run-build`, `manual-build`,
+  `repo-settings-update`, `auth::remove-authorization`) all mutate state and
+  should be reclassified to Medium/High before shipping.
+- **`_id` and the seed timestamps are frozen** at their original generated
+  values so re-running the seed updates rather than duplicates.
 - **No generator script committed** — only the JSON + this MD are produced.

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+using Blocks.Genesis;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using Devops.DomainService.Shared.Entities;
@@ -20,7 +20,7 @@ public class AuthController : ControllerBase
     }
 
 
-    [Authorize]
+    [ProtectedEndPoint("blocks-release::auth::authorization-status")]
     [HttpGet]
     public async Task<IActionResult> IsAuthorized()
     {
@@ -28,7 +28,7 @@ public class AuthController : ControllerBase
         return Ok(response);
     }
 
-    [Authorize]
+    [ProtectedEndPoint("blocks-release::auth::access-token")]
     [HttpGet]
     public async Task<ActionResult> AccessToken([FromQuery] string code)
     {
@@ -55,7 +55,7 @@ public class AuthController : ControllerBase
     }
 
 
-    [Authorize]
+    [ProtectedEndPoint("blocks-release::auth::remove-authorization")]
     [HttpPost]
     public async Task<IActionResult> RemoveAuthorization()
     {
@@ -63,7 +63,7 @@ public class AuthController : ControllerBase
         return Ok(response);
     }
 
-    [Authorize]
+    [ProtectedEndPoint("blocks-release::auth::delete-authorization")]
     [HttpDelete]
     public async Task<IActionResult> DeleteAuthorization()
     {

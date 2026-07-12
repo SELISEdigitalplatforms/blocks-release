@@ -44,10 +44,6 @@ export default defineConfig(({ mode }) => {
     envPrefix: ["BLOCKS_"],
     plugins: [react()],
     resolve: {
-      // Linked (file:) blocks-kit brings its own React tree; dedupe so a single
-      // React/React-DOM instance is used, otherwise hooks throw "Invalid hook call".
-      dedupe: ["react", "react-dom"],
-      preserveSymlinks: false,
       alias: {
         "@": path.resolve(__dirname, "./app"),
         "@blocks-idp": path.resolve(__dirname, "./app/cross-modules/idp"),

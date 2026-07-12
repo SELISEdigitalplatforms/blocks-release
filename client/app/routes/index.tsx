@@ -7,9 +7,7 @@ import {
   CallbackPage,
   ConsoleLayout,
   ConsolePage,
-  ProjectOverviewRoute,
   DashboardRoute,
-  EnvironmentsPage,
   DashboardOverview
   // ProjectOverviewRoute / DashboardRoute are URL-addressable route elements:
   // they hydrate the selected project from the URL param (:tenantGroupId / :itemId),
@@ -82,19 +80,6 @@ export const routes = [
             children: [
               { path: "console", element: <ConsolePage /> },
               { path: "profile", element: <ProfilePage /> },
-            ],
-          },
-          // Project-overview scope: /app/project/:tenantGroupId/*
-          {
-            path: "project/:tenantGroupId",
-            element: (
-              <ProjectOverviewRoute
-                redirectPaths={redirectPaths}
-                navigationMenus={navigationMenus}
-              />
-            ),
-            children: [
-              { path: "environments", element: <EnvironmentsPage /> },
             ],
           },
           // Impersonated project scope: /app/:itemId/*

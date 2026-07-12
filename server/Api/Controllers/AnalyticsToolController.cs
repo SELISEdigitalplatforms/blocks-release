@@ -7,7 +7,6 @@ using Devops.DomainService.Deployment.Models.Request;
 using Devops.DomainService.Deployment.RepositoryServices;
 using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.VersionControlSystems.Interfaces;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers
@@ -33,7 +32,7 @@ namespace Api.Controllers
         }
 
         [HttpGet]
-        [Authorize]
+        [ProtectedEndPoint("blocks-release::analytics-tool::dependency-track-user")]
         public async Task<IActionResult> ProcessDependencyTrackUser([FromQuery] string buildId)
         {
             var userId = BlocksContext.GetContext()?.UserId;
@@ -53,7 +52,7 @@ namespace Api.Controllers
         }
 
         [HttpGet]
-        [Authorize]
+        [ProtectedEndPoint("blocks-release::analytics-tool::sonar-qube-user")]
         public async Task<IActionResult> ProcessSonarQubeUser([FromQuery] string buildId)
         {
             var userId = BlocksContext.GetContext()?.UserId;

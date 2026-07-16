@@ -1,4 +1,4 @@
-﻿using Blocks.Genesis;
+using Blocks.Genesis;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using Devops.DomainService.Shared.Interfaces;
@@ -54,7 +54,7 @@ namespace Devops.DomainService.Deployment.Services
                 UserIds = UserIds,
                 DenormalizedPayload = denormalizedPayload,
                 SaveDenormalizedPayloadAsAnObject = false,
-                ConfiguratoinName = _configuration["BlocksAppNotificationReceiver"],
+                ConfigurationName = _configuration["BlocksAppNotificationReceiver"],
                 ContentAvailable = true,
                 ResponseKey = "status",
                 ResponseValue = "sent"
@@ -109,7 +109,7 @@ namespace Devops.DomainService.Deployment.Services
                 UserIds = UserIds,
                 DenormalizedPayload = denormalizedPayload,
                 SaveDenormalizedPayloadAsAnObject = false,
-                ConfiguratoinName = _configuration["BlocksAppNotificationReceiver"],
+                ConfigurationName = _configuration["BlocksAppNotificationReceiver"],
                 ContentAvailable = true,
                 ResponseKey = "status",
                 ResponseValue = "sent"

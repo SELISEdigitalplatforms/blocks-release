@@ -7,10 +7,10 @@ namespace Devops.DomainService.DataGatewayDeployment.Services
     public interface IDataGatewayDeploymentService
     {
         /// <summary>
-        /// Initiates the creation of a DataGateway instance manually for a specific project.
+        /// Initiates the creation of a DataGateway instance manually for the project (tenant)
+        /// resolved from the current BlocksContext.
         /// </summary>
-        /// <param name="projectKey">The ID of the project (tenant) for which to create the DataGateway instance.</param>
-        Task<bool> InitiateManualDataGatewayInstanceCreation(string projectKey);
+        Task<bool> InitiateManualDataGatewayInstanceCreation();
 
         /// <summary>
         /// Initiates the creation of a DataGateway instance automatically using tenant data.

@@ -11,6 +11,7 @@ import { IPipeline } from "@blocks-deployment/pages/repo-details";
 import NotificationListener from "./notification-listener";
 import { cn } from "@/lib/utils";
 import { formatFullDate } from "@/utils/date.util";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import SASTLogo from "@blocks-deployment/assets/icons/SAST.svg";
 import SCALogo from "@blocks-deployment/assets/icons/SCA.svg";
 import DASTLogo from "@blocks-deployment/assets/icons/DAST.png";
@@ -27,6 +28,7 @@ const DeploymentObservability = ({
   viewLatestBuild = false,
 }: DeploymentObservabilityProps) => {
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const actions = ["SAST", "SCA", "DAST"];
   const latestBuild = builds?.reduce((latest, current) => {
     if (!latest) return current;
@@ -43,13 +45,17 @@ const DeploymentObservability = ({
   ) => {
     event.stopPropagation();
     navigate(
-      `/deployment/repo/${repoId}/deployment-logs/${buildId}?tab=${action.toLowerCase()}`,
+      scoped(
+        `deployment/repo/${repoId}/deployment-logs/${buildId}?tab=${action.toLowerCase()}`,
+      ),
     );
   };
 
   const handleDeployedItem = (repoId: string, buildId: string) => {
     navigate(
-      `/deployment/repo/${repoId}/deployment-logs/${buildId}?tab=deployment-logs`,
+      scoped(
+        `deployment/repo/${repoId}/deployment-logs/${buildId}?tab=deployment-logs`,
+      ),
     );
   };
 

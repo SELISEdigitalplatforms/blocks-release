@@ -8,7 +8,9 @@ export function useFilteredMenus(menus: Menu[]): Menu[] {
   return useMemo(() => {
     const blockedMenu = import.meta.env.BLOCKS_BLOCKED_MENU || "[]";
     let parsedBlockedMenu: string[] = [];
-    const isProjectOverviewRoute = pathname.startsWith("/project-overview");
+    // Project-overview scope now lives under /app/project/:tenantGroupId.
+    // startsWith("/app/project") is safe — it does NOT match /app/create-project.
+    const isProjectOverviewRoute = pathname.startsWith("/app/project");
     const projectOverviewMenuIds = new Set([
       "environments",
       "people",

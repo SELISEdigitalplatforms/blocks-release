@@ -53,7 +53,7 @@ export const GitCommandSnippet = () => {
               Please add a repository and set the Application Domain above to
               enable git commands.
             </p>
-            <Link to="/deployment">
+            <Link to="/app/deployment">
               <Button size="sm">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Repository

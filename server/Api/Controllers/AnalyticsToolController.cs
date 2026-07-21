@@ -7,7 +7,6 @@ using Devops.DomainService.Deployment.Models.Request;
 using Devops.DomainService.Deployment.RepositoryServices;
 using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.VersionControlSystems.Interfaces;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers
@@ -33,7 +32,7 @@ namespace Api.Controllers
         }
 
         [HttpGet]
-        [Authorize]
+        [ProtectedEndPoint("blocks-release::analytics-tool::dependency-track-user")]
         public async Task<IActionResult> ProcessDependencyTrackUser([FromQuery] string buildId)
         {
             var userId = BlocksContext.GetContext()?.UserId;
@@ -53,8 +52,8 @@ namespace Api.Controllers
         }
 
         [HttpGet]
-        [Authorize]
-        public async Task<IActionResult> ProcessSonarQubeUser([FromQuery] string ProjectKey, string buildId)
+        [ProtectedEndPoint("blocks-release::analytics-tool::sonar-qube-user")]
+        public async Task<IActionResult> ProcessSonarQubeUser([FromQuery] string buildId)
         {
             var userId = BlocksContext.GetContext()?.UserId;
             var user = await _tokenRepository.GetUserByIdAsync(userId);
@@ -68,7 +67,7 @@ namespace Api.Controllers
                     Message = "Invalid buildId"
                 });
             }
-            bool result = await _sonarQubeAuthService.ProcessSonarQubeUser(userName, build.RepoName, ProjectKey);
+            bool result = await _sonarQubeAuthService.ProcessSonarQubeUser(userName, build.RepoName, build.ProjectId);
             return Ok(new BaseResponse()
             {
                 IsSuccess = result

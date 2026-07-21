@@ -35,7 +35,6 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { SortHeader } from "@/components/filter-toolbar/sort-header/sort-header";
 import {
   useGetSCALibraryData,
-  useGetSCADContainerData,
   useSCARedirectLink,
 } from "@/cross-modules/deployment/hooks/use-observability";
 import { useParams } from "react-router-dom";
@@ -893,13 +892,8 @@ const SCATab: React.FC = () => {
     isLoading,
     error,
   } = useGetSCALibraryData(buildId) as any;
-  const { data: scaContainerData } = useGetSCADContainerData(buildId) as any;
   const scaDetails = scaData?.data?.details;
   const vulnerabilities = scaData?.data?.vulnerabilities || [];
-
-  const scaContainerDetails = scaContainerData?.data?.details;
-  const containerVulnerabilities =
-    scaContainerData?.data?.vulnerabilities || [];
 
   const libraryPackageSummary = {
     critical: scaDetails?.critical,
@@ -911,18 +905,6 @@ const SCATab: React.FC = () => {
     vulnerabilities: scaDetails?.vulnerabilities,
     vulnerableComponents: scaDetails?.vulnerableComponents,
     components: scaDetails?.components,
-  };
-
-  const containerImageSummary = {
-    critical: scaContainerDetails?.critical,
-    high: scaContainerDetails?.high,
-    medium: scaContainerDetails?.medium,
-    low: scaContainerDetails?.low,
-    unassigned: scaContainerDetails?.unassigned,
-    riskScore: scaContainerDetails?.inheritedRiskScore,
-    vulnerabilities: scaContainerDetails?.vulnerabilities,
-    vulnerableComponents: scaContainerDetails?.vulnerableComponents,
-    components: scaContainerDetails?.components,
   };
 
   const transformVulnerabilities = (vulnerabilities: any[]): Dependency[] => {
@@ -996,10 +978,6 @@ const SCATab: React.FC = () => {
     [vulnerabilities],
   );
 
-  const containerImageDependencies: Dependency[] = useMemo(
-    () => transformVulnerabilities(containerVulnerabilities),
-    [containerVulnerabilities],
-  );
   return (
     <div className="w-full space-y-6">
       {isLoading ? (
@@ -1039,13 +1017,6 @@ const SCATab: React.FC = () => {
             summary={libraryPackageSummary}
             dependencies={libraryPackageDependencies}
           />
-          {scaContainerDetails && containerVulnerabilities ? (
-            <SCACard
-              title="Container image scan"
-              summary={containerImageSummary}
-              dependencies={containerImageDependencies}
-            />
-          ) : null}
         </>
       ) : (
         <Card>

@@ -164,3 +164,11 @@ server/Api/wwwroot/**
 .idea/
 
 builds/
+.sonarqube/
+.scannerwork/
+*.trufflehog.json
+*-secrets.json
+*sbom*.json
+*.cdx.json
+zap-*.xml
+*-semgrep.sarif

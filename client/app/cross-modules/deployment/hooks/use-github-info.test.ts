@@ -63,10 +63,7 @@ describe("Github Info Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toBe("token-123");
-      expect(githubInfoService.verifyAuthorization).toHaveBeenCalledWith(
-        code,
-        TEST_PROJECT_KEY,
-      );
+      expect(githubInfoService.verifyAuthorization).toHaveBeenCalledWith(code);
     });
   });
 
@@ -121,7 +118,7 @@ describe("Github Info Hooks", () => {
 
   describe("useManualDeployment", () => {
     it("should trigger manual deployment successfully", async () => {
-      const payload = { repoId: MOCK_REPO_ID, ProjectKey: TEST_PROJECT_KEY };
+      const payload = { repoId: MOCK_REPO_ID };
       vi.mocked(githubInfoService.manualDeploy).mockResolvedValue(
         mockSuccessResponse as any,
       );
@@ -264,7 +261,6 @@ describe("Github Info Hooks", () => {
     it("should trigger initial repo deployment successfully", async () => {
       const payload = {
         repoId: MOCK_REPO_ID,
-        projectKey: TEST_PROJECT_KEY,
         machineConfigId: "mc-1",
       };
       vi.mocked(githubInfoService.repoInitialDeploy).mockResolvedValue(
@@ -317,9 +313,7 @@ describe("Github Info Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockBuilds);
-      expect(githubInfoService.getAllRepoBuilds).toHaveBeenCalledWith(
-        TEST_PROJECT_KEY,
-      );
+      expect(githubInfoService.getAllRepoBuilds).toHaveBeenCalledWith();
     });
   });
 
@@ -395,7 +389,6 @@ describe("Github Info Hooks", () => {
     it("should change repo specs successfully", async () => {
       const payload = {
         repoId: MOCK_REPO_ID,
-        projectKey: TEST_PROJECT_KEY,
         machineConfigId: "mc-1",
       };
       vi.mocked(githubInfoService.updateRepoSettings).mockResolvedValue(

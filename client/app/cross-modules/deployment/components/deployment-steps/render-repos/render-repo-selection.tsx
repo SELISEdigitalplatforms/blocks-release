@@ -77,7 +77,8 @@ const RepositorySelector = ({
   const persistedData = localStorage.getItem("project-store");
   if (persistedData) {
     const parsedData = JSON.parse(persistedData);
-    applicationDomain = parsedData.state.selectedProject.applicationDomain;
+    applicationDomain =
+      parsedData.state.selectedProject.applications?.[0]?.domain ?? "";
   }
 
   return (

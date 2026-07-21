@@ -27,7 +27,7 @@ export const ProjectCard = ({ project, projects }: ProjectCardProps) => {
   const selectAndOpen = (target: IProject) => {
     setTenantGroup(target.tenantGroupId);
     setSelectedProject(target);
-    navigate("/deployment");
+    navigate("/app/deployment");
   };
 
   const onConfigureClick = () => {

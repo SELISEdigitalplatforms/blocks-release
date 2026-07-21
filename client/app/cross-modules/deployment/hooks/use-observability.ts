@@ -1,4 +1,3 @@
-import { useProjectStore } from "@/store/project.store";
 import { observabilityService } from "@blocks-deployment/services/observability.service";
 import { useQuery } from "@tanstack/react-query";
 
@@ -20,16 +19,6 @@ export const useGetSCALibraryData = (buildId: string) => {
     staleTime: 5 * 60 * 1000,
   });
 };
-export const useGetSCADContainerData = (buildId: string) => {
-  return useQuery({
-    queryKey: ["SCA-container", buildId],
-    queryFn: () => observabilityService.SCAData(buildId, "container"),
-    enabled: !!buildId,
-    retry: 2,
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
 export const useSCARedirectLink = (buildId: string) => {
   return useQuery({
     queryKey: ["SCA-redirect", buildId],
@@ -41,15 +30,10 @@ export const useSCARedirectLink = (buildId: string) => {
 };
 
 export const useSASTRedirectLink = (buildId: string) => {
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
-
   return useQuery({
     queryKey: ["SAST-redirect", buildId],
     queryFn: async () => {
-      const result = await observabilityService.SASTRedirect(
-        buildId,
-        projectKey,
-      );
+      const result = await observabilityService.SASTRedirect(buildId);
       return result;
     },
     enabled: !!buildId,

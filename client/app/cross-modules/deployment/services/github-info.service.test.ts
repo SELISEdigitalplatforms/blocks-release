@@ -11,7 +11,6 @@ import {
   MOCK_BUILD_ID,
   mockSuccessResponse,
 } from "../test-utils/__mocks__";
-import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
 
 vi.mock("@/lib/http-client", () => mockHttpClientFactory());
 
@@ -19,17 +18,14 @@ describe("GithubInfoService", () => {
   // ─── verifyAuthorization ───────────────────────────────────────────────────
 
   describe("verifyAuthorization", () => {
-    it("should call correct endpoint with code and projectKey", async () => {
+    it("should call correct endpoint with code", async () => {
       const mockResponse = "token-123";
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
       const code = "auth-code";
-      const result = await githubInfoService.verifyAuthorization(
-        code,
-        TEST_PROJECT_KEY,
-      );
+      const result = await githubInfoService.verifyAuthorization(code);
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.ACCESS_TOKEN}?code=${encodeURIComponent(code)}&ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}`;
+      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.ACCESS_TOKEN}?code=${encodeURIComponent(code)}`;
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockResponse);
     });
@@ -172,7 +168,6 @@ describe("GithubInfoService", () => {
       const payload = {
         repoName: "test",
         branch: "main",
-        ProjectKey: TEST_PROJECT_KEY,
         deploymentUrl: "http",
         repoUrl: "http",
         projectName: "test",
@@ -210,7 +205,7 @@ describe("GithubInfoService", () => {
     it("should call correct endpoint with payload", async () => {
       vi.mocked(http.post).mockResolvedValue(mockSuccessResponse);
 
-      const payload = { repoId: MOCK_REPO_ID, ProjectKey: TEST_PROJECT_KEY };
+      const payload = { repoId: MOCK_REPO_ID };
       const result = await githubInfoService.manualDeploy(payload);
 
       expect(http.post).toHaveBeenCalledWith(
@@ -238,14 +233,13 @@ describe("GithubInfoService", () => {
   // ─── getAllRepos ───────────────────────────────────────────────────────────
 
   describe("getAllRepos", () => {
-    it("should call correct endpoint with projectKey", async () => {
+    it("should call correct endpoint", async () => {
       const mockResponse: any[] = [];
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
-      const result = await githubInfoService.getAllRepos(TEST_PROJECT_KEY);
+      const result = await githubInfoService.getAllRepos();
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.REPOS}?ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}`;
-      expect(http.get).toHaveBeenCalledWith(expectedUrl);
+      expect(http.get).toHaveBeenCalledWith(CLOUD_BUILD_ENDPOINTS.REPOS);
       expect(result).toEqual(mockResponse);
     });
   });
@@ -253,14 +247,13 @@ describe("GithubInfoService", () => {
   // ─── getAllRepoBuilds ──────────────────────────────────────────────────────
 
   describe("getAllRepoBuilds", () => {
-    it("should call correct endpoint with projectKey", async () => {
+    it("should call correct endpoint", async () => {
       const mockResponse: any[] = [];
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
-      const result = await githubInfoService.getAllRepoBuilds(TEST_PROJECT_KEY);
+      const result = await githubInfoService.getAllRepoBuilds();
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.REPOS}?ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}`;
-      expect(http.get).toHaveBeenCalledWith(expectedUrl);
+      expect(http.get).toHaveBeenCalledWith(CLOUD_BUILD_ENDPOINTS.REPOS);
       expect(result).toEqual(mockResponse);
     });
   });
@@ -341,7 +334,6 @@ describe("GithubInfoService", () => {
 
       const payload = {
         repoId: MOCK_REPO_ID,
-        projectKey: TEST_PROJECT_KEY,
         machineConfigId: "mc-1",
       };
       const result = await githubInfoService.updateRepoSettings(payload);
@@ -380,16 +372,13 @@ describe("GithubInfoService", () => {
   // ─── getBuildLogs ──────────────────────────────────────────────────────────
 
   describe("getBuildLogs", () => {
-    it("should call correct endpoint with repoId and projectKey", async () => {
+    it("should call correct endpoint with repoId", async () => {
       const mockResponse = {};
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
-      const result = await githubInfoService.getBuildLogs(
-        MOCK_REPO_ID,
-        TEST_PROJECT_KEY,
-      );
+      const result = await githubInfoService.getBuildLogs(MOCK_REPO_ID);
 
-      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.RUN_BUILD}?repoId=${MOCK_REPO_ID}&ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}`;
+      const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.RUN_BUILD}?repoId=${MOCK_REPO_ID}`;
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockResponse);
     });

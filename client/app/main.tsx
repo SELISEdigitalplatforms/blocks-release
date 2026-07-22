@@ -13,19 +13,31 @@ import { NotificationHubListener } from "./cross-modules/communication/component
 import { router } from "./router";
 import "./styles/globals.css";
 import { TooltipProvider } from "./components/ui-kits/tooltip/tooltip";
+import { BlocksAppLayout } from "@seliseblocks/blocks-kit";
+import { getRuntimeEnv } from "./lib/runtime-env";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryProvider>
       <ThemeProvider>
-        <TooltipProvider>
-          <NuqsAdapter>
-            <RouterProvider router={router} />
+        <NuqsAdapter>
+          <TooltipProvider>
+            <BlocksAppLayout
+              config={{
+                name: "blocks-release",
+                appLogoUrl:{
+                  dark: "/Logo_Dark.svg",
+                  light: "/Logo_Light.svg",
+                }
+              }}
+            >
+              <RouterProvider router={router} />
+            </BlocksAppLayout>
             <Toaster />
             {/* <DeploymentHubListener /> */}
             <NotificationHubListener />
-          </NuqsAdapter>
-        </TooltipProvider>
+          </TooltipProvider>
+        </NuqsAdapter>
       </ThemeProvider>
     </QueryProvider>
   </StrictMode>,

@@ -1,46 +1,121 @@
-import { Navigate, type RouteObject } from "react-router-dom";
-import { DashboardLayout } from "@/layouts/dashboard-layout/dashboard-layout";
-import { ConsoleLayout } from "@/layouts/console-layout/console-layout";
-import { Console } from "@/pages/console/console";
-import LoginPage from "./auth/login";
-import CallbackPage from "./callback";
-import ProfilePage from "./dashboard/profile";
+import { Navigate, Outlet, type RouteObject } from "react-router-dom";
+import {
+  AuthResolver,
+  PublicGuard,
+  ProtectedGuard,
+  LoginPage,
+  CallbackPage,
+  ConsoleLayout,
+  ConsolePage,
+  DashboardRoute,
+  DashboardOverview
+  // ProjectOverviewRoute / DashboardRoute are URL-addressable route elements:
+  // they hydrate the selected project from the URL param (:tenantGroupId / :itemId),
+  // validate it (redirecting to /app/console when invalid), inject the id into the
+  // navigation-menu paths, and render ProjectOverviewLayout / DashboardLayout
+  // (which self-wrap the impersonation guards) with an <Outlet /> for children.
+} from "@seliseblocks/blocks-kit";
+import { ProfilePage } from "@seliseblocks/blocks-kit";
 import DeploymentPage from "./deployment/deployment";
 import DeploymentRepoDetailsPage from "./deployment/deployment-repo-details";
 import DeploymentLogsPage from "./deployment/deployment-logs";
 import DeploymentLivePage from "./deployment/deployment-live";
+import { navigationMenus } from "@/constants/navigation-menus.constant";
+
+
+const redirectPaths: Record<string, string> = {
+  "/app/release/monitor/*": "/app/release",
+  "/app/release/monitor/incidents/*": "/app/release",
+};
 
 export const routes = [
   {
-    path: "/login",
+    // Resolve authentication state before rendering any route.
+    element: (
+      <AuthResolver>
+        <Outlet />
+      </AuthResolver>
+    ),
     children: [
-      { index: true, element: <LoginPage /> },
-      { path: "callback", element: <CallbackPage /> },
+      // ── Public routes ──
+      {
+        element: (
+          <PublicGuard>
+            <Outlet />
+          </PublicGuard>
+        ),
+        children: [
+          {
+            path: "/login",
+            children: [
+              { index: true, element: <LoginPage /> },
+              {
+                path: "callback",
+                element: <CallbackPage defaultRedirectUrl="/app/console" />,
+              },
+            ],
+          },
+        ],
+      },
+
+      // ── Protected routes ── (all live under the /app prefix)
+      {
+        path: "/app",
+        element: (
+          <ProtectedGuard>
+            <Outlet />
+          </ProtectedGuard>
+        ),
+        children: [
+          // Bare /app → console.
+          { index: true, element: <Navigate to="/app/console" replace /> },
+
+          // Console: ConsoleLayout self-wraps ImpersonationChecker + ImpersonationTerminator.
+          {
+            element: (
+              <ConsoleLayout>
+                <Outlet />
+              </ConsoleLayout>
+            ),
+            children: [
+              { path: "console", element: <ConsolePage /> },
+              { path: "profile", element: <ProfilePage /> },
+            ],
+          },
+          // Impersonated project scope: /app/:itemId/*
+          {
+            path: ":itemId",
+            element: (
+              <DashboardRoute
+                redirectPaths={redirectPaths}
+                navigationMenus={navigationMenus}
+              />
+            ),
+            children: [
+              { index: true, element: <Navigate to="dashboard" replace /> },
+              { path: "dashboard", element: <DashboardOverview /> },
+              { path: "deployment", element: <DeploymentPage /> },
+              {
+                path: "deployment/repo/:repoId",
+                element: <DeploymentRepoDetailsPage />,
+              },
+              {
+                path: "deployment/repo/:repoId/deployment-logs/:buildId",
+                element: <DeploymentLogsPage />,
+              },
+              {
+                path: "deployment/repo/:repoId/deployment-live/:buildId",
+                element: <DeploymentLivePage />,
+              },
+              { path: "profile", element: <ProfilePage /> },
+            ],
+          },
+        ],
+      },
+
+      { path: "/", element: <Navigate to="/app/console" replace /> },
+      // ── Catch-all: redirect to login ──
+      { path: "*", element: <Navigate to="/login" replace /> },
     ],
   },
-  {
-    element: <ConsoleLayout />,
-    children: [{ path: "/console", element: <Console /> }],
-  },
-  {
-    element: <DashboardLayout />,
-    children: [
-      { path: "/deployment", element: <DeploymentPage /> },
-      {
-        path: "/deployment/repo/:repoId",
-        element: <DeploymentRepoDetailsPage />,
-      },
-      {
-        path: "/deployment/repo/:repoId/deployment-logs/:buildId",
-        element: <DeploymentLogsPage />,
-      },
-      {
-        path: "/deployment/repo/:repoId/deployment-live/:buildId",
-        element: <DeploymentLivePage />,
-      },
-      { path: "/profile", element: <ProfilePage /> },
-    ],
-  },
-  { path: "/", element: <Navigate to="/console" replace /> },
-  { path: "*", element: <Navigate to="/login" replace /> },
 ] as const satisfies RouteObject[];

@@ -59,8 +59,10 @@ export const useGetProject = (options: { projectId: string }) => {
 
 export const useGetEnvRepositories = (projectKey: string) => {
   return useQuery({
+    // projectKey stays in the queryKey to scope the cache per project; the API
+    // itself resolves the project from the tenant context server-side.
     queryKey: ["env-repositories", projectKey],
-    queryFn: () => crossProjectService.getEnvRepositories(projectKey),
+    queryFn: () => crossProjectService.getEnvRepositories(),
   });
 };
 

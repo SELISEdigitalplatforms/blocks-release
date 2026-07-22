@@ -19,6 +19,9 @@ Options:
 
   -k, --kill-port      Kill process on API port
   -h, --help           Show this help
+
+Tests:
+  -te, --test-e2e      End-to-end tests (e2e/: playwright)
 "@ | Write-Host
 }
 
@@ -28,6 +31,7 @@ $Worker = $false
 $All = $false
 $Frontend = $false
 $KillPort = $false
+$TestE2e = $false
 $Npm = @()
 $Dotnet = @()
 
@@ -51,6 +55,9 @@ while ($i -lt $CliArgs.Count) {
         "-k" { $KillPort = $true }
         "--kill-port" { $KillPort = $true }
 
+        "-te" { $TestE2e = $true }
+        "--test-e2e" { $TestE2e = $true }
+
         "-h" { Show-Usage; exit }
         "--help" { Show-Usage; exit }
 
@@ -69,7 +76,7 @@ while ($i -lt $CliArgs.Count) {
     $i++
 }
 
-if (-not ($Backend -or $Worker -or $All -or $Frontend -or $KillPort -or $Npm.Count -or $Dotnet.Count)) {
+if (-not ($Backend -or $Worker -or $All -or $Frontend -or $KillPort -or $TestE2e -or $Npm.Count -or $Dotnet.Count)) {
     Show-Usage
     exit
 }
@@ -77,6 +84,7 @@ if (-not ($Backend -or $Worker -or $All -or $Frontend -or $KillPort -or $Npm.Cou
 # ---- Paths ----
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ClientDir = Join-Path $ScriptDir "client"
+$E2eDir = Join-Path $ScriptDir "e2e"
 $ApiProject = Join-Path $ScriptDir "server/Api/Api.csproj"
 $WorkerProject = Join-Path $ScriptDir "server/Worker/Worker.csproj"
 $Wwwroot = Join-Path $ScriptDir "server/Api/wwwroot"
@@ -146,10 +154,54 @@ function Run-Worker {
     dotnet run --project $WorkerProject
 }
 
+# ---- Tests ----
+
+# Native commands do not stop the script on failure, so check the exit code.
+function Invoke-Step {
+    param([scriptblock]$Step, [string]$Name)
+
+    & $Step
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "$Name failed (exit $LASTEXITCODE)"
+        exit $LASTEXITCODE
+    }
+}
+
+# Reads e2e/.env.e2e for the target host + credentials. Against the remote dev
+# host that file sets E2E_NO_WEBSERVER=1; without it Playwright would try to
+# start a local API itself (webServer: run.sh -b).
+function Test-E2E {
+    Write-Host "=== E2E tests ==="
+
+    if (!(Test-Path (Join-Path $E2eDir ".env.e2e"))) {
+        Write-Host "Missing $E2eDir\.env.e2e - copy .env.e2e.example and set E2E_BASE_URL + credentials."
+        exit 1
+    }
+
+    if (!(Test-Path (Join-Path $E2eDir "node_modules"))) {
+        Write-Host "Installing dependencies in e2e..."
+        Invoke-Step { npm --prefix $E2eDir install } "npm install"
+    }
+
+    Push-Location $E2eDir
+    try {
+        Invoke-Step { npx playwright install --no-shell chromium } "playwright install"
+        Invoke-Step { npm run test } "e2e tests"
+    }
+    finally {
+        Pop-Location
+    }
+}
+
 # ---- Execution ----
 
 if ($KillPort) {
     Free-Port
+    exit
+}
+
+if ($TestE2e) {
+    Test-E2E
     exit
 }
 

@@ -1,26 +1,10 @@
 // import { GRANT_TYPES, SSO_PROVIDERS } from "@blocks-idp/authentication/constants";
 
-export interface IProject {
-  itemId: string;
-  createdDate: string;
-  lastUpdatedDate: string;
-  createdBy: string;
-  lastUpdatedBy: string;
-  organizationIds: string[];
-  tags: string[];
-  name: string;
-  applicationDomain: string;
-  customDomain: string;
-  isProduction: true;
-  tenantId: string;
-  isCookieEnable: boolean;
-  isDomainVerified: boolean;
-  cookieDomain: string;
-  isDisabled: boolean;
-  environment: string;
-  tenantGroupId: string;
-  tenantSlug: string;
-}
+// IProject is now owned by blocks-kit (0.0.54 reshaped it: `applicationDomain`
+// became `applications: IDomain[]`). Re-export blocks-kit's type as the single
+// source of truth so this app's values stay assignable to blocks-kit APIs.
+import type { IProject, IDomain } from "@seliseblocks/blocks-kit";
+export type { IProject, IDomain };
 
 export interface IResource {
   name: string;

@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 CLIENT_DIR="$SCRIPT_DIR/client"
+E2E_DIR="$SCRIPT_DIR/e2e"
 API_PROJECT="$SCRIPT_DIR/server/Api/Api.csproj"
 WORKER_PROJECT="$SCRIPT_DIR/server/Worker/Worker.csproj"
 WWWROOT_DIR="$SCRIPT_DIR/server/Api/wwwroot"
@@ -31,11 +32,15 @@ Options:
   -n, --npm         Run npm command inside client/
   -h, --help        Show help
 
+Tests:
+  -te, --test-e2e   End-to-end tests (e2e/: playwright)
+
 Examples:
   $0 -a
   $0 -b
   $0 -f
   $0 -k
+  $0 -te
 EOF
 exit 1
 }
@@ -143,6 +148,32 @@ run_worker() {
     dotnet run --project "$WORKER_PROJECT"
 }
 
+# ---------- TESTS ----------
+ensure_node_modules() {
+    local dir=$1
+    if [ ! -d "$dir/node_modules" ]; then
+        echo "Installing dependencies in $(basename "$dir")..."
+        (cd "$dir" && npm install)
+    fi
+}
+
+# Reads e2e/.env.e2e for the target host + credentials. Against the remote dev
+# host that file sets E2E_NO_WEBSERVER=1; without it Playwright would try to
+# start a local API itself (webServer: run.sh -b).
+test_e2e() {
+    echo "=== E2E tests ==="
+
+    if [ ! -f "$E2E_DIR/.env.e2e" ]; then
+        echo "Missing $E2E_DIR/.env.e2e — copy .env.e2e.example and set E2E_BASE_URL + credentials."
+        exit 1
+    fi
+
+    ensure_node_modules "$E2E_DIR"
+
+    (cd "$E2E_DIR" && npx playwright install --no-shell chromium)
+    (cd "$E2E_DIR" && npm run test)
+}
+
 # ---------- MAIN ----------
 if [ $# -eq 0 ]; then
     usage
@@ -184,6 +215,10 @@ case "$1" in
         WORKER_PID=$!
 
         wait $API_PID $WORKER_PID
+        ;;
+
+    -te|--test-e2e)
+        test_e2e
         ;;
 
     -n|--npm)

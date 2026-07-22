@@ -5,15 +5,22 @@ import { Separator } from "@/components/ui-kits/separator/separator";
 import { navigationMenus } from "@/constants/navigation-menus.constant";
 import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import { useFilteredMenus } from "@/hooks/use-filtered-menus";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppSettingsStore } from "@seliseblocks/blocks-kit/store";
 import { cn } from "@/lib/utils";
 import { PanelLeft } from "lucide-react";
 import { Fragment, useContext } from "react";
 import { Link } from "react-router-dom";
 
+function getSystemTheme(): "light" | "dark" {
+  if (typeof window === "undefined") return "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 export function SidebarMenuDesktop() {
   const { isSidebarOpen, toggleSidebar } = useContext(SidebarContext);
-  const { resolvedTheme } = useTheme();
+  const { settings } = useAppSettingsStore();
+  const theme = settings.theme ?? "system";
+  const resolvedTheme = theme === "system" ? getSystemTheme() : theme;
   const allowedMenu = useFilteredMenus(navigationMenus);
 
   const getLogoSrc = () => {
@@ -28,7 +35,7 @@ export function SidebarMenuDesktop() {
       className={`hidden h-[calc(100vh)] flex-col border-r bg-background transition-all md:flex ${isSidebarOpen ? "min-w-60" : "w-14"}`}>
       <div className="flex h-[60px] shrink-0 items-center justify-between border-b bg-background px-3">
         <Link
-          to="/console"
+          to="/app/console"
           aria-label="Go to Console"
           className={cn(
             "relative inline-block cursor-pointer overflow-hidden transition-all",

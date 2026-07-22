@@ -2,7 +2,7 @@ using Devops.DomainService.Deployment.Models.Dtos;
 
 namespace Devops.DomainService.Deployment.Models.Request;
 
-public class RepoUpdateRequest : ProjectKeyQuery
+public class RepoUpdateRequest
 {
     public string RepoId { get; set; }
     public string HostingProviderId { get; set; }

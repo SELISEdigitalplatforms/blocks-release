@@ -31,20 +31,21 @@ export class ProjectService {
     return this.logicClient.get(url);
   }
 
-  getEnvRepositories(projectKey: string): Promise<{
+  getEnvRepositories(): Promise<{
     data: IEnvRepository[];
     errors: unknown | null;
     isSuccess: boolean;
   }> {
-    const url = `${CLOUD_BUILD_ENDPOINTS.REPOS_LIST}?projectkey=${projectKey}`;
-    return this.httpClient.get(url);
+    return this.httpClient.get(CLOUD_BUILD_ENDPOINTS.REPOS_LIST);
   }
 
   addAssets(payload: { tenantGroupId: string; resource: IResource }): Promise<{
     errors: unknown | null;
     isSuccess: boolean;
   }> {
-    return this.httpClient.post(PROJECT_ENDPOINTS.ADD_ASSET, payload);
+    // Project management is owned by the logic app, not the deployment API
+    // (the deployment backend no longer hosts a Project controller).
+    return this.logicClient.post(PROJECT_ENDPOINTS.ADD_ASSET, payload);
   }
 }
 

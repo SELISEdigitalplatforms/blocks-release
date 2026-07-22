@@ -43,3 +43,8 @@ public class MyService
 | `RemoveAuthorizationAsync()` | Revokes the current user's OAuth access from the provider |
 | `DeleteAuthorizationAsync()` | Deletes the stored access token for the current user |
 | `GetReposListAsync(projectKey)` | Retrieves the list of repositories for the given project key |
+| `GetUserAsync()` | Retrieves the authenticated GitHub user |
+| `SearchRepositoriesAsync(search, pageNumber, pageSize)` | Searches the authenticated user's GitHub repositories |
+| `GetBranchesAsync(repo)` | Retrieves the branches for the specified GitHub repository |
+| `GithubBranchExistsAsync(repoId)` | Checks whether the configured branch exists for the given repository |
+| `UpdateRepoDomainAsync(request)` | Updates the custom deployment domains for the given repositories |

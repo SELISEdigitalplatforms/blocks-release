@@ -1,53 +1,19 @@
+import type { StoreApi, UseBoundStore } from "zustand";
+import { useAuthStore as useBlocksAuthStore } from "@seliseblocks/blocks-kit";
 import { User } from "@blocks-idp/iam/models/user";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
-interface AuthState {
-  isAuthenticated: boolean;
+// Auth state is owned by blocks-kit so that its guards (AuthResolver,
+// ProtectedGuard, PublicGuard) and the rest of the deployment app share a
+// single source of truth. blocks-kit types `user` loosely as `BaseUser`;
+// deployment works with the richer IDP `User` shape, so we re-expose the same
+// store instance with that type.
+type BlocksAuthState = ReturnType<typeof useBlocksAuthStore.getState>;
+
+export interface AuthState extends Omit<BlocksAuthState, "user" | "setUser"> {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
   setUser: (user: User | null) => void;
-  setAuthenticated: () => void;
-  setUnAuthenticated: () => void;
-  setTokens: (accessToken: string, refreshToken: string) => void;
-  clearTokens: () => void;
-  reset: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      isAuthenticated: false,
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-      setUser: (user: User | null) => {
-        set((state) => ({ ...state, user }));
-      },
-      setAuthenticated: () => {
-        set((state) => ({ ...state, isAuthenticated: true }));
-      },
-      setUnAuthenticated: () => {
-        set((state) => ({ ...state, isAuthenticated: false, user: null }));
-      },
-      setTokens: (accessToken: string, refreshToken: string) => {
-        set((state) => ({ ...state, accessToken, refreshToken }));
-      },
-      clearTokens: () => {
-        set((state) => ({ ...state, accessToken: null, refreshToken: null }));
-      },
-      reset: () => {
-        set({
-          isAuthenticated: false,
-          user: null,
-          accessToken: null,
-          refreshToken: null,
-        });
-      },
-    }),
-    {
-      name: "auth-storage",
-    },
-  ),
-);
+export const useAuthStore = useBlocksAuthStore as unknown as UseBoundStore<
+  StoreApi<AuthState>
+>;

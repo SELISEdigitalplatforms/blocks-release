@@ -6,6 +6,7 @@ import { IDeploySettings } from "@blocks-deployment/models/deployed-logs";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatFullDate } from "@/utils/date.util";
+import { useScopedPath } from "@/hooks/use-scoped-path";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
 import React, { useState } from "react";
 import {
@@ -56,6 +57,7 @@ export interface IRepoResponse {
 
 export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
   const navigate = useNavigate();
+  const scoped = useScopedPath();
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [skipInitialVerification, setSkipInitialVerification] = useState(false);
@@ -108,7 +110,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
   const handleSuccess = () => {
     setShowBranchModal(false);
     setIsLoading(false);
-    navigate(`/deployment/repo/${repo.itemId}`);
+    navigate(scoped(`deployment/repo/${repo.itemId}`));
   };
 
   const handleApiComplete = () => {

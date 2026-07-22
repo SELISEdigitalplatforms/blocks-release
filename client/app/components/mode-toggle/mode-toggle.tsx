@@ -1,9 +1,29 @@
+import { useEffect } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import { useTheme } from "@/hooks/use-theme";
+import { useAppSettingsStore } from "@seliseblocks/blocks-kit/store";
+
+type Theme = "light" | "dark" | "system";
+
+function getSystemTheme(): "light" | "dark" {
+  if (typeof window === "undefined") return "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
 
 export function ModeToggle() {
-  const { setTheme, resolvedTheme } = useTheme();
+  const { settings, setSettings } = useAppSettingsStore();
+  const theme = settings.theme ?? "system";
+  const resolvedTheme = theme === "system" ? getSystemTheme() : theme;
+
+  const setTheme = (newTheme: Theme) => {
+    setSettings({ theme: newTheme });
+    const resolved = newTheme === "system" ? getSystemTheme() : newTheme;
+    document.documentElement.classList.toggle("dark", resolved === "dark");
+  };
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
+  }, [resolvedTheme]);
 
   return (
     <Button

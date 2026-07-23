@@ -8,7 +8,7 @@ import {
   ConsoleLayout,
   ConsolePage,
   DashboardRoute,
-  DashboardOverview
+  DashboardOverview,
   // ProjectOverviewRoute / DashboardRoute are URL-addressable route elements:
   // they hydrate the selected project from the URL param (:tenantGroupId / :itemId),
   // validate it (redirecting to /app/console when invalid), inject the id into the
@@ -21,7 +21,7 @@ import DeploymentRepoDetailsPage from "./deployment/deployment-repo-details";
 import DeploymentLogsPage from "./deployment/deployment-logs";
 import DeploymentLivePage from "./deployment/deployment-live";
 import { navigationMenus } from "@/constants/navigation-menus.constant";
-
+import { DeploymentLayout } from "@/layouts/deployment-layout";
 
 const redirectPaths: Record<string, string> = {
   "/app/release/monitor/*": "/app/release",
@@ -92,22 +92,39 @@ export const routes = [
               />
             ),
             children: [
-              { index: true, element: <Navigate to="dashboard" replace /> },
-              { path: "dashboard", element: <DashboardOverview /> },
-              { path: "deployment", element: <DeploymentPage /> },
               {
-                path: "deployment/repo/:repoId",
-                element: <DeploymentRepoDetailsPage />,
+                index: true,
+                element: <Navigate to="dashboard" replace />,
               },
               {
-                path: "deployment/repo/:repoId/deployment-logs/:buildId",
-                element: <DeploymentLogsPage />,
+                path: "dashboard",
+                element: <DashboardOverview />,
               },
               {
-                path: "deployment/repo/:repoId/deployment-live/:buildId",
-                element: <DeploymentLivePage />,
+                element: <DeploymentLayout />,
+                children: [
+                  {
+                    index: true,
+                    element: <Navigate to="deployment" replace />,
+                  },
+                  {
+                    path: "deployment",
+                    element: <DeploymentPage />,
+                  },
+                  {
+                    path: "deployment/repo/:repoId",
+                    element: <DeploymentRepoDetailsPage />,
+                  },
+                  {
+                    path: "deployment/repo/:repoId/deployment-logs/:buildId",
+                    element: <DeploymentLogsPage />,
+                  },
+                  {
+                    path: "deployment/repo/:repoId/deployment-live/:buildId",
+                    element: <DeploymentLivePage />,
+                  },
+                ],
               },
-              { path: "profile", element: <ProfilePage /> },
             ],
           },
         ],

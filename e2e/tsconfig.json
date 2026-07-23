@@ -7,7 +7,12 @@
     "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "baseUrl": "./",
+    "paths": {
+      "@/tests": ["tests/*"],
+      "@/support/*": ["support/*"]
+    }
   },
   "include": ["**/*.ts"]
 }

@@ -1,4 +1,4 @@
-import { test, expect } from "../../support/test-base";
+import { test, expect } from "@/support/test-base";
 
 const username = process.env.E2E_USERNAME;
 const password = process.env.E2E_PASSWORD;

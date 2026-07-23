@@ -339,30 +339,7 @@ describe("GithubInfoService", () => {
       const result = await githubInfoService.updateRepoSettings(payload);
 
       expect(http.post).toHaveBeenCalledWith(
-        CLOUD_BUILD_ENDPOINTS.SETTINGS,
-        payload,
-      );
-      expect(result).toEqual(mockSuccessResponse);
-    });
-  });
-
-  // ─── changeRepoSettings ────────────────────────────────────────────────────
-
-  describe("changeRepoSettings", () => {
-    it("should call correct endpoint with payload", async () => {
-      vi.mocked(http.put).mockResolvedValue(mockSuccessResponse);
-
-      const payload = {
-        deploymentType: "manual" as const,
-        hostingProviderId: "hp-1",
-        machineConfigId: "mc-1",
-        regionId: "reg-1",
-        repoId: MOCK_REPO_ID,
-      };
-      const result = await githubInfoService.changeRepoSettings(payload);
-
-      expect(http.put).toHaveBeenCalledWith(
-        CLOUD_BUILD_ENDPOINTS.SETTINGS,
+        CLOUD_BUILD_ENDPOINTS.REPO_SETTINGS_UPDATE,
         payload,
       );
       expect(result).toEqual(mockSuccessResponse);

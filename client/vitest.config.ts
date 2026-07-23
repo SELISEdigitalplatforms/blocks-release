@@ -42,7 +42,6 @@ export default defineConfig({
     clearMocks: true,
     setupFiles: ["./app/test-utils/vitest.setup.ts"],
     coverage: {
-      all: true,
       provider: "v8",
       // Minimum FE unit-test coverage gate. `test:coverage` fails if any of
       // these drop below 10%.

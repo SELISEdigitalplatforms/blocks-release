@@ -11,7 +11,9 @@
     "baseUrl": "./",
     "paths": {
       "@/tests": ["tests/*"],
-      "@/support/*": ["support/*"]
+      "@/support/*": ["support/*"],
+      "@/pages/*": ["pages/*"],
+      "@/constants/*": ["constants/*"]
     }
   },
   "include": ["**/*.ts"]

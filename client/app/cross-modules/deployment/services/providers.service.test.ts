@@ -8,8 +8,13 @@ import {
   authenticateWithAws,
 } from "./providers.service";
 
+const GITHUB_CLIENT_ID = "test-client-id";
+
+vi.mock("@/lib/runtime-env", () => ({
+  getRuntimeEnv: vi.fn(() => GITHUB_CLIENT_ID),
+}));
+
 describe("ProvidersService", () => {
-  const GITHUB_CLIENT_ID = "test-client-id";
   const TEST_STATE = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
   beforeEach(() => {
@@ -23,7 +28,6 @@ describe("ProvidersService", () => {
         return arr;
       }),
     });
-    process.env.NEXT_PUBLIC_GITHUB_SSO_CLIENT_ID = GITHUB_CLIENT_ID;
   });
 
   afterEach(() => {

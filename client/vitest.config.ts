@@ -37,10 +37,19 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    // Reset spy call history before every test so shared mocks (e.g. the http
+    // client / service factories) don't leak calls across test cases.
+    clearMocks: true,
     setupFiles: ["./app/test-utils/vitest.setup.ts"],
     coverage: {
-      all: true,
       provider: "v8",
+      // Minimum FE unit-test coverage gate. `test:coverage` fails if any of
+      // these drop below 10%.
+      thresholds: {
+        statements: 10,
+        lines: 10,
+        functions: 10,
+      },
       include: ["app/**/*.{ts,tsx}"],
       exclude: [
         "app/**/*.test.*",

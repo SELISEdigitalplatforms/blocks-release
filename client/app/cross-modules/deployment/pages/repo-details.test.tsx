@@ -241,6 +241,61 @@ describe("RepoDetails page", () => {
     );
   });
 
+  it("consumes the refresh query param on mount", () => {
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        ...window.location,
+        search: "?refresh=true",
+        pathname: "/app/deployment/repo/r1",
+      },
+    });
+    const replaceState = vi.spyOn(window.history, "replaceState");
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: {
+        data: { repo: { ...baseRepo }, build: [makeBuild()] },
+        isSuccess: true,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    expect(replaceState).toHaveBeenCalled();
+    replaceState.mockRestore();
+  });
+
+  it("navigates to deployment home when a manual deploy returns no build id", () => {
+    const deployMutate = vi.fn((_vars, opts) => {
+      opts.onSuccess({});
+    });
+    vi.mocked(useInitialRepoDeployment).mockReturnValue({
+      mutate: deployMutate,
+      isPending: false,
+    } as never);
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: {
+        data: { repo: { ...baseRepo }, build: [makeBuild()] },
+        isSuccess: true,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Deploy/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
+    expect(navigateMock).toHaveBeenCalledWith(
+      expect.stringContaining("deployment"),
+    );
+  });
+
   it("handles a manual deployment error", () => {
     const deployMutate = vi.fn((_vars, opts) => {
       opts.onError({ errors: { message: "boom" } });

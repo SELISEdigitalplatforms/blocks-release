@@ -8,11 +8,15 @@ const specsData = [
   {
     id: "prov-aws",
     name: "AWS",
-    regions: [
+    status: "active",
+    region: [
       {
         id: "r1",
         name: "us-east-1",
-        machineConfigs: [{ id: "m1", name: "small", cpu: "1", memory: "1GB" }],
+        status: "active",
+        machineSpecs: [
+          { id: "m1", name: "small", cpu: "1", memory: "1GB", status: "active" },
+        ],
       },
     ],
   },
@@ -23,8 +27,8 @@ const deploymentData: DeploymentFormData = {
   lastDeploymentStatus: "",
   deploymentType: "auto",
   framework: "react",
-  provider: "",
-  region: "",
+  provider: "AWS",
+  region: "us-east-1",
   selectedSpec: "",
 };
 

@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
 import {
@@ -107,5 +107,36 @@ describe("SCATab", () => {
     renderWithProviders(<SCATab />);
     expect(screen.getByText("left-pad")).toBeInTheDocument();
     expect(screen.getByText("CVE-1")).toBeInTheDocument();
+  });
+
+  it("opens the vulnerability details dialog and filters dependencies", () => {
+    vi.mocked(useGetSCALibraryData).mockReturnValue({
+      data: {
+        data: {
+          details: { critical: 1, high: 0, medium: 0, low: 0, unassigned: 0 },
+          vulnerabilities: [
+            {
+              name: "left-pad",
+              group: "npm",
+              version: "1.0.0",
+              id: "CVE-1",
+              score: "9.8",
+              severity: "CRITICAL",
+              epssPercentile: 0.5,
+            },
+          ],
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as never);
+    renderWithProviders(<SCATab />);
+    // Open the details dialog by clicking the dependency row.
+    fireEvent.click(screen.getByText("left-pad"));
+    expect(screen.getByText("Vulnerability details")).toBeInTheDocument();
+    // Filter the dependency table.
+    const search = screen.getByPlaceholderText("Search dependencies...");
+    fireEvent.change(search, { target: { value: "nomatch" } });
+    expect(search).toHaveValue("nomatch");
   });
 });

@@ -67,6 +67,56 @@ describe("RepoCards", () => {
     );
   });
 
+  it("ignores clicks that originate on a link inside the card", () => {
+    const refetchAuthorization = vi.fn();
+    vi.mocked(useValidateAuthorization).mockReturnValue({
+      data: { isSuccess: true },
+      refetchAuthorization,
+      refetch: refetchAuthorization,
+    } as never);
+    renderWithProviders(<RepoCards repo={repo} />, { route: "/app/deployment" });
+    // Clicking the repo URL link should not start the auth check.
+    fireEvent.click(screen.getByText("https://github.com/acme/app"));
+    expect(refetchAuthorization).not.toHaveBeenCalled();
+  });
+
+  it("renders a custom deployment url and N/A repo url", () => {
+    renderWithProviders(
+      <RepoCards
+        repo={
+          {
+            ...repo,
+            repoUrl: "",
+            defaultDeploymentUrl: null,
+            customDeploymentUrl: "https://custom.example.com",
+          } as never
+        }
+      />,
+      { route: "/app/deployment" },
+    );
+    expect(
+      screen.getByText("https://custom.example.com"),
+    ).toBeInTheDocument();
+  });
+
+  it("proceeds to branch verification after a successful retry", async () => {
+    const refetch = vi
+      .fn()
+      .mockResolvedValueOnce({ data: { isSuccess: false } })
+      .mockResolvedValue({ data: { isSuccess: true } });
+    vi.mocked(useValidateAuthorization).mockReturnValue({
+      data: { isSuccess: false },
+      refetch,
+    } as never);
+    renderWithProviders(<RepoCards repo={repo} />, { route: "/app/deployment" });
+    fireEvent.click(screen.getByText(/Deploys for/));
+    // Access modal opens; retry now authorizes and advances to the branch modal.
+    fireEvent.click(await screen.findByRole("button", { name: /Retry/i }));
+    await waitFor(() =>
+      expect(screen.getByText("Please wait…")).toBeInTheDocument(),
+    );
+  });
+
   it("renders the no-build badge when no deployment status is present", () => {
     renderWithProviders(
       <RepoCards

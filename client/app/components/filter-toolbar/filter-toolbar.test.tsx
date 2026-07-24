@@ -50,6 +50,43 @@ describe("FilterToolbar", () => {
     const resetButtons = screen.getAllByRole("button");
     expect(resetButtons.length).toBeGreaterThan(0);
   });
+
+  it("resets to the default values when the reset control is clicked", () => {
+    const onReset = vi.fn();
+    render(
+      <FilterToolbar<Filters>
+        filters={[{ key: "search", type: "SearchInput", label: "" }]}
+        values={{ ...values, search: "abc" }}
+        defaultValues={values}
+        onChange={vi.fn()}
+        onReset={onReset}
+      />,
+    );
+    const reset = screen.getAllByRole("button", { name: /reset/i })[0];
+    fireEvent.click(reset);
+    expect(onReset).toHaveBeenCalledWith(values);
+  });
+
+  it("forwards a control change to the change handler", () => {
+    const onChange = vi.fn();
+    render(
+      <FilterToolbar<Filters>
+        filters={[{ key: "search", type: "SearchInput", label: "" }]}
+        values={{ ...values, search: "abc" }}
+        defaultValues={values}
+        onChange={onChange}
+        hideGlobalResetButton
+      />,
+    );
+    // The search clear button fires an immediate onChange through the toolbar.
+    const clearButtons = screen.getAllByRole("button");
+    fireEvent.click(clearButtons[0]);
+    expect(onChange).toHaveBeenCalledWith(
+      "search",
+      "",
+      expect.objectContaining({ search: "" }),
+    );
+  });
 });
 
 describe("ClearButton", () => {

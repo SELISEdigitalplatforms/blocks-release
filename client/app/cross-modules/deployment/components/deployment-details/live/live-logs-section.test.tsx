@@ -85,6 +85,40 @@ describe("LiveDeploymentLogs", () => {
     );
   });
 
+  it("expands a step when a log notification arrives", () => {
+    render(
+      <LiveDeploymentLogs
+        buildId="b1"
+        historicalEvents={
+          [
+            {
+              buildId: "b1",
+              eventType: "EventStarted",
+              eventGroup: "Build",
+              message: "starting",
+              createdAt: "2024-01-01T00:00:00Z",
+            },
+          ] as never
+        }
+      />,
+    );
+    dispatchNotification({
+      BuildId: "b1",
+      EventGroup: "Build",
+      EventType: "Log",
+      Message: "compiling output",
+    });
+    expect(screen.getByText("Build")).toBeInTheDocument();
+  });
+
+  it("connects after the connection timer elapses", () => {
+    vi.useFakeTimers();
+    render(<LiveDeploymentLogs buildId="b1" historicalEvents={[] as never} />);
+    vi.advanceTimersByTime(3100);
+    vi.useRealTimers();
+    expect(screen.getByText("Deployment logs")).toBeInTheDocument();
+  });
+
   it("ignores notifications for a different build id", () => {
     render(<LiveDeploymentLogs buildId="b1" historicalEvents={[] as never} />);
     dispatchNotification({

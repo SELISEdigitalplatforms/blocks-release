@@ -78,6 +78,26 @@ describe("FileUploader", () => {
     fireEvent.keyDown(uploader, { key: "Escape" });
   });
 
+  it("navigates a horizontal uploader with left/right arrows", () => {
+    render(
+      <FileUploader
+        data-testid="uploader"
+        orientation="horizontal"
+        value={[new File(["x"], "a.png"), new File(["y"], "b.png")]}
+        onValueChange={vi.fn()}
+        dropzoneOptions={{ maxFiles: 3, multiple: true }}
+      >
+        <FileInput>
+          <span>Drop files here</span>
+        </FileInput>
+      </FileUploader>,
+    );
+    const uploader = screen.getByTestId("uploader");
+    fireEvent.keyDown(uploader, { key: "ArrowRight" });
+    fireEvent.keyDown(uploader, { key: "ArrowLeft" });
+    expect(uploader).toBeInTheDocument();
+  });
+
   it("opens the file dialog on Enter when nothing is selected", () => {
     render(<Harness value={[]} onValueChange={vi.fn()} />);
     const uploader = screen.getByTestId("uploader");

@@ -19,6 +19,7 @@ export {
   useProjectStore,
   useAuthStore,
   useBlocksAuthStore,
+  useImpersonateStore,
 } from "./blocks-kit-stores";
 export type { StubProject as ProjectStoreState } from "./blocks-kit-stores";
 

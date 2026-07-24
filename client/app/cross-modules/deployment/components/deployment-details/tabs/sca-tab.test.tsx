@@ -109,6 +109,61 @@ describe("SCATab", () => {
     expect(screen.getByText("CVE-1")).toBeInTheDocument();
   });
 
+  const manyVulns = Array.from({ length: 7 }).map((_, i) => ({
+    name: `pkg-${i}`,
+    group: "npm",
+    version: "1.0.0",
+    id: `CVE-${i}`,
+    score: "9.8",
+    severity: i === 0 ? "CRITICAL" : "HIGH",
+    epssPercentile: 0.5,
+  }));
+
+  it("filters by severity card and paginates the dependency table", () => {
+    vi.mocked(useGetSCALibraryData).mockReturnValue({
+      data: {
+        data: {
+          details: { critical: 1, high: 6, medium: 0, low: 0, unassigned: 0 },
+          vulnerabilities: manyVulns,
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as never);
+    renderWithProviders(<SCATab />);
+    // Pagination controls are present for more than one page.
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    // Clicking the Critical summary card filters to critical rows only.
+    fireEvent.click(screen.getByText("Critical").closest("div") as HTMLElement);
+    expect(screen.getByText("pkg-0")).toBeInTheDocument();
+  });
+
+  it("redirects to Dependency Track when the button is clicked", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    const refetch = vi.fn().mockResolvedValue({ data: {} });
+    vi.mocked(useSCARedirectLink).mockReturnValue({
+      isLoading: false,
+      refetch,
+    } as never);
+    vi.mocked(useGetSCALibraryData).mockReturnValue({
+      data: {
+        data: {
+          details: { critical: 0, high: 0, medium: 0, low: 0, unassigned: 0 },
+          vulnerabilities: [],
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as never);
+    renderWithProviders(<SCATab />);
+    fireEvent.click(
+      screen.getByRole("button", { name: /Dependency Track/i }),
+    );
+    await vi.waitFor(() => expect(refetch).toHaveBeenCalled());
+    expect(openSpy).toHaveBeenCalled();
+    openSpy.mockRestore();
+  });
+
   it("opens the vulnerability details dialog and filters dependencies", () => {
     vi.mocked(useGetSCALibraryData).mockReturnValue({
       data: {

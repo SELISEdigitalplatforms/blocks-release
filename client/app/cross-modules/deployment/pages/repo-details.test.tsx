@@ -1,4 +1,5 @@
 import { fireEvent, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
 import {
@@ -194,6 +195,55 @@ describe("RepoDetails page", () => {
     );
   });
 
+  it("renders a custom deployment url and cancels the manual deploy dialog", () => {
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: {
+        data: {
+          repo: {
+            ...baseRepo,
+            customDeploymentUrl: "https://custom.example.com",
+          },
+          build: [makeBuild()],
+        },
+        isSuccess: true,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    expect(
+      screen.getByText("https://custom.example.com"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Deploy/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Cancel/i }));
+    expect(screen.getByText("Deployment Information")).toBeInTheDocument();
+  });
+
+  it("switches tabs through the mobile select", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: {
+        data: { repo: { ...baseRepo }, build: [makeBuild()] },
+        isSuccess: true,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    await user.click(screen.getByRole("combobox"));
+    fireEvent.click(await screen.findByRole("option", { name: "History" }));
+    // tabChangedHandler updated the mocked query state.
+    expect(currentTab).toBe("history");
+  });
+
   it("renders deployment information when builds exist", () => {
     vi.mocked(useGetRepoDetails).mockReturnValue({
       data: {
@@ -294,6 +344,61 @@ describe("RepoDetails page", () => {
     expect(navigateMock).toHaveBeenCalledWith(
       expect.stringContaining("deployment"),
     );
+  });
+
+  it("deploys from the settings modal with no build id in the response", async () => {
+    const initialDeploy = vi.fn((_vars, opts) => {
+      opts.onSuccess({});
+    });
+    vi.mocked(useInitialRepoDeployment).mockReturnValue({
+      mutate: initialDeploy,
+      isPending: false,
+    } as never);
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: repoDetailsEmpty,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
+    const deployButtons = await screen.findAllByRole("button", {
+      name: /Deploy Now/i,
+    });
+    fireEvent.click(deployButtons[deployButtons.length - 1]);
+    expect(initialDeploy).toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith(
+      expect.stringContaining("deployment"),
+    );
+  });
+
+  it("handles a settings-modal deployment error", async () => {
+    const initialDeploy = vi.fn((_vars, opts) => {
+      opts.onError({ errors: { message: "nope" } });
+    });
+    vi.mocked(useInitialRepoDeployment).mockReturnValue({
+      mutate: initialDeploy,
+      isPending: false,
+    } as never);
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: repoDetailsEmpty,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
+    const deployButtons = await screen.findAllByRole("button", {
+      name: /Deploy Now/i,
+    });
+    fireEvent.click(deployButtons[deployButtons.length - 1]);
+    expect(initialDeploy).toHaveBeenCalled();
   });
 
   it("handles a manual deployment error", () => {

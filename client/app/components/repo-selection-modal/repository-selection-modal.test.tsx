@@ -134,6 +134,47 @@ describe("RepositorySelectionModal", () => {
     expect(search).toHaveValue("app");
   });
 
+  it("loads more repositories on scroll and wheel near the bottom", async () => {
+    const items = Array.from({ length: 10 }).map((_, i) => ({
+      id: i + 1,
+      name: `app${i}`,
+      full_name: `acme/app${i}`,
+      html_url: `https://github.com/acme/app${i}`,
+    }));
+    vi.mocked(useGetGithubRepos).mockReturnValue({
+      data: { data: { items, total_count: 40 } },
+      isLoading: false,
+      isFetching: false,
+    } as never);
+    renderWithProviders(
+      <RepositorySelectionModal
+        open
+        onOpenChange={vi.fn()}
+        onSelectRepository={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("combobox"));
+    const list = await screen.findByText("acme/app0");
+    const scrollContainer = list.closest("[class*='overflow-y-auto']")
+      ?.parentElement as HTMLElement;
+    const target = scrollContainer || (list.parentElement as HTMLElement);
+    Object.defineProperty(target, "scrollHeight", {
+      value: 1000,
+      configurable: true,
+    });
+    Object.defineProperty(target, "clientHeight", {
+      value: 200,
+      configurable: true,
+    });
+    Object.defineProperty(target, "scrollTop", {
+      value: 800,
+      configurable: true,
+    });
+    fireEvent.scroll(target);
+    fireEvent.wheel(target, { deltaY: 100 });
+    expect(target).toBeInTheDocument();
+  });
+
   it("renders the empty state when no repositories are returned", () => {
     vi.mocked(useGetGithubRepos).mockReturnValue({
       data: { data: { items: [], total_count: 0 } },

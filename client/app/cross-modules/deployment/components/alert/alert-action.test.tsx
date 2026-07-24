@@ -51,6 +51,42 @@ describe("AlertAction", () => {
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
   });
 
+  it("uses the health mutation and toasts on success when request is false", async () => {
+    const healthMutate = vi.fn().mockResolvedValue({});
+    vi.mocked(useUpdateHealth).mockReturnValue({
+      mutateAsync: healthMutate,
+      isPending: false,
+    } as never);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderWithProviders(<AlertAction {...props} request={false} />);
+    await user.click(document.querySelector("svg.lucide-ellipsis-vertical")!);
+    await user.click(await screen.findByText("Pause"));
+    await user.click(await screen.findByRole("button", { name: /confirm/i }));
+    const { toast } = await import("@/hooks/use-toast");
+    await waitFor(() => expect(healthMutate).toHaveBeenCalled());
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ variant: "success" }),
+    );
+  });
+
+  it("toasts a failure when the update mutation throws", async () => {
+    vi.mocked(useUpdateSingleMonitor).mockReturnValue({
+      mutateAsync: vi.fn().mockRejectedValue(new Error("boom")),
+      isPending: false,
+    } as never);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderWithProviders(<AlertAction {...props} />);
+    await user.click(document.querySelector("svg.lucide-ellipsis-vertical")!);
+    await user.click(await screen.findByText("Pause"));
+    await user.click(await screen.findByRole("button", { name: /confirm/i }));
+    const { toast } = await import("@/hooks/use-toast");
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: "destructive" }),
+      ),
+    );
+  });
+
   it("opens the delete dialog and confirms deletion", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderWithProviders(<AlertAction {...props} />);

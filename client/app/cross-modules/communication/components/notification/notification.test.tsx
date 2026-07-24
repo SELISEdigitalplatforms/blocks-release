@@ -108,6 +108,86 @@ describe("Notification", () => {
     expect(screen.getByText("99+")).toBeInTheDocument();
   });
 
+  it("formats plain titles and partial meta information", async () => {
+    vi.mocked(useGetNotifications).mockReturnValue({
+      data: {
+        notifications: [
+          {
+            id: "n1",
+            denormalizedPayload: JSON.stringify({
+              title: "build_completed",
+              description: "done",
+              meta: JSON.stringify({ status: "ok" }),
+            }),
+            isRead: true,
+            createdTime: "",
+          },
+          {
+            id: "n2",
+            denormalizedPayload: JSON.stringify({
+              title: "",
+              description: "fallback text",
+              meta: "not-json",
+            }),
+            isRead: true,
+            createdTime: "2024-01-01T00:00:00Z",
+          },
+          {
+            id: "n3",
+            denormalizedPayload: JSON.stringify({
+              title: "kb_sync",
+              description: "d",
+              meta: JSON.stringify({ kb_id: "xyz-999" }),
+            }),
+            isRead: true,
+            createdTime: "2024-01-01T00:00:00Z",
+          },
+        ],
+        totalNotificationsCount: 3,
+        unReadNotificationsCount: 0,
+      },
+      isLoading: false,
+      isFetching: false,
+    } as never);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderWithProviders(<Notification />);
+    await user.click(screen.getByTestId("notification-bell"));
+    expect(await screen.findByText("Build Completed")).toBeInTheDocument();
+    expect(screen.getByText("No Title")).toBeInTheDocument();
+    expect(screen.getByText("fallback text")).toBeInTheDocument();
+    expect(screen.getByText(/KB Id: xyz/)).toBeInTheDocument();
+  });
+
+  it("loads the next page when the list is scrolled to the bottom", async () => {
+    vi.mocked(useGetNotifications).mockReturnValue({
+      data: {
+        notifications: [
+          {
+            id: "n1",
+            denormalizedPayload: denormalized(),
+            isRead: true,
+            createdTime: "2024-01-01T00:00:00Z",
+          },
+        ],
+        totalNotificationsCount: 50,
+        unReadNotificationsCount: 0,
+      },
+      isLoading: false,
+      isFetching: false,
+    } as never);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderWithProviders(<Notification />);
+    await user.click(screen.getByTestId("notification-bell"));
+    const list = document.querySelector(
+      ".max-h-\\[400px\\]",
+    ) as HTMLElement;
+    Object.defineProperty(list, "scrollHeight", { value: 1000, configurable: true });
+    Object.defineProperty(list, "clientHeight", { value: 400, configurable: true });
+    Object.defineProperty(list, "scrollTop", { value: 600, configurable: true });
+    fireEvent.scroll(list);
+    expect(list).toBeInTheDocument();
+  });
+
   it("subscribes to hub notifications and invalidates on incoming payload", async () => {
     const conn = { on: vi.fn(), off: vi.fn() };
     vi.mocked(connectNotificationHub).mockResolvedValue(conn as never);

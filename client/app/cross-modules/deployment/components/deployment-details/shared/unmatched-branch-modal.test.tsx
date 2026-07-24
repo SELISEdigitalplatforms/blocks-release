@@ -102,6 +102,39 @@ describe("BranchVerificationModal", () => {
     );
   });
 
+  it("cancels while verification is still loading", async () => {
+    const onClose = vi.fn();
+    // A refetch that never resolves keeps the modal in the loading state.
+    const refetch = vi.fn().mockReturnValue(new Promise(() => {}));
+    render(
+      <BranchVerificationModal
+        {...baseProps}
+        onClose={onClose}
+        isOpen
+        refetch={refetch as never}
+      />,
+    );
+    expect(screen.getByText("Please wait…")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("moves to the error state when refetch throws", async () => {
+    const refetch = vi.fn().mockRejectedValue(new Error("boom"));
+    render(
+      <BranchVerificationModal
+        {...baseProps}
+        isOpen
+        refetch={refetch as never}
+      />,
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByText("Expected branch not available"),
+      ).toBeInTheDocument(),
+    );
+  });
+
   it("calls onSuccess after a successful verification", async () => {
     vi.useFakeTimers();
     const onSuccess = vi.fn();

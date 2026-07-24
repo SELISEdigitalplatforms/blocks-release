@@ -171,6 +171,58 @@ describe("NotificationModal", () => {
     expect(screen.queryByDisplayValue("c@d.com")).not.toBeInTheDocument();
   });
 
+  it("flags an empty email as required", () => {
+    render(
+      <NotificationModal
+        open
+        onOpenChange={vi.fn()}
+        request
+        data={{ ...baseData, emails: ["a@b.com"] }}
+      />,
+    );
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "" } });
+    expect(screen.getByText("Email is required")).toBeInTheDocument();
+  });
+
+  it("shows an error toast when the mutation throws", async () => {
+    mutateAsync.mockRejectedValueOnce(new Error("network"));
+    const { showErrorToast } = await import("@/hooks/use-toast");
+    render(
+      <NotificationModal
+        open
+        onOpenChange={vi.fn()}
+        request
+        data={baseData}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await waitFor(() => expect(showErrorToast).toHaveBeenCalled());
+  });
+
+  it("reindexes errors when an earlier email row is removed", () => {
+    render(
+      <NotificationModal
+        open
+        onOpenChange={vi.fn()}
+        request
+        data={{ ...baseData, emails: ["a@b.com", "b@c.com", "not-valid"] }}
+      />,
+    );
+    // Trigger a validation error on the third row.
+    const inputs = screen.getAllByRole("textbox");
+    fireEvent.change(inputs[2], { target: { value: "still-bad" } });
+    expect(
+      screen.getByText("Please enter a valid email address"),
+    ).toBeInTheDocument();
+    // Remove the first row; the error should reindex without crashing.
+    const removeButtons = screen
+      .getAllByRole("button")
+      .filter((b) => b.querySelector("svg.text-error"));
+    fireEvent.click(removeButtons[0]);
+    expect(screen.queryByDisplayValue("a@b.com")).not.toBeInTheDocument();
+  });
+
   it("closes on cancel", () => {
     const onOpenChange = vi.fn();
     render(

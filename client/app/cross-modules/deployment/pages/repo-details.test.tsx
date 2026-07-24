@@ -145,6 +145,55 @@ describe("RepoDetails page", () => {
     expect(screen.getByText("acme/app")).toBeInTheDocument();
   });
 
+  it("goes back from the empty state", () => {
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: repoDetailsEmpty,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    // The first button in the empty state is the back control.
+    fireEvent.click(screen.getAllByRole("button")[0]);
+    expect(navigateMock).toHaveBeenCalledWith(
+      expect.stringContaining("deployment"),
+    );
+  });
+
+  it("deploys from the settings modal in the empty state", async () => {
+    const initialDeploy = vi.fn((_vars, opts) => {
+      opts.onSuccess({ buildId: "fresh" });
+    });
+    vi.mocked(useInitialRepoDeployment).mockReturnValue({
+      mutate: initialDeploy,
+      isPending: false,
+    } as never);
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: repoDetailsEmpty,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    // Open the settings modal from the empty-state Deploy Now button.
+    fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
+    // The modal renders its own Deploy Now button (deployment flow).
+    const deployButtons = await screen.findAllByRole("button", {
+      name: /Deploy Now/i,
+    });
+    fireEvent.click(deployButtons[deployButtons.length - 1]);
+    expect(initialDeploy).toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith(
+      expect.stringContaining("deployment-live/fresh"),
+    );
+  });
+
   it("renders deployment information when builds exist", () => {
     vi.mocked(useGetRepoDetails).mockReturnValue({
       data: {

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   FileInput,
@@ -11,14 +11,17 @@ import {
 const Harness = ({
   value,
   onValueChange,
+  dropzoneOptions = { maxFiles: 2, multiple: true },
 }: {
   value: File[] | null;
   onValueChange: (v: File[] | null) => void;
+  dropzoneOptions?: Record<string, unknown>;
 }) => (
   <FileUploader
+    data-testid="uploader"
     value={value}
     onValueChange={onValueChange}
-    dropzoneOptions={{ maxFiles: 2, multiple: true }}
+    dropzoneOptions={dropzoneOptions}
   >
     <FileInput>
       <span>Drop files here</span>
@@ -53,6 +56,58 @@ describe("FileUploader", () => {
     const removeButtons = screen.getAllByRole("button");
     fireEvent.click(removeButtons[0]);
     expect(onValueChange).toHaveBeenCalled();
+  });
+
+  it("navigates through files with the keyboard and deletes the active one", () => {
+    const onValueChange = vi.fn();
+    render(
+      <Harness
+        value={[new File(["x"], "a.png"), new File(["y"], "b.png")]}
+        onValueChange={onValueChange}
+      />,
+    );
+    const uploader = screen.getByTestId("uploader");
+    // Move down then up through the list.
+    fireEvent.keyDown(uploader, { key: "ArrowDown" });
+    fireEvent.keyDown(uploader, { key: "ArrowDown" });
+    fireEvent.keyDown(uploader, { key: "ArrowUp" });
+    // Delete the active file.
+    fireEvent.keyDown(uploader, { key: "Delete" });
+    expect(onValueChange).toHaveBeenCalled();
+    // Escape clears selection.
+    fireEvent.keyDown(uploader, { key: "Escape" });
+  });
+
+  it("opens the file dialog on Enter when nothing is selected", () => {
+    render(<Harness value={[]} onValueChange={vi.fn()} />);
+    const uploader = screen.getByTestId("uploader");
+    fireEvent.keyDown(uploader, { key: "Enter" });
+    expect(uploader).toBeInTheDocument();
+  });
+
+  it("accepts dropped files through the input change handler", async () => {
+    const onValueChange = vi.fn();
+    render(<Harness value={[]} onValueChange={onValueChange} />);
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    const file = new File(["hello"], "hello.png", { type: "image/png" });
+    fireEvent.change(input, { target: { files: [file] } });
+    await waitFor(() => expect(onValueChange).toHaveBeenCalled());
+  });
+
+  it("disables the input once the max number of files is reached", () => {
+    render(
+      <Harness
+        value={[new File(["x"], "a.png")]}
+        onValueChange={vi.fn()}
+        dropzoneOptions={{ maxFiles: 1, multiple: false }}
+      />,
+    );
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    expect(input).toBeDisabled();
   });
 
   it("useFileUpload throws outside a provider", () => {

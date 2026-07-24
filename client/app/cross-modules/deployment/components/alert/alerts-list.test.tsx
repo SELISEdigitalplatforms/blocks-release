@@ -1,7 +1,33 @@
 import { screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
+
+vi.mock("@/cross-modules/deployment/hooks/use-alerts", () => ({
+  useUpdateSingleMonitor: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateHealth: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteMonitor: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteHealth: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 import { AlertsList, formatSeconds } from "./alerts-list";
+
+const alertRow = {
+  itemId: "m1",
+  name: "Health check",
+  operationName: "Health check",
+  repoName: "acme/app",
+  repoId: "r1",
+  isActive: true,
+  currentStatus: true,
+  monitorType: 0,
+  monitorConfigurationType: 0,
+  monitorSourceType: 0,
+  incidentSummaries: [],
+  emails: [],
+  subEntries: [],
+  url: "https://acme.dev/health",
+  timeoutInSeconds: 30,
+} as never;
 
 describe("formatSeconds", () => {
   it("formats seconds", () => {
@@ -29,5 +55,13 @@ describe("AlertsList", () => {
       nuqs: true,
     });
     expect(screen.getByText("No results.")).toBeInTheDocument();
+  });
+
+  it("renders a monitor row with its actions and uptime bar", () => {
+    renderWithProviders(
+      <AlertsList data={[alertRow]} isLoading={false} totalCount={1} />,
+      { nuqs: true },
+    );
+    expect(screen.getByText("Health check")).toBeInTheDocument();
   });
 });

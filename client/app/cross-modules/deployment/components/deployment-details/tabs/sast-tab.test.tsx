@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
 import {
@@ -69,6 +69,37 @@ describe("SastTab", () => {
     renderWithProviders(<SastTab />);
     expect(screen.getByText("Overview")).toBeInTheDocument();
     expect(screen.getByText("Quality Gate")).toBeInTheDocument();
+  });
+
+  it("redirects to SonarQube when the button is clicked", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    const refetch = vi.fn().mockResolvedValue({});
+    vi.mocked(useSASTRedirectLink).mockReturnValue({
+      isLoading: false,
+      refetch,
+    } as never);
+    vi.mocked(useGetSASTData).mockReturnValue({
+      data: {
+        data: {
+          details: {
+            alert_status: "ERROR",
+            software_quality_security_rating: "3.0",
+            software_quality_reliability_rating: "4.0",
+            sqale_rating: "2.0",
+          },
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as never);
+    vi.useFakeTimers();
+    renderWithProviders(<SastTab />);
+    fireEvent.click(screen.getByRole("button", { name: /View in SonarQube/i }));
+    expect(refetch).toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1100);
+    expect(openSpy).toHaveBeenCalled();
+    vi.useRealTimers();
+    openSpy.mockRestore();
   });
 
   it("renders an error state", () => {

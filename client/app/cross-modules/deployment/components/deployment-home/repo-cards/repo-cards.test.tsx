@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
 import {
@@ -42,12 +42,47 @@ describe("RepoCards", () => {
     });
     expect(container.textContent).toContain("acme/app");
   });
+
+  it("opens the branch verification modal when authorization succeeds", async () => {
+    vi.mocked(useValidateAuthorization).mockReturnValue({
+      data: { isSuccess: true },
+      refetch: vi.fn().mockResolvedValue({ data: { isSuccess: true } }),
+    } as never);
+    renderWithProviders(<RepoCards repo={repo} />, { route: "/app/deployment" });
+    fireEvent.click(screen.getByText(/Deploys for/));
+    await waitFor(() =>
+      expect(screen.getByText("Please wait…")).toBeInTheDocument(),
+    );
+  });
+
+  it("opens the repository access modal when authorization fails", async () => {
+    vi.mocked(useValidateAuthorization).mockReturnValue({
+      data: { isSuccess: false },
+      refetch: vi.fn().mockResolvedValue({ data: { isSuccess: false } }),
+    } as never);
+    renderWithProviders(<RepoCards repo={repo} />, { route: "/app/deployment" });
+    fireEvent.click(screen.getByText(/Deploys for/));
+    await waitFor(() =>
+      expect(screen.getByText("Repository access denied")).toBeInTheDocument(),
+    );
+  });
+
+  it("renders the no-build badge when no deployment status is present", () => {
+    renderWithProviders(
+      <RepoCards
+        repo={{ ...repo, lastDeploymentStatus: null, deploymentType: "" } as never}
+      />,
+      { route: "/app/deployment" },
+    );
+    expect(screen.getByText("No build")).toBeInTheDocument();
+    expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
+  });
 });
 
 describe("RepositoryAccessModal", () => {
-  it("renders when open and retries authorization", async () => {
+  it("renders when open and shows a failure notice on denied retry", async () => {
     const refetch = vi.fn().mockResolvedValue({ data: { isSuccess: false } });
-    const { container } = renderWithProviders(
+    renderWithProviders(
       <RepositoryAccessModal
         isOpen
         onOpenChange={vi.fn()}
@@ -55,6 +90,43 @@ describe("RepositoryAccessModal", () => {
         refetchAuthorization={refetch}
       />,
     );
-    expect(container).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Retry/i }));
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Authorization still denied/i),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("calls onAuthorized when the retry succeeds", async () => {
+    const onAuthorized = vi.fn();
+    const refetch = vi.fn().mockResolvedValue({ data: { isSuccess: true } });
+    renderWithProviders(
+      <RepositoryAccessModal
+        isOpen
+        onOpenChange={vi.fn()}
+        onAuthorized={onAuthorized}
+        refetchAuthorization={refetch}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Retry/i }));
+    await waitFor(() => expect(onAuthorized).toHaveBeenCalled());
+  });
+
+  it("opens the Blocks OS repositories page from Manage repositories", () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    renderWithProviders(
+      <RepositoryAccessModal
+        isOpen
+        onOpenChange={vi.fn()}
+        onAuthorized={vi.fn()}
+        refetchAuthorization={vi.fn().mockResolvedValue({ data: {} })}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /Manage repositories/i }),
+    );
+    expect(openSpy).toHaveBeenCalled();
+    openSpy.mockRestore();
   });
 });

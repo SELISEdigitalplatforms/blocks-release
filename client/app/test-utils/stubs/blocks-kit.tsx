@@ -1,31 +1,44 @@
 /**
- * Test-only stub for `@seliseblocks/blocks-kit`.
+ * Test-only double for the `@seliseblocks/blocks-kit` barrel.
  *
- * The real package's barrel eagerly imports framer-motion, whose `motion-utils`
- * reads `process.env.NODE_ENV` at import time and throws under the jsdom test
- * environment. Aliasing the package to this stub keeps the heavy design-system
- * (and its animation deps) out of the test module graph while still providing
- * the handful of exports the app modules under test rely on.
+ * The real package's barrel eagerly imports framer-motion (whose motion-utils
+ * reads process.env.NODE_ENV at import time) and instantiates a signalr-backed
+ * NotificationListenerService that reads runtime env at construction. Both crash
+ * under the jsdom test environment. Aliasing the package to this double (see
+ * vitest.config.ts) keeps the heavy design-system out of the test module graph
+ * while still providing the exports app modules under test rely on.
  *
- * `useProjectStore` / `useAuthStore` are re-exported from the local stores so
- * that `vi.mock("@/store/useProjectStore", ...)` in hook tests continues to
- * intercept them.
+ * Layout / route / guard components are rendered as transparent passthroughs so
+ * the app code around them still executes. Project / auth state comes from the
+ * shared stub stores so selectors return usable values.
  */
 import React from "react";
+import { Outlet } from "react-router-dom";
 
-export { useProjectStore } from "@/store/useProjectStore";
-export { useAuthStore } from "@/store/useAuthStore";
+export {
+  useProjectStore,
+  useAuthStore,
+  useBlocksAuthStore,
+} from "./blocks-kit-stores";
+export type { StubProject as ProjectStoreState } from "./blocks-kit-stores";
 
-type HttpClientOptions = { baseURL?: string; blocksKey?: string };
+type PassthroughProps = { children?: React.ReactNode } & Record<string, unknown>;
 
-/**
- * Minimal HttpClient stand-in. Service tests mock `@/lib/http-client`, so these
- * methods are rarely invoked; they exist so constructing the client at module
- * load time does not throw.
- */
+const passthrough = (label: string) => {
+  const Component = ({ children }: PassthroughProps) =>
+    React.createElement(React.Fragment, null, children);
+  Component.displayName = label;
+  return Component;
+};
+
+type HttpClientOptions = {
+  baseURL?: string | (() => string);
+  blocksKey?: string | (() => string);
+};
+
 export class HttpClient {
-  baseURL: string;
-  blocksKey: string;
+  baseURL: HttpClientOptions["baseURL"];
+  blocksKey: HttpClientOptions["blocksKey"];
 
   constructor(options: HttpClientOptions = {}) {
     this.baseURL = options.baseURL ?? "";
@@ -62,24 +75,24 @@ export class HttpError extends Error {
   }
 }
 
-type PassthroughProps = { children?: React.ReactNode } & Record<string, unknown>;
+export { Outlet };
 
-const passthrough = (label: string) => {
-  const Component = ({ children }: PassthroughProps) =>
-    React.createElement(React.Fragment, null, children);
-  Component.displayName = label;
-  return Component;
-};
-
-// Layout / provider components — rendered as transparent passthroughs.
 export const BlocksAppLayout = passthrough("BlocksAppLayout");
 export const TooltipProvider = passthrough("TooltipProvider");
 export const ConsoleLayout = passthrough("ConsoleLayout");
 export const ConsolePage = passthrough("ConsolePage");
+export const DashboardLayout = passthrough("DashboardLayout");
 export const DashboardOverview = passthrough("DashboardOverview");
 export const DashboardRoute = passthrough("DashboardRoute");
+export const ProjectOverviewLayout = passthrough("ProjectOverviewLayout");
+export const ProjectOverviewRoute = passthrough("ProjectOverviewRoute");
 export const LoginPage = passthrough("LoginPage");
 export const CallbackPage = passthrough("CallbackPage");
+export const ProfilePage = passthrough("ProfilePage");
 export const AuthResolver = passthrough("AuthResolver");
 export const ProtectedGuard = passthrough("ProtectedGuard");
 export const PublicGuard = passthrough("PublicGuard");
+export const AppSwitcher = passthrough("AppSwitcher");
+export const ThemeSwitcher = passthrough("ThemeSwitcher");
+export const UserDropdownMenu = passthrough("UserDropdownMenu");
+export const EnvironmentCard = passthrough("EnvironmentCard");

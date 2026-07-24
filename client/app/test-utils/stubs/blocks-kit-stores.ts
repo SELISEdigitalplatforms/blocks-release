@@ -44,6 +44,7 @@ interface ProjectState {
   setProjects: (projects: StubProject[]) => void;
   resetProject: () => void;
   reset: () => void;
+  setTenantGroup: (id: string) => void;
   setTennantGroup: (id: string) => void;
   resetTennantGroup: () => void;
 }
@@ -57,6 +58,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
   setProjects: (projects) => set({ projects }),
   resetProject: () => set({ selectedProject: null, projects: [] }),
   reset: () => set({ selectedProject: null, projects: [], selectedTenantGroup: "" }),
+  setTenantGroup: (id) => set({ selectedTenantGroup: id }),
   setTennantGroup: (id) => set({ selectedTenantGroup: id }),
   resetTennantGroup: () => set({ selectedTenantGroup: "" }),
 }));
@@ -64,18 +66,56 @@ export const useProjectStore = create<ProjectState>((set) => ({
 interface AuthState {
   user: Record<string, unknown> | null;
   isAuthenticated: boolean;
+  accessToken: string | null;
+  refreshToken: string | null;
   setUser: (user: Record<string, unknown> | null) => void;
+  setAuthenticated: () => void;
+  setTokens: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
+  accessToken: null,
+  refreshToken: null,
   setUser: (user) => set({ user, isAuthenticated: !!user }),
-  logout: () => set({ user: null, isAuthenticated: false }),
+  setAuthenticated: () => set({ isAuthenticated: true }),
+  setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
+  logout: () =>
+    set({ user: null, isAuthenticated: false, accessToken: null, refreshToken: null }),
 }));
 
 export const useBlocksAuthStore = useAuthStore;
+
+interface ImpersonateState {
+  isImpersonated: boolean;
+  isInitialized: boolean;
+  originalTenantId: string | null;
+  impersonatedTenantId: string | null;
+  setImpersonation: (
+    impersonated: boolean,
+    originalTenantId: string | null,
+    impersonatedTenantId: string | null,
+  ) => void;
+  setInitialized: (value: boolean) => void;
+  impersonate: (tenantId: string, key: string) => void;
+  terminate: (key: string) => void;
+}
+
+export const useImpersonateStore = create<ImpersonateState>((set) => ({
+  isImpersonated: false,
+  isInitialized: false,
+  originalTenantId: null,
+  impersonatedTenantId: null,
+  setImpersonation: (isImpersonated, originalTenantId, impersonatedTenantId) =>
+    set({ isImpersonated, originalTenantId, impersonatedTenantId }),
+  setInitialized: (isInitialized) => set({ isInitialized }),
+  impersonate: (tenantId) =>
+    set({ isImpersonated: true, impersonatedTenantId: tenantId }),
+  terminate: () =>
+    set({ isImpersonated: false, impersonatedTenantId: null }),
+}));
 
 interface AppSettingsState {
   settings: { theme: string; [key: string]: unknown };

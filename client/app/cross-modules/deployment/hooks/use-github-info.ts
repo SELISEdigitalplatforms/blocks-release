@@ -66,7 +66,6 @@ export const useRemoveAuthorization = () => {
       // queryClient.invalidateQueries({ queryKey: ["verify-auth"] });
       // queryClient.invalidateQueries({ queryKey: ["github-repos"] });
       // queryClient.invalidateQueries({ queryKey: ["repository-user"] });
-      console.log("Authorization removed successfully");
       queryClient.setQueryData(["verify-auth"], () => undefined);
       queryClient.setQueryData(["github-repos"], () => []);
       queryClient.setQueryData(["repository-user"], () => undefined);

@@ -57,10 +57,10 @@ const verifyOAuthState = (receivedState: string | null) => {
   return storedState === receivedState;
 };
 
-const authenticateWithGitlab = () => console.log("GitLab auth");
-const authenticateWithBitbucket = () => console.log("Bitbucket auth");
-const authenticateWithAzure = () => console.log("Azure auth");
-const authenticateWithAws = () => console.log("AWS auth");
+const authenticateWithGitlab = () => console.error("GitLab auth");
+const authenticateWithBitbucket = () => console.error("Bitbucket auth");
+const authenticateWithAzure = () => console.error("Azure auth");
+const authenticateWithAws = () => console.error("AWS auth");
 
 export {
   authenticateWithGithub,

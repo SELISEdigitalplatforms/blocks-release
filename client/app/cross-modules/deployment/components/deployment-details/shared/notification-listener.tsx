@@ -5,15 +5,18 @@ import { getDeploymentLogEventBadgeClassName } from "@blocks-deployment/utils/de
 
 // Custom hook - handles all the notification logic
 export const useDeploymentStatus = (
-  latestBuild?: any,
+  latestBuild?: unknown,
   deploymentStatus: string = "NoBuild",
 ) => {
+  const latestBuildItemId = (
+    latestBuild as { itemId?: string } | null | undefined
+  )?.itemId;
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [liveBuildId, setLiveBuildId] = useState<string | null>(null);
   const [hasReceivedUpdate, setHasReceivedUpdate] = useState(false);
 
   const handleNotification = useCallback(
-    (notificationData: any) => {
+    (notificationData: { message: { denormalizedPayload: string } }) => {
       try {
         setHasReceivedUpdate(true);
         const denormalizedPayload = JSON.parse(
@@ -24,7 +27,7 @@ export const useDeploymentStatus = (
         const buildStatus = repoStatus?.BuildStatus || message?.EventType;
         const buildId = message?.BuildId;
 
-        if (buildId && latestBuild?.itemId && buildId === latestBuild.itemId) {
+        if (buildId && latestBuildItemId && buildId === latestBuildItemId) {
           setLiveStatus(buildStatus);
           setLiveBuildId(buildId);
         }
@@ -32,13 +35,13 @@ export const useDeploymentStatus = (
         console.error("Failed to parse notification:", error);
       }
     },
-    [latestBuild?.itemId],
+    [latestBuildItemId],
   );
 
   useNotificationListener("BuildLogNotification", handleNotification);
 
   const displayStatus =
-    hasReceivedUpdate && liveBuildId === latestBuild?.itemId && liveStatus
+    hasReceivedUpdate && liveBuildId === latestBuildItemId && liveStatus
       ? liveStatus
       : deploymentStatus;
 
@@ -56,7 +59,7 @@ export const DeploymentStatusBadge = ({ status }: { status: string }) => {
 
 // Main component - combines hook + badge
 interface NotificationListenerProps {
-  latestBuild?: any;
+  latestBuild?: unknown;
   deploymentStatus?: string;
 }
 

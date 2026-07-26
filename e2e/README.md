@@ -1,17 +1,17 @@
-# Blocks Release — End-to-End Tests (Playwright)
+# Blocks Release End-to-End Tests (Playwright)
 
 E2E tests that drive the real app through the browser, including the dev-iam
 login redirect flow.
 
 ## One-time setup
 
-1. **Configure env** — copy the template and fill in your values:
+1. **Configure env**: copy the template and fill in your values:
    ```bash
    cd e2e
    cp .env.e2e.example .env.e2e
    ```
-   Set `E2E_BASE_URL`, `E2E_USERNAME`, `E2E_PASSWORD`. `.env.e2e` is gitignored
-   — never commit real credentials.
+   Set `E2E_BASE_URL`, `E2E_USERNAME`, `E2E_PASSWORD`. `.env.e2e` is gitignored;
+   never commit real credentials.
 
 2. **Install** Playwright + the browser:
    ```bash
@@ -44,7 +44,7 @@ With `E2E_BASE_URL=https://dev-release.blocksdeveloper` and
 `E2E_NO_WEBSERVER=1` in `.env.e2e`, the tests point straight at the deployed dev
 server. Nothing is built or started locally.
 
-You will see this warning on every such run — it is expected and harmless:
+You will see this warning on every such run; it is expected and harmless:
 
 ```
 [e2e] index.html not found at .../server/Api/wwwroot/index.html — skipping BLOCKS_RELEASE_BASE_URL patch.
@@ -58,14 +58,14 @@ There is no local `wwwroot` to rewrite when the app under test is remote.
    ```
    127.0.0.1 dev-release.blocksdeveloper
    ```
-2. Set `E2E_BASE_URL=https://dev-release.blocksdeveloper:5000` — `5000` is
-   `API_PORT` in `run.sh`.
+2. Set `E2E_BASE_URL=https://dev-release.blocksdeveloper:5000` (`5000` is
+   `API_PORT` in `run.sh`).
 3. Remove (or set to `0`) `E2E_NO_WEBSERVER` so Playwright starts the API itself
    via `bash run.sh -b`. **Git Bash's `bash` must be on PATH** for this;
    `run.ps1 -b` cannot be automated. To manage the server yourself, leave
    `E2E_NO_WEBSERVER=1` and start it in another terminal.
 4. Build the frontend at least once (`./run.sh -a`) so
-   `server/Api/wwwroot/index.html` exists — `global-setup.ts` rewrites
+   `server/Api/wwwroot/index.html` exists; `global-setup.ts` rewrites
    `BLOCKS_RELEASE_BASE_URL` in it to point the SPA at your local host instead
    of the remote dev server.
 
@@ -94,7 +94,7 @@ npm run codegen -- <E2E_BASE_URL>/login
 
 | Variable | Effect |
 |---|---|
-| `E2E_BASE_URL` | Host under test. No default — a missing value fails loudly rather than silently hitting localhost. |
+| `E2E_BASE_URL` | Host under test. No default; a missing value fails loudly rather than silently hitting localhost. |
 | `E2E_USERNAME` / `E2E_PASSWORD` | Dev-IAM test account. Captcha is disabled on dev. |
 | `E2E_NO_WEBSERVER=1` | Don't auto-start the app. Required for the remote dev host. |
 | `E2E_PAUSE_MS` | How long the browser holds after **each** test so you can see the result. Defaults to **10 s in headed mode**, 0 when headless; `0` disables. |

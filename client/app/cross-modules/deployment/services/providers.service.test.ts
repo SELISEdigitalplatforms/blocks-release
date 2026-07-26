@@ -41,7 +41,8 @@ describe("ProvidersService", () => {
       authenticateWithGithub("extra-state");
 
       expect(window.open).toHaveBeenCalled();
-      const openedUrl = (window.open as any).mock.calls[0][0];
+      const openedUrl = (window.open as unknown as { mock: { calls: string[][] } })
+        .mock.calls[0][0];
       const url = new URL(openedUrl);
 
       expect(url.origin).toBe("https://github.com");
@@ -56,7 +57,9 @@ describe("ProvidersService", () => {
   describe("verifyOAuthState", () => {
     it("should return true if states match", () => {
       expect(verifyOAuthState(TEST_STATE)).toBe(true);
-      expect((window as any).tempOAuthStorage).toBeUndefined(); // Should be deleted after check
+      expect(
+        (window as unknown as { tempOAuthStorage?: unknown }).tempOAuthStorage,
+      ).toBeUndefined(); // Should be deleted after check
     });
 
     it("should return false if states don't match", () => {
@@ -73,7 +76,7 @@ describe("ProvidersService", () => {
 
   describe("other providers", () => {
     it("should log auth messages (smoke tests)", () => {
-      const consoleSpy = vi.spyOn(console, "log");
+      const consoleSpy = vi.spyOn(console, "error");
       authenticateWithGitlab();
       authenticateWithBitbucket();
       authenticateWithAzure();

@@ -9,7 +9,7 @@
 	<PackageVersion Include="MongoDB.Driver" Version="3.8.0" />
     <PackageVersion Include="SeliseBlocks.Genesis" Version="10.1.4" />
 	<PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.2" />
-	<PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+	<PackageVersion Include="Swashbuckle.AspNetCore" Version="10.2.3" />
 	<PackageVersion Include="coverlet.collector" Version="6.0.4" />
 	<PackageVersion Include="FluentAssertions" Version="8.8.0" />
 	<PackageVersion Include="JUnitLogger" Version="1.0.1" />

@@ -68,7 +68,7 @@ export interface RepositorySelectorProps {
 }
 
 interface IconMap {
-  [key: string]: any;
+  [key: string]: string;
 }
 
 export const iconMap: IconMap = {
@@ -98,7 +98,7 @@ export interface IRepoDetailsApiErrorResponse {
   };
   message: string | null;
   statusCode: number;
-  errors: any | null;
+  errors: unknown;
   isSuccess: boolean;
 }
 

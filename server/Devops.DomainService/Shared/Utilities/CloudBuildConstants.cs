@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Blocks.Genesis;
 
 namespace Devops.DomainService.Shared.Utilities
@@ -42,7 +43,7 @@ namespace Devops.DomainService.Shared.Utilities
             "lines",
             "new_lines"
         };
-        public static readonly Dictionary<string, string> BranchToEnvironmentMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        public static readonly ImmutableDictionary<string, string> BranchToEnvironmentMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { "dev", "dev" },
             { "test", "test" },
@@ -52,7 +53,7 @@ namespace Devops.DomainService.Shared.Utilities
             { "prod-shadow", "prodshadow" },
             { "pre-prod", "preprod" },
             { "main", "prod" }
-        };
+        }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
 
         private const string DefaultProvider = "azure";
         private const string RabbitMqProvider = "rabbitmq";

@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace Devops.DomainService.Deployment.Models.Response;
 
 public class BuildEventResponse
@@ -31,10 +33,8 @@ public static class EventGroups
     public const string Sca = "Sca";
     public const string Dast = "Dast";
 
-    public static readonly List<string> EventGroupsList = new List<string>
-    {
+    public static readonly ImmutableList<string> EventGroupsList = ImmutableList.Create(
         EventGroups.Clone,
         EventGroups.Build,
-        EventGroups.Deploy
-    };
+        EventGroups.Deploy);
 }

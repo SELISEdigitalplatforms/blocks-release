@@ -31,9 +31,9 @@ const buildConnection = (userId: string): HubConnection => {
     .withAutomaticReconnect()
     .build();
 
-  conn.onreconnecting((err) => console.warn("[DeploymentHub] Reconnecting...", err));
+  conn.onreconnecting((err) => console.error("[DeploymentHub] Reconnecting...", err));
   conn.onreconnected((connId) =>
-    console.log("[DeploymentHub] Reconnected. Connection ID:", connId),
+    console.error("[DeploymentHub] Reconnected. Connection ID:", connId),
   );
   conn.onclose((err) => console.error("[DeploymentHub] Connection closed.", err));
 
@@ -48,8 +48,8 @@ export const connectDeploymentHub = async (
   // Paused: build-log notifications now arrive via the central blocks-logic
   // NotificationHub. To re-enable the local hub, restore the connect logic
   // (build, start, reuse-or-rebuild) using buildConnection().
-  console.info(
-    "[DeploymentHub] connect skipped — central NotificationHub is the active source.",
+  console.error(
+    "[DeploymentHub] connect skipped - central NotificationHub is the active source.",
   );
   return null;
 };
@@ -61,7 +61,7 @@ export const disconnectDeploymentHub = async (): Promise<void> => {
       await connection.stop();
     }
   } catch (err) {
-    console.warn("[DeploymentHub] Error stopping connection:", err);
+    console.error("[DeploymentHub] Error stopping connection:", err);
   } finally {
     connection = null;
     currentUserId = null;

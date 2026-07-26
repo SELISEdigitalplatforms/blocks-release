@@ -21,7 +21,7 @@ const authenticateWithGithub = (_extraState: string) => {
 
   const clientId = getRuntimeEnv("BLOCKS_GITHUB_SSO_CLIENT_ID");
   // const appUrl = getRuntimeEnv("BLOCKS_APP_URL");
-  const _origin = typeof window !== "undefined" ? window.location.origin : "";
+  const _origin = typeof window !== "undefined" ? window.location?.origin : "";
   // const baseUrl = (appUrl || origin).replace(/\/$/, "");
   // const redirectUri = baseUrl ? `${baseUrl}/callback` : "";
 
@@ -57,10 +57,10 @@ const verifyOAuthState = (receivedState: string | null) => {
   return storedState === receivedState;
 };
 
-const authenticateWithGitlab = () => console.log("GitLab auth");
-const authenticateWithBitbucket = () => console.log("Bitbucket auth");
-const authenticateWithAzure = () => console.log("Azure auth");
-const authenticateWithAws = () => console.log("AWS auth");
+const authenticateWithGitlab = () => console.error("GitLab auth");
+const authenticateWithBitbucket = () => console.error("Bitbucket auth");
+const authenticateWithAzure = () => console.error("Azure auth");
+const authenticateWithAws = () => console.error("AWS auth");
 
 export {
   authenticateWithGithub,

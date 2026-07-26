@@ -11,8 +11,8 @@ function getHttpsConfig(): false | { key: Buffer; cert: Buffer } {
   const keyPath = process.env.RELEASE_SSL_KEY;
 
   if (!certPath || !keyPath) {
-    console.warn(
-      "[vite] RELEASE_SSL_CERT / RELEASE_SSL_KEY not set — serving over HTTP.",
+    console.error(
+      "[vite] RELEASE_SSL_CERT / RELEASE_SSL_KEY not set - serving over HTTP.",
     );
     return false;
   }
@@ -21,8 +21,8 @@ function getHttpsConfig(): false | { key: Buffer; cert: Buffer } {
   const resolvedKeyPath = path.resolve(__dirname, keyPath);
 
   if (!fs.existsSync(resolvedCertPath) || !fs.existsSync(resolvedKeyPath)) {
-    console.warn(
-      `[vite] SSL cert files not found (cert: ${resolvedCertPath}, key: ${resolvedKeyPath}) — serving over HTTP.`,
+    console.error(
+      `[vite] SSL cert files not found (cert: ${resolvedCertPath}, key: ${resolvedKeyPath}) - serving over HTTP.`,
     );
     return false;
   }

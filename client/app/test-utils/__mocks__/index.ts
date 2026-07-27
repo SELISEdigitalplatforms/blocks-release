@@ -23,12 +23,18 @@ export const mockHttpClientFactory = () => {
 
   (globalThis as Record<string, unknown>).http = http;
 
+  // Every service instance (idpService, logicService, deploymentService, …)
+  // resolves to the same shared spy, so a call made through any of them is
+  // recorded on the object the tests assert against — regardless of which
+  // instance a given service happens to bind to.
+  const serviceInstances = new Proxy(
+    {},
+    { get: () => http },
+  ) as Record<string, typeof http>;
+
   return {
     http,
-    serviceInstances: {
-      idpService: http,
-      logicService: http,
-    },
+    serviceInstances,
     HttpClient: class MockHttpClient {},
     HttpError: class MockHttpError extends Error {
       status: number;

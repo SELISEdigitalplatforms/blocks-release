@@ -52,7 +52,7 @@ const stripPortFromUrl = (url: string) => {
     parsedUrl.port = "";
     return parsedUrl.toString();
   } catch (error) {
-    console.warn(`Failed to parse URL: ${url}`, error);
+    console.error(`Failed to parse URL: ${url}`, error);
     return url;
   }
 };

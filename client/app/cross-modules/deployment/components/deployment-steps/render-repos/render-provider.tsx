@@ -55,7 +55,6 @@ const ProviderButtons = ({
           }
 
           const reloadListener = (event: StorageEvent) => {
-            console.log("Event:", event);
             if (event.key === "isReload" && event.newValue === "true") {
               window.removeEventListener("storage", reloadListener);
               localStorage.setItem("isReload", "false");

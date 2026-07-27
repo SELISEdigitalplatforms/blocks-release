@@ -23,10 +23,10 @@ const buildConnection = (): HubConnection => {
     .build();
 
   conn.onreconnecting((err) =>
-    console.warn("[NotificationHub] Reconnecting...", err),
+    console.error("[NotificationHub] Reconnecting...", err),
   );
   conn.onreconnected((connId) =>
-    console.log("[NotificationHub] Reconnected. Connection ID:", connId),
+    console.error("[NotificationHub] Reconnected. Connection ID:", connId),
   );
   conn.onclose((err) => console.error("[NotificationHub] Connection closed.", err));
 
@@ -37,7 +37,7 @@ export const getNotificationHubConnection = (): HubConnection | null => connecti
 
 export const connectNotificationHub = async (): Promise<HubConnection | null> => {
   if (!hubBaseUrl()) {
-    console.warn("[NotificationHub] BLOCKS_LOGIC_BASE_URL is not configured; skipping connection.");
+    console.error("[NotificationHub] BLOCKS_LOGIC_BASE_URL is not configured; skipping connection.");
     return null;
   }
 
@@ -54,11 +54,11 @@ export const connectNotificationHub = async (): Promise<HubConnection | null> =>
 
   connection = buildConnection();
 
-  console.log(`[NotificationHub] Connecting to ${HUB_PATH}...`);
+  console.error(`[NotificationHub] Connecting to ${HUB_PATH}...`);
   startPromise = connection
     .start()
     .then(() => {
-      console.log("[NotificationHub] Connected. State:", connection?.state);
+      console.error("[NotificationHub] Connected. State:", connection?.state);
     })
     .catch((err) => {
       console.error("[NotificationHub] Connection failed:", err);
@@ -83,7 +83,7 @@ export const disconnectNotificationHub = async (): Promise<void> => {
       await connection.stop();
     }
   } catch (err) {
-    console.warn("[NotificationHub] Error stopping connection:", err);
+    console.error("[NotificationHub] Error stopping connection:", err);
   } finally {
     connection = null;
     startPromise = null;

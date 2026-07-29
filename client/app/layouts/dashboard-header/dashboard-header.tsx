@@ -5,10 +5,10 @@ import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import { SidebarMobileView } from "@/layouts/sidebar-mobile-view/sidebar-mobile-view";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/store/project.store.ts";
-import { AppSwitcher, ThemeSwitcher, UserDropdownMenu } from "@seliseblocks/blocks-kit";
+import { AppSwitcher, ThemeSwitcher, UserDropdownMenu } from "@seliseblocks/genesis-os";
 import { ChevronRight, FolderOpen, PanelLeft } from "lucide-react";
 import { useContext } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 
 
 export function DashboardHeader() {

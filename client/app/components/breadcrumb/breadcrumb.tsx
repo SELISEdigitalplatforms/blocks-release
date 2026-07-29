@@ -7,7 +7,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "../ui-kits/breadcrumb/breadcrumb";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import useRoutePathSegments from "@/hooks/use-path-segments";
 import { BREADCRUMB_CUSTOM_TITLES } from "@/constants/breadcrumb-custom-title.constant";
 import type { RouterType } from "@/router";

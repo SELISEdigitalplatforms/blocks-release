@@ -1,6 +1,6 @@
 import { Card, CardTitle } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { IProject } from "@blocks-identifier/models/project.model";
 import {
   Tooltip,

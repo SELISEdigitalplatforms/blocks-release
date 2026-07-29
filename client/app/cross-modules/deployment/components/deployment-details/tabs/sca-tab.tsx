@@ -37,7 +37,7 @@ import {
   useGetSCALibraryData,
   useSCARedirectLink,
 } from "@/cross-modules/deployment/hooks/use-observability";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { Button } from "@/components/ui-kits/button/button";
 import { ErrorDisplay } from "@/components/error-display";
 

@@ -1,7 +1,7 @@
 /**
  * Shared zustand stores for the blocks-kit test doubles.
  *
- * The real `@seliseblocks/blocks-kit` package owns project/auth/app-settings
+ * The real `@seliseblocks/genesis-os` package owns project/auth/app-settings
  * state, but its barrel eagerly instantiates services (NotificationListener,
  * framer-motion) that crash under jsdom. These stores stand in for the real
  * ones so components that read selected-project / auth / theme state render in

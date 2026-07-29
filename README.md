@@ -1,6 +1,6 @@
 # Blocks Release
 
-**Blocks Release** is the Blocks deployment console: a **React 18** single-page application (Vite, TypeScript, Tailwind) paired with an **ASP.NET Core** host (`server/Api`) that serves the built SPA from `wwwroot`, exposes JSON APIs, and registers **Swagger** through the **SeliseBlocks.Genesis** middleware stack. A separate **.NET Worker** (`server/Worker`) runs message consumers and background work using the same domain services and **SeliseBlocks.Genesis** configuration stack.
+**Blocks Release** is the Blocks deployment console: a **React 19** single-page application (Vite, TypeScript, Tailwind) paired with an **ASP.NET Core** host (`server/Api`) that serves the built SPA from `wwwroot`, exposes JSON APIs, and registers **Swagger** through the **SeliseBlocks.Genesis.OS** middleware stack. A separate **.NET Worker** (`server/Worker`) runs message consumers and background work using the same domain services and **SeliseBlocks.Genesis.OS** configuration stack.
 
 Functionally, it lets a signed-in user connect a **GitHub** account, browse repositories and branches, and build and deploy a selected repository onto a **Kubernetes** cluster through **Tekton** pipelines. Builds run manually or automatically from a GitHub push webhook; build and deployment logs stream to the browser over **SignalR**. The console also surfaces security analytics (SonarQube SAST and Dependency-Track SCA) and monitoring/alerting views for deployed applications.
 
@@ -202,7 +202,7 @@ The root **`Dockerfile`** automates this: Node stage builds the client into `ser
 - **Controllers:** `server/Api/Controllers/` (`Api.Controllers` and related namespaces). Routes use attributes such as `[Route("[controller]/[action]")]`; **`GlobalApiRoutePrefixConvention`** in `server/Api/Program.cs` prepends **`api`** to each controller’s attribute route template, so typical controller routes are under **`/api/...`**.
 - **Swagger:** `Program.cs` registers Swagger UI (e.g. **`/swagger`**, JSON at **`/swagger/v1/swagger.json`**).
 - **Static SPA:** `UseDefaultFiles`, `UseStaticFiles`, and when `wwwroot/index.html` exists, **`MapFallbackToFile("/index.html")`** for client-side routing.
-- **Further middleware and endpoints** are applied in **`ApplicationConfigurations.ConfigureMiddleware`** from **SeliseBlocks.Genesis** (referenced via domain packages); use Swagger against a running instance for a complete list beyond this repo’s `Program.cs`.
+- **Further middleware and endpoints** are applied in **`ApplicationConfigurations.ConfigureMiddleware`** from **SeliseBlocks.Genesis.OS** (referenced via domain packages); use Swagger against a running instance for a complete list beyond this repo’s `Program.cs`.
 
 ## Testing
 

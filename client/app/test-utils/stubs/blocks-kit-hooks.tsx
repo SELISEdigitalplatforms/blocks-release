@@ -1,5 +1,5 @@
 /**
- * Test double for `@seliseblocks/blocks-kit/hooks`.
+ * Test double for `@seliseblocks/genesis-os/hooks`.
  */
 export type Theme = "light" | "dark" | "system";
 

@@ -2,7 +2,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { DashboardLayoutProvider } from "@/contexts/dashboard-layout-provider";
 import { DashboardHeader } from "@/layouts/dashboard-header/dashboard-header";
 import { SidebarMenuDesktop } from "@/layouts/sidebar-menu-desktop/sidebar-menu-desktop";
-import { Outlet } from "react-router-dom";
+import { Outlet } from "react-router";
 
 // Auth/impersonation guards are applied by the router (blocks-kit
 // AuthResolver/ProtectedGuard/ImpersonationChecker/ImpersonationSynchronizer);

@@ -4,10 +4,10 @@
     <PackageReference Include="KubernetesClient" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="MongoDB.Driver" />
-    <PackageReference Include="SeliseBlocks.Genesis" />
+    <PackageReference Include="SeliseBlocks.Genesis.OS" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <!-- Pin Swashbuckle to the supported version so the Swagger stack pulled transitively via
-         SeliseBlocks.Genesis resolves to a Microsoft.OpenApi build without known advisories. -->
+         SeliseBlocks.Genesis.OS resolves to a Microsoft.OpenApi build without known advisories. -->
     <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
 

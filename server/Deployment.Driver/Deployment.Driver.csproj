@@ -23,7 +23,7 @@
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="Newtonsoft.Json" />
-    <PackageReference Include="SeliseBlocks.Genesis" />
+    <PackageReference Include="SeliseBlocks.Genesis.OS" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 

@@ -1,4 +1,4 @@
-import { Outlet, Link } from "react-router-dom";
+import { Outlet, Link } from "react-router";
 import { Logo } from "@/components/logo";
 import { ModeToggle } from "@/components/mode-toggle/mode-toggle";
 import { Notification } from "@blocks-communication/components/notification/notification";

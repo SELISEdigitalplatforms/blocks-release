@@ -1,4 +1,4 @@
-import { Navigate, Outlet, type RouteObject } from "react-router-dom";
+import { Navigate, Outlet, type RouteObject } from "react-router";
 import {
   AuthResolver,
   PublicGuard,
@@ -14,8 +14,8 @@ import {
   // validate it (redirecting to /app/console when invalid), inject the id into the
   // navigation-menu paths, and render ProjectOverviewLayout / DashboardLayout
   // (which self-wrap the impersonation guards) with an <Outlet /> for children.
-} from "@seliseblocks/blocks-kit";
-import { ProfilePage } from "@seliseblocks/blocks-kit";
+} from "@seliseblocks/genesis-os";
+import { ProfilePage } from "@seliseblocks/genesis-os";
 import DeploymentPage from "./deployment/deployment";
 import DeploymentRepoDetailsPage from "./deployment/deployment-repo-details";
 import DeploymentLogsPage from "./deployment/deployment-logs";

@@ -199,7 +199,7 @@ The root **`Dockerfile`** automates this: Node stage builds the client into `ser
 
 ## API / routing
 
-- **Controllers:** `server/Api/Controllers/` (`Api.Controllers` and related namespaces). Routes use attributes such as `[Route("[controller]/[action]")]`; **`GlobalApiRoutePrefixConvention`** in `server/Api/Program.cs` prepends **`api`** to each controller’s attribute route template, so typical controller routes are under **`/api/...`**.
+- **Controllers:** `server/Api/Controllers/` (`Api.Controllers` and related namespaces). Routes use attributes such as `[Route("[controller]/[action]")]`; the **`api`** prefix is prepended by **`ApplicationConfigurations.ConfigureApi`** from SeliseBlocks.Genesis.OS (its default `apiRoutePrefix`), so typical controller routes are under **`/api/...`**. (A local `GlobalApiRoutePrefixConvention` class existed for the same purpose but was never registered; it is commented out pending removal.)
 - **Swagger:** `Program.cs` registers Swagger UI (e.g. **`/swagger`**, JSON at **`/swagger/v1/swagger.json`**).
 - **Static SPA:** `UseDefaultFiles`, `UseStaticFiles`, and when `wwwroot/index.html` exists, **`MapFallbackToFile("/index.html")`** for client-side routing.
 - **Further middleware and endpoints** are applied in **`ApplicationConfigurations.ConfigureMiddleware`** from **SeliseBlocks.Genesis.OS** (referenced via domain packages); use Swagger against a running instance for a complete list beyond this repo’s `Program.cs`.

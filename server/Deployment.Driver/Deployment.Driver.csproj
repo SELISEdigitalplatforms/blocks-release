@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Version>10.0.0-preview.5</Version>
-    <PackageId>SeliseBlocks.DeploymentDriver</PackageId>
+    <Version>4.0.0</Version>
+    <PackageId>SeliseBlocks.ReleaseDriver.OS</PackageId>
     <Authors>SeliseBlocks</Authors>
     <Company>SeliseBlocks</Company>
     <Description>Blocks Deployment Driver</Description>

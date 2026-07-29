@@ -1,4 +1,4 @@
-import { EnvironmentCard } from "@seliseblocks/blocks-kit";
+import { EnvironmentCard } from "@seliseblocks/genesis-os";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useGetProjects } from "@blocks-identifier/hooks/use-project";
 import { useProjectStore } from "@/store/project.store";

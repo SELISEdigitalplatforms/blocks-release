@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet } from "react-router";
 import { DashboardLayoutProvider } from "@/contexts/dashboard-layout-provider";
 import { DashboardHeader } from "@/layouts/dashboard-header/dashboard-header";
 import { SidebarMenuDesktop } from "@/layouts/sidebar-menu-desktop/sidebar-menu-desktop";

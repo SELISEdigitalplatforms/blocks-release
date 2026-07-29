@@ -9,7 +9,7 @@
 import "@testing-library/jest-dom/vitest";
 
 // Some third-party ESM deps (e.g. framer-motion's motion-utils, pulled in via
-// @seliseblocks/blocks-kit) read `process.env.NODE_ENV` at import time. Under the
+// @seliseblocks/genesis-os) read `process.env.NODE_ENV` at import time. Under the
 // jsdom environment `process.env` can be undefined, which crashes module
 // evaluation. Ensure a minimal, non-production process.env is always present.
 {

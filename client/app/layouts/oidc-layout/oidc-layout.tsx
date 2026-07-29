@@ -8,7 +8,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import { Outlet, useLocation, useSearchParams } from "react-router-dom";
+import { Outlet, useLocation, useSearchParams } from "react-router";
 
 type OIDCContextType = {
   logoUrl?: string;

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter, Routes, Route } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ImpersonationChecker,

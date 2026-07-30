@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui-kits/badge/badge";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { getDeploymentLogEventBadgeClassName } from "@blocks-deployment/utils/deployment-logs.utils";
 import { IDeploySettings } from "@blocks-deployment/models/deployed-logs";
 import { ChevronRight } from "lucide-react";

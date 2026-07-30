@@ -2,7 +2,7 @@ import React from "react";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { Badge } from "@/components/ui-kits/badge/badge";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import {
   getDeploymentLogEventBadgeClassName,
   getTimeDifference,

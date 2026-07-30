@@ -10,7 +10,7 @@ import {
 
 type ComingSoonProps = {
   buildId: string;
-  cardData?: any;
+  cardData?: unknown;
   isLoading?: boolean;
   isError?: boolean;
   isSuccess?: boolean;

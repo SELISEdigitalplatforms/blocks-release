@@ -1,3 +1,3 @@
-export { ThemeProvider } from "@seliseblocks/blocks-kit/providers";
-export { useTheme } from "@seliseblocks/blocks-kit/hooks";
-export type { Theme } from "@seliseblocks/blocks-kit/hooks";
+export { ThemeProvider } from "@seliseblocks/genesis-os/providers";
+export { useTheme } from "@seliseblocks/genesis-os/hooks";
+export type { Theme } from "@seliseblocks/genesis-os/hooks";

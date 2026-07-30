@@ -16,6 +16,7 @@ namespace Devops.DomainService.VersionControlSystems.Services;
 
 public class GithubService : IVersionControlService
 {
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
     private readonly ITokenRepository _tokenRepository;
     private readonly IHttpHelperServices _httpHelperServices;
     private readonly IConfiguration _configuration;
@@ -170,7 +171,7 @@ public class GithubService : IVersionControlService
 
         if(linkHeader is not null)
         {
-            var match = Regex.Match(linkHeader, @"<[^>]*[?&]page=(\d+)[^>]*>; rel=""last""");
+            var match = Regex.Match(linkHeader, @"<[^>]*[?&]page=(\d+)[^>]*>; rel=""last""", RegexOptions.None, RegexTimeout);
             if (match.Success && int.TryParse(match.Groups[1].Value, out var totalPages))
             {
                 pageCount = totalPages;

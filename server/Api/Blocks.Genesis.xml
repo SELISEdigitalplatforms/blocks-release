@@ -11,12 +11,6 @@
             a shared <c>X-Internal-Secret</c> header — never expose to public traffic.
             </summary>
         </member>
-        <member name="T:BlocksTemplate.Api.GlobalApiRoutePrefixConvention">
-            <summary>Prepends a segment (e.g. <c>api</c>) to every controller’s attribute route template.</summary>
-        </member>
-        <member name="M:BlocksTemplate.Api.GlobalApiRoutePrefixConvention.#ctor(System.String)">
-            <summary>Prepends a segment (e.g. <c>api</c>) to every controller’s attribute route template.</summary>
-        </member>
         <member name="T:Program">
             <summary>
             Auto-generated public partial Program class for top-level statement apps.

@@ -87,7 +87,7 @@ export interface IAllProjectsResponse {
   data: IProject[];
   isLoading: boolean;
   isError: boolean;
-  error: any;
+  error: unknown;
   refetch: () => void;
 }
 

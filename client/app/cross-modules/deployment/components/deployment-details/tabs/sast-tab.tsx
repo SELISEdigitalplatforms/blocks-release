@@ -4,7 +4,7 @@ import {
   useSASTRedirectLink,
 } from "@/cross-modules/deployment/hooks/use-observability";
 import { AlertTriangle, ExternalLink, Shield, Clock } from "lucide-react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import React, { useMemo } from "react";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { getDeploymentLogEventBadgeClassName } from "@blocks-deployment/utils/deployment-logs.utils";

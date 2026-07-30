@@ -1,34 +1,23 @@
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   MOCK_BUILD_ID,
   mockObservabilityServiceFactory,
 } from "../test-utils/__mocks__";
 import { observabilityService } from "@blocks-deployment/services/observability.service";
-import { useProjectStore } from "@/modules/identifier/state/use-project-store";
 import {
   useGetSASTData,
   useGetSCALibraryData,
   useSCARedirectLink,
   useSASTRedirectLink,
-} from "./observability";
-import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
+} from "./use-observability";
 
 vi.mock("@blocks-deployment/services/observability.service", () =>
   mockObservabilityServiceFactory(),
 );
-vi.mock("@/modules/identifier/state/use-project-store", () => ({
-  useProjectStore: vi.fn(),
-}));
 
 describe("Observability Hooks", () => {
-  beforeEach(() => {
-    vi.mocked(useProjectStore).mockReturnValue({
-      selectedProject: { tenantId: TEST_PROJECT_KEY },
-    } as any);
-  });
-
   // ─── useGetSASTData ─────────────────────────────────────────────────────────
 
   describe("useGetSASTData", () => {
@@ -41,10 +30,7 @@ describe("Observability Hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toBe("sast-report");
-      expect(observabilityService.SASTData).toHaveBeenCalledWith(
-        MOCK_BUILD_ID,
-        TEST_PROJECT_KEY,
-      );
+      expect(observabilityService.SASTData).toHaveBeenCalledWith(MOCK_BUILD_ID);
     });
   });
 
@@ -64,7 +50,6 @@ describe("Observability Hooks", () => {
       expect(result.current.data).toBe("sca-library-report");
       expect(observabilityService.SCAData).toHaveBeenCalledWith(
         MOCK_BUILD_ID,
-        TEST_PROJECT_KEY,
         "libraries",
       );
     });
@@ -86,7 +71,6 @@ describe("Observability Hooks", () => {
       expect(result.current.data).toBe("sca-redirect-url");
       expect(observabilityService.SCARedirect).toHaveBeenCalledWith(
         MOCK_BUILD_ID,
-        TEST_PROJECT_KEY,
       );
     });
   });

@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  createEvent,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "@/hooks/use-toast";
 import LiveDeploymentLogs from "./live-logs-section";
@@ -15,6 +21,22 @@ const dispatchNotification = (payload: Record<string, unknown>) => {
       }),
     );
   });
+};
+
+const startedEvent = {
+  buildId: "b1",
+  eventType: "EventStarted",
+  eventGroup: "Build",
+  message: "starting",
+  createdAt: "2024-01-01T00:00:00Z",
+};
+
+const logEvent = {
+  buildId: "b1",
+  eventType: "Log",
+  eventGroup: "Build",
+  message: "line one\nline two",
+  createdAt: "2024-01-01T00:00:30Z",
 };
 
 describe("LiveDeploymentLogs", () => {
@@ -128,5 +150,61 @@ describe("LiveDeploymentLogs", () => {
       Message: "done",
     });
     expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("toggles a step open and closed with Enter", () => {
+    render(
+      <LiveDeploymentLogs
+        buildId="b1"
+        historicalEvents={[startedEvent, logEvent] as never}
+      />,
+    );
+    const header = screen.getByRole("button", { name: /Build/ });
+    fireEvent.keyDown(header, { key: "Enter" });
+    expect(screen.getByText("line one")).toBeInTheDocument();
+    fireEvent.keyDown(header, { key: "Enter" });
+    expect(screen.queryByText("line one")).not.toBeInTheDocument();
+  });
+
+  it("toggles a step open with Space and stops the page scrolling", () => {
+    render(
+      <LiveDeploymentLogs
+        buildId="b1"
+        historicalEvents={[startedEvent, logEvent] as never}
+      />,
+    );
+    const header = screen.getByRole("button", { name: /Build/ });
+    const space = createEvent.keyDown(header, { key: " " });
+    fireEvent(header, space);
+    expect(space.defaultPrevented).toBe(true);
+    expect(screen.getByText("line one")).toBeInTheDocument();
+  });
+
+  it("ignores keys other than Enter and Space on a step header", () => {
+    render(
+      <LiveDeploymentLogs
+        buildId="b1"
+        historicalEvents={[startedEvent, logEvent] as never}
+      />,
+    );
+    const header = screen.getByRole("button", { name: /Build/ });
+    const escape = createEvent.keyDown(header, { key: "Escape" });
+    fireEvent(header, escape);
+    expect(escape.defaultPrevented).toBe(false);
+    expect(screen.queryByText("line one")).not.toBeInTheDocument();
+  });
+
+  it("leaves a step without logs inert when Enter is pressed", () => {
+    // No Log event, so the Build step has no logs and must not toggle.
+    const { container } = render(
+      <LiveDeploymentLogs
+        buildId="b1"
+        historicalEvents={[startedEvent] as never}
+      />,
+    );
+    const header = screen.getByRole("button", { name: /Build/ });
+    const before = container.innerHTML;
+    fireEvent.keyDown(header, { key: "Enter" });
+    expect(container.innerHTML).toBe(before);
   });
 });

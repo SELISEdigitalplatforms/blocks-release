@@ -218,7 +218,7 @@ describe("RepoDetails page", () => {
     expect(
       screen.getByText("https://custom.example.com"),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Deploy/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Deploy" }));
     fireEvent.click(screen.getByRole("button", { name: /Cancel/i }));
     expect(screen.getByText("Deployment Information")).toBeInTheDocument();
   });
@@ -283,7 +283,7 @@ describe("RepoDetails page", () => {
       route: "/app/deployment/repo/r1?tab=details",
       nuqs: true,
     });
-    fireEvent.click(screen.getByRole("button", { name: /Deploy/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Deploy" }));
     fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
     expect(deployMutate).toHaveBeenCalled();
     expect(navigateMock).toHaveBeenCalledWith(
@@ -339,7 +339,7 @@ describe("RepoDetails page", () => {
       route: "/app/deployment/repo/r1?tab=details",
       nuqs: true,
     });
-    fireEvent.click(screen.getByRole("button", { name: /Deploy/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Deploy" }));
     fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
     expect(navigateMock).toHaveBeenCalledWith(
       expect.stringContaining("deployment"),
@@ -423,7 +423,7 @@ describe("RepoDetails page", () => {
       route: "/app/deployment/repo/r1?tab=details",
       nuqs: true,
     });
-    fireEvent.click(screen.getByRole("button", { name: /Deploy/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Deploy" }));
     fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
     expect(deployMutate).toHaveBeenCalled();
   });

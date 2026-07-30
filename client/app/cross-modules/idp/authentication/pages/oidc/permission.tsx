@@ -76,11 +76,6 @@ export const OIDCPermissionScreen = () => {
     }
   };
 
-  // const redirectToLogin = () => {
-  //   const currentParams = getCurrentOIDCParams();
-  //   const loginUrl = `/oidc/login?${currentParams.toString()}`;
-  //   window.location.href = loginUrl;
-  // };
 
   return (
     <Card className="flex h-full flex-col rounded border-solid border-background shadow-none md:min-w-[448px] md:border-[#95ADC4] lg:max-w-md">

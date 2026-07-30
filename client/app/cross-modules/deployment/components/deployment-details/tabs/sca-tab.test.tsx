@@ -134,8 +134,33 @@ describe("SCATab", () => {
     // Pagination controls are present for more than one page.
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     // Clicking the Critical summary card filters to critical rows only.
-    fireEvent.click(screen.getByText("Critical").closest("div") as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: /^Critical/ }));
     expect(screen.getByText("pkg-0")).toBeInTheDocument();
+  });
+
+  it("filters the dependency table from every severity card", () => {
+    vi.mocked(useGetSCALibraryData).mockReturnValue({
+      data: {
+        data: {
+          details: { critical: 1, high: 6, medium: 0, low: 0, unassigned: 0 },
+          vulnerabilities: manyVulns,
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as never);
+    renderWithProviders(<SCATab />);
+
+    // High keeps only the high rows and drops the critical one.
+    fireEvent.click(screen.getByRole("button", { name: /^High/ }));
+    expect(screen.getByText("pkg-1")).toBeInTheDocument();
+    expect(screen.queryByText("pkg-0")).not.toBeInTheDocument();
+
+    // The remaining cards have no matching rows.
+    [/^Medium/, /^Low/, /^Unassigned/].forEach((name) => {
+      fireEvent.click(screen.getByRole("button", { name }));
+      expect(screen.getByText("No dependencies found.")).toBeInTheDocument();
+    });
   });
 
   it("redirects to Dependency Track when the button is clicked", async () => {

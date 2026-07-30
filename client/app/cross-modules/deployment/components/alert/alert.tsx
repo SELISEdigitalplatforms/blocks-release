@@ -35,6 +35,7 @@ const Alert = ({
                 window.open(
                   `${getRuntimeEnv("BLOCKS_MONITOR_BASE_URL")}`,
                   "_blank",
+                  "noopener,noreferrer",
                 )
               }
               className="h-9 gap-2"

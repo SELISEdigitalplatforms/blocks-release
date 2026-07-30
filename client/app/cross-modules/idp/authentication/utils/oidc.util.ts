@@ -40,7 +40,9 @@ const normalizeColorValue = (value: string | null | undefined): string => {
 
   let color = fullyDecodeURIComponent(value);
 
-  color = color.replace(/&.*$/, "");
+  // Truncate at the first query separator. Done with split rather than a regex so
+  // there is no backtracking to reason about at all.
+  color = color.split("&")[0];
 
   if (/^[A-Fa-f0-9]{6}$/.test(color)) {
     return `#${color}`;

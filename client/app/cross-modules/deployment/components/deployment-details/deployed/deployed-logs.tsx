@@ -143,6 +143,8 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
               className={`${stepIndex !== buildSteps.length - 1 ? "border-default border-b" : ""}`}>
               {/* Step Header */}
               <div
+                role="button"
+                tabIndex={0}
                 className={`flex items-center justify-between bg-background p-3 transition-colors ${
                   DeployedLogsService.shouldShowChevron(step)
                     ? "cursor-pointer hover:bg-secondary"
@@ -151,7 +153,14 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
                 onClick={() =>
                   DeployedLogsService.shouldShowChevron(step) &&
                   toggleExpanded(step.id)
-                }>
+                }
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  event.preventDefault();
+                  if (DeployedLogsService.shouldShowChevron(step)) {
+                    toggleExpanded(step.id);
+                  }
+                }}>
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center space-x-2">
                     {DeployedLogsService.shouldShowChevron(step) &&

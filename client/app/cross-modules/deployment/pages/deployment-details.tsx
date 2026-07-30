@@ -10,7 +10,6 @@ import DeploymentGeneralInfo from "@blocks-deployment/components/deployment-deta
 import DeploymentLogsTab from "@blocks-deployment/components/deployment-details/tabs/deployment-logs-tab";
 import SASTTab from "@blocks-deployment/components/deployment-details/tabs/sast-tab";
 import SCATab from "@blocks-deployment/components/deployment-details/tabs/sca-tab";
-// import DASTTab from "@blocks-deployment/components/deployment-details/tabs/dast-tab";
 import {
   DeploymentEventGroup,
   DeploymentEventType,

@@ -7,6 +7,7 @@ namespace Devops.DomainService.PipelinerunBuilders;
 public class PipelineRunSettings
 {
     private IDictionary<string, object> myDictionary;
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
     private static readonly IDeserializer _deser = new DeserializerBuilder()
         .WithAttemptingUnquotedStringTypeDeserialization().Build();
     private string filePath;
@@ -49,7 +50,7 @@ public class PipelineRunSettings
 
     public PipelineRunSettings setMetadataNamespace(string ns)
     {
-        metadataNamespace = Regex.Replace(ns, "[^a-zA-Z0-9]", "-").ToLower().Trim()
+        metadataNamespace = Regex.Replace(ns, "[^a-zA-Z0-9]", "-", RegexOptions.None, RegexTimeout).ToLower().Trim()
                     .Trim('-')
                     .ToLower().Substring(0, Math.Min(63, ns.Length));
         return this;
@@ -86,7 +87,7 @@ public class PipelineRunSettings
             this.appName = $"unknown-{Guid.NewGuid().ToString().ToLower()}";
             return this;
         }
-        var formattedAppName = Regex.Replace(appName, "[^a-zA-Z0-9]", "-").ToLower().Trim()
+        var formattedAppName = Regex.Replace(appName, "[^a-zA-Z0-9]", "-", RegexOptions.None, RegexTimeout).ToLower().Trim()
                     .Trim('-')
                     .ToLower();
         this.appName = formattedAppName.Substring(0, Math.Min(63, formattedAppName.Length));
@@ -98,7 +99,7 @@ public class PipelineRunSettings
         repoUrl = repoUrl.Substring(0, repoUrl.Length).Split('/').Last();
         var modifiedRepoUrl = $"{appName}-{repoUrl}";
         setSonarQubeProjectKey(modifiedRepoUrl);
-        modifiedRepoUrl = Regex.Replace(modifiedRepoUrl, "[^a-zA-Z0-9]", "-").Trim('-').Substring(0, Math.Min(63, modifiedRepoUrl.Length));
+        modifiedRepoUrl = Regex.Replace(modifiedRepoUrl, "[^a-zA-Z0-9]", "-", RegexOptions.None, RegexTimeout).Trim('-').Substring(0, Math.Min(63, modifiedRepoUrl.Length));
         paramNamespace = modifiedRepoUrl.Trim().Trim('-').ToLower();
         return this;
     }
@@ -111,8 +112,8 @@ public class PipelineRunSettings
 
     public PipelineRunSettings setDomain(string defaultDomain, string customDomain)
     {
-        defaultDomain = Regex.Replace(defaultDomain, @"^https?://", "", RegexOptions.IgnoreCase).ToLower();
-        customDomain = string.IsNullOrWhiteSpace(customDomain) ? null : Regex.Replace(customDomain, @"^https?://", "", RegexOptions.IgnoreCase).ToLower();
+        defaultDomain = Regex.Replace(defaultDomain, @"^https?://", "", RegexOptions.IgnoreCase, RegexTimeout).ToLower();
+        customDomain = string.IsNullOrWhiteSpace(customDomain) ? null : Regex.Replace(customDomain, @"^https?://", "", RegexOptions.IgnoreCase, RegexTimeout).ToLower();
         domains = string.Join(",", new[] { defaultDomain, customDomain }.Where(domain => !string.IsNullOrWhiteSpace(domain)));
         return this;
     }

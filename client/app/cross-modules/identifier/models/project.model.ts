@@ -3,7 +3,7 @@
 // IProject is now owned by blocks-kit (0.0.54 reshaped it: `applicationDomain`
 // became `applications: IDomain[]`). Re-export blocks-kit's type as the single
 // source of truth so this app's values stay assignable to blocks-kit APIs.
-import type { IProject, IDomain } from "@seliseblocks/blocks-kit";
+import type { IProject, IDomain } from "@seliseblocks/genesis-os";
 export type { IProject, IDomain };
 
 export interface IResource {

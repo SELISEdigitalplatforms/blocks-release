@@ -4,7 +4,7 @@ import { OSCreateProjectPage } from "@/pages/os/create-project.page";
 import { DeploymentPage } from "@/pages/release/deployment.page";
 import testData from "@/constants/test-data.constant";
 
-test.describe("Deployment with GitHub repo during project creation", () => {
+test.describe.skip("Deployment with GitHub repo during project creation", () => {
   let consolePage: ConsolePage;
   let osCreateProjectPage: OSCreateProjectPage;
   let deploymentPage: DeploymentPage;

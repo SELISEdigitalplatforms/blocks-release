@@ -112,8 +112,16 @@ const DeploymentObservability = ({
           {latestBuildOnly.map((build) => (
             <div
               key={build.itemId + 1}
+              role="button"
+              tabIndex={0}
               className="flex flex-col gap-3 px-1 py-4 hover:cursor-pointer hover:bg-secondary sm:flex-row sm:items-center sm:justify-between sm:gap-0"
-              onClick={() => handleDeployedItem(build.repoId, build.itemId)}>
+              onClick={() => handleDeployedItem(build.repoId, build.itemId)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                if (event.target !== event.currentTarget) return;
+                event.preventDefault();
+                handleDeployedItem(build.repoId, build.itemId);
+              }}>
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-high-emphasis">
@@ -187,8 +195,16 @@ const DeploymentObservability = ({
         {displayedBuilds.map((build) => (
           <div
             key={build.itemId + 1}
+            role="button"
+            tabIndex={0}
             className="flex flex-col gap-3 px-1 py-4 hover:cursor-pointer hover:bg-secondary sm:flex-row sm:items-center sm:justify-between sm:gap-0"
-            onClick={() => handleDeployedItem(build.repoId, build.itemId)}>
+            onClick={() => handleDeployedItem(build.repoId, build.itemId)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              if (event.target !== event.currentTarget) return;
+              event.preventDefault();
+              handleDeployedItem(build.repoId, build.itemId);
+            }}>
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-700">

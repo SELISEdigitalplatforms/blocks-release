@@ -71,8 +71,6 @@ public class GithubController: ControllerBase
         return BadRequest(result);
     }
     
-    //public async Task<ActionResult<string>> GetAccessToken([FromQuery] string code)
-    //expects full repo name
     [HttpGet("branches")]
     [ProtectedEndPoint("blocks-release::github::branches")]
     public async Task<ActionResult> GetBranches([FromQuery] string repo)
@@ -135,11 +133,6 @@ public class GithubController: ControllerBase
         var hash  = hmac.ComputeHash(Encoding.UTF8.GetBytes(body));
         var oursSig = "sha256=" + Convert.ToHexString(hash).ToLowerInvariant();
 
-        // Constant‑time comparison
-        //if (!CryptographicOperations.FixedTimeEquals(
-        //        Encoding.UTF8.GetBytes(oursSig),
-        //        Encoding.UTF8.GetBytes(theirSig)))
-        //    return Unauthorized();
 
         // 2️⃣  Work out which event this is ----------------------------------------
         var eventType = HttpContext.Request.Headers["X-GitHub-Event"].ToString();

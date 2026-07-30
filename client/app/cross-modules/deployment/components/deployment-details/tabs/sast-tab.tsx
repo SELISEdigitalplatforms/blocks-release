@@ -270,7 +270,7 @@ const SastTab = () => {
     });
 
     setTimeout(() => {
-      window.open(sastLink, "_blank");
+      window.open(sastLink, "_blank", "noopener,noreferrer");
     }, 1000);
   };
 

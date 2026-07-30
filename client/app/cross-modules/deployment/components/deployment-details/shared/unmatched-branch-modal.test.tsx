@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  createEvent,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import BranchVerificationModal from "./unmatched-branch-modal";
 import type { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
@@ -151,5 +157,77 @@ describe("BranchVerificationModal", () => {
     await vi.advanceTimersByTimeAsync(900);
     expect(onSuccess).toHaveBeenCalled();
     vi.useRealTimers();
+  });
+
+  it("closes from the backdrop with Enter", () => {
+    const onClose = vi.fn();
+    render(
+      <BranchVerificationModal
+        {...baseProps}
+        onClose={onClose}
+        isOpen
+        skipInitialVerification
+        refetch={vi.fn().mockResolvedValue({}) as never}
+      />,
+    );
+    fireEvent.keyDown(screen.getByRole("button", { name: "Close dialog" }), {
+      key: "Enter",
+    });
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("closes from the backdrop with Space and stops the page scrolling", () => {
+    const onClose = vi.fn();
+    render(
+      <BranchVerificationModal
+        {...baseProps}
+        onClose={onClose}
+        isOpen
+        skipInitialVerification
+        refetch={vi.fn().mockResolvedValue({}) as never}
+      />,
+    );
+    const backdrop = screen.getByRole("button", { name: "Close dialog" });
+    const space = createEvent.keyDown(backdrop, { key: " " });
+    fireEvent(backdrop, space);
+    expect(space.defaultPrevented).toBe(true);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("ignores keys other than Enter and Space on the backdrop", () => {
+    const onClose = vi.fn();
+    render(
+      <BranchVerificationModal
+        {...baseProps}
+        onClose={onClose}
+        isOpen
+        skipInitialVerification
+        refetch={vi.fn().mockResolvedValue({}) as never}
+      />,
+    );
+    const backdrop = screen.getByRole("button", { name: "Close dialog" });
+    const escape = createEvent.keyDown(backdrop, { key: "Escape" });
+    fireEvent(backdrop, escape);
+    expect(escape.defaultPrevented).toBe(false);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("does not close from the backdrop while verification is loading", () => {
+    const onClose = vi.fn();
+    // A refetch that never resolves keeps the modal in the loading state.
+    const refetch = vi.fn().mockReturnValue(new Promise(() => {}));
+    render(
+      <BranchVerificationModal
+        {...baseProps}
+        onClose={onClose}
+        isOpen
+        refetch={refetch as never}
+      />,
+    );
+    expect(screen.getByText("Please wait…")).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole("button", { name: "Close dialog" }), {
+      key: "Enter",
+    });
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

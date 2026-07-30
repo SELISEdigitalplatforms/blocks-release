@@ -12,9 +12,6 @@ let connection: HubConnection | null = null;
 let currentUserId: string | null = null;
 let startPromise: Promise<void> | null = null;
 
-// The hub lives on the deployment API server. Resolve its origin from runtime
-// env (same source the http-client uses), falling back to the current origin so
-// the vite dev proxy can still forward /deploymentHub when the value is unset.
 const hubBaseUrl = (): string => {
   const fromEnv = getRuntimeEnv("BLOCKS_API_BASE_URL").trim().replace(/\/$/, "");
   if (fromEnv) return fromEnv;

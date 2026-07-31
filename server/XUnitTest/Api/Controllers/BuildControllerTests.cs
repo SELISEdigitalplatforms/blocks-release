@@ -9,6 +9,7 @@ using Devops.DomainService.DataGatewayDeployment.Services;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Models.Request;
 using Devops.DomainService.Shared.Entities;
+using Devops.DomainService.Deployment.Models.Response;
 using Devops.DomainService.Shared.Models;
 using FluentAssertions;
 using FluentValidation.Results;
@@ -138,5 +139,68 @@ namespace XUnitTest.Api.Controllers
             _f.BuildRepo.Setup(b => b.GetBuild("b1")).ReturnsAsync(new Build { RepoName = "org/r", Branch = "main" });
             (await CreateController().GetReports("b1", "dast")).Should().BeOfType<OkObjectResult>();
         }
-    }
+    
+        [Fact]
+        public async Task GetRepoDetails_ReturnsTheRepoWithItsBuildHistory()
+        {
+            _f.RepoRepo.Setup(r => r.GetRepoBuildList("repo-1"))
+                       .ReturnsAsync([new Build { ItemId = "build-1" }]);
+            _f.RepoRepo.Setup(r => r.GetRepo("repo-1"))
+                       .ReturnsAsync(new Repo { ItemId = "repo-1", RepoName = "web" });
+
+            var result = await CreateController().GetRepoDetails("repo-1");
+
+            result.Should().BeOfType<OkObjectResult>();
+            var body = (BaseApiResponse)((OkObjectResult)result).Value;
+            body.IsSuccess.Should().BeTrue();
+            body.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        [Fact]
+        public async Task GetRepoDetails_RejectsAnUnknownRepo()
+        {
+            _f.RepoRepo.Setup(r => r.GetRepoBuildList(It.IsAny<string>())).ReturnsAsync([]);
+            _f.RepoRepo.Setup(r => r.GetRepo(It.IsAny<string>())).ReturnsAsync((Repo)null);
+
+            var result = await CreateController().GetRepoDetails("gone");
+
+            result.Should().BeOfType<BadRequestObjectResult>();
+            ((BaseApiResponse)((BadRequestObjectResult)result).Value).IsSuccess.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task GetRepoDetails_TurnsARepositoryFailureIntoABadRequest()
+        {
+            _f.RepoRepo.Setup(r => r.GetRepoBuildList(It.IsAny<string>()))
+                       .ThrowsAsync(new TimeoutException("mongo unreachable"));
+
+            var result = await CreateController().GetRepoDetails("repo-1");
+
+            result.Should().BeOfType<BadRequestObjectResult>();
+            ((BaseApiResponse)((BadRequestObjectResult)result).Value)
+                .Message.Should().Be("mongo unreachable");
+        }
+
+        [Fact]
+        public async Task ManualBuild_RejectsARequestWithoutARepoId()
+        {
+            var result = await CreateController().ManualBuild(new RepoBuildRequest { RepoId = "" });
+
+            var bad = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+            ((BaseApiResponse)bad.Value).Message.Should().Be("Repo id is required");
+        }
+
+        [Fact]
+        public async Task ManualBuild_ReportsAMissingRepoAsABadRequest()
+        {
+            _f.RepoRepo.Setup(r => r.GetRepo(It.IsAny<string>())).ReturnsAsync((Repo)null);
+
+            var result = await CreateController().ManualBuild(new RepoBuildRequest { RepoId = "gone" });
+
+            // ManualBuild answers "Repo not found." with an OK status code, so the controller
+            // returns it as a success envelope rather than a 400.
+            result.Result.Should().BeOfType<OkObjectResult>();
+            ((BuildResponse)((OkObjectResult)result.Result).Value).Message.Should().Be("Repo not found.");
+        }
+}
 }

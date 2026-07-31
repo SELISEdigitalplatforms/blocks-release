@@ -78,7 +78,7 @@ namespace XUnitTest.Devops.Deployment
         public BuildService BuildService() =>
             new(new Mock<ILogger<BuildService>>().Object,
                 BuildRepo.Object, RepoRepo.Object, Vcs.Object,
-                PipelineRunService(), LogRetrievalService(), Webhook.Object,
-                BuildValidator.Object, ScopeFactory.Object, DomainValidator.Object, MessageClient.Object);
+                PipelineRunService(), Webhook.Object,
+                DomainValidator.Object, MessageClient.Object);
     }
 }

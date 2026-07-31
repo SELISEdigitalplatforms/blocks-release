@@ -140,7 +140,6 @@ public class GithubController: ControllerBase
         // Always acknowledge *quickly*
         // (GitHub considers any non‑2xx within 10 s a failure)
         // JS sample returns 202; we’ll do the same
-        // _ = Task.Run(() => HandleEventAsync(eventType, body, logger));
         var result = await _buildService.HandleWebhookEventAsync(eventType,body, tenantId);
         return Ok(result);
     }

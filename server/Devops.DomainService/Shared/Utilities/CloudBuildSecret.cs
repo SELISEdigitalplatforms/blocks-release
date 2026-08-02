@@ -15,6 +15,8 @@ namespace Blocks.Genesis
         public string GithubClientSecret { get; set; }
         public string GithubClientId { get; set; }
         public string SonarQubeToken { get; set; }
+        public string KubeConfig { get; set; }
+        public string PipelineRunFeConstruct { get; set; }
 
 
         public static async Task<ICloudBuildSecret> ProcessBlocksSecret(VaultType vaultType = VaultType.Azure)

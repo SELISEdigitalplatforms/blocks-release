@@ -38,6 +38,22 @@ namespace Devops.DomainService.Deployment.Services
         }
 
 
+        // Pipeline definitions live in the vault, base64-encoded so that multi-line YAML
+        // survives transport into Key Vault. A plain-YAML secret is accepted as well, in
+        // case one is ever set by hand.
+        private static string DecodePipelineYaml(string secretValue)
+        {
+            if (string.IsNullOrWhiteSpace(secretValue))
+                throw new InvalidDataException("PipelineRunFeConstruct secret is missing from the vault.");
+
+            var trimmed = secretValue.Trim();
+            var buffer = new byte[trimmed.Length];
+
+            return Convert.TryFromBase64String(trimmed, buffer, out var written)
+                ? Encoding.UTF8.GetString(buffer, 0, written)
+                : secretValue;
+        }
+
         private async Task<object?> SubmitKubernetesAsync(
         object resourceObject,
         string group,
@@ -94,7 +110,7 @@ namespace Devops.DomainService.Deployment.Services
                     : repo.CreatedBy;
 
                 var namespaceName = CloudBuildConstants.NAMESPACE_NAME;
-                var yamlPath = CloudBuildConstants.YAML_PATH;
+                var pipelineYaml = DecodePipelineYaml(_cloudBuildSecret.PipelineRunFeConstruct);
                 var guid = Guid.NewGuid().ToString();
 
                 var accessToken = await _tokenRepository.getToken(blocksUserId);
@@ -113,7 +129,7 @@ namespace Devops.DomainService.Deployment.Services
                 var buildImageName = $"{_configuration["ImageReference"]}{formattedProjectName}/{formattedRepoName}:{guid}";
 
                 var pipelineRunData = PipelineRunSettings
-                    .fromYamlFile(yamlPath)
+                    .fromYaml(pipelineYaml)
                     .setMetadataNamespace(pipelineRunNameGuid)
                     .setImageReference(buildImageName)
                     .setAppName($"{formattedProjectName}-{formattedBranchName}-{formattedRepoName}")

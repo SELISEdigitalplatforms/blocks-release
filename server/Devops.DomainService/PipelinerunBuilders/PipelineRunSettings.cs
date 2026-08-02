@@ -46,7 +46,15 @@ public class PipelineRunSettings
     }
 
     public static PipelineRunSettings fromYamlFile(string path) =>
-        new(_deser.Deserialize<IDictionary<string, object>>(File.ReadAllText(path)));
+        fromYaml(File.ReadAllText(path));
+
+    public static PipelineRunSettings fromYaml(string yaml)
+    {
+        if (string.IsNullOrWhiteSpace(yaml))
+            throw new InvalidDataException("PipelineRun YAML is empty.");
+
+        return new(_deser.Deserialize<IDictionary<string, object>>(yaml));
+    }
 
     public PipelineRunSettings setMetadataNamespace(string ns)
     {

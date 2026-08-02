@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.DependencyInjection;
 
 using Devops.DomainService.Deployment.Interfaces;
 using Devops.DomainService.Deployment.Models.Request;
@@ -60,38 +58,39 @@ public static class ServiceRegistry
         services.AddSingleton<IDeploymentHubService, NullDeploymentHubService>();
         services.AddSingleton<ISonarQubeAuthService, SonarQubeAuthService>();
 
-        services.AddSingleton<IKubernetes>(sp =>
+        // Kubernetes credentials come from the vaulted "KubeConfig" secret (base64-encoded
+        // kubeconfig YAML), with the developer's local kubeconfig as the only backup. When
+        // neither is usable the client stays null so startup still succeeds, matching the
+        // previous behaviour - callers already guard against an unavailable cluster.
+        services.AddSingleton<IKubernetes>(_ =>
         {
-            var env = sp.GetRequiredService<IHostEnvironment>();
-
-            if (env.IsDevelopment())
+            if (!string.IsNullOrWhiteSpace(cloudBuildSecret.KubeConfig))
             {
                 try
                 {
-                    var kubeConfig = KubernetesClientConfiguration.BuildConfigFromConfigFile();
-                    return new Kubernetes(kubeConfig);
+                    using var stream = new MemoryStream(Convert.FromBase64String(cloudBuildSecret.KubeConfig));
+                    var vaultConfig = KubernetesClientConfiguration.LoadKubeConfigAsync(stream)
+                                                                   .GetAwaiter().GetResult();
+                    return new Kubernetes(KubernetesClientConfiguration.BuildConfigFromConfigObject(vaultConfig));
                 }
-                catch
+                catch (Exception ex)
                 {
-                    return null!;
+                    Console.WriteLine($"Kubernetes: vaulted KubeConfig is unusable ({ex.GetType().Name}: {ex.Message}). Falling back to the local kubeconfig.");
                 }
             }
+            else
+            {
+                Console.WriteLine("Kubernetes: no KubeConfig secret found in the vault. Falling back to the local kubeconfig.");
+            }
+
             try
             {
-                var config = KubernetesClientConfiguration.InClusterConfig();
-                return new Kubernetes(config);
+                return new Kubernetes(KubernetesClientConfiguration.BuildConfigFromConfigFile());
             }
-            catch
+            catch (Exception ex)
             {
-                try
-                {
-                    var kubeConfig = KubernetesClientConfiguration.BuildConfigFromConfigFile();
-                    return new Kubernetes(kubeConfig);
-                }
-                catch
-                {
-                    return null!;
-                }
+                Console.WriteLine($"Kubernetes: no local kubeconfig either ({ex.GetType().Name}: {ex.Message}). Kubernetes client is unavailable.");
+                return null!;
             }
         });
 

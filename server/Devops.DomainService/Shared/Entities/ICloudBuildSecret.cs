@@ -17,5 +17,7 @@ namespace Devops.DomainService.Shared.Entities
         public string GithubWebhookSecret { get; set; }
         public string GithubClientSecret { get; set; }
         public string GithubClientId { get; set; }
+        public string KubeConfig { get; set; }
+        public string PipelineRunFeConstruct { get; set; }
     }
 }

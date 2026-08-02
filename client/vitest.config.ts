@@ -62,6 +62,7 @@ export default defineConfig({
     clearMocks: true,
     setupFiles: ["./app/test-utils/vitest.setup.ts"],
     coverage: {
+      reporter: ["text", "lcov"],
       all: true,
       provider: "v8",
       reporter: ["text", "html", "json", "json-summary"],

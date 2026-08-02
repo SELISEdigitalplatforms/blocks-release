@@ -5,6 +5,7 @@ import { useProjectStore } from "@/store/project.store";
 import { useDeploymentStatus } from "@blocks-deployment/components/deployment-details/shared/notification-listener";
 import { ExternalLink } from "lucide-react";
 import { AlertsList } from "./alerts-list";
+import { getRuntimeEnv } from "@/lib/runtime-env";
 
 const Alert = ({
   repoId,
@@ -31,9 +32,10 @@ const Alert = ({
           <div className="flex h-10 items-center justify-end gap-4 rounded text-base">
             <Button
               onClick={() =>
-                window.open(
-                  "http://dev-observability.blocksdevelopers.com/health",
+               window.open(
+                  `${getRuntimeEnv("BLOCKS_MONITOR_BASE_URL")}`,
                   "_blank",
+                  "noopener,noreferrer",
                 )
               }
               className="h-9 gap-2"

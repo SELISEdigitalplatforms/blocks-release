@@ -318,5 +318,57 @@ namespace XUnitTest.Devops.AnalyticsTool
 
             result.Should().BeFalse();
         }
-    }
+    
+        [Fact]
+        public async Task ProcessSonarQubeUser_StillSucceedsWhenTheOidcAndMembershipCallsAreRejected()
+        {
+            // Setting the OIDC provider and adding the group membership are both best-effort: the
+            // user and group already exist by then, so a rejection is logged and the flow continues.
+            _http.Setup(h => h.MakeHttpRequest<object>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                 .ReturnsAsync((new object(), Resp(HttpStatusCode.BadRequest)));
+            _http.Setup(h => h.MakeHttpGetRequest<SonarQubeUserSearchResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                 .ReturnsAsync((new SonarQubeUserSearchResponse { users = new List<SonarQubeUserResponse>() }, ""));
+            _http.Setup(h => h.MakeHttpRequest<SonarQubeUserResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                 .ReturnsAsync((new SonarQubeUserResponse { id = "u1", login = "bob" }, Resp(HttpStatusCode.OK)));
+            _http.Setup(h => h.MakeHttpGetRequest<SonarQubeGroupSearchResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                 .ReturnsAsync((new SonarQubeGroupSearchResponse { groups = new List<SonarQubeGroupResponse> { new() { id = "g1", name = "Blocks_key" } } }, ""));
+            SetupClientFactory(HttpStatusCode.OK);
+
+            var result = await CreateService().ProcessSonarQubeUser("bob", "org/repo", "key");
+
+            result.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task ProcessSonarQubeUser_StillSucceedsWhenPermissionAssignmentIsRejected()
+        {
+            _http.Setup(h => h.MakeHttpGetRequest<SonarQubeUserSearchResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                 .ReturnsAsync((new SonarQubeUserSearchResponse { users = new List<SonarQubeUserResponse> { new() { login = "bob", email = "bob", id = "u1" } } }, ""));
+            _http.Setup(h => h.MakeHttpGetRequest<SonarQubeGroupSearchResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                 .ReturnsAsync((new SonarQubeGroupSearchResponse { groups = new List<SonarQubeGroupResponse> { new() { id = "g1", name = "Blocks_key" } } }, ""));
+            _http.Setup(h => h.MakeHttpRequest<object>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                 .ReturnsAsync((new object(), Resp(HttpStatusCode.OK)));
+            // A permission call that SonarQube refuses is reported, not fatal.
+            SetupClientFactory(HttpStatusCode.Forbidden);
+
+            var result = await CreateService().ProcessSonarQubeUser("bob", "org/repo", "key");
+
+            result.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task ProcessSonarQubeUser_NormalisesASlashInTheRepositoryName()
+        {
+            _http.Setup(h => h.MakeHttpGetRequest<SonarQubeUserSearchResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                 .ReturnsAsync((new SonarQubeUserSearchResponse { users = new List<SonarQubeUserResponse> { new() { login = "bob", email = "bob", id = "u1" } } }, ""));
+            _http.Setup(h => h.MakeHttpGetRequest<SonarQubeGroupSearchResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                 .ReturnsAsync((new SonarQubeGroupSearchResponse { groups = new List<SonarQubeGroupResponse> { new() { id = "g1", name = "Blocks_key" } } }, ""));
+            _http.Setup(h => h.MakeHttpRequest<object>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                 .ReturnsAsync((new object(), Resp(HttpStatusCode.OK)));
+            SetupClientFactory(HttpStatusCode.OK);
+
+            // "org/repo" is not a legal SonarQube project key, so it becomes "org-repo".
+            (await CreateService().ProcessSonarQubeUser("bob", "org/repo", "key")).Should().BeTrue();
+        }
+}
 }

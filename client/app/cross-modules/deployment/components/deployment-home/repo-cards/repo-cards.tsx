@@ -16,18 +16,6 @@ import {
 import BranchVerificationModal from "@blocks-deployment/components/deployment-details/shared/unmatched-branch-modal";
 import { DEPLOYMENT_OPTIONS_DETAILS } from "@blocks-deployment/models/deployment-settings";
 import { RepositoryAccessModal } from "./repository-access-modal";
-// Original "Connect repository" provider-picker modal — temporarily replaced
-// by RepositoryAccessModal (redirect-to-Blocks-OS + retry flow). Keep these
-// imports referenced below in the commented JSX so re-enabling is a one-step
-// flip.
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogDescription,
-//   DialogHeader,
-//   DialogTitle,
-// } from "@/components/ui-kits/dialog/dialog";
-// import ProviderButtons from "@blocks-deployment/components/deployment-steps/render-repos/render-provider";
 
 export interface IRepoResponse {
   sourceRepoId: string;
@@ -66,7 +54,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
     useValidateAuthorization();
   const [repositoryModalOpen, setRepositoryModalOpen] = useState(false);
 
-  const handleRepoClick = async (e: React.MouseEvent) => {
+  const handleRepoClick = async (e: React.MouseEvent | React.KeyboardEvent) => {
     if ((e.target as HTMLElement).closest("button, a")) {
       return;
     }
@@ -91,10 +79,6 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
     }
   };
 
-  // Kept for reference alongside the commented-out provider-picker modal below.
-  // const handleProviderClose = () => {
-  //   setRepositoryModalOpen(false);
-  // };
 
   const handleAccessGranted = () => {
     setRepositoryModalOpen(false);
@@ -137,10 +121,18 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
     <>
       <div className="mb-4 space-y-2">
         <div
+          role="button"
+          tabIndex={0}
           className={`group flex h-auto cursor-pointer flex-col items-start justify-start gap-4 self-stretch rounded-sm border bg-background px-4 pb-2 pt-4 transition-colors sm:gap-6 sm:px-6 sm:pt-6 ${
             isLoading ? "pointer-events-none opacity-50" : ""
           }`}
-          onClick={handleRepoClick}>
+          onClick={handleRepoClick}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            if (event.target !== event.currentTarget) return;
+            event.preventDefault();
+            handleRepoClick(event);
+          }}>
           {/* Header */}
           <div className="flex w-full items-center justify-start">
             <h3 className="flex flex-wrap items-center gap-2 text-lg font-semibold">

@@ -146,9 +146,6 @@ if (typeof window !== "undefined" && typeof window.scrollTo !== "function") {
   });
 }
 
-// Radix UI primitives (dropdown-menu, select, dialog, …) rely on Pointer
-// Capture and scrollIntoView, which jsdom does not implement. Provide inert
-// stubs (only when missing) so these components open/close in unit tests.
 if (typeof Element !== "undefined") {
   const proto = Element.prototype as unknown as Record<string, unknown>;
   if (typeof proto.hasPointerCapture !== "function") {

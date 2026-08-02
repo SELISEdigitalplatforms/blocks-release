@@ -19,7 +19,6 @@ public class DataGatewayPipelineBuilder
 
     public IDictionary<string, object> build()
     {
-        //validate();
         applyMetadataName();
         applyProjectKey();
         applyVersion();
@@ -171,23 +170,6 @@ public class DataGatewayPipelineBuilder
         }
 
         return null;
-    }
-
-    private void validate()
-    {
-        static string Missing(string k) => $"YAML missing required field '{k}'";
-
-        if (!myDictionary.TryGetValue("apiVersion", out var apiVersion) ||
-                (string)apiVersion != "tekton.dev/v1beta1")
-        {
-            throw new InvalidDataException(Missing("apiVersion"));
-        }
-
-        if (!myDictionary.TryGetValue("kind", out var kind) || (string)kind != "PipelineRun")
-        {
-            Console.WriteLine("Invalid kind. Must be PipelineRun");
-            throw new InvalidDataException(Missing("Invalid kind. Must be PipelineRun"));
-        }
     }
 
 }

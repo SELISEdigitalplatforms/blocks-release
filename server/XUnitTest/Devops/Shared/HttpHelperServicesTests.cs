@@ -186,5 +186,120 @@ namespace XUnitTest.Devops.Shared
             error.Should().BeNull();
             response.Should().NotBeNull();
         }
-    }
+    
+        // ---- MakeHttpDeleteRequest ----
+
+        [Fact]
+        public async Task MakeHttpDeleteRequest_ReturnsTheDeserialisedBodyAndTheResponse()
+        {
+            SetupClient(HttpStatusCode.OK, "{\"name\":\"deleted\"}");
+
+            var (data, response) = await CreateService()
+                .MakeHttpDeleteRequest<Dto>("dtrack", "https://api.example.com/x", HttpMethod.Delete);
+
+            data.name.Should().Be("deleted");
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        [Fact]
+        public async Task MakeHttpDeleteRequest_StillReturnsTheResponseOnAFailureStatus()
+        {
+            SetupClient(HttpStatusCode.NotFound, "{\"name\":\"missing\"}");
+
+            var (_, response) = await CreateService()
+                .MakeHttpDeleteRequest<Dto>("dtrack", "https://api.example.com/x", HttpMethod.Delete);
+
+            // The caller decides what a 404 means, so the status has to reach it rather than throw.
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        [Fact]
+        public async Task MakeHttpDeleteRequest_SendsTheBodyWhenTheVerbIsDelete()
+        {
+            SetupClient(HttpStatusCode.OK, "{\"name\":\"deleted\"}");
+
+            var (data, _) = await CreateService().MakeHttpDeleteRequest<Dto>(
+                "dtrack", "https://api.example.com/x", HttpMethod.Delete, new { uuid = "abc" });
+
+            data.Should().NotBeNull();
+        }
+
+        [Fact]
+        public async Task MakeHttpDeleteRequest_AppliesTheBearerTokenAndExtraHeaders()
+        {
+            SetupClient(HttpStatusCode.OK, "{\"name\":\"deleted\"}");
+
+            var (data, _) = await CreateService().MakeHttpDeleteRequest<Dto>(
+                "dtrack", "https://api.example.com/x", HttpMethod.Delete, null,
+                new Dictionary<string, string> { ["X-Api-Key"] = "k" }, "token-1");
+
+            data.Should().NotBeNull();
+        }
+
+        [Fact]
+        public async Task MakeHttpDeleteRequest_ReturnsAnEmptyResponseRatherThanThrowingOnANetworkFailure()
+        {
+            SetupClient(HttpStatusCode.OK, string.Empty, @throw: true);
+
+            var (data, response) = await CreateService()
+                .MakeHttpDeleteRequest<Dto>("dtrack", "https://api.example.com/x", HttpMethod.Delete);
+
+            data.Should().BeNull();
+            response.Should().NotBeNull();
+        }
+
+        // ---- MakeHttpRequest ----
+
+        [Fact]
+        public async Task MakeHttpRequest_ReturnsTheDataOnSuccess()
+        {
+            SetupClient(HttpStatusCode.OK, "{\"name\":\"ok\"}");
+
+            var (data, error, response) = await CreateService()
+                .MakeHttpRequest<Dto, Dto>("dtrack", "https://api.example.com/x", HttpMethod.Post, new { a = 1 });
+
+            data.name.Should().Be("ok");
+            error.Should().BeNull();
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        [Fact]
+        public async Task MakeHttpRequest_ReturnsTheErrorShapeOnAFailureStatus()
+        {
+            SetupClient(HttpStatusCode.BadRequest, "{\"name\":\"bad request\"}");
+
+            var (data, error, response) = await CreateService()
+                .MakeHttpRequest<Dto, Dto>("dtrack", "https://api.example.com/x", HttpMethod.Post, new { a = 1 });
+
+            // A failure body is deserialised into the error type, not the success type.
+            data.Should().BeNull();
+            error.name.Should().Be("bad request");
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task MakeHttpRequest_AppliesTheBearerTokenAndExtraHeaders()
+        {
+            SetupClient(HttpStatusCode.OK, "{\"name\":\"ok\"}");
+
+            var (data, _, _) = await CreateService().MakeHttpRequest<Dto, Dto>(
+                "dtrack", "https://api.example.com/x", HttpMethod.Post, null,
+                new Dictionary<string, string> { ["X-Api-Key"] = "k" }, "token-1");
+
+            data.Should().NotBeNull();
+        }
+
+        [Fact]
+        public async Task MakeHttpRequest_ReturnsNullsRatherThanThrowingOnANetworkFailure()
+        {
+            SetupClient(HttpStatusCode.OK, string.Empty, @throw: true);
+
+            var (data, error, response) = await CreateService()
+                .MakeHttpRequest<Dto, Dto>("dtrack", "https://api.example.com/x", HttpMethod.Post);
+
+            data.Should().BeNull();
+            error.Should().BeNull();
+            response.Should().NotBeNull();
+        }
+}
 }

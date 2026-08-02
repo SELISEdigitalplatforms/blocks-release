@@ -132,5 +132,131 @@ namespace XUnitTest.Devops.PipelinerunBuilders
 
             act.Should().Throw<InvalidDataException>();
         }
+    
+        [Fact]
+        public void Build_RejectsAYamlWithNoSpecSection()
+        {
+            var root = new Dictionary<string, object>
+            {
+                ["apiVersion"] = "tekton.dev/v1beta1",
+                ["kind"] = "PipelineRun",
+                ["metadata"] = new Dictionary<object, object> { ["name"] = "" },
+            };
+
+            var act = () => new DataGatewayPipelineBuilder(root).setProjectKey("proj-1").build();
+
+            act.Should().Throw<InvalidDataException>().WithMessage("YAML has no spec section.");
+        }
+
+        [Fact]
+        public void Build_RejectsAYamlWhoseSpecHasNoParamsList()
+        {
+            var root = new Dictionary<string, object>
+            {
+                ["apiVersion"] = "tekton.dev/v1beta1",
+                ["kind"] = "PipelineRun",
+                ["metadata"] = new Dictionary<object, object> { ["name"] = "" },
+                ["spec"] = new Dictionary<object, object>(),
+            };
+
+            var act = () => new DataGatewayPipelineBuilder(root).setProjectKey("proj-1").build();
+
+            act.Should().Throw<InvalidDataException>().WithMessage("YAML has no spec.params list.");
+        }
+
+        [Fact]
+        public void Build_RejectsAYamlThatDoesNotDeclareTheParameterBeingSet()
+        {
+            var root = new Dictionary<string, object>
+            {
+                ["apiVersion"] = "tekton.dev/v1beta1",
+                ["kind"] = "PipelineRun",
+                ["metadata"] = new Dictionary<object, object> { ["name"] = "" },
+                ["spec"] = new Dictionary<object, object>
+                {
+                    ["params"] = new List<object>
+                    {
+                        new Dictionary<object, object> { ["name"] = "something-else", ["value"] = "" },
+                    },
+                },
+            };
+
+            var act = () => new DataGatewayPipelineBuilder(root).setProjectKey("proj-1").build();
+
+            act.Should().Throw<InvalidDataException>();
+        }
+
+        [Fact]
+        public void SetRepoUrl_RejectsATemplateWithNoSpecToReadTheCurrentUrlFrom()
+        {
+            // setRepoUrl splices the access token into the url already in the template, so a
+            // template that carries no spec at all cannot be completed.
+            var root = new Dictionary<string, object>
+            {
+                ["apiVersion"] = "tekton.dev/v1beta1",
+                ["kind"] = "PipelineRun",
+            };
+
+            var act = () => new DataGatewayPipelineBuilder(root).setRepoUrl("token-1");
+
+            act.Should().Throw<Exception>();
+        }
+
+        [Fact]
+        public void SetRepoUrl_RejectsATemplateWhoseSpecHasNoParamsList()
+        {
+            var root = new Dictionary<string, object>
+            {
+                ["apiVersion"] = "tekton.dev/v1beta1",
+                ["kind"] = "PipelineRun",
+                ["spec"] = new Dictionary<object, object>(),
+            };
+
+            var act = () => new DataGatewayPipelineBuilder(root).setRepoUrl("token-1");
+
+            act.Should().Throw<Exception>();
+        }
+
+        [Fact]
+        public void SetRepoUrl_RejectsATemplateThatDeclaresNoRepoUrlParameter()
+        {
+            var root = new Dictionary<string, object>
+            {
+                ["apiVersion"] = "tekton.dev/v1beta1",
+                ["kind"] = "PipelineRun",
+                ["spec"] = new Dictionary<object, object>
+                {
+                    ["params"] = new List<object>
+                    {
+                        new Dictionary<object, object> { ["name"] = "revision", ["value"] = "main" },
+                    },
+                },
+            };
+
+            var act = () => new DataGatewayPipelineBuilder(root).setRepoUrl("token-1");
+
+            act.Should().Throw<Exception>();
+        }
+
+        [Fact]
+        public void SetRepoUrl_RejectsARepoUrlParameterThatCarriesNoValue()
+        {
+            var root = new Dictionary<string, object>
+            {
+                ["apiVersion"] = "tekton.dev/v1beta1",
+                ["kind"] = "PipelineRun",
+                ["spec"] = new Dictionary<object, object>
+                {
+                    ["params"] = new List<object>
+                    {
+                        new Dictionary<object, object> { ["name"] = "repo-url" },
+                    },
+                },
+            };
+
+            var act = () => new DataGatewayPipelineBuilder(root).setRepoUrl("token-1");
+
+            act.Should().Throw<Exception>();
+        }
     }
 }

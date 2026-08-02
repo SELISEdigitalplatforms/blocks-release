@@ -1,5 +1,5 @@
 /**
- * Test-only double for the `@seliseblocks/blocks-kit` barrel.
+ * Test-only double for the `@seliseblocks/genesis-os` barrel.
  *
  * The real package's barrel eagerly imports framer-motion (whose motion-utils
  * reads process.env.NODE_ENV at import time) and instantiates a signalr-backed
@@ -13,7 +13,7 @@
  * shared stub stores so selectors return usable values.
  */
 import React from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet } from "react-router";
 
 export {
   useProjectStore,

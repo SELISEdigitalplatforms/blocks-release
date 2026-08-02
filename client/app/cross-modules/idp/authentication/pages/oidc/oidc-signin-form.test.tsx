@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const navigateMock = vi.fn();
@@ -20,8 +20,8 @@ vi.mock("@/store/auth.store", () => ({
   useAuthStore: () => ({ setAuthenticated }),
 }));
 vi.mock("@/hooks/use-toast", () => ({ showErrorToast: vi.fn() }));
-vi.mock("react-router-dom", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-router-dom")>();
+vi.mock("react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router")>();
   return { ...actual, useNavigate: () => navigateMock };
 });
 

@@ -3,6 +3,7 @@ import { test, expect } from "@/support/test-base";
 const username = process.env.E2E_USERNAME;
 const password = process.env.E2E_PASSWORD;
 
+// need to make this reusable
 test.describe("Authentication", () => {
   test.beforeAll(() => {
     if (!username || !password) {
@@ -52,6 +53,14 @@ test.describe("Authentication", () => {
     await expect(
       page.getByRole("heading", { name: "Your Blocks Projects" }),
     ).toBeVisible({ timeout: 20_000 });
+
+    // Also visit the OS app to ensure authentication state is saved for that domain too
+    // const osBaseUrl = process.env.E2E_OS_BASE_URL;
+    // if (osBaseUrl) {
+    //   await page.goto(osBaseUrl);
+    //   // Wait a bit for any redirects/auth to complete
+    //   await page.waitForLoadState();
+    // }
 
     // Persist the authenticated session for future specs to reuse.
     await page.context().storageState({ path: "fixtures/auth.json" });

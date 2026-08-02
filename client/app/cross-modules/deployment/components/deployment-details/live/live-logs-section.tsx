@@ -305,6 +305,8 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
                 key={step.id}
                 className={`${stepIndex !== logSteps.length - 1 ? "border-default border-b" : ""}`}>
                 <div
+                  role="button"
+                  tabIndex={0}
                   className={`flex items-center justify-between bg-background p-3 transition-colors ${
                     shouldShowChevron(step)
                       ? "cursor-pointer hover:bg-secondary"
@@ -312,7 +314,14 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
                   }`}
                   onClick={() =>
                     shouldShowChevron(step) && toggleExpanded(step.id)
-                  }>
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    if (shouldShowChevron(step)) {
+                      toggleExpanded(step.id);
+                    }
+                  }}>
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center space-x-2">
                       {shouldShowChevron(step) &&

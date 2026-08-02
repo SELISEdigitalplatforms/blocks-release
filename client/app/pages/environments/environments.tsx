@@ -16,9 +16,6 @@ const EnvironmentsLoading = () => (
   </main>
 );
 
-// Lighter than the uds EnvironmentsPage: reuses blocks-kit's EnvironmentCard and
-// deployment's existing useGetProjects. The add-environment modal and migration
-// status (which need backend support not present here) are omitted.
 export const EnvironmentsPage = () => {
   const groupId = useProjectStore((state) => state.selectedTenantGroup);
   const { data: projectGroups = [], isLoading } = useGetProjects({

@@ -60,7 +60,6 @@ namespace Devops.DomainService.Deployment.Services
                 ResponseValue = "sent"
             };
 
-            // await _deploymentHubService.SendBuildLogAsync(requestData, UserIds);
 
             var blocksKey = _configuration["RootTenantId"];
             var tenantId = _configuration["RootTenantId"];
@@ -115,7 +114,6 @@ namespace Devops.DomainService.Deployment.Services
                 ResponseValue = "sent"
             };
 
-            // await _deploymentHubService.SendBuildLogAsync(requestData, UserIds);
 
             var blocksKey = _configuration["RootTenantId"];
             var tenantId = _configuration["RootTenantId"];

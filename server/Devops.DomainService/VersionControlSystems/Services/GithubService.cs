@@ -295,27 +295,6 @@ public class GithubService : IVersionControlService
 
     public async Task<bool> Clone(string repo)
     {
-        //var token = await _tokenRepository.getToken();
-        //if (token == null)
-        //    return false;
-        //var outputPath = "repofromuser.zip";
-        //var httpClient = _httpClientFactory.CreateClient("GitHubApi");
-        //httpClient.DefaultRequestHeaders.Authorization =
-        //    new AuthenticationHeaderValue("Bearer", token);
-        //var httpResponse = await httpClient.GetAsync(
-        //    $"repos/{repo}/zipball", HttpCompletionOption.ResponseHeadersRead);
-        //httpResponse.EnsureSuccessStatusCode();
-        //try
-        //{
-        //    await using var stream = await httpResponse.Content.ReadAsStreamAsync();
-        //    await using var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None);
-        //    await stream.CopyToAsync(fileStream);
-        //    Console.WriteLine($"File downloaded to: {Path.GetFullPath(outputPath)}");
-        //}
-        //catch (Exception e)
-        //{
-        //    Console.WriteLine($"Download failed: {e.Message}");
-        //}
 
         return true;
     }

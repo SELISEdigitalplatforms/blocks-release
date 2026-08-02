@@ -10,7 +10,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { useImpersonateStore } from "@/store/impersonate.store";
 import { useProjectStore } from "@/store/project.store";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useAppState } from "./public-guard";
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 

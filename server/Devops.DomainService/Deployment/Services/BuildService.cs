@@ -25,11 +25,9 @@ public class BuildService : IBuildService
     private readonly IRepoRepository _repoRepository;
     private readonly PipelineRunService _pipelineRunService;
     private readonly IGithubWebhookService _githubWebhookService;
-    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly IVersionControlService _githubService;
     private readonly IValidator<RepoDomainUpdateRequest> _repoDomainUpdateRequestValidator;
     private readonly IMessageClient _messageClient;
-    private readonly LogRetrievalService _logRetrievalService;
 
     public BuildService(
                         ILogger<BuildService> logger,   
@@ -37,24 +35,18 @@ public class BuildService : IBuildService
                         IRepoRepository repoRepository,
                         IVersionControlService githubService,
                         PipelineRunService pipelineRunService,
-                        LogRetrievalService logRetrievalService,
                         IGithubWebhookService githubWebhookService,
-                        IValidator<BuildRequest> buildRequestValidator,
-                        IServiceScopeFactory serviceScopeFactor,
-
                         IValidator<RepoDomainUpdateRequest> repoDomainUpdateRequestValidator,
                         IMessageClient messageClient)
     {
         _logger = logger;
         _buildRepository = buildRepository;
         _repoRepository = repoRepository;
-        _serviceScopeFactory = serviceScopeFactor;
         _repoDomainUpdateRequestValidator = repoDomainUpdateRequestValidator;
         _githubService = githubService;
         _pipelineRunService = pipelineRunService;
         _githubWebhookService = githubWebhookService;
         _messageClient = messageClient;
-        _logRetrievalService = logRetrievalService;
     }
 
     public async Task<BuildResponse> Build(BuildRequest request, Repo? repo = null)
@@ -63,15 +55,6 @@ public class BuildService : IBuildService
 
         try
         {
-            //var validationResult = await _buildRequestValidator.ValidateAsync(request);
-
-            //if (!validationResult.IsValid)
-            //{
-            //    return new BuildResponse { 
-            //        IsSuccess = false,
-            //        Errors = validationResult.Errors.ToDictionary(e => string.IsNullOrWhiteSpace(e.PropertyName) ? "validation_error" : e.PropertyName, e => e.ErrorMessage)
-            //    };
-            //}
             var blocksContext = BlocksContext.GetContext();
             var tenantId = string.IsNullOrWhiteSpace(blocksContext.TenantId) ? repo.ProjectId : blocksContext.TenantId;
             var blocksUserId = string.IsNullOrWhiteSpace(blocksContext.UserId) ? repo.CreatedBy : blocksContext.UserId;
@@ -108,32 +91,6 @@ public class BuildService : IBuildService
             {
                 _logger.LogError($"Failed to push data to queue. Error: {ex.Message}");
             }
-            //_ = Task.Run(async () =>
-            //{
-            //    try
-            //    {
-            //        using var scope = _serviceScopeFactory.CreateScope();
-            //        var logService = scope.ServiceProvider.GetRequiredService<LogRetrievalService>();
-            //        await logService.CheckPodLogsAsync(build);
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        _logger.LogWarning($"Failed to initiage log retrieval service. Error: {ex.Message}");
-            //    }
-            //});
-
-            //  _ = Task.Run(async () =>
-            // {
-            //     try
-            //     {
-            //         await _logRetrievalService.CheckPodLogsAsync(build);
-            //     }
-            //     catch (Exception ex)
-            //     {
-            //         // TODO: replace with your logger
-            //         Console.WriteLine(ex);
-            //     }
-            // });
 
             BuildResponse buildResponse = new BuildResponse
             {

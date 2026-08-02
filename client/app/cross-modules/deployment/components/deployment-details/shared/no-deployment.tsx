@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { GitBranch } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useProjectStore } from "@/store/project.store";
 
 export const NoDeploymentAvailable = () => {

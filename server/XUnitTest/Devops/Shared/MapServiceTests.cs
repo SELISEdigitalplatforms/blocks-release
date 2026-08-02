@@ -60,11 +60,13 @@ namespace XUnitTest.Devops.Shared
         private class ArraySource
         {
             public string[] Tags { get; set; }
+            public List<Inner> Items { get; set; }
         }
 
         private class ArrayDest
         {
             public string[] Tags { get; set; }
+            public List<InnerDto> Items { get; set; }
         }
 
         [Fact]
@@ -195,5 +197,82 @@ namespace XUnitTest.Devops.Shared
             result.Tags.Should().NotBeNull();
             result.Tags.Should().BeEquivalentTo(new[] { "x", "y" });
         }
-    }
+    
+        private class NullableSource
+        {
+            public int? Optional { get; set; }
+            public DateTime? When { get; set; }
+        }
+
+        private class NullableDest
+        {
+            public int Optional { get; set; }
+            public DateTime When { get; set; }
+        }
+
+        [Fact]
+        public void Map_CopiesAnArrayPropertyAsAnArrayRatherThanAList()
+        {
+            var result = MapService.Map<ArraySource, ArrayDest>(
+                new ArraySource { Tags = ["alpha", "beta"] });
+
+            result.Tags.Should().BeOfType<string[]>();
+            result.Tags.Should().Equal("alpha", "beta");
+        }
+
+        [Fact]
+        public void Map_CopiesAnEmptyArrayWithoutFailing()
+        {
+            var result = MapService.Map<ArraySource, ArrayDest>(new ArraySource { Tags = [] });
+
+            result.Tags.Should().NotBeNull().And.BeEmpty();
+        }
+
+        [Fact]
+        public void Map_MapsEachElementOfACollectionOntoTheDestinationElementType()
+        {
+            var result = MapService.Map<ArraySource, ArrayDest>(new ArraySource
+            {
+                Items = [new Inner { Text = "one" }, new Inner { Text = "two" }],
+            });
+
+            result.Items.Should().HaveCount(2);
+            result.Items[0].Should().BeOfType<InnerDto>();
+            result.Items[0].Text.Should().Be("one");
+            result.Items[1].Text.Should().Be("two");
+        }
+
+        [Fact]
+        public void Map_KeepsANullElementAsANullInTheDestinationCollection()
+        {
+            var result = MapService.Map<ArraySource, ArrayDest>(new ArraySource
+            {
+                Items = [new Inner { Text = "one" }, null],
+            });
+
+            result.Items.Should().HaveCount(2);
+            result.Items[1].Should().BeNull();
+        }
+
+        [Fact]
+        public void Map_UnwrapsANullableSourceOntoItsUnderlyingDestinationType()
+        {
+            var when = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+
+            var result = MapService.Map<NullableSource, NullableDest>(
+                new NullableSource { Optional = 42, When = when });
+
+            result.Optional.Should().Be(42);
+            result.When.Should().Be(when);
+        }
+
+        [Fact]
+        public void Map_LeavesTheDefaultWhenANullableSourceIsNull()
+        {
+            var result = MapService.Map<NullableSource, NullableDest>(new NullableSource());
+
+            result.Optional.Should().Be(0);
+            result.When.Should().Be(default);
+        }
+}
 }

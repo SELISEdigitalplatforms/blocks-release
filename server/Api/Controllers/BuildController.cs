@@ -197,17 +197,5 @@ public class BuildController : ControllerBase
         });
     }
 
-    //[ApiExplorerSettings(IgnoreApi = true)]
-    //[HttpGet("DatagatewayPipelineInitiate")]
-    //[Authorize]
-    //public async Task<IActionResult> DatagatewayPipelineInitiate()
-    //{
-    //    var result = await _dataGatewayDeploymentService.InitiateManualDataGatewayInstanceCreation();
-    //    if (result)
-    //    {
-    //        return Ok(result);
-    //    }
-    //    return BadRequest(result);
-    //}
 
 }

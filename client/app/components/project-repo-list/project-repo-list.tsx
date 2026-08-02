@@ -7,9 +7,6 @@ import { useProjectStore } from "@/store/project.store";
 import { useGetAllProjects } from "@blocks-deployment/hooks/use-github-info";
 import type { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
 
-// Lighter than the uds version: the edit-domain dialog (EditDomainForm) is not
-// ported here. The repository list is fetched from the deployment repos-list
-// endpoint (scoped to the selected project's tenant).
 export const ProjectRepoList = ({
   project,
   isLoading,

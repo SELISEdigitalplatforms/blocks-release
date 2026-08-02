@@ -313,7 +313,6 @@ public class LogRetrievalService
         .Distinct()
         .ToList();
 
-        // await _notificationService.NotifyPipeLineLogData(logArray, userIdLists, tenantId, repoId, buildStatus);
         for (int i = 0; i< logArray.Count(); i++)
         {
             await _notificationService.NotifyPipeLineLogData(logArray[i], userIdLists, tenantId, repoId, buildStatus);

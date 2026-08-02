@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { cn } from "@/lib/utils";
 import { Menu } from "@/models/menu.model";

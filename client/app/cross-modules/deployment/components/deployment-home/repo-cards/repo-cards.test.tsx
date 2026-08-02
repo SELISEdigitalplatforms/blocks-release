@@ -1,4 +1,9 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import {
+  createEvent,
+  fireEvent,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
 import {
@@ -126,6 +131,64 @@ describe("RepoCards", () => {
     );
     expect(screen.getByText("No build")).toBeInTheDocument();
     expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
+  });
+
+  it("opens the branch verification modal when Enter is pressed on the card", async () => {
+    vi.mocked(useValidateAuthorization).mockReturnValue({
+      data: { isSuccess: true },
+      refetch: vi.fn().mockResolvedValue({ data: { isSuccess: true } }),
+    } as never);
+    renderWithProviders(<RepoCards repo={repo} />, { route: "/app/deployment" });
+    fireEvent.keyDown(screen.getByRole("button", { name: /Deploys for/ }), {
+      key: "Enter",
+    });
+    await waitFor(() =>
+      expect(screen.getByText("Please wait…")).toBeInTheDocument(),
+    );
+  });
+
+  it("opens the card with Space and stops the page scrolling", async () => {
+    vi.mocked(useValidateAuthorization).mockReturnValue({
+      data: { isSuccess: true },
+      refetch: vi.fn().mockResolvedValue({ data: { isSuccess: true } }),
+    } as never);
+    renderWithProviders(<RepoCards repo={repo} />, { route: "/app/deployment" });
+    const card = screen.getByRole("button", { name: /Deploys for/ });
+    const space = createEvent.keyDown(card, { key: " " });
+    fireEvent(card, space);
+    expect(space.defaultPrevented).toBe(true);
+    await waitFor(() =>
+      expect(screen.getByText("Please wait…")).toBeInTheDocument(),
+    );
+  });
+
+  it("ignores keys other than Enter and Space on the card", () => {
+    const refetchAuthorization = vi.fn();
+    vi.mocked(useValidateAuthorization).mockReturnValue({
+      data: { isSuccess: true },
+      refetch: refetchAuthorization,
+    } as never);
+    renderWithProviders(<RepoCards repo={repo} />, { route: "/app/deployment" });
+    const card = screen.getByRole("button", { name: /Deploys for/ });
+    const escape = createEvent.keyDown(card, { key: "Escape" });
+    fireEvent(card, escape);
+    expect(escape.defaultPrevented).toBe(false);
+    expect(refetchAuthorization).not.toHaveBeenCalled();
+  });
+
+  it("ignores a keydown that originates on a link inside the card", () => {
+    const refetchAuthorization = vi.fn();
+    vi.mocked(useValidateAuthorization).mockReturnValue({
+      data: { isSuccess: true },
+      refetch: refetchAuthorization,
+    } as never);
+    renderWithProviders(<RepoCards repo={repo} />, { route: "/app/deployment" });
+    // Enter on the repo URL link belongs to the link, not to the card.
+    fireEvent.keyDown(
+      screen.getByRole("link", { name: "https://github.com/acme/app" }),
+      { key: "Enter" },
+    );
+    expect(refetchAuthorization).not.toHaveBeenCalled();
   });
 });
 

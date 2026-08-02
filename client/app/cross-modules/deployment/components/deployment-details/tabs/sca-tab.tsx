@@ -37,7 +37,7 @@ import {
   useGetSCALibraryData,
   useSCARedirectLink,
 } from "@/cross-modules/deployment/hooks/use-observability";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { Button } from "@/components/ui-kits/button/button";
 import { ErrorDisplay } from "@/components/error-display";
 
@@ -591,62 +591,75 @@ const SummaryCards = ({
           </div>
         </div>
 
-        <div
-          className={`cursor-pointer border-l-4 border-red-500 pl-2 transition-colors hover:bg-red-50 sm:pl-3 ${
+        <button
+          type="button"
+          className={`w-full cursor-pointer border-l-4 border-red-500 pl-2 text-left transition-colors hover:bg-red-50 sm:pl-3 ${
             activeSeverityFilter === "Critical" ? "bg-red-50" : ""
           }`}
           onClick={() => onSeverityClick?.("Critical")}>
-          <div className="mb-1 text-xs font-medium text-high-emphasis">
+          <span className="mb-1 block text-xs font-medium text-high-emphasis">
             Critical
-          </div>
-          <div className="text-xl font-bold sm:text-2xl">
+          </span>
+          <span className="block text-xl font-bold sm:text-2xl">
             {summary.critical}
-          </div>
-        </div>
+          </span>
+        </button>
 
-        <div
-          className={`cursor-pointer border-l-4 border-orange-500 pl-2 transition-colors hover:bg-orange-50 sm:pl-3 ${
+        <button
+          type="button"
+          className={`w-full cursor-pointer border-l-4 border-orange-500 pl-2 text-left transition-colors hover:bg-orange-50 sm:pl-3 ${
             activeSeverityFilter === "High" ? "bg-orange-50" : ""
           }`}
           onClick={() => onSeverityClick?.("High")}>
-          <div className="mb-1 text-xs font-medium text-high-emphasis">
+          <span className="mb-1 block text-xs font-medium text-high-emphasis">
             High
-          </div>
-          <div className="text-xl font-bold sm:text-2xl">{summary.high}</div>
-        </div>
+          </span>
+          <span className="block text-xl font-bold sm:text-2xl">
+            {summary.high}
+          </span>
+        </button>
 
-        <div
-          className={`cursor-pointer border-l-4 border-yellow-500 pl-2 transition-colors hover:bg-yellow-50 sm:pl-3 ${
+        <button
+          type="button"
+          className={`w-full cursor-pointer border-l-4 border-yellow-500 pl-2 text-left transition-colors hover:bg-yellow-50 sm:pl-3 ${
             activeSeverityFilter === "Medium" ? "bg-yellow-50" : ""
           }`}
           onClick={() => onSeverityClick?.("Medium")}>
-          <div className="mb-1 text-xs font-medium text-high-emphasis">
+          <span className="mb-1 block text-xs font-medium text-high-emphasis">
             Medium
-          </div>
-          <div className="text-xl font-bold sm:text-2xl">{summary.medium}</div>
-        </div>
+          </span>
+          <span className="block text-xl font-bold sm:text-2xl">
+            {summary.medium}
+          </span>
+        </button>
 
-        <div
-          className={`cursor-pointer border-l-4 border-green-500 pl-2 transition-colors hover:bg-green-50 sm:pl-3 ${
+        <button
+          type="button"
+          className={`w-full cursor-pointer border-l-4 border-green-500 pl-2 text-left transition-colors hover:bg-green-50 sm:pl-3 ${
             activeSeverityFilter === "Low" ? "bg-green-50" : ""
           }`}
           onClick={() => onSeverityClick?.("Low")}>
-          <div className="mb-1 text-xs font-medium text-high-emphasis">Low</div>
-          <div className="text-xl font-bold sm:text-2xl">{summary.low}</div>
-        </div>
+          <span className="mb-1 block text-xs font-medium text-high-emphasis">
+            Low
+          </span>
+          <span className="block text-xl font-bold sm:text-2xl">
+            {summary.low}
+          </span>
+        </button>
 
-        <div
-          className={`cursor-pointer border-l-4 border-gray-500 pl-2 transition-colors hover:bg-gray-50 sm:pl-3 ${
+        <button
+          type="button"
+          className={`w-full cursor-pointer border-l-4 border-gray-500 pl-2 text-left transition-colors hover:bg-gray-50 sm:pl-3 ${
             activeSeverityFilter === "Unassigned" ? "bg-secondary" : ""
           }`}
           onClick={() => onSeverityClick?.("Unassigned")}>
-          <div className="mb-1 text-xs font-medium text-high-emphasis">
+          <span className="mb-1 block text-xs font-medium text-high-emphasis">
             Unassigned
-          </div>
-          <div className="text-xl font-bold sm:text-2xl">
+          </span>
+          <span className="block text-xl font-bold sm:text-2xl">
             {summary.unassigned}
-          </div>
-        </div>
+          </span>
+        </button>
       </div>
     </div>
   );

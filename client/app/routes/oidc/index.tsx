@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router";
 import { OIDCPermissionWrapper } from "@blocks-idp/authentication/pages/oidc/permission-wrapper";
 import { OIDCSignin } from "@blocks-idp/authentication/pages/oidc/oidc-signin";
 import { authService } from "@blocks-idp/authentication/services/auth.service";

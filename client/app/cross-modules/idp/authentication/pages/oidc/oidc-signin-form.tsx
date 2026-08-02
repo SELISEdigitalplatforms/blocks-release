@@ -9,12 +9,12 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui-kits/input/input";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { Button } from "@/components/ui-kits/button/button";
 import { z } from "zod";
 import { useAuthStore } from "@/store/auth.store";
 import { showErrorToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useState } from "react";
 import { signinFormDefaultValue, signinFormSchema } from "./schema";
 import { useOIDCContext } from "@/layouts/oidc-layout/oidc-layout";

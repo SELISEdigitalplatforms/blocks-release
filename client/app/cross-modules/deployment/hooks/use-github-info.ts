@@ -63,9 +63,6 @@ export const useRemoveAuthorization = () => {
     mutationKey: ["remove-authorization"],
     mutationFn: githubInfoService.removeAuthorization,
     onSuccess: () => {
-      // queryClient.invalidateQueries({ queryKey: ["verify-auth"] });
-      // queryClient.invalidateQueries({ queryKey: ["github-repos"] });
-      // queryClient.invalidateQueries({ queryKey: ["repository-user"] });
       queryClient.setQueryData(["verify-auth"], () => undefined);
       queryClient.setQueryData(["github-repos"], () => []);
       queryClient.setQueryData(["repository-user"], () => undefined);

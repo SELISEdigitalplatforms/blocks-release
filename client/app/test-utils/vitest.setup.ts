@@ -9,7 +9,7 @@
 import "@testing-library/jest-dom/vitest";
 
 // Some third-party ESM deps (e.g. framer-motion's motion-utils, pulled in via
-// @seliseblocks/blocks-kit) read `process.env.NODE_ENV` at import time. Under the
+// @seliseblocks/genesis-os) read `process.env.NODE_ENV` at import time. Under the
 // jsdom environment `process.env` can be undefined, which crashes module
 // evaluation. Ensure a minimal, non-production process.env is always present.
 {
@@ -146,9 +146,6 @@ if (typeof window !== "undefined" && typeof window.scrollTo !== "function") {
   });
 }
 
-// Radix UI primitives (dropdown-menu, select, dialog, …) rely on Pointer
-// Capture and scrollIntoView, which jsdom does not implement. Provide inert
-// stubs (only when missing) so these components open/close in unit tests.
 if (typeof Element !== "undefined") {
   const proto = Element.prototype as unknown as Record<string, unknown>;
   if (typeof proto.hasPointerCapture !== "function") {

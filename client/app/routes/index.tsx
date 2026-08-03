@@ -1,4 +1,4 @@
-import { Navigate, Outlet, type RouteObject } from "react-router-dom";
+import { Navigate, Outlet, type RouteObject } from "react-router";
 import {
   AuthResolver,
   PublicGuard,
@@ -8,20 +8,20 @@ import {
   ConsoleLayout,
   ConsolePage,
   DashboardRoute,
-  DashboardOverview
+  DashboardOverview,
   // ProjectOverviewRoute / DashboardRoute are URL-addressable route elements:
   // they hydrate the selected project from the URL param (:tenantGroupId / :itemId),
   // validate it (redirecting to /app/console when invalid), inject the id into the
   // navigation-menu paths, and render ProjectOverviewLayout / DashboardLayout
   // (which self-wrap the impersonation guards) with an <Outlet /> for children.
-} from "@seliseblocks/blocks-kit";
-import { ProfilePage } from "@seliseblocks/blocks-kit";
+} from "@seliseblocks/genesis-os";
+import { ProfilePage } from "@seliseblocks/genesis-os";
 import DeploymentPage from "./deployment/deployment";
 import DeploymentRepoDetailsPage from "./deployment/deployment-repo-details";
 import DeploymentLogsPage from "./deployment/deployment-logs";
 import DeploymentLivePage from "./deployment/deployment-live";
 import { navigationMenus } from "@/constants/navigation-menus.constant";
-
+import { DeploymentLayout } from "@/layouts/deployment-layout";
 
 const redirectPaths: Record<string, string> = {
   "/app/release/monitor/*": "/app/release",
@@ -92,22 +92,39 @@ export const routes = [
               />
             ),
             children: [
-              { index: true, element: <Navigate to="dashboard" replace /> },
-              { path: "dashboard", element: <DashboardOverview /> },
-              { path: "deployment", element: <DeploymentPage /> },
               {
-                path: "deployment/repo/:repoId",
-                element: <DeploymentRepoDetailsPage />,
+                index: true,
+                element: <Navigate to="dashboard" replace />,
               },
               {
-                path: "deployment/repo/:repoId/deployment-logs/:buildId",
-                element: <DeploymentLogsPage />,
+                path: "dashboard",
+                element: <DashboardOverview />,
               },
               {
-                path: "deployment/repo/:repoId/deployment-live/:buildId",
-                element: <DeploymentLivePage />,
+                element: <DeploymentLayout />,
+                children: [
+                  {
+                    index: true,
+                    element: <Navigate to="deployment" replace />,
+                  },
+                  {
+                    path: "deployment",
+                    element: <DeploymentPage />,
+                  },
+                  {
+                    path: "deployment/repo/:repoId",
+                    element: <DeploymentRepoDetailsPage />,
+                  },
+                  {
+                    path: "deployment/repo/:repoId/deployment-logs/:buildId",
+                    element: <DeploymentLogsPage />,
+                  },
+                  {
+                    path: "deployment/repo/:repoId/deployment-live/:buildId",
+                    element: <DeploymentLivePage />,
+                  },
+                ],
               },
-              { path: "profile", element: <ProfilePage /> },
             ],
           },
         ],

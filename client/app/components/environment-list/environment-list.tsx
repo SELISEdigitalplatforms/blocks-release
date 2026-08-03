@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { ChevronDown, Loader } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import {
   DropdownMenu,
   DropdownMenuContent,

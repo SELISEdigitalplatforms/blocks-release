@@ -15,6 +15,7 @@ namespace Devops.DomainService.AnalyticsTool.Services.Sca;
 
 public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
 {
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
     private readonly ILogger<DependencyTrackAnalyticsService> _logger;
     private readonly IHttpHelperServices _httpHelperServices;
     private readonly IBuildRepository _buildRepository;
@@ -43,7 +44,7 @@ public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
         List<VulnerabilityResponse> Vulnerabilities = new List<VulnerabilityResponse>();
         Dictionary<string, string> metricsDict = new Dictionary<string, string>();
 
-        var formattedRepoName = Regex.Replace(repoName, "[^a-zA-Z0-9]", "-").ToLower().Trim()
+        var formattedRepoName = Regex.Replace(repoName, "[^a-zA-Z0-9]", "-", RegexOptions.None, RegexTimeout).ToLower().Trim()
                     .Trim('-')
                     .ToLower();
 
@@ -119,7 +120,7 @@ public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
 
     public async Task<string> RetrieveScaProjectUuid(Build build)
     {
-        var formattedRepoName = Regex.Replace(build.RepoName, "[^a-zA-Z0-9]", "-").ToLower().Trim()
+        var formattedRepoName = Regex.Replace(build.RepoName, "[^a-zA-Z0-9]", "-", RegexOptions.None, RegexTimeout).ToLower().Trim()
                     .Trim('-')
                     .ToLower();
 

@@ -5,15 +5,19 @@ using Devops.DomainService.Deployment.Models.Response;
 using Devops.DomainService.Deployment.Models.Dtos;
 using Devops.DomainService.Deployment.Interfaces;
 using Devops.DomainService.Shared.Utilities;
-using Devops.DomainService.Deployment.Services;
 using Devops.DomainService.Deployment.Models.Request;
 using Blocks.Genesis;
 using Devops.DomainService.AnalyticsTool.Models;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using Devops.DomainService.DataGatewayDeployment.Services;
+
+namespace Devops.DomainService.Deployment.Services;
 
 public class LogRetrievalService
 {
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
+
     private readonly IBuildRepository _buildRepository;
     private readonly IRepoRepository _repoRepository;
     private readonly PipelineRunService _pipelineRunService;
@@ -62,9 +66,14 @@ public class LogRetrievalService
             {
                 pipeLineStatus = await _pipelineRunService.GetPipelineRunStatusAsync(pipelineRunName, namespaceName);
 
-                if (pipeLineStatus is null && iteration > 20)
+                if (pipeLineStatus is null)
                 {
-                    break;
+                    if (iteration > 20)
+                    {
+                        break;
+                    }
+                    await Task.Delay(pollingInterval);
+                    continue;
                 }
                 foreach (var taskRun in pipeLineStatus.TaskRuns)
                 {
@@ -188,13 +197,17 @@ public class LogRetrievalService
                     }
                 }
 
-                var combinedLogsMessage = System.Text.RegularExpressions.Regex.Replace(
-                    System.Text.RegularExpressions.Regex.Replace(
+                var combinedLogsMessage = Regex.Replace(
+                    Regex.Replace(
                         combinedLogsBuilder.ToString(),
                         @"\S*github\.com\S*",
-                        "**"),
+                        "**",
+                        RegexOptions.None,
+                        RegexTimeout),
                     @"(?i)(namespace\s+).*",
-                    "$1***");
+                    "$1***",
+                    RegexOptions.None,
+                    RegexTimeout);
                 if (string.IsNullOrWhiteSpace(combinedLogsMessage))
                 {
                     continue;
@@ -300,7 +313,6 @@ public class LogRetrievalService
         .Distinct()
         .ToList();
 
-        // await _notificationService.NotifyPipeLineLogData(logArray, userIdLists, tenantId, repoId, buildStatus);
         for (int i = 0; i< logArray.Count(); i++)
         {
             await _notificationService.NotifyPipeLineLogData(logArray[i], userIdLists, tenantId, repoId, buildStatus);
@@ -552,9 +564,14 @@ public class LogRetrievalService
             {
                 PipelineRunStatus pipeLineStatus = await _pipelineRunService.GetPipelineRunStatusAsync(pipelineRunName, namespaceName);
 
-                if (pipeLineStatus is null && iteration > 20)
+                if (pipeLineStatus is null)
                 {
-                    break;
+                    if (iteration > 20)
+                    {
+                        break;
+                    }
+                    await Task.Delay(pollingInterval);
+                    continue;
                 }
                 foreach (var taskRun in pipeLineStatus.TaskRuns)
                 {

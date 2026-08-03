@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/utils/date.util";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router";
 import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use-github-info";
 import React, { useEffect, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";

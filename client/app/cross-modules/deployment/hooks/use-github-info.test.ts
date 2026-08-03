@@ -1,6 +1,6 @@
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   mockRepository,
   mockRepositories,
@@ -12,7 +12,6 @@ import {
   mockGithubInfoServiceFactory,
 } from "../test-utils/__mocks__";
 import { githubInfoService } from "../services/github-info.service";
-import { useProjectStore } from "@/modules/identifier/state/use-project-store";
 import {
   useGithubVerification,
   useValidateAuthorization,
@@ -31,23 +30,14 @@ import {
   useGetCardProjectAndBranch,
   useChangeBuildSpecs,
   useUpdateRepoSettings,
-} from "./github-info";
+} from "./use-github-info";
 import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
 
 vi.mock("../services/github-info.service", () =>
   mockGithubInfoServiceFactory(),
 );
-vi.mock("@/modules/identifier/state/use-project-store", () => ({
-  useProjectStore: vi.fn(),
-}));
 
 describe("Github Info Hooks", () => {
-  beforeEach(() => {
-    vi.mocked(useProjectStore).mockReturnValue({
-      selectedProject: { tenantId: TEST_PROJECT_KEY },
-    } as any);
-  });
-
   // ─── useGithubVerification ─────────────────────────────────────────────────
 
   describe("useGithubVerification", () => {
@@ -395,7 +385,7 @@ describe("Github Info Hooks", () => {
         mockSuccessResponse as any,
       );
 
-      const { result } = renderHook(() => useUpdateRepoSettings(), {
+      const { result } = renderHook(() => useUpdateRepoSettings({}), {
         wrapper: createWrapper(),
       });
 

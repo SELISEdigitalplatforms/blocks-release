@@ -5,7 +5,7 @@ import DeploymentObservability from "@blocks-deployment/components/deployment-de
 import { ChartGantt, GitBranch, Logs, Rocket, Settings } from "lucide-react";
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 
 import { BackIconButton } from "@/components/buttons";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";

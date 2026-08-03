@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router";
 import { useAuthStore } from "@/store/auth.store";
 
 export const useAppState = () => {
@@ -29,7 +29,10 @@ export function PublicGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isMounted) return;
     if (isSSOCallback) return;
-    if (isAuthenticated) return navigate("/app/console", { replace: true });
+    if (isAuthenticated) {
+      navigate("/app/console", { replace: true });
+      return;
+    }
   }, [isAuthenticated, isMounted, isSSOCallback, navigate]);
 
   if (!isMounted || (isAuthenticated && !isSSOCallback)) return null;

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import { Menu } from "@/models/menu.model";
 
 export function useFilteredMenus(menus: Menu[]): Menu[] {
@@ -8,8 +8,6 @@ export function useFilteredMenus(menus: Menu[]): Menu[] {
   return useMemo(() => {
     const blockedMenu = import.meta.env.BLOCKS_BLOCKED_MENU || "[]";
     let parsedBlockedMenu: string[] = [];
-    // Project-overview scope now lives under /app/project/:tenantGroupId.
-    // startsWith("/app/project") is safe — it does NOT match /app/create-project.
     const isProjectOverviewRoute = pathname.startsWith("/app/project");
     const projectOverviewMenuIds = new Set([
       "environments",
@@ -53,7 +51,7 @@ export function useFilteredMenus(menus: Menu[]): Menu[] {
 
       const previousItem = filteredMenus[index - 1];
       const nextItem = filteredMenus[index + 1];
-      const separatorId = (item as any).id;
+      const separatorId = (item as { id?: string }).id;
 
       // Hide separator-overview on project overview routes (Overview is hidden there)
       if (separatorId === "separator-overview" && isProjectOverviewRoute) {

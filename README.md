@@ -1,35 +1,48 @@
-# Blocks Deployment
+# Blocks Release
 
-**Blocks Deployment** is the Blocks cloud console: a **React 18** single-page application (Vite, TypeScript, Tailwind) paired with an **ASP.NET Core** host (`server/Api`) that serves the built SPA from `wwwroot`, exposes JSON APIs, registers **Swagger**, and adds **health checks** to DI (`AddHealthChecks()` in `Program.cs`; HTTP mapping may come from **SeliseBlocks.Genesis** middleware). A separate **.NET Worker** (`server/Worker`) runs message consumers and background work using the same domain services and **SeliseBlocks.Genesis** configuration stack. In production-style runs, the UI and API share one origin (static files + fallback to `index.html`); during local SPA development, Vite serves the app on port **4000** and can proxy selected paths to a backend URL when `BLOCKS_API_BASE_URL` is set.
+**Blocks Release** is the Blocks deployment console: a **React 19** single-page application (Vite, TypeScript, Tailwind) paired with an **ASP.NET Core** host (`server/Api`) that serves the built SPA from `wwwroot`, exposes JSON APIs, and registers **Swagger** through the **SeliseBlocks.Genesis.OS** middleware stack. A separate **.NET Worker** (`server/Worker`) runs message consumers and background work using the same domain services and **SeliseBlocks.Genesis.OS** configuration stack.
+
+Functionally, it lets a signed-in user connect a **GitHub** account, browse repositories and branches, and build and deploy a selected repository onto a **Kubernetes** cluster through **Tekton** pipelines. Builds run manually or automatically from a GitHub push webhook; build and deployment logs stream to the browser over **SignalR**. The console also surfaces security analytics (SonarQube SAST and Dependency-Track SCA) and monitoring/alerting views for deployed applications.
+
+In production-style runs, the UI and API share one origin (static files plus a fallback to `index.html`); during local SPA development, Vite serves the app on port **4000** and can proxy selected paths to a backend URL when `BLOCKS_API_BASE_URL` is set.
+
+This project is released under the **MIT License** (see [LICENSE](LICENSE)).
 
 ## Project structure
 
 ```text
-blocks-deployment/
-├── client/                    # React SPA (Vite)
-│   ├── app/                   # Application routes, IDP, cross-modules (deployment, lmt, …)
-│   ├── public/                # Static assets copied into the build
-│   ├── index.html             # SPA shell; __BLOCKS_*__ placeholders for publish-time injection
-│   ├── vite.config.ts         # build outDir, dev server, BLOCKS_ env prefix, dev proxies
+blocks-release/
+├── client/                       # React SPA (Vite)
+│   ├── app/                      # Application routes, IDP, cross-modules (deployment, …)
+│   ├── public/                   # Static assets copied into the build
+│   ├── index.html                # SPA shell; __BLOCKS_*__ placeholders for publish-time injection
+│   ├── vite.config.ts            # build outDir, dev server, BLOCKS_ env prefix, dev proxies
+│   ├── vitest.config.ts          # Vitest unit-test config
 │   ├── package.json
-│   └── .env.example           # BLOCKS_* keys for local dev (copy → .env)
+│   └── .env.example              # BLOCKS_* keys for local dev (copy → .env)
 ├── server/
-│   ├── Api/                   # Web host (Kestrel)
-│   │   ├── Controllers/       # MVC API controllers
-│   │   ├── wwwroot/           # Published SPA output (Vite build target)
-│   │   ├── Program.cs         # Startup, static files, SPA fallback, runtime env injection
+│   ├── Api/                      # Web host (Kestrel)
+│   │   ├── Controllers/          # API controllers (Auth, Build, Github, AnalyticsTool, …)
+│   │   ├── Hubs/                 # SignalR hub for build/deployment logs
+│   │   ├── wwwroot/              # Published SPA output (Vite build target)
+│   │   ├── Program.cs            # Startup, static files, SPA fallback, runtime env injection
 │   │   └── Properties/launchSettings.json
-│   ├── Worker/                # Worker host + consumers
-│   ├── *.DomainService/       # Domain logic (IAM, DevOps, Identifier, MFA, …)
-│   ├── Cloud.LmtService/      # LMT / trace-related services
-│   ├── Blocks.slnx            # Solution (SDK-style XML)
-│   ├── Directory.Build.props  # Shared MSBuild properties (e.g. TargetFramework)
-│   └── Directory.Packages.props
-├── Dockerfile                 # Multi-stage: Node builds client → dotnet publish Api
-├── Dockerfile.worker          # Worker image
-├── run.sh                     # macOS/Linux helper
-├── run.ps1                    # Windows helper
-├── LOCAL_GUIDE.md             # Additional notes (verify flags against scripts)
+│   ├── Worker/                   # Worker host + message consumers
+│   ├── Devops.DomainService/     # Domain logic (deployment, GitHub, pipelines, analytics)
+│   ├── Deployment.Driver/        # Packaged facade over the domain services
+│   ├── XUnitTest/                # Backend unit tests (xUnit)
+│   ├── seed/                     # Permission seed documents (mongoimport / upsert)
+│   ├── Blocks.slnx               # Solution (SDK-style XML)
+│   ├── Directory.Build.props     # Shared MSBuild properties (e.g. TargetFramework)
+│   └── Directory.Packages.props  # Central package versions
+├── e2e/                          # Playwright end-to-end tests (see e2e/README.md)
+├── scripts/
+│   ├── scan.sh                   # SAST, SCA, and secret scanning entry point
+│   └── deploy.sh                 # Build, publish, and (re)start systemd services
+├── Dockerfile                    # Multi-stage: Node builds client → dotnet publish Api
+├── Dockerfile.worker             # Worker image
+├── run.sh                        # macOS/Linux helper
+├── run.ps1                       # Windows helper
 └── LICENSE
 ```
 
@@ -59,6 +72,7 @@ This repository does **not** embed Compose files or hard-require an external inf
 | `-f` / `--frontend`  | Yes               | Yes                  | Install deps if needed, then **`npm run dev`** in `client/` (Vite on **4000**).                |
 | `-k` / `--kill-port` | Yes               | Yes                  | Free processes listening on **API port 5000** (not the Vite port).                             |
 | `-n` / `--npm`       | Yes               | Yes                  | Run `npm` in `client/` with the remaining arguments (e.g. `-n install`).                       |
+| `-te` / `--test-e2e` | Yes               | Yes                  | Run the Playwright e2e suite (see `e2e/README.md`; needs `e2e/.env.e2e`).                      |
 | `-d` / `--dotnet`    | **No**            | Yes                  | **PowerShell only:** pass through to `dotnet` (e.g. `.\run.ps1 -d restore`).                   |
 | `-h` / `--help`      | Yes (via `usage`) | Yes                  | Show usage.                                                                                    |
 
@@ -69,7 +83,7 @@ This repository does **not** embed Compose files or hard-require an external inf
 
 `launchSettings.json` is what Visual Studio / `dotnet run` use from the IDE; keep it in mind if your IDE profile differs from the scripts.
 
-**Local HTTPS:** both the Vite dev server (4000) and the API (5000) serve HTTPS automatically when the machine env vars `RELEASE_SSL_CERT` / `RELEASE_SSL_KEY` point at an mkcert cert; otherwise they fall back to HTTP. One-time setup is documented in **[LOCAL_GUIDE.md → "Local HTTPS setup (mkcert)"](LOCAL_GUIDE.md)**.
+**Local HTTPS:** both the Vite dev server (4000) and the API (5000) serve HTTPS automatically when the machine env vars `RELEASE_SSL_CERT` / `RELEASE_SSL_KEY` point at an existing certificate and key (for example one generated with `mkcert`); otherwise they fall back to HTTP.
 
 ### Unix (`run.sh`)
 
@@ -79,7 +93,7 @@ This repository does **not** embed Compose files or hard-require an external inf
 - **All:** runs API and Worker as **background jobs** in the same shell; `trap` kills them on exit.
 - **Worker:** foreground `dotnet run` for the Worker project.
 
-> **Note:** [LOCAL_GUIDE.md](LOCAL_GUIDE.md) may describe extra workflows; **`run.sh` in this repo has no `-d` flag** (use `dotnet` directly, or `run.ps1 -d` on Windows).
+> **Note:** **`run.sh` in this repo has no `-d` flag** (use `dotnet` directly, or `run.ps1 -d` on Windows).
 
 Examples:
 
@@ -135,7 +149,7 @@ npm run build            # output: server/Api/wwwroot (see vite.config.ts)
 **API**
 
 ```bash
-cd /path/to/blocks-deployment
+cd /path/to/blocks-release
 dotnet restore server/Api/Api.csproj
 dotnet run --project server/Api/Api.csproj
 ```
@@ -185,10 +199,40 @@ The root **`Dockerfile`** automates this: Node stage builds the client into `ser
 
 ## API / routing
 
-- **Controllers:** `server/Api/Controllers/` (`Api.Controllers` and related namespaces). Routes use attributes such as `[Route("[controller]/[action]")]`; **`GlobalApiRoutePrefixConvention`** in `server/Api/Program.cs` prepends **`api`** to each controller’s attribute route template, so typical controller routes are under **`/api/...`**.
+- **Controllers:** `server/Api/Controllers/` (`Api.Controllers` and related namespaces). Routes use attributes such as `[Route("[controller]/[action]")]`; the **`api`** prefix is prepended by **`ApplicationConfigurations.ConfigureApi`** from SeliseBlocks.Genesis.OS (its default `apiRoutePrefix`), so typical controller routes are under **`/api/...`**. (A local `GlobalApiRoutePrefixConvention` class existed for the same purpose but was never registered; it is commented out pending removal.)
 - **Swagger:** `Program.cs` registers Swagger UI (e.g. **`/swagger`**, JSON at **`/swagger/v1/swagger.json`**).
 - **Static SPA:** `UseDefaultFiles`, `UseStaticFiles`, and when `wwwroot/index.html` exists, **`MapFallbackToFile("/index.html")`** for client-side routing.
-- **Further middleware and endpoints** are applied in **`ApplicationConfigurations.ConfigureMiddleware`** from **SeliseBlocks.Genesis** (referenced via domain packages); use Swagger against a running instance for a complete list beyond this repo’s `Program.cs`.
+- **Further middleware and endpoints** are applied in **`ApplicationConfigurations.ConfigureMiddleware`** from **SeliseBlocks.Genesis.OS** (referenced via domain packages); use Swagger against a running instance for a complete list beyond this repo’s `Program.cs`.
+
+## Testing
+
+Run from the repository root. There is no `.sln` file here; target the `.csproj` directly for backend tests.
+
+```bash
+# Backend unit tests (xUnit)
+dotnet test server/XUnitTest/XUnitTest.csproj
+
+# Frontend unit tests (Vitest)
+npm --prefix client run test
+
+# End-to-end tests (Playwright); needs e2e/.env.e2e, see e2e/README.md
+npm --prefix e2e run test    # or: ./run.sh -te
+```
+
+For coverage:
+
+```bash
+dotnet test server/XUnitTest/XUnitTest.csproj --collect:"XPlat Code Coverage"
+npm --prefix client run test -- --coverage
+```
+
+## Security scanning
+
+`scripts/scan.sh` is the maintainer entry point for static analysis (SAST), dependency analysis (SCA), and secret scanning. It reads scanner endpoints and tokens from the maintainer environment; it is not required for building or testing the project.
+
+## Deployment
+
+`scripts/deploy.sh` is the maintainer deploy script for a systemd host: it checks out the latest `inception`, builds the client, publishes the Api and Worker projects, and installs and restarts their systemd services. For container-based deployment, use the root `Dockerfile` (Api + SPA) and `Dockerfile.worker` (Worker) instead.
 
 ## License
 

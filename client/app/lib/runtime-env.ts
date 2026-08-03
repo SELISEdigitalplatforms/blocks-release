@@ -33,7 +33,7 @@ type RuntimeKey =
   | "BLOCKS_STUDIO_BASE_URL"
   | "BLOCKS_STUDIO_CALLBACK_URL";
 
-// NOTE: the `Window.__BLOCKS_ENV__` global is declared by @seliseblocks/blocks-kit.
+// NOTE: the `Window.__BLOCKS_ENV__` global is declared by @seliseblocks/genesis-os.
 // We intentionally do not re-declare it here to avoid a conflicting augmentation
 // (blocks-kit types it against its own RuntimeKey union); we read it via a
 // string-keyed cast below so deployment's own keys continue to work.
@@ -52,7 +52,7 @@ const stripPortFromUrl = (url: string) => {
     parsedUrl.port = "";
     return parsedUrl.toString();
   } catch (error) {
-    console.warn(`Failed to parse URL: ${url}`, error);
+    console.error(`Failed to parse URL: ${url}`, error);
     return url;
   }
 };

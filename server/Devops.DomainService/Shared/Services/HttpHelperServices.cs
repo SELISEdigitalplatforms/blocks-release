@@ -147,7 +147,6 @@ namespace Devops.DomainService.Shared.Services
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogError($"Request failed with status code: {response.StatusCode}, Body: {contentString}");
-                    //return (null, response);
                 }
 
                 var deserialized = JsonSerializer.Deserialize<T>(contentString);

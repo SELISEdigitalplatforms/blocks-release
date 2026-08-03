@@ -40,12 +40,15 @@ export const ColorSwatch: React.FC<ColorSwatchProps> = ({
           hasError ? "border-destructive" : "",
         )}
       >
-        <div
-          className="relative h-6 min-h-6 w-6 min-w-6 cursor-pointer rounded-sm border"
-          style={{ backgroundColor: value }}
-          onClick={handleColorPickerClick}
-          title="Pick a color"
-        >
+        <div className="relative h-6 min-h-6 w-6 min-w-6">
+          <button
+            type="button"
+            className="h-6 w-6 cursor-pointer rounded-sm border"
+            style={{ backgroundColor: value }}
+            onClick={handleColorPickerClick}
+            title="Pick a color"
+            aria-label="Pick a color"
+          />
           <input
             ref={colorInputRef}
             type="color"

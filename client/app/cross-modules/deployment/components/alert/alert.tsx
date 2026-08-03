@@ -32,7 +32,7 @@ const Alert = ({
           <div className="flex h-10 items-center justify-end gap-4 rounded text-base">
             <Button
               onClick={() =>
-               window.open(
+                window.open(
                   `${getRuntimeEnv("BLOCKS_MONITOR_BASE_URL")}`,
                   "_blank",
                   "noopener,noreferrer",

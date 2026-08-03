@@ -68,13 +68,6 @@ const SPECIFICATION_OPTIONS = [
   { os: "8 GiB", core: "4 CPUs", ram: "5,000", logo: "", id: "4" },
   { os: "16 GiB", core: "8 CPUs", ram: "7,000", logo: "", id: "5" },
 ];
-// export interface BuildStep {
-//   id: string;
-//   name: string;
-//   status: "success" | "error" | "running" | "pending";
-//   duration: string;
-//   logs?: string[];
-// }
 const deployments: DeploymentData[] = [
   {
     id: "1",

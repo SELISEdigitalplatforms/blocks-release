@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import { useAppSettingsStore } from "@seliseblocks/blocks-kit/store";
+import { useAppSettingsStore } from "@seliseblocks/genesis-os/store";
 
 type Theme = "light" | "dark" | "system";
 

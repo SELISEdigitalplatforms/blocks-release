@@ -10,7 +10,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { useImpersonateStore } from "@/store/impersonate.store";
 import { useProjectStore } from "@/store/project.store";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useAppState } from "./public-guard";
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 
@@ -22,7 +22,10 @@ export function ProtectedGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isMounted) return;
-    if (!data || isError) return navigate(`/login`, { replace: true });
+    if (!data || isError) {
+      navigate(`/login`, { replace: true });
+      return;
+    }
     setUser(data.data);
   }, [data, navigate, setUser, isError]);
 

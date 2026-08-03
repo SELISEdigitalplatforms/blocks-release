@@ -4,9 +4,11 @@ namespace Devops.DomainService.Shared.Services
 {
     public static class StringFormatterService
     {
+        private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
+
         public static string SanitizeString(string value)
         {
-            return Regex.Replace(value, "[^a-zA-Z0-9]", "-")
+            return Regex.Replace(value, "[^a-zA-Z0-9]", "-", RegexOptions.None, RegexTimeout)
                         .ToLower()
                         .Trim()
                         .Trim('-');
@@ -14,7 +16,7 @@ namespace Devops.DomainService.Shared.Services
 
         public static string RemoveHttpsFromString(string value)
         {
-            return Regex.Replace(value, @"^https?://", "", RegexOptions.IgnoreCase)
+            return Regex.Replace(value, @"^https?://", "", RegexOptions.IgnoreCase, RegexTimeout)
                         .ToLower();
         }
 

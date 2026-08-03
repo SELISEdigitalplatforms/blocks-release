@@ -228,8 +228,16 @@ export default function BranchVerificationModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
+        role="button"
+        tabIndex={0}
+        aria-label="Close dialog"
         className="fixed inset-0 bg-black bg-opacity-50"
         onClick={handleBackdropClick}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          handleBackdropClick();
+        }}
       />
 
       <div className="relative mx-4 w-full max-w-md rounded-lg bg-background shadow-xl dark:border dark:border-border">

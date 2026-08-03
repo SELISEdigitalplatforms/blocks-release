@@ -18,9 +18,11 @@ namespace Devops.DomainService.Shared.Services
         /// <typeparam name="TDestination">Destination object type</typeparam>
         /// <param name="source">Source object instance</param>
         /// <returns>New instance of destination type with mapped properties</returns>
-        public static TDestination Map<TSource, TDestination>(TSource source) where TDestination : class, new()
+        public static TDestination Map<TSource, TDestination>(TSource source)
+            where TSource : class
+            where TDestination : class, new()
         {
-            if (source == null)
+            if (source is null)
                 return null;
 
             var destination = new TDestination();
@@ -35,9 +37,11 @@ namespace Devops.DomainService.Shared.Services
         /// <param name="source">Source object instance</param>
         /// <param name="destination">Destination object instance</param>
         /// <returns>Destination object with mapped properties</returns>
-        public static TDestination Map<TSource, TDestination>(TSource source, TDestination destination) where TDestination : class
+        public static TDestination Map<TSource, TDestination>(TSource source, TDestination destination)
+            where TSource : class
+            where TDestination : class
         {
-            if (source == null || destination == null)
+            if (source is null || destination is null)
                 return destination;
 
             var sourceType = typeof(TSource);

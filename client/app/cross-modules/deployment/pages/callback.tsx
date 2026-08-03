@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router";
 import { Loader } from "lucide-react"; // or wherever your Loader component is imported from
 
 const RedirectCallbackUrl = () => {

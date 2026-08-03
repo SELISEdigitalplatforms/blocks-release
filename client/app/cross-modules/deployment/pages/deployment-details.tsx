@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/ui-kits/button/button";
 import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use-github-info";
 import { toast } from "@/hooks/use-toast";
@@ -10,7 +10,6 @@ import DeploymentGeneralInfo from "@blocks-deployment/components/deployment-deta
 import DeploymentLogsTab from "@blocks-deployment/components/deployment-details/tabs/deployment-logs-tab";
 import SASTTab from "@blocks-deployment/components/deployment-details/tabs/sast-tab";
 import SCATab from "@blocks-deployment/components/deployment-details/tabs/sca-tab";
-// import DASTTab from "@blocks-deployment/components/deployment-details/tabs/dast-tab";
 import {
   DeploymentEventGroup,
   DeploymentEventType,

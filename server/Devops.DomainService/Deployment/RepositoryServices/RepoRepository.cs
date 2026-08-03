@@ -103,7 +103,6 @@ public class RepoRepository : IRepoRepository
         var collection = _dbContextProvider.GetCollection<Repo>("Repos");
         try
         {
-            // var existingRepo = await collection.Find(r => r.Name == repo.Name).FirstOrDefaultAsync();
             var filter = Builders<Repo>.Filter.Eq(r => r.ProjectId, repo.ProjectId) &
              Builders<Repo>.Filter.Eq(r => r.RepoName, repo.RepoName);
 

@@ -2,7 +2,7 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 import { useAuthStore } from "@/store/auth.store";
 import { Loader } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 
 export default function LoginCallbackPage() {
   const [searchParams] = useSearchParams();

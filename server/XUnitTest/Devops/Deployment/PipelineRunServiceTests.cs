@@ -266,7 +266,7 @@ namespace XUnitTest.Devops.Deployment
         // ---- GetTaskRunLogsAsync ----
 
         [Fact]
-        public async Task GetTaskRunLogsAsync_ReadsEveryContainerLogAndStripsTimestamps()
+        public async Task GetTaskRunLogsAsync_ReadsEveryContainerLogAndKeepsTimestamps()
         {
             SetupGetCustomObject(new Dictionary<string, object>
             {
@@ -289,7 +289,7 @@ namespace XUnitTest.Devops.Deployment
             logs.Status.Should().Be("Succeeded");
             logs.Steps.Should().HaveCount(2);
             logs.Steps["step-clone"].Should().Contain("cloned repository");
-            logs.Steps["step-clone"].Should().NotContain("2026-01-01T00:00:00");
+            logs.Steps["step-clone"].Should().Contain("2026-01-01T00:00:00.123456789Z");
         }
 
         [Fact]

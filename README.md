@@ -234,6 +234,12 @@ npm --prefix client run test -- --coverage
 
 `scripts/deploy.sh` is the maintainer deploy script for a systemd host: it checks out the latest `inception`, builds the client, publishes the Api and Worker projects, and installs and restarts their systemd services. For container-based deployment, use the root `Dockerfile` (Api + SPA) and `Dockerfile.worker` (Worker) instead.
 
+## Contributing and security
+
+- Contribution conventions and workflow: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Reporting a vulnerability: [SECURITY.md](SECURITY.md)
+- Community standards: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+
 ## License
 
 See [LICENSE](LICENSE).

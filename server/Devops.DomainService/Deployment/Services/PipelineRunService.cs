@@ -18,7 +18,6 @@ namespace Devops.DomainService.Deployment.Services
 
     public class PipelineRunService
     {
-        private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
         private readonly IKubernetes _k8sClient;
         private readonly ITokenRepository _tokenRepository;
         private readonly IConfiguration _configuration;
@@ -334,9 +333,8 @@ namespace Devops.DomainService.Deployment.Services
                                 string line;
                                 while ((line = await reader.ReadLineAsync()) != null)
                                 {
-                                    var cleanedLine = System.Text.RegularExpressions.Regex.Replace(line, @"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s", string.Empty, System.Text.RegularExpressions.RegexOptions.None, RegexTimeout);
-                                    logBuilder.AppendLine(cleanedLine);
-
+                                    // Keep the RFC3339 timestamp Kubernetes prefixes each line with.
+                                    logBuilder.AppendLine(line);
                                 }
                                 taskLogs.Steps[container.Name] = logBuilder.ToString();
                             }

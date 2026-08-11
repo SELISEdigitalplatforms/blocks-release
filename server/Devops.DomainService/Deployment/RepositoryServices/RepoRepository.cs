@@ -237,7 +237,7 @@ public class RepoRepository : IRepoRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Failed to clear deployed namespace for repo {repoId}. {ex.Message}");
+            _logger.LogError(ex, "Failed to clear deployed namespace for repo {RepoId}.", repoId);
             return false;
         }
     }

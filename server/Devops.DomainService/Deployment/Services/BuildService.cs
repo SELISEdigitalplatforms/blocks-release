@@ -77,7 +77,9 @@ public class BuildService : IBuildService
             {
                 // The namespace is the only handle the delete path will ever have on this deployment, so a
                 // failed write is worth shouting about even though the pipeline itself is already running.
-                _logger.LogError($"Failed to persist deployment namespace '{paramNamespace}' for repo {repo.ItemId}. Deleting this deployment from the product will not be possible until it is redeployed.");
+                _logger.LogError(
+                    "Failed to persist deployment namespace '{ParamNamespace}' for repo {RepoId}. Deleting this deployment from the product will not be possible until it is redeployed.",
+                    paramNamespace, repo.ItemId);
             }
 
             Build build = await SaveBuild(repo, request, buildImageName, blocksUserId, pipelineRunNameGuid);
@@ -167,7 +169,9 @@ public class BuildService : IBuildService
 
         if (PipelineRunService.IsProtectedNamespace(namespaceName))
         {
-            _logger.LogError($"Refused to delete protected namespace '{namespaceName}' recorded on repo {repoId}.");
+            _logger.LogError(
+                "Refused to delete protected namespace '{NamespaceName}' recorded on repo {RepoId}.",
+                namespaceName, repoId);
             return new BaseApiResponse
             {
                 IsSuccess = false,
@@ -192,7 +196,9 @@ public class BuildService : IBuildService
         var (deleted, alreadyGone, deleteError) = await _pipelineRunService.DeleteNamespaceAsync(namespaceName);
         if (!deleted)
         {
-            _logger.LogError($"Delete deployment failed. user={blocksUserId} tenant={tenantId} repo={repoId} namespace={namespaceName} outcome=k8s-rejected reason={deleteError}");
+            _logger.LogError(
+                "Delete deployment failed. user={BlocksUserId} tenant={TenantId} repo={RepoId} namespace={NamespaceName} outcome=k8s-rejected reason={DeleteError}",
+                blocksUserId, tenantId, repoId, namespaceName, deleteError);
             return new BaseApiResponse
             {
                 IsSuccess = false,
@@ -204,7 +210,9 @@ public class BuildService : IBuildService
         var cleared = await _repoRepository.ClearDeployedNamespace(repoId, tenantId, EventStatus.DELETED);
         if (!cleared)
         {
-            _logger.LogError($"Delete deployment partially failed. user={blocksUserId} tenant={tenantId} repo={repoId} namespace={namespaceName} outcome=db-write-failed");
+            _logger.LogError(
+                "Delete deployment partially failed. user={BlocksUserId} tenant={TenantId} repo={RepoId} namespace={NamespaceName} outcome=db-write-failed",
+                blocksUserId, tenantId, repoId, namespaceName);
             return new BaseApiResponse
             {
                 IsSuccess = false,
@@ -213,19 +221,15 @@ public class BuildService : IBuildService
             };
         }
 
-        _logger.LogInformation($"Delete deployment succeeded. user={blocksUserId} tenant={tenantId} repo={repoId} namespace={namespaceName} alreadyGone={alreadyGone} cancelledBuilds={string.Join(",", cancelledBuilds)}");
-
-        var message = alreadyGone
-            ? "Deployment was already deleted."
-            : cancelledBuilds.Count > 0
-                ? "In-progress build cancelled. Deployment deletion started."
-                : "Deployment deletion started.";
+        _logger.LogInformation(
+            "Delete deployment succeeded. user={BlocksUserId} tenant={TenantId} repo={RepoId} namespace={NamespaceName} alreadyGone={AlreadyGone} cancelledBuilds={CancelledBuilds}",
+            blocksUserId, tenantId, repoId, namespaceName, alreadyGone, string.Join(",", cancelledBuilds));
 
         return new BaseApiResponse
         {
             IsSuccess = true,
             StatusCode = HttpStatusCode.OK,
-            Message = message,
+            Message = DeleteOutcomeMessage(alreadyGone, cancelledBuilds.Count),
             Data = new
             {
                 RepoId = repoId,
@@ -234,6 +238,16 @@ public class BuildService : IBuildService
                 CancelledBuilds = cancelledBuilds
             }
         };
+    }
+
+    private static string DeleteOutcomeMessage(bool alreadyGone, int cancelledCount)
+    {
+        if (alreadyGone)
+            return "Deployment was already deleted.";
+
+        return cancelledCount > 0
+            ? "In-progress build cancelled. Deployment deletion started."
+            : "Deployment deletion started.";
     }
 
     /// <summary>
@@ -248,18 +262,19 @@ public class BuildService : IBuildService
         if (builds is null || builds.Count == 0)
             return (cancelled, null);
 
-        var inFlight = builds
+        var inFlightRunNames = builds
             .Where(build => !string.IsNullOrWhiteSpace(build.PipelineRunName)
                             && !PipeLineTaskConstants.TermialStatus.Contains(build.Status, StringComparer.OrdinalIgnoreCase))
+            .Select(build => build.PipelineRunName)
             .ToList();
 
-        foreach (var build in inFlight)
+        foreach (var pipelineRunName in inFlightRunNames)
         {
-            var (success, alreadyGone, error) = await _pipelineRunService.CancelPipelineRunAsync(build.PipelineRunName);
+            var (success, alreadyGone, error) = await _pipelineRunService.CancelPipelineRunAsync(pipelineRunName);
 
             if (!success)
             {
-                return (cancelled, $"Could not cancel the in-progress build '{build.PipelineRunName}': {error}. Deployment was not deleted.");
+                return (cancelled, $"Could not cancel the in-progress build '{pipelineRunName}': {error}. Deployment was not deleted.");
             }
 
             if (alreadyGone)
@@ -269,8 +284,8 @@ public class BuildService : IBuildService
                 continue;
             }
 
-            await _buildRepository.UpdateBuildStatus(build.PipelineRunName, EventStatus.CANCELLED, tenantId);
-            cancelled.Add(build.PipelineRunName);
+            await _buildRepository.UpdateBuildStatus(pipelineRunName, EventStatus.CANCELLED, tenantId);
+            cancelled.Add(pipelineRunName);
         }
 
         return (cancelled, null);

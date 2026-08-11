@@ -19,6 +19,10 @@ namespace Devops.DomainService.Deployment.Services
 
     public class PipelineRunService
     {
+        private const string TektonGroup = "tekton.dev";
+        private const string TektonV1Beta1 = "v1beta1";
+        private const string PipelineRunsPlural = "pipelineruns";
+
         private readonly IKubernetes _k8sClient;
         private readonly ITokenRepository _tokenRepository;
         private readonly IConfiguration _configuration;
@@ -143,10 +147,10 @@ namespace Devops.DomainService.Deployment.Services
 
                 var result = await SubmitKubernetesAsync(
                     pipelineRunData,
-                    group: "tekton.dev",
-                    version: "v1beta1",
+                    group: TektonGroup,
+                    version: TektonV1Beta1,
                     namespaceName: namespaceName,
-                    plural: "pipelineruns");
+                    plural: PipelineRunsPlural);
 
                 return result is not null? (pipelineRunNameGuid, buildImageName, paramNamespace, null):(null, null, null, null);
             }
@@ -180,10 +184,10 @@ namespace Devops.DomainService.Deployment.Services
 
                 var result = await SubmitKubernetesAsync(
                     pipelineRunData,
-                    group: "tekton.dev",
-                    version: "v1beta1",
+                    group: TektonGroup,
+                    version: TektonV1Beta1,
                     namespaceName: CloudBuildConstants.NAMESPACE_NAME,
-                    plural: "pipelineruns");
+                    plural: PipelineRunsPlural);
 
                 return result is not null? metadataName:null;
             }
@@ -200,10 +204,10 @@ namespace Devops.DomainService.Deployment.Services
             try
             {
                 var pipelineRun = await _k8sClient.CustomObjects.GetNamespacedCustomObjectAsync(
-                    group: "tekton.dev",
+                    group: TektonGroup,
                     version: "v1",
                     namespaceParameter: namespaceName,
-                    plural: "pipelineruns",
+                    plural: PipelineRunsPlural,
                     name: pipelineRunName
                 );
                 //Console.WriteLine($"[DEBUG] Raw PipelineRun object: {JsonSerializer.Serialize(pipelineRun, new JsonSerializerOptions { WriteIndented = false })}");
@@ -303,7 +307,7 @@ namespace Devops.DomainService.Deployment.Services
             try
             {
                 var taskRun = await _k8sClient.CustomObjects.GetNamespacedCustomObjectAsync(
-                    group: "tekton.dev",
+                    group: TektonGroup,
                     version: "v1",
                     namespaceParameter: namespaceName,
                     plural: "taskruns",
@@ -474,10 +478,10 @@ namespace Devops.DomainService.Deployment.Services
             {
                 await _k8sClient.CustomObjects.PatchNamespacedCustomObjectAsync(
                     body: patch,
-                    group: "tekton.dev",
-                    version: "v1beta1",
+                    group: TektonGroup,
+                    version: TektonV1Beta1,
                     namespaceParameter: CloudBuildConstants.NAMESPACE_NAME,
-                    plural: "pipelineruns",
+                    plural: PipelineRunsPlural,
                     name: pipelineRunName);
 
                 Console.WriteLine($"PipelineRun '{pipelineRunName}' cancelled.");
@@ -508,10 +512,10 @@ namespace Devops.DomainService.Deployment.Services
             try
             {
                 await _k8sClient.CustomObjects.DeleteNamespacedCustomObjectAsync(
-                    group: "tekton.dev",
-                    version: "v1beta1",
+                    group: TektonGroup,
+                    version: TektonV1Beta1,
                     namespaceParameter: CloudBuildConstants.NAMESPACE_NAME,
-                    plural: "pipelineruns",
+                    plural: PipelineRunsPlural,
                     name: pipelineRunName
                 );
                 Console.WriteLine($"PipelineRun '{pipelineRunName}' deleted successfully");

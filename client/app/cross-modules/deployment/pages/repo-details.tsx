@@ -2,14 +2,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/project.store";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
 import DeploymentObservability from "@blocks-deployment/components/deployment-details/shared/deployment-observability";
-import {
-  ChartGantt,
-  GitBranch,
-  Logs,
-  Rocket,
-  Settings,
-  Trash2,
-} from "lucide-react";
+import { ChartGantt, GitBranch, Logs, Rocket, Settings } from "lucide-react";
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -31,9 +24,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useScopedPath } from "@/hooks/use-scoped-path";
 import { formatFullDate } from "@/utils/date.util";
-import NotificationListener, {
-  DeploymentStatusBadge,
-} from "@blocks-deployment/components/deployment-details/shared/notification-listener";
+import DeleteDeploymentButton from "@blocks-deployment/components/deployment-details/shared/delete-deployment-button";
+import DeploymentStatusIndicator from "@blocks-deployment/components/deployment-details/shared/deployment-status-indicator";
+import DeploymentTargetLink from "@blocks-deployment/components/deployment-details/shared/deployment-target-link";
 import { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
 import { REPO_DETAILS_PROVIDERS } from "@blocks-deployment/constants/alert.constant";
 import {
@@ -392,28 +385,8 @@ export default function RepoDetails() {
     repoDetails?.data?.repo?.defaultDeploymentUrl ||
     "";
 
-  const deleteConfirmationData = {
-    dialogTitle: "Delete deployment?",
-    dialogSubtitle: (
-      <>
-        This permanently destroys the deployment of{" "}
-        <strong>
-          {latestBuild?.repoName.split("/").pop() || latestBuild?.repoName}
-        </strong>
-        {deploymentUrl ? (
-          <>
-            {" "}
-            at <strong>{deploymentUrl}</strong>
-          </>
-        ) : null}
-        . The site will stop responding. Build history is kept.
-        <br />
-        <br />
-      </>
-    ),
-    confirmButton: "Delete",
-    cancelButton: "Cancel",
-  };
+  const repoDisplayName =
+    latestBuild?.repoName.split("/").pop() || latestBuild?.repoName;
 
   const handleSettingsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -626,35 +599,17 @@ export default function RepoDetails() {
                         />
                       </Dialog>
 
-                      {hasLiveDeployment ? (
-                        <Dialog
-                          open={isDeleteModalOpen}
-                          onOpenChange={setIsDeleteModalOpen}>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="destructive"
-                              onClick={() => setIsDeleteModalOpen(true)}
-                              disabled={isDeleting || isDeploying}
-                              className="w-full shadow-sm sm:w-auto"
-                              data-testid="delete-deployment-button">
-                              <div className="flex items-center justify-center gap-2">
-                                <Trash2 size={20} />
-                                <span>
-                                  {isDeleting ? "Deleting..." : "Delete"}
-                                </span>
-                              </div>
-                            </Button>
-                          </DialogTrigger>
-                          <ConfirmationModal
-                            data={deleteConfirmationData}
-                            onCancel={handleDeleteCancel}
-                            onConfirm={handleDeleteDeployment}
-                            buttonState={{
-                              confirm: { disable: isDeleting },
-                            }}
-                          />
-                        </Dialog>
-                      ) : null}
+                      <DeleteDeploymentButton
+                        hasLiveDeployment={hasLiveDeployment}
+                        repoName={repoDisplayName}
+                        deploymentUrl={deploymentUrl}
+                        isDeleting={isDeleting}
+                        isDisabled={isDeploying}
+                        isModalOpen={isDeleteModalOpen}
+                        onModalOpenChange={setIsDeleteModalOpen}
+                        onConfirm={handleDeleteDeployment}
+                        onCancel={handleDeleteCancel}
+                      />
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -677,29 +632,10 @@ export default function RepoDetails() {
                           <p className="text-sm text-low-emphasis">
                             Deploys To
                           </p>
-                          {hasLiveDeployment ? (
-                            <CopyToClipboardButton
-                              textToCopy={
-                                latestBuild?.defaultDeploymentUrl || ""
-                              }
-                              isHoverable={false}>
-                              <a
-                                href={latestBuild?.defaultDeploymentUrl || "#"}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block truncate text-sm text-primary hover:underline"
-                                onClick={(e) => e.stopPropagation()}>
-                                {latestBuild?.defaultDeploymentUrl || "N/A"}
-                              </a>
-                            </CopyToClipboardButton>
-                          ) : (
-                            // Nothing is serving this host any more, so it must not look like a live link.
-                            <span
-                              className="block truncate text-sm text-low-emphasis line-through"
-                              data-testid="deploys-to-inactive">
-                              {deploymentUrl || "N/A"}
-                            </span>
-                          )}
+                          <DeploymentTargetLink
+                            isLive={hasLiveDeployment}
+                            url={deploymentUrl}
+                          />
                         </div>
 
                         <div className="space-y-2">
@@ -739,21 +675,14 @@ export default function RepoDetails() {
                             <p className="text-sm text-low-emphasis">
                               Deployment Status
                             </p>
-                            {hasLiveDeployment ? (
-                              <NotificationListener
-                                latestBuild={latestBuild}
-                                deploymentStatus={latestBuild?.status}
-                              />
-                            ) : (
-                              // Once nothing is deployed the repo record is the source of truth. Listening for
-                              // build notifications here would resurrect the last build's "Succeeded" badge.
-                              <DeploymentStatusBadge
-                                status={
-                                  repoDetails?.data?.repo
-                                    ?.lastDeploymentStatus || "NoBuild"
-                                }
-                              />
-                            )}
+                            <DeploymentStatusIndicator
+                              hasLiveDeployment={hasLiveDeployment}
+                              latestBuild={latestBuild}
+                              buildStatus={latestBuild?.status}
+                              repoStatus={
+                                repoDetails?.data?.repo?.lastDeploymentStatus
+                              }
+                            />
                           </div>
 
                           <div className="space-y-2">

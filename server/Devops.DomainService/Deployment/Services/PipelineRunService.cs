@@ -463,6 +463,58 @@ namespace Devops.DomainService.Deployment.Services
         /// Cancels a running PipelineRun by patching spec.status. This is deliberately a cancel and not a
         /// delete: removing the PipelineRun would lose the audit record and can orphan running pods.
         /// </summary>
+        /// <summary>
+        /// Reports whether a PipelineRun is still running, so callers can skip cancelling one that has
+        /// already finished or been reaped. This only needs `get` on pipelineruns, which the read paths
+        /// already use - cancellation additionally needs `patch`, so checking first means a build record
+        /// left with a stale non-terminal status does not demand a permission nothing will be used for.
+        /// </summary>
+        /// <returns>IsRunning is false when the PipelineRun is absent or has reached a final condition.</returns>
+        public async Task<(bool IsRunning, string Error)> IsPipelineRunRunningAsync(string pipelineRunName)
+        {
+            if (string.IsNullOrWhiteSpace(pipelineRunName))
+                return (false, "PipelineRun name is required.");
+
+            try
+            {
+                var pipelineRun = await _k8sClient.CustomObjects.GetNamespacedCustomObjectAsync(
+                    group: TektonGroup,
+                    version: TektonV1Beta1,
+                    namespaceParameter: CloudBuildConstants.NAMESPACE_NAME,
+                    plural: PipelineRunsPlural,
+                    name: pipelineRunName);
+
+                var status = JObject.Parse(JsonSerializer.Serialize(pipelineRun))["status"] as JObject;
+                var condition = (status?["conditions"] as JArray)?.FirstOrDefault() as JObject;
+                var conditionStatus = condition?["status"]?.ToString();
+
+                // Tekton reports a finished run as True (succeeded) or False (failed/cancelled); Unknown
+                // means still running or pending. A run with no condition yet has only just been created,
+                // so treat it as running rather than risk deleting the namespace underneath it.
+                var isRunning = conditionStatus is not "True" and not "False";
+
+                Console.WriteLine($"PipelineRun '{pipelineRunName}' condition status '{conditionStatus ?? "none"}' -> running={isRunning}");
+                return (isRunning, null);
+            }
+            catch (HttpOperationException httpEx) when (httpEx.Response?.StatusCode == HttpStatusCode.NotFound)
+            {
+                Console.WriteLine($"PipelineRun '{pipelineRunName}' no longer exists; nothing to cancel.");
+                return (false, null);
+            }
+            catch (HttpOperationException httpEx)
+            {
+                var message = KubernetesApiErrorHandler.HandleKubernetesError(httpEx);
+                Console.WriteLine($"Failed to read PipelineRun '{pipelineRunName}': {message}");
+                return (false, message);
+            }
+            catch (Exception ex)
+            {
+                var message = KubernetesApiErrorHandler.HandleGeneralError(ex);
+                Console.WriteLine($"Failed to read PipelineRun '{pipelineRunName}': {message}");
+                return (false, message);
+            }
+        }
+
         /// <returns>AlreadyGone is true when the PipelineRun no longer exists, which counts as finished.</returns>
         public async Task<(bool Success, bool AlreadyGone, string Error)> CancelPipelineRunAsync(string pipelineRunName)
         {

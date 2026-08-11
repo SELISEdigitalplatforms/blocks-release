@@ -97,6 +97,44 @@ namespace XUnitTest.Devops.Deployment
             _f.RepoRepo.Setup(r => r.ClearDeployedNamespace(RepoId, TenantId, EventStatus.DELETED))
                 .ReturnsAsync(true);
 
+        /// <summary>Makes the PipelineRun read return a run whose first condition has the given status.</summary>
+        private void GivenPipelineRunConditionStatus(string conditionStatus) =>
+            _f.CustomObjects
+                .Setup(c => c.GetNamespacedCustomObjectWithHttpMessagesAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Response<object>(new Dictionary<string, object>
+                {
+                    ["status"] = new Dictionary<string, object>
+                    {
+                        ["conditions"] = new List<object>
+                        {
+                            new Dictionary<string, object> { ["type"] = "Succeeded", ["status"] = conditionStatus }
+                        }
+                    }
+                }));
+
+        private void GivenPipelineRunIsRunning() => GivenPipelineRunConditionStatus("Unknown");
+
+        private void GivenPipelineRunReadThrows(Exception exception) =>
+            _f.CustomObjects
+                .Setup(c => c.GetNamespacedCustomObjectWithHttpMessagesAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                    It.IsAny<CancellationToken>()))
+                .ThrowsAsync(exception);
+
+        private void VerifyNothingPatched() =>
+            _f.CustomObjects.Verify(c => c.PatchNamespacedCustomObjectWithHttpMessagesAsync(
+                It.IsAny<object>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                It.IsAny<CancellationToken>()), Times.Never);
+
         private static HttpOperationException K8sError(HttpStatusCode statusCode) =>
             new("kubernetes rejected the request")
             {
@@ -235,6 +273,7 @@ namespace XUnitTest.Devops.Deployment
             GivenBuilds(
                 new Build { PipelineRunName = "run-done", Status = EventStatus.SUCCEEDED },
                 new Build { PipelineRunName = "run-live", Status = EventStatus.RUNNING });
+            GivenPipelineRunIsRunning();
             GivenCancelSucceeds();
             GivenNamespaceDeleteSucceeds();
             GivenClearSucceeds();
@@ -283,6 +322,7 @@ namespace XUnitTest.Devops.Deployment
         {
             GivenRepo();
             GivenBuilds(new Build { PipelineRunName = "run-live", Status = EventStatus.RUNNING });
+            GivenPipelineRunIsRunning();
             GivenCancelThrows(K8sError(HttpStatusCode.Forbidden));
             GivenNamespaceDeleteSucceeds();
 
@@ -298,11 +338,15 @@ namespace XUnitTest.Devops.Deployment
         }
 
         [Fact]
-        public async Task PipelineRunAlreadyReaped_DoesNotBlockTheDeleteOrRelabelTheBuild()
+        public async Task PipelineRunAlreadyReaped_IsNotPatchedAtAll()
         {
+            // A build record left with a stale non-terminal status looks in-flight forever. Patching it
+            // would demand `patch` on pipelineruns for a run that finished long ago - and because
+            // Kubernetes authorises before checking existence, a missing permission answers 403 rather
+            // than the 404 that would have let the delete continue. So the run is read first.
             GivenRepo();
-            GivenBuilds(new Build { PipelineRunName = "run-live", Status = EventStatus.RUNNING });
-            GivenCancelThrows(K8sError(HttpStatusCode.NotFound));
+            GivenBuilds(new Build { PipelineRunName = "run-stale", Status = EventStatus.RUNNING });
+            GivenPipelineRunReadThrows(K8sError(HttpStatusCode.NotFound));
             GivenNamespaceDeleteSucceeds();
             GivenClearSucceeds();
 
@@ -311,10 +355,48 @@ namespace XUnitTest.Devops.Deployment
             result.IsSuccess.Should().BeTrue();
             // Nothing was actually cancelled, so the message stays the plain one.
             result.Message.Should().Be("Deployment deletion started.");
-            // The run is gone and we cannot tell what it finished as, so its status is left alone
-            // rather than mislabelling a success as cancelled.
+            VerifyNothingPatched();
+            // We cannot tell what it finished as, so its status is left alone rather than
+            // mislabelling a success as cancelled.
             _f.BuildRepo.Verify(b => b.UpdateBuildStatus(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Theory]
+        [InlineData("True")]  // succeeded
+        [InlineData("False")] // failed or cancelled
+        public async Task PipelineRunAlreadyFinished_IsNotPatchedAtAll(string conditionStatus)
+        {
+            GivenRepo();
+            GivenBuilds(new Build { PipelineRunName = "run-finished", Status = EventStatus.RUNNING });
+            GivenPipelineRunConditionStatus(conditionStatus);
+            GivenNamespaceDeleteSucceeds();
+            GivenClearSucceeds();
+
+            var result = await _f.BuildService().DeleteDeployment(RepoId);
+
+            result.IsSuccess.Should().BeTrue();
+            result.Message.Should().Be("Deployment deletion started.");
+            VerifyNothingPatched();
+        }
+
+        [Fact]
+        public async Task PipelineRunStateUnreadable_AbortsBeforeDeletingAnything()
+        {
+            // Deleting the namespace without knowing whether a pipeline is live risks deploy-app
+            // recreating the workload behind us, so an unreadable state is as blocking as a failed cancel.
+            GivenRepo();
+            GivenBuilds(new Build { PipelineRunName = "run-live", Status = EventStatus.RUNNING });
+            GivenPipelineRunReadThrows(K8sError(HttpStatusCode.Forbidden));
+            GivenNamespaceDeleteSucceeds();
+
+            var result = await _f.BuildService().DeleteDeployment(RepoId);
+
+            result.IsSuccess.Should().BeFalse();
+            result.Message.Should().Contain("Could not determine whether the build 'run-live' is still running");
+            result.Message.Should().Contain("Deployment was not deleted.");
+            VerifyNoNamespaceDeleted();
+            VerifyRepoNeverUpdated();
         }
 
         // ---- failures ----

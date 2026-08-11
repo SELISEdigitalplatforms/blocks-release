@@ -617,6 +617,91 @@ namespace XUnitTest.Devops.Deployment
                     It.IsAny<CancellationToken>()))
                 .ThrowsAsync(exception);
 
+        // ---- IsPipelineRunRunningAsync ----
+
+        private static Dictionary<string, object> PipelineRunWithCondition(string conditionStatus) =>
+            new()
+            {
+                ["status"] = new Dictionary<string, object>
+                {
+                    ["conditions"] = new List<object>
+                    {
+                        new Dictionary<string, object> { ["type"] = "Succeeded", ["status"] = conditionStatus }
+                    }
+                }
+            };
+
+        [Theory]
+        [InlineData("True")]  // succeeded
+        [InlineData("False")] // failed or cancelled
+        public async Task IsPipelineRunRunningAsync_FinalCondition_ReportsNotRunning(string conditionStatus)
+        {
+            SetupGetCustomObject(PipelineRunWithCondition(conditionStatus));
+
+            var (isRunning, error) = await Service().IsPipelineRunRunningAsync("run-1");
+
+            isRunning.Should().BeFalse();
+            error.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task IsPipelineRunRunningAsync_UnknownCondition_ReportsRunning()
+        {
+            SetupGetCustomObject(PipelineRunWithCondition("Unknown"));
+
+            var (isRunning, error) = await Service().IsPipelineRunRunningAsync("run-1");
+
+            isRunning.Should().BeTrue();
+            error.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task IsPipelineRunRunningAsync_NoConditionYet_ReportsRunning()
+        {
+            // A run this fresh has only just been created; treating it as finished would let the caller
+            // delete the namespace out from under a pipeline that is about to deploy into it.
+            SetupGetCustomObject(new Dictionary<string, object>());
+
+            var (isRunning, error) = await Service().IsPipelineRunRunningAsync("run-1");
+
+            isRunning.Should().BeTrue();
+            error.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task IsPipelineRunRunningAsync_NotFound_ReportsNotRunningWithoutError()
+        {
+            _customObjects
+                .Setup(c => c.GetNamespacedCustomObjectWithHttpMessagesAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                    It.IsAny<CancellationToken>()))
+                .ThrowsAsync(K8sError(HttpStatusCode.NotFound));
+
+            var (isRunning, error) = await Service().IsPipelineRunRunningAsync("run-1");
+
+            isRunning.Should().BeFalse();
+            error.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task IsPipelineRunRunningAsync_ReadRejected_SurfacesTheError()
+        {
+            _customObjects
+                .Setup(c => c.GetNamespacedCustomObjectWithHttpMessagesAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                    It.IsAny<CancellationToken>()))
+                .ThrowsAsync(K8sError(HttpStatusCode.Forbidden));
+
+            var (isRunning, error) = await Service().IsPipelineRunRunningAsync("run-1");
+
+            isRunning.Should().BeFalse();
+            error.Should().Contain("403");
+        }
+
         [Fact]
         public async Task CancelPipelineRunAsync_PatchesSpecStatusToCancelled()
         {

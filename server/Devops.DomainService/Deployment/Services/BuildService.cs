@@ -270,6 +270,25 @@ public class BuildService : IBuildService
 
         foreach (var pipelineRunName in inFlightRunNames)
         {
+            // Ask before cancelling. A build record whose status was never advanced to a terminal value
+            // looks in-flight forever, and cancelling it would demand `patch` on pipelineruns for a run
+            // that finished long ago. Reading only needs `get`, which the status polling already uses.
+            var (isRunning, stateError) = await _pipelineRunService.IsPipelineRunRunningAsync(pipelineRunName);
+
+            if (stateError is not null)
+            {
+                // Deleting the namespace without knowing whether a pipeline is live risks it being
+                // recreated by deploy-app, so an unreadable state stops the delete just like a failed cancel.
+                return (cancelled, $"Could not determine whether the build '{pipelineRunName}' is still running: {stateError}. Deployment was not deleted.");
+            }
+
+            if (!isRunning)
+            {
+                // Finished or already reaped. Its recorded status is merely stale, and we cannot tell what it
+                // finished as, so leave it rather than mislabelling a success as cancelled.
+                continue;
+            }
+
             var (success, alreadyGone, error) = await _pipelineRunService.CancelPipelineRunAsync(pipelineRunName);
 
             if (!success)
@@ -279,8 +298,7 @@ public class BuildService : IBuildService
 
             if (alreadyGone)
             {
-                // The PipelineRun is gone, so nothing is running. Its recorded status is merely stale and we
-                // cannot tell what it finished as, so leave it rather than mislabelling a success as cancelled.
+                // It finished between the check and the cancel - nothing was running, nothing to relabel.
                 continue;
             }
 

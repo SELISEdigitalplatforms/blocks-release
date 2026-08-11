@@ -129,6 +129,16 @@ public class BuildService : IBuildService
     /// </summary>
     public async Task<BaseApiResponse> DeleteDeployment(string repoId)
     {
+        var blocksContext = BlocksContext.GetContext();
+        return await DeleteDeployment(repoId, blocksContext?.TenantId, blocksContext?.UserId);
+    }
+
+    /// <summary>
+    /// Tenant-explicit form of <see cref="DeleteDeployment(string)"/>, for callers with no ambient
+    /// <see cref="BlocksContext"/> - the queue-driven teardown runs in the worker, off any request.
+    /// </summary>
+    public async Task<BaseApiResponse> DeleteDeployment(string repoId, string? tenantId, string? blocksUserId = null)
+    {
         if (string.IsNullOrWhiteSpace(repoId))
         {
             return new BaseApiResponse
@@ -138,10 +148,6 @@ public class BuildService : IBuildService
                 Message = "Repo id is required"
             };
         }
-
-        var blocksContext = BlocksContext.GetContext();
-        var tenantId = blocksContext?.TenantId;
-        var blocksUserId = blocksContext?.UserId;
 
         var repo = await _repoRepository.GetRepo(repoId, tenantId);
         if (repo is null)

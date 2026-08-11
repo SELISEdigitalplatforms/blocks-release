@@ -18,6 +18,8 @@ public interface IRepoRepository
     public Task<bool> UpdateRepo(RepoUpdateRequest repo,string tenantId);
     public Task<bool> UpdateRepo(Repo repo);
     public Task<bool> ClearDeployedNamespace(string repoId, string tenantId, string lastDeploymentStatus);
+    public Task<List<Repo>> GetProjectRepos(string tenantId, string? resourceId = null);
+    public Task<bool> ArchiveRepo(string repoId, string tenantId);
     public Task<IReadOnlyList<RepoWithBuildsResponse>> GetReposWithBuildsAsync(string projectId);
     public Task<DeploySettings> GetDeploySettings(string hostingProviderId, string regionId, string machineConfigId);
     public Task<BulkOperationSummary> UpdateRepoDomain(RepoDomainUpdateRequest repowithdomain);

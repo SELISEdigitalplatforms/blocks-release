@@ -372,6 +372,59 @@ namespace XUnitTest.Integration
             (await CreateRepo().GetRepos()).Select(r => r.ItemId).Should().Contain(legacyId);
         }
 
+        /// <summary>
+        /// The queue-driven teardown reads a project's repositories out of that project's own tenant
+        /// database, with no ambient tenant context, so this pins the tenant scoping and the resource filter.
+        /// </summary>
+        [Fact]
+        public async Task GetProjectRepos_ReturnsLiveReposOfTheProjectAndNarrowsByResource()
+        {
+            var projectId = Guid.NewGuid().ToString("N");
+            var sut = CreateRepo();
+
+            var first = NewRepo(projectId);
+            first.SourceRepoId = "res-1";
+            var second = NewRepo(projectId);
+            second.SourceRepoId = "res-2";
+            var archived = NewRepo(projectId);
+            archived.SourceRepoId = "res-3";
+            var otherProject = NewRepo();
+            otherProject.SourceRepoId = "res-1";
+
+            foreach (var repo in new[] { first, second, archived, otherProject })
+                await sut.SaveRepo(repo);
+            await Archive(sut, archived);
+
+            var all = await sut.GetProjectRepos(projectId);
+            all.Select(r => r.ItemId).Should()
+               .BeEquivalentTo(new[] { first.ItemId, second.ItemId });
+
+            var narrowed = await sut.GetProjectRepos(projectId, "res-2");
+            narrowed.Select(r => r.ItemId).Should().Equal(second.ItemId);
+
+            (await sut.GetProjectRepos(projectId, "res-3")).Should().BeEmpty();
+            (await sut.GetProjectRepos(projectId, "no-such-resource")).Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task ArchiveRepo_HidesTheRepoFromEveryRead()
+        {
+            var repo = NewRepo();
+            var sut = CreateRepo();
+            await sut.SaveRepo(repo);
+
+            (await sut.ArchiveRepo(repo.ItemId, "any-tenant")).Should().BeTrue();
+
+            (await sut.GetRepo(repo.ItemId)).Should().BeNull();
+            (await sut.GetProjectRepos(repo.ProjectId)).Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task ArchiveRepo_UnknownRepo_ReturnsFalse()
+        {
+            (await CreateRepo().ArchiveRepo("no-such-repo", "any-tenant")).Should().BeFalse();
+        }
+
         [Fact]
         public async Task GetReposWithBuildsAsync_ExcludesArchivedRepositories()
         {

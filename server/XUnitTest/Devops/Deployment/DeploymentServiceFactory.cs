@@ -37,6 +37,7 @@ namespace XUnitTest.Devops.Deployment
         public Mock<IMessageClient> MessageClient { get; } = new();
         public Mock<INotificationService> Notification { get; } = new();
         public Mock<IDataGatewayDeploymentRepository> DataGatewayRepo { get; } = new();
+        public Mock<ITenantLookupRepository> TenantLookup { get; } = new();
         public Mock<IDbContextProvider> DbProvider { get; } = new();
         public Mock<IValidator<RepoDomainUpdateRequest>> DomainValidator { get; } = new();
         public Mock<IValidator<BuildRequest>> BuildValidator { get; } = new();
@@ -92,5 +93,9 @@ namespace XUnitTest.Devops.Deployment
                 BuildRepo.Object, RepoRepo.Object, Vcs.Object,
                 PipelineRunService(), Webhook.Object,
                 DomainValidator.Object, MessageClient.Object);
+
+        public DeploymentTeardownService DeploymentTeardownService() =>
+            new(new Mock<ILogger<DeploymentTeardownService>>().Object,
+                TenantLookup.Object, RepoRepo.Object, BuildService());
     }
 }

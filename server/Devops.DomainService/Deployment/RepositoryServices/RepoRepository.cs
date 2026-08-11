@@ -249,6 +249,59 @@ public class RepoRepository : IRepoRepository
         }
     }
 
+    /// <summary>
+    /// Live repositories of one project, read from that project's own tenant database rather than the
+    /// caller's - the queue-driven teardown has no ambient tenant context to fall back on.
+    /// Passing a resourceId narrows to the repository imported from that resource.
+    /// </summary>
+    public async Task<List<Repo>> GetProjectRepos(string tenantId, string? resourceId = null)
+    {
+        try
+        {
+            var _dbContext = _dbContextProvider.GetDatabase(tenantId);
+            var collection = _dbContext.GetCollection<Repo>("Repos");
+
+            var filter = Builders<Repo>.Filter.Eq(r => r.ProjectId, tenantId) & NotArchived;
+
+            if (!string.IsNullOrWhiteSpace(resourceId))
+                filter &= Builders<Repo>.Filter.Eq(r => r.SourceRepoId, resourceId);
+
+            return await collection.Find(filter).ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to read repositories for project {ProjectId}.", tenantId);
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Marks a repository archived so it drops out of every read. Deliberately separate from
+    /// <see cref="ClearDeployedNamespace"/>: tearing a deployment down and retiring the repository
+    /// are different decisions, and the interactive delete-deployment path only does the former.
+    /// </summary>
+    public async Task<bool> ArchiveRepo(string repoId, string tenantId)
+    {
+        try
+        {
+            var _dbContext = _dbContextProvider.GetDatabase(tenantId);
+            var collection = _dbContext.GetCollection<Repo>("Repos");
+
+            var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+            var update = Builders<Repo>.Update
+                .Set(r => r.IsArchived, true)
+                .Set(r => r.LastUpdatedDate, DateTime.UtcNow);
+
+            var result = await collection.UpdateOneAsync(filter, update);
+            return result.MatchedCount == 1;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to archive repo {RepoId}.", repoId);
+            return false;
+        }
+    }
+
     public async Task<BulkOperationSummary> UpdateRepoDomain(RepoDomainUpdateRequest request)
     {
         var collection = _dbContextProvider.GetCollection<Repo>("Repos");

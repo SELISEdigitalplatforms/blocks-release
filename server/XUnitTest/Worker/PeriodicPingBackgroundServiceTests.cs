@@ -10,6 +10,46 @@ namespace XUnitTest.Worker
 {
     public class PeriodicPingBackgroundServiceTests
     {
+        /// <summary>
+        /// Waits until the service has logged a message of <paramref name="level"/> containing
+        /// <paramref name="contains"/>, or the timeout elapses.
+        /// The service pings on a background loop, so waiting a fixed number of milliseconds and hoping
+        /// the ping finished makes these tests fail on a slow or loaded machine - which is exactly how
+        /// they have flaked in CI. Callers still assert with Verify afterwards, so a genuine failure
+        /// keeps its usual message; this only stops the assertion running too early.
+        /// </summary>
+        private static async Task WaitForLogAsync(
+            Mock<ILogger<PeriodicPingBackgroundService>> logger,
+            LogLevel level,
+            string contains,
+            int timeoutMs = 5000)
+        {
+            var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+
+            while (true)
+            {
+                try
+                {
+                    logger.Verify(
+                        x => x.Log(
+                            level,
+                            It.IsAny<EventId>(),
+                            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains(contains)),
+                            It.IsAny<Exception>(),
+                            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                        Times.AtLeastOnce);
+                    return;
+                }
+                catch (MockException)
+                {
+                    if (DateTime.UtcNow >= deadline)
+                        return;
+
+                    await Task.Delay(25);
+                }
+            }
+        }
+
         #region Constructor and Configuration Tests
 
         [Fact]
@@ -43,7 +83,7 @@ namespace XUnitTest.Worker
 
             // Act
             await service.StartAsync(cts.Token);
-            await Task.Delay(100);
+            await WaitForLogAsync(mockLogger, LogLevel.Information, "Periodic ping is disabled");
             await service.StopAsync(cts.Token);
 
             // Assert
@@ -72,7 +112,7 @@ namespace XUnitTest.Worker
 
             // Act
             await service.StartAsync(cts.Token);
-            await Task.Delay(100);
+            await WaitForLogAsync(mockLogger, LogLevel.Warning, "PingUrl is empty");
             await service.StopAsync(cts.Token);
 
             // Assert
@@ -100,7 +140,7 @@ namespace XUnitTest.Worker
 
             // Act
             await service.StartAsync(cts.Token);
-            await Task.Delay(100);
+            await WaitForLogAsync(mockLogger, LogLevel.Warning, "PingUrl is empty");
             await service.StopAsync(cts.Token);
 
             // Assert
@@ -131,7 +171,7 @@ namespace XUnitTest.Worker
 
             // Act
             await service.StartAsync(cts.Token);
-            await Task.Delay(200); // Wait for immediate ping
+            await WaitForLogAsync(mockLogger, LogLevel.Information, "Pinging");
             await service.StopAsync(cts.Token);
 
             // Assert
@@ -164,7 +204,7 @@ namespace XUnitTest.Worker
 
             // Act
             await service.StartAsync(cts.Token);
-            await Task.Delay(200);
+            await WaitForLogAsync(mockLogger, LogLevel.Debug, "Ping success");
             await service.StopAsync(cts.Token);
 
             // Assert
@@ -199,7 +239,7 @@ namespace XUnitTest.Worker
 
             // Act
             await service.StartAsync(cts.Token);
-            await Task.Delay(200);
+            await WaitForLogAsync(mockLogger, LogLevel.Warning, "client error");
             await service.StopAsync(cts.Token);
 
             // Assert
@@ -230,7 +270,7 @@ namespace XUnitTest.Worker
 
             // Act
             await service.StartAsync(cts.Token);
-            await Task.Delay(200);
+            await WaitForLogAsync(mockLogger, LogLevel.Error, "server error");
             await service.StopAsync(cts.Token);
 
             // Assert
@@ -268,7 +308,7 @@ namespace XUnitTest.Worker
 
             // Act
             await service.StartAsync(cts.Token);
-            await Task.Delay(200);
+            await WaitForLogAsync(mockLogger, LogLevel.Warning, "timed out");
             await service.StopAsync(cts.Token);
 
             // Assert
@@ -302,7 +342,7 @@ namespace XUnitTest.Worker
 
             // Act
             await service.StartAsync(cts.Token);
-            await Task.Delay(200);
+            await WaitForLogAsync(mockLogger, LogLevel.Error, "request failed");
             await service.StopAsync(cts.Token);
 
             // Assert

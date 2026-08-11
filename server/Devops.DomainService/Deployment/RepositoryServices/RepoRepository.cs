@@ -20,6 +20,9 @@ public class RepoRepository : IRepoRepository
     private readonly IConfiguration _configuration;
     private readonly IBlocksSecret _blocksSecret;
 
+    private static readonly FilterDefinition<Repo> NotArchived =
+        Builders<Repo>.Filter.Ne(r => r.IsArchived, true);
+
     public RepoRepository(IDbContextProvider dbContextProvider, IConfiguration configuration, ILogger<RepoRepository> logger, IBlocksSecret blocksSecret)
     {
         _logger = logger;
@@ -31,7 +34,7 @@ public class RepoRepository : IRepoRepository
     public async Task<Repo?> GetRepo(string repoId)
     {
         var collection = _dbContextProvider.GetCollection<Repo>("Repos");
-        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId) & NotArchived;
         var repo = await collection.Find(filter).FirstOrDefaultAsync();
         return repo;
     }
@@ -40,7 +43,7 @@ public class RepoRepository : IRepoRepository
     {
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
         var collection = _dbContext.GetCollection<Repo>("Repos");
-        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId) & NotArchived;
         var repo = await collection.Find(filter).FirstOrDefaultAsync();
         return repo;
     }
@@ -50,7 +53,8 @@ public class RepoRepository : IRepoRepository
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
         var collection = _dbContext.GetCollection<Repo>("Repos");
         var filter = Builders<Repo>.Filter.Eq(r => r.RepoName, repoFullName) &
-                     Builders<Repo>.Filter.Eq(r => r.Branch, branch);
+                     Builders<Repo>.Filter.Eq(r => r.Branch, branch) &
+                     NotArchived;
         var repo = await collection.Find(filter).FirstOrDefaultAsync();
         return repo;
     }
@@ -58,7 +62,7 @@ public class RepoRepository : IRepoRepository
     public async Task<List<Repo>?> GetRepos()
     {
         var collection = _dbContextProvider.GetCollection<Repo>("Repos");
-        return await collection.Find(_ => true).ToListAsync();
+        return await collection.Find(NotArchived).ToListAsync();
     }
 
     public async Task<List<Build>?> GetRepoBuildList(string repoId)
@@ -74,9 +78,12 @@ public class RepoRepository : IRepoRepository
         var blocksUserId = BlocksContext.GetContext().UserId;
         var repoCollection = _dbContextProvider.GetCollection<Repo>("Repos");
         var buildsCollection = _dbContextProvider.GetCollection<Build>("Builds");
+        var repoFilter = Builders<Repo>.Filter.Eq(r => r.BlocksUserId, blocksUserId) &
+                         Builders<Repo>.Filter.Eq(r => r.ProjectId, projectId) &
+                         NotArchived;
+
         var pipeline = repoCollection.Aggregate()                        // FROM repos
-            .Match(r => r.BlocksUserId == blocksUserId &&
-                        r.ProjectId == projectId)          // only this user
+            .Match(repoFilter)                             // only this user, archived repos excluded
             .Lookup<Repo, Build, RepoWithBuildsResponse>(                // JOIN builds
                 foreignCollection: buildsCollection,
                 localField: r => r.ItemId,

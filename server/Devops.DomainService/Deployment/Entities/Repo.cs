@@ -28,6 +28,7 @@ namespace Devops.DomainService.Deployment.Entities
         public GithubWebhook GithubWebhook { get; set; }
         public string RepositoryType { get; set; }
         public string DependencyTrackProjectUuid { get; set; }
+        public bool IsArchived { get; set; }
     }
 
     public class GithubWebhook

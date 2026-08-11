@@ -62,10 +62,11 @@ export default defineConfig({
     clearMocks: true,
     setupFiles: ["./app/test-utils/vitest.setup.ts"],
     coverage: {
-      reporter: ["text", "lcov"],
       all: true,
       provider: "v8",
-      reporter: ["text", "html", "json", "json-summary"],
+      // `lcov` must stay in this list: SonarQube reads coverage/lcov.info and reports 0%
+      // coverage without it. A second `reporter` key used to silently drop it.
+      reporter: ["text", "lcov", "html", "json", "json-summary"],
       // Minimum FE unit-test coverage gate. `test:coverage` fails if any of
       // these drop below 10%.
       thresholds: {

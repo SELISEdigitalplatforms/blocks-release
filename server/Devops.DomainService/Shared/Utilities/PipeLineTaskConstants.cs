@@ -103,6 +103,7 @@ namespace Devops.DomainService.Shared.Utilities
         public const string SUCCEEDED = "Succeeded";
         public const string FAILED = "Failed";
         public const string CANCELLED = "Cancelled";
+        public const string DELETED = "Deleted";
         public const string TIMEOUT = "Timeout";
         public const string SKIPPED = "Skipped";
         public const string PAUSED = "Paused";

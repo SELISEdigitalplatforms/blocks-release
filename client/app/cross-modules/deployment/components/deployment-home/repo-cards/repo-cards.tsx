@@ -31,6 +31,8 @@ export interface IRepoResponse {
   commit: string | null;
   lastDeploymentDate: string | null;
   lastDeploymentStatus: string | null;
+  /** Namespace of the live deployment. Absent means nothing is deployed - never deployed, or deleted. */
+  deployedNamespace?: string | null;
   deploySettings: IDeploySettings;
   itemId: string;
   createdDate: string;

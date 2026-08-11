@@ -215,6 +215,33 @@ public class RepoRepository : IRepoRepository
         return result.MatchedCount == 1;
     }
 
+    /// <summary>
+    /// Clears the recorded deployment namespace and stamps the display status, in one atomic update against
+    /// the caller's tenant database - the same database <see cref="GetRepo(string, string)"/> reads from.
+    /// UpdateRepo(RepoUpdateRequest, tenantId) cannot be reused here: it skips null values, so it cannot clear a field.
+    /// </summary>
+    public async Task<bool> ClearDeployedNamespace(string repoId, string tenantId, string lastDeploymentStatus)
+    {
+        try
+        {
+            var _dbContext = _dbContextProvider.GetDatabase(tenantId);
+            var collection = _dbContext.GetCollection<Repo>("Repos");
+
+            var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+            var update = Builders<Repo>.Update
+                .Set(r => r.DeployedNamespace, null)
+                .Set(r => r.LastDeploymentStatus, lastDeploymentStatus);
+
+            var result = await collection.UpdateOneAsync(filter, update);
+            return result.MatchedCount == 1;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Failed to clear deployed namespace for repo {repoId}. {ex.Message}");
+            return false;
+        }
+    }
+
     public async Task<BulkOperationSummary> UpdateRepoDomain(RepoDomainUpdateRequest request)
     {
         var collection = _dbContextProvider.GetCollection<Repo>("Repos");

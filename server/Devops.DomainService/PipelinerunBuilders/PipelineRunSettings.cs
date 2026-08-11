@@ -27,6 +27,12 @@ public class PipelineRunSettings
 
     public PipelineRunSettings(IDictionary<string, object> root) => myDictionary = root;
 
+    /// <summary>
+    /// The exact value applied to the `namespace` param of the PipelineRun. Exposed so the caller can
+    /// persist it verbatim - it must never be recomputed once the PipelineRun has been submitted.
+    /// </summary>
+    public string ParamNamespace => paramNamespace;
+
     public IDictionary<string, object> build()
     {
         validate();

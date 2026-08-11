@@ -2,7 +2,14 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/project.store";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
 import DeploymentObservability from "@blocks-deployment/components/deployment-details/shared/deployment-observability";
-import { ChartGantt, GitBranch, Logs, Rocket, Settings } from "lucide-react";
+import {
+  ChartGantt,
+  GitBranch,
+  Logs,
+  Rocket,
+  Settings,
+  Trash2,
+} from "lucide-react";
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -24,10 +31,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useScopedPath } from "@/hooks/use-scoped-path";
 import { formatFullDate } from "@/utils/date.util";
-import NotificationListener from "@blocks-deployment/components/deployment-details/shared/notification-listener";
+import NotificationListener, {
+  DeploymentStatusBadge,
+} from "@blocks-deployment/components/deployment-details/shared/notification-listener";
 import { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
 import { REPO_DETAILS_PROVIDERS } from "@blocks-deployment/constants/alert.constant";
 import {
+  useDeleteDeployment,
   useGetRepoDetails,
   useInitialRepoDeployment,
 } from "@/cross-modules/deployment/hooks/use-github-info";
@@ -107,11 +117,14 @@ export default function RepoDetails() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [filteredBuilds, setFilteredBuilds] = useState<IPipeline[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isDeploymentSettingsForDeploy, setIsDeploymentSettingsForDeploy] =
     useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
 
   const { mutate: deployManually } = useInitialRepoDeployment();
+  const { mutate: deleteDeployment } = useDeleteDeployment();
 
   const { mutate: initialDeploy, isPending: isInitialDeploying } =
     useInitialRepoDeployment();
@@ -320,6 +333,43 @@ export default function RepoDetails() {
     setIsModalOpen(false);
   };
 
+  const handleDeleteCancel = () => {
+    setIsDeleteModalOpen(false);
+  };
+
+  const handleDeleteDeployment = () => {
+    setIsDeleting(true);
+
+    deleteDeployment(repoId, {
+      onSuccess: (response) => {
+        setIsDeleteModalOpen(false);
+
+        toast({
+          title: "Deletion Started",
+          description:
+            response?.message ||
+            "The deployment is being removed. This can take up to a minute.",
+          variant: "success",
+        });
+      },
+      onError: (error: CustomError) => {
+        const errorMessage =
+          error?.errors?.message ||
+          error?.message ||
+          "Failed to delete the deployment. Please try again.";
+
+        toast({
+          title: "Deletion Failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      },
+      onSettled: () => {
+        setIsDeleting(false);
+      },
+    });
+  };
+
   const confirmationData = {
     dialogTitle: "Confirm Deployment",
     dialogSubtitle: (
@@ -330,6 +380,38 @@ export default function RepoDetails() {
       </>
     ),
     confirmButton: "Deploy Now",
+    cancelButton: "Cancel",
+  };
+
+  // The recorded namespace is the only authority on whether something is deployed: absent means
+  // never deployed, or already deleted. The latest build survives deletion, so it cannot be used here.
+  const hasLiveDeployment = Boolean(repoDetails?.data?.repo?.deployedNamespace);
+
+  const deploymentUrl =
+    latestBuild?.defaultDeploymentUrl ||
+    repoDetails?.data?.repo?.defaultDeploymentUrl ||
+    "";
+
+  const deleteConfirmationData = {
+    dialogTitle: "Delete deployment?",
+    dialogSubtitle: (
+      <>
+        This permanently destroys the deployment of{" "}
+        <strong>
+          {latestBuild?.repoName.split("/").pop() || latestBuild?.repoName}
+        </strong>
+        {deploymentUrl ? (
+          <>
+            {" "}
+            at <strong>{deploymentUrl}</strong>
+          </>
+        ) : null}
+        . The site will stop responding. Build history is kept.
+        <br />
+        <br />
+      </>
+    ),
+    confirmButton: "Delete",
     cancelButton: "Cancel",
   };
 
@@ -518,30 +600,62 @@ export default function RepoDetails() {
                     <h3 className="text-lg font-semibold">
                       Deployment Information
                     </h3>
-                    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          onClick={() => setIsModalOpen(true)}
-                          disabled={isDeploying}
-                          className="w-full shadow-sm sm:w-auto">
-                          <div className="flex items-center justify-center gap-2">
-                            <Rocket size={20} />
-                            <span>
-                              {isDeploying ? "Deploying..." : "Deploy"}
-                            </span>
-                          </div>
-                        </Button>
-                      </DialogTrigger>
-                      <ConfirmationModal
-                        data={confirmationData}
-                        onCancel={handleCancel}
-                        onConfirm={handleManualDeploy}
-                        buttonState={{
-                          confirm: { disable: isDeploying },
-                        }}
-                      />
-                    </Dialog>
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsModalOpen(true)}
+                            disabled={isDeploying || isDeleting}
+                            className="w-full shadow-sm sm:w-auto">
+                            <div className="flex items-center justify-center gap-2">
+                              <Rocket size={20} />
+                              <span>
+                                {isDeploying ? "Deploying..." : "Deploy"}
+                              </span>
+                            </div>
+                          </Button>
+                        </DialogTrigger>
+                        <ConfirmationModal
+                          data={confirmationData}
+                          onCancel={handleCancel}
+                          onConfirm={handleManualDeploy}
+                          buttonState={{
+                            confirm: { disable: isDeploying },
+                          }}
+                        />
+                      </Dialog>
+
+                      {hasLiveDeployment ? (
+                        <Dialog
+                          open={isDeleteModalOpen}
+                          onOpenChange={setIsDeleteModalOpen}>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              onClick={() => setIsDeleteModalOpen(true)}
+                              disabled={isDeleting || isDeploying}
+                              className="w-full shadow-sm sm:w-auto"
+                              data-testid="delete-deployment-button">
+                              <div className="flex items-center justify-center gap-2">
+                                <Trash2 size={20} />
+                                <span>
+                                  {isDeleting ? "Deleting..." : "Delete"}
+                                </span>
+                              </div>
+                            </Button>
+                          </DialogTrigger>
+                          <ConfirmationModal
+                            data={deleteConfirmationData}
+                            onCancel={handleDeleteCancel}
+                            onConfirm={handleDeleteDeployment}
+                            buttonState={{
+                              confirm: { disable: isDeleting },
+                            }}
+                          />
+                        </Dialog>
+                      ) : null}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {" "}
@@ -563,18 +677,29 @@ export default function RepoDetails() {
                           <p className="text-sm text-low-emphasis">
                             Deploys To
                           </p>
-                          <CopyToClipboardButton
-                            textToCopy={latestBuild?.defaultDeploymentUrl || ""}
-                            isHoverable={false}>
-                            <a
-                              href={latestBuild?.defaultDeploymentUrl || "#"}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block truncate text-sm text-primary hover:underline"
-                              onClick={(e) => e.stopPropagation()}>
-                              {latestBuild?.defaultDeploymentUrl || "N/A"}
-                            </a>
-                          </CopyToClipboardButton>
+                          {hasLiveDeployment ? (
+                            <CopyToClipboardButton
+                              textToCopy={
+                                latestBuild?.defaultDeploymentUrl || ""
+                              }
+                              isHoverable={false}>
+                              <a
+                                href={latestBuild?.defaultDeploymentUrl || "#"}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block truncate text-sm text-primary hover:underline"
+                                onClick={(e) => e.stopPropagation()}>
+                                {latestBuild?.defaultDeploymentUrl || "N/A"}
+                              </a>
+                            </CopyToClipboardButton>
+                          ) : (
+                            // Nothing is serving this host any more, so it must not look like a live link.
+                            <span
+                              className="block truncate text-sm text-low-emphasis line-through"
+                              data-testid="deploys-to-inactive">
+                              {deploymentUrl || "N/A"}
+                            </span>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -610,14 +735,25 @@ export default function RepoDetails() {
 
                       <div className="grid grid-cols-1 gap-4 md:mb-4 md:gap-6">
                         <div className="space-y-4">
-                          <div className="space-y-2">
+                          <div className="space-y-2" data-testid="deployment-status">
                             <p className="text-sm text-low-emphasis">
                               Deployment Status
                             </p>
-                            <NotificationListener
-                              latestBuild={latestBuild}
-                              deploymentStatus={latestBuild?.status}
-                            />
+                            {hasLiveDeployment ? (
+                              <NotificationListener
+                                latestBuild={latestBuild}
+                                deploymentStatus={latestBuild?.status}
+                              />
+                            ) : (
+                              // Once nothing is deployed the repo record is the source of truth. Listening for
+                              // build notifications here would resurrect the last build's "Succeeded" badge.
+                              <DeploymentStatusBadge
+                                status={
+                                  repoDetails?.data?.repo
+                                    ?.lastDeploymentStatus || "NoBuild"
+                                }
+                              />
+                            )}
                           </div>
 
                           <div className="space-y-2">

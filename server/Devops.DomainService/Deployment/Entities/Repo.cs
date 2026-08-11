@@ -16,6 +16,9 @@ namespace Devops.DomainService.Deployment.Entities
         public string RepoUrl { get; set; }
         public string DefaultDeploymentUrl { get; set; }
         public string CustomDeploymentUrl { get; set; }
+        // The exact `namespace` param sent to Tekton at deploy time. Null/absent means no live deployment.
+        // Never recomputed - it is the only value the delete path is allowed to act on.
+        public string DeployedNamespace { get; set; }
         public string Branch { get; set; }
         public string Commit { get; set; }
         public DateTime? LastDeploymentDate { get; set; }

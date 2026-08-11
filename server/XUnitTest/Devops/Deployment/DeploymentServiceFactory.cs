@@ -41,7 +41,12 @@ namespace XUnitTest.Devops.Deployment
         public Mock<IValidator<RepoDomainUpdateRequest>> DomainValidator { get; } = new();
         public Mock<IValidator<BuildRequest>> BuildValidator { get; } = new();
         public Mock<IServiceScopeFactory> ScopeFactory { get; } = new();
+        public Mock<IKubernetes> Kubernetes { get; } = new();
+        public Mock<ICustomObjectsOperations> CustomObjects { get; } = new();
+        public Mock<ICoreV1Operations> CoreV1 { get; } = new();
         public IConfiguration Config { get; }
+
+        private PipelineRunService _pipelineRunService;
 
         public DeploymentServiceFactory()
         {
@@ -52,10 +57,17 @@ namespace XUnitTest.Devops.Deployment
                     ["ScaToolsApiBaseUri"] = "https://sca.example.com"
                 })
                 .Build();
+
+            Kubernetes.SetupGet(k => k.CustomObjects).Returns(CustomObjects.Object);
+            Kubernetes.SetupGet(k => k.CoreV1).Returns(CoreV1.Object);
         }
 
+        /// <summary>
+        /// Cached so a test can arrange the Kubernetes mocks and have the same instance reached
+        /// through BuildService and LogRetrievalService.
+        /// </summary>
         public PipelineRunService PipelineRunService() =>
-            new(new Mock<IKubernetes>().Object, TokenRepo.Object, Config, Secret.Object);
+            _pipelineRunService ??= new(Kubernetes.Object, TokenRepo.Object, Config, Secret.Object);
 
         public DependencyTrackAnalyticsService ScaAnalyticsService()
         {

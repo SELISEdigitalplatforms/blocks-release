@@ -3,9 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
 import {
+  useDeleteDeployment,
   useGetRepoDetails,
   useInitialRepoDeployment,
 } from "@/cross-modules/deployment/hooks/use-github-info";
+import { toast } from "@/hooks/use-toast";
 import { useGetMonitorListById } from "@/cross-modules/deployment/hooks/use-alerts";
 import { useProjectStore } from "@/store/project.store";
 
@@ -29,6 +31,7 @@ vi.mock("@/cross-modules/deployment/hooks/use-github-info", async (importOrigina
     ...actual,
     useGetRepoDetails: vi.fn(),
     useInitialRepoDeployment: vi.fn(),
+    useDeleteDeployment: vi.fn(),
   };
 });
 vi.mock("@/cross-modules/deployment/hooks/use-alerts", () => ({
@@ -55,6 +58,9 @@ const baseRepo = {
   customDeploymentUrl: "",
   deploymentType: "auto",
   lastDeploymentDate: "2024-01-01T00:00:00Z",
+  // Present means a live deployment: it is what the Delete control and the live URL key off.
+  deployedNamespace: "acme-dev-app",
+  lastDeploymentStatus: "Succeeded",
   deploySettings: {},
 };
 
@@ -113,6 +119,10 @@ describe("RepoDetails page", () => {
     vi.mocked(useGetMonitorListById).mockReturnValue({
       data: { data: [] },
       isLoading: false,
+    } as never);
+    vi.mocked(useDeleteDeployment).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
     } as never);
   });
 
@@ -486,6 +496,122 @@ describe("RepoDetails page", () => {
       nuqs: true,
     });
     expect(navigateMock).toHaveBeenCalled();
+  });
+
+  describe("delete deployment", () => {
+    const renderWithRepo = (repoOverrides = {}) => {
+      vi.mocked(useGetRepoDetails).mockReturnValue({
+        data: {
+          data: { repo: { ...baseRepo, ...repoOverrides }, build: [makeBuild()] },
+          isSuccess: true,
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as never);
+      return renderWithProviders(<RepoDetails />, {
+        route: "/app/deployment/repo/r1?tab=details",
+        nuqs: true,
+      });
+    };
+
+    it("offers Delete when a deployment is live", () => {
+      renderWithRepo();
+      expect(
+        screen.getByTestId("delete-deployment-button"),
+      ).toBeInTheDocument();
+    });
+
+    it("hides Delete when no namespace is recorded", () => {
+      // Never deployed, already deleted, or deployed before the namespace was captured -
+      // in every case there is nothing this page can delete.
+      renderWithRepo({ deployedNamespace: null });
+      expect(
+        screen.queryByTestId("delete-deployment-button"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("names the repository and URL in the modal and sends nothing until confirmed", () => {
+      const deleteMutate = vi.fn();
+      vi.mocked(useDeleteDeployment).mockReturnValue({
+        mutate: deleteMutate,
+        isPending: false,
+      } as never);
+      renderWithRepo();
+
+      fireEvent.click(screen.getByTestId("delete-deployment-button"));
+
+      const dialog = screen.getByRole("dialog");
+      expect(dialog).toHaveTextContent("Delete deployment?");
+      // The user must be told exactly which repository and which URL they are destroying.
+      expect(dialog).toHaveTextContent("app");
+      expect(dialog).toHaveTextContent("https://app.dev");
+      expect(dialog).toHaveTextContent("The site will stop responding");
+      // Opening the dialog must not be enough to destroy anything.
+      expect(deleteMutate).not.toHaveBeenCalled();
+    });
+
+    it("deletes the deployment for this repo once confirmed", () => {
+      const deleteMutate = vi.fn((_repoId, opts) => {
+        opts.onSuccess({ message: "Deployment deletion started." });
+        opts.onSettled();
+      });
+      vi.mocked(useDeleteDeployment).mockReturnValue({
+        mutate: deleteMutate,
+        isPending: false,
+      } as never);
+      renderWithRepo();
+
+      fireEvent.click(screen.getByTestId("delete-deployment-button"));
+      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+      expect(deleteMutate).toHaveBeenCalledWith("r1", expect.anything());
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: "success" }),
+      );
+    });
+
+    it("surfaces a failure instead of claiming the deployment is gone", () => {
+      const deleteMutate = vi.fn((_repoId, opts) => {
+        opts.onError({ errors: { message: "Forbidden (403)" } });
+        opts.onSettled();
+      });
+      vi.mocked(useDeleteDeployment).mockReturnValue({
+        mutate: deleteMutate,
+        isPending: false,
+      } as never);
+      renderWithRepo();
+
+      fireEvent.click(screen.getByTestId("delete-deployment-button"));
+      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: "destructive",
+          description: "Forbidden (403)",
+        }),
+      );
+    });
+
+    it("presents the repo as deleted once the namespace is cleared", () => {
+      const { container } = renderWithRepo({
+        deployedNamespace: null,
+        lastDeploymentStatus: "Deleted",
+      });
+
+      // Status comes from the repo record, not the build that survived the deletion.
+      const status = screen.getByTestId("deployment-status");
+      expect(status).toHaveTextContent("Deleted");
+      expect(status).not.toHaveTextContent("Succeeded");
+      // The URL is still shown for reference but is no longer a live link.
+      expect(screen.getByTestId("deploys-to-inactive")).toBeInTheDocument();
+      expect(
+        container.querySelector('a[href="https://app.dev"]'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("delete-deployment-button"),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("shows the missing parameters view when no project is selected", () => {

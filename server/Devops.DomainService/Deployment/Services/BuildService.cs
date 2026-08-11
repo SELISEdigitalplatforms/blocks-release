@@ -58,7 +58,7 @@ public class BuildService : IBuildService
             var blocksContext = BlocksContext.GetContext();
             var tenantId = string.IsNullOrWhiteSpace(blocksContext.TenantId) ? repo.ProjectId : blocksContext.TenantId;
             var blocksUserId = string.IsNullOrWhiteSpace(blocksContext.UserId) ? repo.CreatedBy : blocksContext.UserId;
-            var (pipelineRunNameGuid, buildImageName, errorMessage) = await _pipelineRunService.CreateNamespaceAsync(repo);
+            var (pipelineRunNameGuid, buildImageName, paramNamespace, errorMessage) = await _pipelineRunService.CreateNamespaceAsync(repo);
          
             if (pipelineRunNameGuid == null || buildImageName == null) 
             {
@@ -71,7 +71,14 @@ public class BuildService : IBuildService
                 };
             }
             var webhook = await _githubWebhookService.CreateWebhook(repo);
-            var repoUpdate = this.RepositoryUpdateForBuild(repo, request, webhook);
+            var repoUpdate = await this.RepositoryUpdateForBuild(repo, request, webhook, paramNamespace);
+
+            if (!repoUpdate)
+            {
+                // The namespace is the only handle the delete path will ever have on this deployment, so a
+                // failed write is worth shouting about even though the pipeline itself is already running.
+                _logger.LogError($"Failed to persist deployment namespace '{paramNamespace}' for repo {repo.ItemId}. Deleting this deployment from the product will not be possible until it is redeployed.");
+            }
 
             Build build = await SaveBuild(repo, request, buildImageName, blocksUserId, pipelineRunNameGuid);
 
@@ -111,6 +118,162 @@ public class BuildService : IBuildService
                 StatusCode = HttpStatusCode.BadRequest
             };
         }
+    }
+
+    /// <summary>
+    /// Tears a deployment down completely: cancels any in-flight build, deletes the Kubernetes namespace the
+    /// deployment owns, then clears the recorded namespace. The namespace acted on is only ever the one
+    /// captured at deploy time - it is never recomputed or derived.
+    /// </summary>
+    public async Task<BaseApiResponse> DeleteDeployment(string repoId)
+    {
+        if (string.IsNullOrWhiteSpace(repoId))
+        {
+            return new BaseApiResponse
+            {
+                IsSuccess = false,
+                StatusCode = HttpStatusCode.BadRequest,
+                Message = "Repo id is required"
+            };
+        }
+
+        var blocksContext = BlocksContext.GetContext();
+        var tenantId = blocksContext?.TenantId;
+        var blocksUserId = blocksContext?.UserId;
+
+        var repo = await _repoRepository.GetRepo(repoId, tenantId);
+        if (repo is null)
+        {
+            // 404 rather than 403 so a caller cannot probe for another tenant's repositories.
+            return new BaseApiResponse
+            {
+                IsSuccess = false,
+                StatusCode = HttpStatusCode.NotFound,
+                Message = "Repository not found."
+            };
+        }
+
+        var namespaceName = repo.DeployedNamespace;
+
+        if (string.IsNullOrWhiteSpace(namespaceName))
+        {
+            return new BaseApiResponse
+            {
+                IsSuccess = false,
+                StatusCode = HttpStatusCode.BadRequest,
+                Message = "This deployment has no recorded namespace. Redeploy the repository before deleting."
+            };
+        }
+
+        if (PipelineRunService.IsProtectedNamespace(namespaceName))
+        {
+            _logger.LogError($"Refused to delete protected namespace '{namespaceName}' recorded on repo {repoId}.");
+            return new BaseApiResponse
+            {
+                IsSuccess = false,
+                StatusCode = HttpStatusCode.BadRequest,
+                Message = $"Refusing to delete protected namespace '{namespaceName}'."
+            };
+        }
+
+        // Cancel first. A namespace deleted underneath a running pipeline gets recreated by its deploy-app
+        // step, leaving a live deployment the product believes is gone and can no longer reach.
+        var (cancelledBuilds, cancelFailure) = await CancelInFlightBuilds(repoId, tenantId);
+        if (cancelFailure is not null)
+        {
+            return new BaseApiResponse
+            {
+                IsSuccess = false,
+                StatusCode = HttpStatusCode.BadRequest,
+                Message = cancelFailure
+            };
+        }
+
+        var (deleted, alreadyGone, deleteError) = await _pipelineRunService.DeleteNamespaceAsync(namespaceName);
+        if (!deleted)
+        {
+            _logger.LogError($"Delete deployment failed. user={blocksUserId} tenant={tenantId} repo={repoId} namespace={namespaceName} outcome=k8s-rejected reason={deleteError}");
+            return new BaseApiResponse
+            {
+                IsSuccess = false,
+                StatusCode = HttpStatusCode.BadRequest,
+                Message = $"Failed to delete deployment: {deleteError}"
+            };
+        }
+
+        var cleared = await _repoRepository.ClearDeployedNamespace(repoId, tenantId, EventStatus.DELETED);
+        if (!cleared)
+        {
+            _logger.LogError($"Delete deployment partially failed. user={blocksUserId} tenant={tenantId} repo={repoId} namespace={namespaceName} outcome=db-write-failed");
+            return new BaseApiResponse
+            {
+                IsSuccess = false,
+                StatusCode = HttpStatusCode.BadRequest,
+                Message = "The deployment was removed from the cluster but its record could not be updated. Retry the delete to reconcile."
+            };
+        }
+
+        _logger.LogInformation($"Delete deployment succeeded. user={blocksUserId} tenant={tenantId} repo={repoId} namespace={namespaceName} alreadyGone={alreadyGone} cancelledBuilds={string.Join(",", cancelledBuilds)}");
+
+        var message = alreadyGone
+            ? "Deployment was already deleted."
+            : cancelledBuilds.Count > 0
+                ? "In-progress build cancelled. Deployment deletion started."
+                : "Deployment deletion started.";
+
+        return new BaseApiResponse
+        {
+            IsSuccess = true,
+            StatusCode = HttpStatusCode.OK,
+            Message = message,
+            Data = new
+            {
+                RepoId = repoId,
+                Namespace = namespaceName,
+                AlreadyGone = alreadyGone,
+                CancelledBuilds = cancelledBuilds
+            }
+        };
+    }
+
+    /// <summary>
+    /// Cancels every build of this repo that has not reached a terminal status.
+    /// </summary>
+    /// <returns>The PipelineRuns actually cancelled, and a failure message if any cancellation was rejected.</returns>
+    private async Task<(List<string> Cancelled, string Failure)> CancelInFlightBuilds(string repoId, string tenantId)
+    {
+        var cancelled = new List<string>();
+
+        var builds = await _buildRepository.GetBuilds(repoId);
+        if (builds is null || builds.Count == 0)
+            return (cancelled, null);
+
+        var inFlight = builds
+            .Where(build => !string.IsNullOrWhiteSpace(build.PipelineRunName)
+                            && !PipeLineTaskConstants.TermialStatus.Contains(build.Status, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var build in inFlight)
+        {
+            var (success, alreadyGone, error) = await _pipelineRunService.CancelPipelineRunAsync(build.PipelineRunName);
+
+            if (!success)
+            {
+                return (cancelled, $"Could not cancel the in-progress build '{build.PipelineRunName}': {error}. Deployment was not deleted.");
+            }
+
+            if (alreadyGone)
+            {
+                // The PipelineRun is gone, so nothing is running. Its recorded status is merely stale and we
+                // cannot tell what it finished as, so leave it rather than mislabelling a success as cancelled.
+                continue;
+            }
+
+            await _buildRepository.UpdateBuildStatus(build.PipelineRunName, EventStatus.CANCELLED, tenantId);
+            cancelled.Add(build.PipelineRunName);
+        }
+
+        return (cancelled, null);
     }
 
     public async Task<Build?> SaveBuild(Repo repo, BuildRequest request, string buildImageName, string blocksUserId, string pipelineRunNameGuid)
@@ -379,7 +542,7 @@ public class BuildService : IBuildService
         return result;
     }
 
-    private async Task<bool> RepositoryUpdateForBuild(Repo repo, BuildRequest request, GithubWebhook webhook)
+    private async Task<bool> RepositoryUpdateForBuild(Repo repo, BuildRequest request, GithubWebhook webhook, string paramNamespace = null)
     {
         DeploySettings deploySettings = null;
 
@@ -393,6 +556,13 @@ public class BuildService : IBuildService
             repo.DeploySettings = deploySettings;
         }
         repo.LastDeploymentDate = DateTime.UtcNow;
+
+        if (!string.IsNullOrWhiteSpace(paramNamespace))
+        {
+            // Stored verbatim from the builder. Never recompute this later - see PipelineRunSettings.ParamNamespace.
+            repo.DeployedNamespace = paramNamespace;
+        }
+
         if (webhook is not null)
         {
             repo.GithubWebhook = webhook;

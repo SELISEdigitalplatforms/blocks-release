@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -32,6 +34,8 @@ namespace XUnitTest.Devops.Deployment
         private readonly Mock<ICoreV1Operations> _coreV1 = new();
         private readonly Mock<ITokenRepository> _tokenRepository = new();
         private readonly Mock<ICloudBuildSecret> _secret = new();
+        private object _submittedPipelineRun;
+        private object _submittedPatch;
         private readonly IConfiguration _configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string>
             {
@@ -82,7 +86,29 @@ namespace XUnitTest.Devops.Deployment
                     It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
                     It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
                     It.IsAny<CancellationToken>()))
+                .Callback((object submitted, string _, string _, string _, string _, string _,
+                           string _, string _, bool? _,
+                           IReadOnlyDictionary<string, IReadOnlyList<string>> _, CancellationToken _) =>
+                    _submittedPipelineRun = submitted)
                 .ReturnsAsync(Response(body));
+
+        /// <summary>
+        /// Reads the `namespace` param straight out of the PipelineRun body that was submitted to Kubernetes,
+        /// so a test can assert the persisted namespace matches what Tekton was actually told.
+        /// </summary>
+        private string NamespaceParamOfSubmittedPipelineRun()
+        {
+            var spec = (_submittedPipelineRun as IDictionary<string, object>)?["spec"] as IDictionary<object, object>;
+            var paramList = spec?["params"] as IList<object>;
+
+            foreach (var item in paramList!.OfType<IDictionary<object, object>>())
+            {
+                if (item.TryGetValue("name", out var name) && name?.ToString() == "namespace")
+                    return item["value"]?.ToString();
+            }
+
+            return null;
+        }
 
         private void SetupPodLog(string logText) =>
             _coreV1
@@ -441,12 +467,223 @@ namespace XUnitTest.Devops.Deployment
             await act.Should().NotThrowAsync();
         }
 
+        // ---- DeleteNamespaceAsync ----
+
+        private static HttpOperationException K8sError(HttpStatusCode statusCode) =>
+            new("kubernetes rejected the request")
+            {
+                Response = new HttpResponseMessageWrapper(new HttpResponseMessage(statusCode), string.Empty)
+            };
+
+        private void SetupDeleteNamespace(V1Status body) =>
+            _coreV1
+                .Setup(c => c.DeleteNamespaceWithHttpMessagesAsync(
+                    It.IsAny<string>(), It.IsAny<V1DeleteOptions>(), It.IsAny<string>(),
+                    It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<bool?>(), It.IsAny<string>(),
+                    It.IsAny<bool?>(),
+                    It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Response(body));
+
+        private void SetupDeleteNamespaceThrows(Exception exception) =>
+            _coreV1
+                .Setup(c => c.DeleteNamespaceWithHttpMessagesAsync(
+                    It.IsAny<string>(), It.IsAny<V1DeleteOptions>(), It.IsAny<string>(),
+                    It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<bool?>(), It.IsAny<string>(),
+                    It.IsAny<bool?>(),
+                    It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                    It.IsAny<CancellationToken>()))
+                .ThrowsAsync(exception);
+
+        private void VerifyNoNamespaceDeleted() =>
+            _coreV1.Verify(c => c.DeleteNamespaceWithHttpMessagesAsync(
+                It.IsAny<string>(), It.IsAny<V1DeleteOptions>(), It.IsAny<string>(),
+                It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<bool?>(), It.IsAny<string>(),
+                It.IsAny<bool?>(),
+                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                It.IsAny<CancellationToken>()), Times.Never);
+
+        [Fact]
+        public async Task DeleteNamespaceAsync_Success_DeletesTheNamespace()
+        {
+            SetupDeleteNamespace(new V1Status { Status = "Success" });
+
+            var (success, alreadyGone, error) = await Service().DeleteNamespaceAsync("acme-dev-web");
+
+            success.Should().BeTrue();
+            alreadyGone.Should().BeFalse();
+            error.Should().BeNull();
+            _coreV1.Verify(c => c.DeleteNamespaceWithHttpMessagesAsync(
+                "acme-dev-web", It.IsAny<V1DeleteOptions>(), It.IsAny<string>(),
+                It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<bool?>(), It.IsAny<string>(),
+                It.IsAny<bool?>(),
+                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task DeleteNamespaceAsync_AlreadyGone_IsTreatedAsSuccess()
+        {
+            SetupDeleteNamespaceThrows(K8sError(HttpStatusCode.NotFound));
+
+            var (success, alreadyGone, error) = await Service().DeleteNamespaceAsync("acme-dev-web");
+
+            success.Should().BeTrue();
+            alreadyGone.Should().BeTrue();
+            error.Should().BeNull();
+        }
+
+        [Theory]
+        [InlineData("tekton-pipelines")]
+        [InlineData("TEKTON-PIPELINES")]
+        [InlineData("  tekton-pipelines  ")]
+        [InlineData("default")]
+        [InlineData("kube-system")]
+        [InlineData("kube-public")]
+        [InlineData("kube-node-lease")]
+        public async Task DeleteNamespaceAsync_ProtectedNamespace_IsRefusedWithoutCallingKubernetes(string namespaceName)
+        {
+            SetupDeleteNamespace(new V1Status { Status = "Success" });
+
+            var (success, alreadyGone, error) = await Service().DeleteNamespaceAsync(namespaceName);
+
+            success.Should().BeFalse();
+            alreadyGone.Should().BeFalse();
+            error.Should().Contain("Refusing to delete protected namespace");
+            VerifyNoNamespaceDeleted();
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task DeleteNamespaceAsync_MissingNamespace_IsRefusedWithoutCallingKubernetes(string namespaceName)
+        {
+            SetupDeleteNamespace(new V1Status { Status = "Success" });
+
+            var (success, _, error) = await Service().DeleteNamespaceAsync(namespaceName);
+
+            success.Should().BeFalse();
+            error.Should().Be("Namespace is required.");
+            VerifyNoNamespaceDeleted();
+        }
+
+        [Fact]
+        public async Task DeleteNamespaceAsync_Forbidden_SurfacesTheReason()
+        {
+            SetupDeleteNamespaceThrows(K8sError(HttpStatusCode.Forbidden));
+
+            var (success, alreadyGone, error) = await Service().DeleteNamespaceAsync("acme-dev-web");
+
+            success.Should().BeFalse();
+            alreadyGone.Should().BeFalse();
+            error.Should().Contain("403");
+        }
+
+        [Fact]
+        public async Task DeleteNamespaceAsync_NetworkFailure_SurfacesTheReason()
+        {
+            SetupDeleteNamespaceThrows(new HttpRequestException("cluster unreachable"));
+
+            var (success, _, error) = await Service().DeleteNamespaceAsync("acme-dev-web");
+
+            success.Should().BeFalse();
+            error.Should().Contain("cluster unreachable");
+        }
+
+        // ---- CancelPipelineRunAsync ----
+
+        private void SetupPatchCustomObject(object body) =>
+            _customObjects
+                .Setup(c => c.PatchNamespacedCustomObjectWithHttpMessagesAsync(
+                    It.IsAny<object>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+                    It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                    It.IsAny<CancellationToken>()))
+                .Callback((object patch, string _, string _, string _, string _, string _,
+                           string _, string _, string _, bool? _,
+                           IReadOnlyDictionary<string, IReadOnlyList<string>> _, CancellationToken _) =>
+                    _submittedPatch = patch)
+                .ReturnsAsync(Response(body));
+
+        private void SetupPatchCustomObjectThrows(Exception exception) =>
+            _customObjects
+                .Setup(c => c.PatchNamespacedCustomObjectWithHttpMessagesAsync(
+                    It.IsAny<object>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+                    It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                    It.IsAny<CancellationToken>()))
+                .ThrowsAsync(exception);
+
+        [Fact]
+        public async Task CancelPipelineRunAsync_PatchesSpecStatusToCancelled()
+        {
+            SetupPatchCustomObject(new Dictionary<string, object> { ["metadata"] = "patched" });
+
+            var (success, alreadyGone, error) = await Service().CancelPipelineRunAsync("run-1");
+
+            success.Should().BeTrue();
+            alreadyGone.Should().BeFalse();
+            error.Should().BeNull();
+
+            // Cancelling is a patch of spec.status - never a delete, which would lose the record
+            // and can orphan the pods the run started.
+            var spec = (_submittedPatch as IDictionary<string, object>)?["spec"] as IDictionary<string, object>;
+            spec?["status"].Should().Be("Cancelled");
+
+            _customObjects.Verify(c => c.PatchNamespacedCustomObjectWithHttpMessagesAsync(
+                It.IsAny<object>(), "tekton.dev", "v1beta1", "tekton-pipelines", "pipelineruns", "run-1",
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task CancelPipelineRunAsync_AlreadyGone_IsTreatedAsFinished()
+        {
+            SetupPatchCustomObjectThrows(K8sError(HttpStatusCode.NotFound));
+
+            var (success, alreadyGone, error) = await Service().CancelPipelineRunAsync("run-1");
+
+            success.Should().BeTrue();
+            alreadyGone.Should().BeTrue();
+            error.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task CancelPipelineRunAsync_Rejected_ReportsFailure()
+        {
+            SetupPatchCustomObjectThrows(K8sError(HttpStatusCode.Forbidden));
+
+            var (success, _, error) = await Service().CancelPipelineRunAsync("run-1");
+
+            success.Should().BeFalse();
+            error.Should().Contain("403");
+        }
+
+        [Fact]
+        public async Task CancelPipelineRunAsync_MissingName_IsRefusedWithoutCallingKubernetes()
+        {
+            var (success, _, error) = await Service().CancelPipelineRunAsync("  ");
+
+            success.Should().BeFalse();
+            error.Should().Be("PipelineRun name is required.");
+            _customObjects.Verify(c => c.PatchNamespacedCustomObjectWithHttpMessagesAsync(
+                It.IsAny<object>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                It.IsAny<CancellationToken>()), Times.Never);
+        }
+
         // ---- CreateNamespaceAsync ----
 
         [Fact]
         public async Task CreateNamespaceAsync_NullRepo_ReturnsNotFoundMessage()
         {
-            var (name, image, error) = await Service().CreateNamespaceAsync(null);
+            var (name, image, _, error) = await Service().CreateNamespaceAsync(null);
 
             name.Should().BeNull();
             image.Should().BeNull();
@@ -461,7 +698,7 @@ namespace XUnitTest.Devops.Deployment
 
             // Pins current behaviour: without an ambient context the tenant lookup throws and
             // the exception message is surfaced instead of a pipeline run name.
-            var (name, image, error) = await Service().CreateNamespaceAsync(NewRepo());
+            var (name, image, _, error) = await Service().CreateNamespaceAsync(NewRepo());
 
             name.Should().BeNull();
             image.Should().BeNull();
@@ -474,7 +711,7 @@ namespace XUnitTest.Devops.Deployment
             SetContext();
             _tokenRepository.Setup(t => t.getToken(It.IsAny<string>())).ReturnsAsync(string.Empty);
 
-            var (name, image, error) = await Service().CreateNamespaceAsync(NewRepo());
+            var (name, image, _, error) = await Service().CreateNamespaceAsync(NewRepo());
 
             name.Should().BeNull();
             image.Should().BeNull();
@@ -488,9 +725,12 @@ namespace XUnitTest.Devops.Deployment
             _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
             SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
 
-            var (name, image, error) = await Service().CreateNamespaceAsync(NewRepo());
+            var (name, image, deployedNamespace, error) = await Service().CreateNamespaceAsync(NewRepo());
 
             error.Should().BeNull();
+            // The returned namespace must be the exact value handed to Tekton as the `namespace` param -
+            // the delete path relies on it never being recomputed.
+            deployedNamespace.Should().Be(NamespaceParamOfSubmittedPipelineRun());
             // The repository name is sanitized and truncated to twenty characters.
             name.Should().StartWith("my-repository-with-a-");
             image.Should().StartWith("registry.example.com/my-project/my-repository-with-a-long-name:");
@@ -515,7 +755,7 @@ namespace XUnitTest.Devops.Deployment
                     It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new HttpRequestException("rejected"));
 
-            var (name, image, error) = await Service().CreateNamespaceAsync(NewRepo());
+            var (name, image, _, error) = await Service().CreateNamespaceAsync(NewRepo());
 
             name.Should().BeNull();
             image.Should().BeNull();
@@ -529,7 +769,7 @@ namespace XUnitTest.Devops.Deployment
             _tokenRepository.Setup(t => t.getToken("user-ctx")).ReturnsAsync("gh-token");
             SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
 
-            var (_, _, error) = await Service().CreateNamespaceAsync(NewRepo());
+            var (_, _, _, error) = await Service().CreateNamespaceAsync(NewRepo());
 
             error.Should().BeNull();
             // The repo was created by user-1, but the ambient context wins.
@@ -545,7 +785,7 @@ namespace XUnitTest.Devops.Deployment
             var repo = NewRepo();
             repo.RepoName = null;
 
-            var (name, image, error) = await Service().CreateNamespaceAsync(repo);
+            var (name, image, _, error) = await Service().CreateNamespaceAsync(repo);
 
             name.Should().BeNull();
             image.Should().BeNull();

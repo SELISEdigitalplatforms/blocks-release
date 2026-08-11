@@ -178,6 +178,21 @@ export const useInitialRepoDeployment = () => {
   });
 };
 
+export const useDeleteDeployment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (repoId: string) => githubInfoService.deleteDeployment(repoId),
+    onSuccess: (_data, repoId) => {
+      // Refetch so the page reflects the cleared deployment rather than the stale live one.
+      queryClient.invalidateQueries({ queryKey: ["repo-details", repoId] });
+    },
+    onError: (error) => {
+      console.error("Delete deployment failed:", error);
+    },
+  });
+};
+
 export const useManualDeployment = () => {
   const queryClient = useQueryClient();
 

@@ -36,6 +36,10 @@ export default defineConfig({
   // Patches a locally-built index.html so BLOCKS_RELEASE_BASE_URL points at
   // E2E_BASE_URL instead of the remote dev server. No-op against remote hosts.
   globalSetup: "./global-setup.ts",
+  // Removes the project the setup project created after the suite finishes.
+  // Best-effort: logs and continues if anything goes wrong, so cleanup
+  // failures never mask the real test result.
+  globalTeardown: "./global-teardown.ts",
   use: {
     baseURL,
     trace: "on-first-retry",

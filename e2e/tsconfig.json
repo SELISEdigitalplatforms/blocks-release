@@ -13,7 +13,8 @@
       "@/tests": ["tests/*"],
       "@/support/*": ["support/*"],
       "@/pages/*": ["pages/*"],
-      "@/constants/*": ["constants/*"]
+      "@/constants/*": ["constants/*"],
+      "@/fixtures/*": ["fixtures/*"]
     }
   },
   "include": ["**/*.ts"]

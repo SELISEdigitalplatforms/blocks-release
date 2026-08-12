@@ -149,6 +149,8 @@ public class BuildService : IBuildService
             };
         }
 
+        // Resolves through GetRepo, which excludes archived repositories on purpose: an id-driven caller
+        // must not be able to act on a repository that has been retired.
         var repo = await _repoRepository.GetRepo(repoId, tenantId);
         if (repo is null)
         {
@@ -161,6 +163,20 @@ public class BuildService : IBuildService
             };
         }
 
+        return await DeleteDeployment(repo, tenantId, blocksUserId);
+    }
+
+    /// <summary>
+    /// Tears down a repository the caller has already loaded. This is the form the queue-driven teardown
+    /// uses: it holds the <see cref="Repo"/> already, and re-resolving by id would send it back through
+    /// <see cref="IRepoRepository.GetRepo(string, string)"/>, which filters archived repositories out -
+    /// so a repository archived upstream could never have its namespace destroyed.
+    /// </summary>
+    public async Task<BaseApiResponse> DeleteDeployment(Repo repo, string? tenantId, string? blocksUserId = null)
+    {
+        ArgumentNullException.ThrowIfNull(repo);
+
+        var repoId = repo.ItemId;
         var namespaceName = repo.DeployedNamespace;
 
         if (string.IsNullOrWhiteSpace(namespaceName))
@@ -264,7 +280,9 @@ public class BuildService : IBuildService
     {
         var cancelled = new List<string>();
 
-        var builds = await _buildRepository.GetBuilds(repoId);
+        // Tenant-explicit: in the worker there is no ambient tenant to fall back on, and guessing one
+        // would read a different project's builds, find nothing in flight, and skip the cancel entirely.
+        var builds = await _buildRepository.GetBuilds(repoId, tenantId);
         if (builds is null || builds.Count == 0)
             return (cancelled, null);
 

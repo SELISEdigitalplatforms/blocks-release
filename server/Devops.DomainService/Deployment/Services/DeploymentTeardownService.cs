@@ -119,14 +119,23 @@ public class DeploymentTeardownService : IDeploymentTeardownService
     private async Task TearDownProjectAsync(string tenantId, string resourceId, DeploymentTeardownSummary summary)
     {
         var repos = await _repoRepository.GetProjectRepos(tenantId, resourceId);
-        if (repos.Count == 0)
+
+        // Archived repositories are in scope - blocks-os archives before it publishes - but one that is
+        // both archived and holds no namespace was already settled by an earlier run. Skipping those
+        // keeps a repeated group teardown from rewriting every repository the project ever had.
+        var actionable = repos
+            .Where(repo => !repo.IsArchived || !string.IsNullOrWhiteSpace(repo.DeployedNamespace))
+            .ToList();
+
+        if (actionable.Count == 0)
         {
             _logger.LogInformation(
-                "No live repositories matched in project {ProjectId} (resource={ResourceId}).", tenantId, resourceId);
+                "Nothing left to tear down in project {ProjectId} (resource={ResourceId}, {RepoCount} repositories already settled).",
+                tenantId, resourceId, repos.Count);
             return;
         }
 
-        foreach (var repo in repos)
+        foreach (var repo in actionable)
         {
             summary.ReposMatched++;
             await TearDownRepoAsync(repo, tenantId, summary);
@@ -144,7 +153,9 @@ public class DeploymentTeardownService : IDeploymentTeardownService
         {
             if (!string.IsNullOrWhiteSpace(repo.DeployedNamespace))
             {
-                var result = await _buildService.DeleteDeployment(repo.ItemId, tenantId, repo.CreatedBy);
+                // Passes the loaded repo, not its id. Resolving by id would go back through GetRepo,
+                // which filters archived repositories out - and archived is the normal case here.
+                var result = await _buildService.DeleteDeployment(repo, tenantId, repo.CreatedBy);
 
                 if (!result.IsSuccess)
                 {

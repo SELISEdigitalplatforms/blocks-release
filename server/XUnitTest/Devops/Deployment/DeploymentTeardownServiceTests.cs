@@ -1,9 +1,14 @@
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Genesis;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Shared.Models;
 using FluentAssertions;
+using k8s.Autorest;
+using k8s.Models;
 using Moq;
 using Xunit;
 
@@ -25,13 +30,15 @@ namespace XUnitTest.Devops.Deployment
 
         private readonly DeploymentServiceFactory _f = new();
 
-        private static Repo NewRepo(string itemId, string projectId, string resourceId, string deployedNamespace = null) => new()
+        private static Repo NewRepo(string itemId, string projectId, string resourceId,
+                                   string deployedNamespace = null, bool isArchived = false) => new()
         {
             ItemId = itemId,
             ProjectId = projectId,
             SourceRepoId = resourceId,
             RepoName = "org/" + itemId,
-            DeployedNamespace = deployedNamespace
+            DeployedNamespace = deployedNamespace,
+            IsArchived = isArchived
         };
 
         // Only TenantId and TenantGroupId are read here; the required members are satisfied but never used.
@@ -60,6 +67,27 @@ namespace XUnitTest.Devops.Deployment
             _f.TenantLookup.Setup(t => t.GetProjectAsync(tenantId)).ReturnsAsync(NewProject(tenantId, GroupId));
             SetupProject(tenantId, repos);
         }
+
+        private static HttpOperationResponse<T> Response<T>(T body) =>
+            new() { Body = body, Request = new HttpRequestMessage(), Response = new HttpResponseMessage(HttpStatusCode.OK) };
+
+        private void GivenNamespaceDeleteSucceeds() =>
+            _f.CoreV1
+                .Setup(c => c.DeleteNamespaceWithHttpMessagesAsync(
+                    It.IsAny<string>(), It.IsAny<V1DeleteOptions>(), It.IsAny<string>(),
+                    It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<bool?>(), It.IsAny<string>(),
+                    It.IsAny<bool?>(),
+                    It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Response(new V1Status { Status = "Success" }));
+
+        private void VerifyNamespaceDeleted(string namespaceName) =>
+            _f.CoreV1.Verify(c => c.DeleteNamespaceWithHttpMessagesAsync(
+                namespaceName, It.IsAny<V1DeleteOptions>(), It.IsAny<string>(),
+                It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<bool?>(), It.IsAny<string>(),
+                It.IsAny<bool?>(),
+                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                It.IsAny<CancellationToken>()), Times.Once);
 
         private void SetupGroup(params string[] tenantIds)
         {
@@ -245,6 +273,74 @@ namespace XUnitTest.Devops.Deployment
 
             summary.ProjectsVisited.Should().Be(0);
             _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
+        /// <summary>
+        /// The case blocks-os actually produces: it archives on its own side, then publishes. The repo
+        /// arrives already archived with its namespace still recorded, and the namespace must still go.
+        /// Resolving by id here would send it back through GetRepo, which filters archived repos out.
+        /// </summary>
+        [Fact]
+        public async Task RepoAlreadyArchivedUpstream_StillHasItsNamespaceTornDown()
+        {
+            var repo = NewRepo("repo-1", ProjectId, "res-1", deployedNamespace: "ns-live", isArchived: true);
+            SetupProjectInGroup(ProjectId, repo);
+            GivenNamespaceDeleteSucceeds();
+            _f.BuildRepo.Setup(b => b.GetBuilds("repo-1", ProjectId)).ReturnsAsync(new List<Build>());
+            _f.RepoRepo.Setup(r => r.ClearDeployedNamespace("repo-1", ProjectId, It.IsAny<string>())).ReturnsAsync(true);
+
+            var summary = await _f.DeploymentTeardownService()
+                .TearDownAsync(new ProjectDeleteQueue { TenantGroupId = GroupId, ProjectId = ProjectId });
+
+            summary.ReposMatched.Should().Be(1);
+            summary.DeploymentsDeleted.Should().Be(1);
+            summary.ReposArchived.Should().Be(1);
+            summary.HasFailures.Should().BeFalse();
+            VerifyNamespaceDeleted("ns-live");
+            // Never re-resolved by id - that path filters archived repositories out.
+            _f.RepoRepo.Verify(r => r.GetRepo("repo-1", ProjectId), Times.Never);
+        }
+
+        /// <summary>
+        /// The cancel-before-delete step must read builds from the project being torn down. In the worker
+        /// there is no ambient tenant, so an ambient read would either throw or hit the publisher's
+        /// database, find nothing in flight, and let the namespace be deleted under a running pipeline -
+        /// which deploy-app would then recreate.
+        /// </summary>
+        [Fact]
+        public async Task Teardown_ReadsInFlightBuildsFromTheProjectBeingTornDown()
+        {
+            var repo = NewRepo("repo-1", ProjectId, "res-1", deployedNamespace: "ns-live");
+            SetupProjectInGroup(ProjectId, repo);
+            GivenNamespaceDeleteSucceeds();
+            _f.BuildRepo.Setup(b => b.GetBuilds("repo-1", ProjectId)).ReturnsAsync(new List<Build>());
+            _f.RepoRepo.Setup(r => r.ClearDeployedNamespace("repo-1", ProjectId, It.IsAny<string>())).ReturnsAsync(true);
+
+            var summary = await _f.DeploymentTeardownService()
+                .TearDownAsync(new ProjectDeleteQueue { TenantGroupId = GroupId, ProjectId = ProjectId });
+
+            summary.DeploymentsDeleted.Should().Be(1);
+            _f.BuildRepo.Verify(b => b.GetBuilds("repo-1", ProjectId), Times.Once);
+        }
+
+        /// <summary>
+        /// Archived with no namespace means an earlier run already settled it. Re-running a group
+        /// teardown must not rewrite every repository the project has ever had.
+        /// </summary>
+        [Fact]
+        public async Task RepoAlreadyArchivedAndAlreadyTornDown_IsSkippedEntirely()
+        {
+            SetupProjectInGroup(ProjectId,
+                NewRepo("repo-1", ProjectId, "res-1", isArchived: true),
+                NewRepo("repo-2", ProjectId, "res-2"));
+
+            var summary = await _f.DeploymentTeardownService()
+                .TearDownAsync(new ProjectDeleteQueue { TenantGroupId = GroupId, ProjectId = ProjectId });
+
+            summary.ReposMatched.Should().Be(1);
+            summary.ReposArchived.Should().Be(1);
+            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-2", ProjectId), Times.Once);
+            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-1", ProjectId), Times.Never);
         }
 
         /// <summary>A repository that was never deployed has no namespace to destroy, but is still retired.</summary>

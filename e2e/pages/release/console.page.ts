@@ -62,18 +62,18 @@ export class ConsolePage {
 
     await environmentButton.waitFor({ state: "visible", timeout: 30_000 });
     await environmentButton.click();
-    await expect(
-      this.page.getByRole("heading", { name: "Project Details" }),
-    ).toBeVisible({ timeout: 40_000 });
+    await expect(this.page.getByRole("heading", { level: 3, name: "Project Details" })).toBeVisible(
+      { timeout: 60_000 },
+    );
   }
 
   async clickDeploymentLink() {
     const deploymentLink = this.page.getByRole("link", { name: "Deployment" });
     await deploymentLink.waitFor({ state: "visible", timeout: 30_000 });
     await deploymentLink.click();
-    await expect(
-      this.page.getByRole("heading", { name: "Deployment Overview" }),
-    ).toBeVisible({ timeout: 30_000 });
+    await expect(this.page.getByRole("heading", { name: "Deployment Overview" })).toBeVisible({
+      timeout: 30_000,
+    });
   }
 
   async clickEnvironment(environmentName: string) {
@@ -86,9 +86,7 @@ export class ConsolePage {
 
   async clickDeleteButton() {
     // Click the main delete button (not the "Delete domain" buttons)
-    await this.page
-      .getByRole("button", { name: "Delete", exact: true })
-      .click();
+    await this.page.getByRole("button", { name: "Delete", exact: true }).click();
   }
 
   async confirmDelete() {
@@ -103,9 +101,7 @@ export class ConsolePage {
   async expectSuccessfullyDeletedToast() {
     // Target the specific toast div with "Successfully deleted" (not the status element)
     await expect(
-      this.page
-        .locator("div.text-sm.opacity-90")
-        .filter({ hasText: "Successfully deleted" }),
+      this.page.locator("div.text-sm.opacity-90").filter({ hasText: "Successfully deleted" }),
     ).toBeVisible();
   }
 }

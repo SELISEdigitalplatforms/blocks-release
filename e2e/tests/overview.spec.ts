@@ -31,7 +31,7 @@ test.describe("overview", () => {
     const skeletons = page.locator('[class*="animate-pulse"]');
     await expect(skeletons.first()).toBeVisible({ timeout: 60000 });
 
-    await expect(page.getByRole("heading", { name: "Project Details" })).toBeVisible({
+    await expect(page.getByRole("heading", { level: 3, name: "Project Details" })).toBeVisible({
       timeout: 10000,
     });
 
@@ -115,7 +115,7 @@ test.describe("overview", () => {
     }
 
     await productionCard.click();
-    await expect(page.getByRole("heading", { name: "Project Details" })).toBeVisible({
+    await expect(page.getByRole("heading", { level: 3, name: "Project Details" })).toBeVisible({
       timeout: 30000,
     });
 
@@ -148,7 +148,7 @@ test.describe("overview", () => {
   }) => {
     // NOTE: assumes the current project has a custom domain configured.
     // The check runs in the background via useEffect; the page must simply keep rendering normally.
-    await expect(page.getByRole("heading", { name: "Project Details" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 3, name: "Project Details" })).toBeVisible();
     await expect(page.getByText("Name", { exact: true })).toBeVisible();
   });
 

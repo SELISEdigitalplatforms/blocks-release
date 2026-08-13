@@ -10,6 +10,7 @@ using Devops.DomainService.Shared.Entities;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using Moq;
 using Xunit;
 
@@ -289,6 +290,172 @@ namespace XUnitTest.Integration
                 var result = await sut.GetReposWithBuildsAsync(projectId);
                 result.Should().ContainSingle(r => r.ItemId == repo.ItemId);
                 result.First(r => r.ItemId == repo.ItemId).Builds.Should().HaveCount(1);
+            }
+            finally
+            {
+                BlocksContext.ClearContext();
+            }
+        }
+
+        /// <summary>
+        /// Archives an already-saved repo the way the write paths do, through the full-document replace,
+        /// so the flag lands in Mongo exactly as production would write it.
+        /// </summary>
+        private static async Task Archive(RepoRepository sut, Repo repo)
+        {
+            repo.IsArchived = true;
+            (await sut.UpdateRepo(repo)).Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task GetRepo_SkipsAnArchivedRepository()
+        {
+            var repo = NewRepo();
+            var sut = CreateRepo();
+            await sut.SaveRepo(repo);
+            (await sut.GetRepo(repo.ItemId)).Should().NotBeNull();
+
+            await Archive(sut, repo);
+
+            (await sut.GetRepo(repo.ItemId)).Should().BeNull();
+            (await sut.GetRepo(repo.ItemId, "any-tenant")).Should().BeNull();
+        }
+
+        [Fact]
+        public async Task GetRepoByBranch_SkipsAnArchivedRepository()
+        {
+            var repo = NewRepo();
+            var sut = CreateRepo();
+            await sut.SaveRepo(repo);
+            await Archive(sut, repo);
+
+            (await sut.GetRepoByBranch("tenant", repo.RepoName, "main")).Should().BeNull();
+        }
+
+        [Fact]
+        public async Task GetRepos_ExcludesArchivedRepositories()
+        {
+            var projectId = Guid.NewGuid().ToString("N");
+            var live = NewRepo(projectId);
+            var archived = NewRepo(projectId);
+            var sut = CreateRepo();
+            await sut.SaveRepo(live);
+            await sut.SaveRepo(archived);
+            await Archive(sut, archived);
+
+            var all = await sut.GetRepos();
+
+            all.Select(r => r.ItemId).Should().Contain(live.ItemId).And.NotContain(archived.ItemId);
+        }
+
+        /// <summary>
+        /// Repos written before IsArchived existed carry no such key. The read filter is Ne(true) rather than
+        /// Eq(false) precisely so those documents keep showing up; an equality filter would hide every one of them.
+        /// </summary>
+        [Fact]
+        public async Task GetRepos_StillReturnsDocumentsWrittenBeforeTheArchiveFlagExisted()
+        {
+            var legacyId = Guid.NewGuid().ToString("N");
+            var projectId = Guid.NewGuid().ToString("N");
+            await _fixture.Collection<BsonDocument>("Repos").InsertOneAsync(new BsonDocument
+            {
+                { "_id", legacyId },
+                { "ProjectId", projectId },
+                { "RepoName", "org/legacy" },
+                { "Branch", "main" }
+            });
+
+            var fetched = await CreateRepo().GetRepo(legacyId);
+
+            fetched.Should().NotBeNull();
+            fetched.IsArchived.Should().BeFalse();
+            (await CreateRepo().GetRepos()).Select(r => r.ItemId).Should().Contain(legacyId);
+        }
+
+        /// <summary>
+        /// The queue-driven teardown reads a project's repositories out of that project's own tenant
+        /// database, with no ambient tenant context, so this pins the tenant scoping and the resource filter.
+        ///
+        /// Unlike every other read, archived repositories are deliberately included: blocks-os archives
+        /// before it publishes the delete, so filtering them out would leave their namespaces running.
+        /// </summary>
+        [Fact]
+        public async Task GetProjectRepos_ReturnsEveryRepoOfTheProjectIncludingArchivedOnes()
+        {
+            var projectId = Guid.NewGuid().ToString("N");
+            var sut = CreateRepo();
+
+            var first = NewRepo(projectId);
+            first.SourceRepoId = "res-1";
+            var second = NewRepo(projectId);
+            second.SourceRepoId = "res-2";
+            var archived = NewRepo(projectId);
+            archived.SourceRepoId = "res-3";
+            var otherProject = NewRepo();
+            otherProject.SourceRepoId = "res-1";
+
+            foreach (var repo in new[] { first, second, archived, otherProject })
+                await sut.SaveRepo(repo);
+            await Archive(sut, archived);
+
+            var all = await sut.GetProjectRepos(projectId);
+            all.Select(r => r.ItemId).Should()
+               .BeEquivalentTo(new[] { first.ItemId, second.ItemId, archived.ItemId });
+            all.Should().ContainSingle(r => r.ItemId == archived.ItemId && r.IsArchived);
+
+            var narrowed = await sut.GetProjectRepos(projectId, "res-2");
+            narrowed.Select(r => r.ItemId).Should().Equal(second.ItemId);
+
+            // An archived repository is still reachable by its resource id - that is the teardown case.
+            (await sut.GetProjectRepos(projectId, "res-3")).Select(r => r.ItemId).Should().Equal(archived.ItemId);
+            (await sut.GetProjectRepos(projectId, "no-such-resource")).Should().BeEmpty();
+        }
+
+        /// <summary>
+        /// Archiving hides a repository from every user-facing read. GetProjectRepos is the one exception,
+        /// and is asserted separately above.
+        /// </summary>
+        [Fact]
+        public async Task ArchiveRepo_HidesTheRepoFromEveryUserFacingRead()
+        {
+            var repo = NewRepo();
+            var sut = CreateRepo();
+            await sut.SaveRepo(repo);
+
+            (await sut.ArchiveRepo(repo.ItemId, "any-tenant")).Should().BeTrue();
+
+            (await sut.GetRepo(repo.ItemId)).Should().BeNull();
+            (await sut.GetRepo(repo.ItemId, "any-tenant")).Should().BeNull();
+            (await sut.GetRepos()).Select(r => r.ItemId).Should().NotContain(repo.ItemId);
+        }
+
+        [Fact]
+        public async Task ArchiveRepo_UnknownRepo_ReturnsFalse()
+        {
+            (await CreateRepo().ArchiveRepo("no-such-repo", "any-tenant")).Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task GetReposWithBuildsAsync_ExcludesArchivedRepositories()
+        {
+            var userId = Guid.NewGuid().ToString("N");
+            var projectId = Guid.NewGuid().ToString("N");
+            var live = NewRepo(projectId, userId);
+            var archived = NewRepo(projectId, userId);
+            var sut = CreateRepo();
+            await sut.SaveRepo(live);
+            await sut.SaveRepo(archived);
+            await Archive(sut, archived);
+
+            BlocksContext.SetContext(BlocksContext.Create(
+                "tenant", new[] { "role" }, userId, true, "uri", "org",
+                DateTime.UtcNow.AddHours(1), "e@x.com", new[] { "perm" }, "octo",
+                "phone", "display", "oauth", "tenant"));
+            try
+            {
+                var result = await sut.GetReposWithBuildsAsync(projectId);
+
+                result.Select(r => r.ItemId).Should().Contain(live.ItemId).And.NotContain(archived.ItemId);
             }
             finally
             {

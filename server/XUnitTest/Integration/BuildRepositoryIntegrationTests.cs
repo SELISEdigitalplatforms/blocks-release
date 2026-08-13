@@ -63,7 +63,7 @@ namespace XUnitTest.Integration
             var build = NewBuild();
             var sut = CreateRepo();
             await sut.SaveBuild(build);
-            var builds = await sut.GetBuilds(build.RepoId);
+            var builds = await sut.GetBuilds(build.RepoId, "any-tenant");
             builds.Should().ContainSingle(b => b.ItemId == build.ItemId);
         }
 

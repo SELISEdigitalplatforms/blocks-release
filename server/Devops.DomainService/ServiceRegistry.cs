@@ -32,6 +32,7 @@ public static class ServiceRegistry
         services.AddTransient<ITokenRepository, TokenRepository>();
         services.AddTransient<IBuildRepository, BuildRepository>();
         services.AddTransient<IRepoRepository, RepoRepository>();
+        services.AddTransient<ITenantLookupRepository, TenantLookupRepository>();
 
         services.AddScoped<IAuthService,AuthService>();
         services.AddScoped<IVersionControlService, GithubService>();
@@ -39,6 +40,7 @@ public static class ServiceRegistry
         services.AddScoped<LogRetrievalService>();
         services.AddScoped<BuildService>();
         services.AddScoped<IBuildService, BuildService>();
+        services.AddScoped<IDeploymentTeardownService, DeploymentTeardownService>();
         
         services.AddScoped<TestReportService>();
         services.AddScoped<SASTStrategy>();

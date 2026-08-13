@@ -106,3 +106,18 @@ export interface IHttpError extends Error {
   status: number;
   errors: IRepoDetailsApiErrorResponse;
 }
+
+export interface IDeleteDeploymentResponse {
+  data: {
+    repoId: string;
+    namespace: string;
+    /** True when the namespace was already gone; the delete is idempotent. */
+    alreadyGone: boolean;
+    /** PipelineRuns that had to be cancelled before the namespace could be removed. */
+    cancelledBuilds: string[];
+  } | null;
+  message: string | null;
+  statusCode: number;
+  errors: unknown;
+  isSuccess: boolean;
+}

@@ -20,6 +20,9 @@ public class RepoRepository : IRepoRepository
     private readonly IConfiguration _configuration;
     private readonly IBlocksSecret _blocksSecret;
 
+    private static readonly FilterDefinition<Repo> NotArchived =
+        Builders<Repo>.Filter.Ne(r => r.IsArchived, true);
+
     public RepoRepository(IDbContextProvider dbContextProvider, IConfiguration configuration, ILogger<RepoRepository> logger, IBlocksSecret blocksSecret)
     {
         _logger = logger;
@@ -31,7 +34,7 @@ public class RepoRepository : IRepoRepository
     public async Task<Repo?> GetRepo(string repoId)
     {
         var collection = _dbContextProvider.GetCollection<Repo>("Repos");
-        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId) & NotArchived;
         var repo = await collection.Find(filter).FirstOrDefaultAsync();
         return repo;
     }
@@ -40,7 +43,7 @@ public class RepoRepository : IRepoRepository
     {
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
         var collection = _dbContext.GetCollection<Repo>("Repos");
-        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId) & NotArchived;
         var repo = await collection.Find(filter).FirstOrDefaultAsync();
         return repo;
     }
@@ -50,7 +53,8 @@ public class RepoRepository : IRepoRepository
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
         var collection = _dbContext.GetCollection<Repo>("Repos");
         var filter = Builders<Repo>.Filter.Eq(r => r.RepoName, repoFullName) &
-                     Builders<Repo>.Filter.Eq(r => r.Branch, branch);
+                     Builders<Repo>.Filter.Eq(r => r.Branch, branch) &
+                     NotArchived;
         var repo = await collection.Find(filter).FirstOrDefaultAsync();
         return repo;
     }
@@ -58,7 +62,7 @@ public class RepoRepository : IRepoRepository
     public async Task<List<Repo>?> GetRepos()
     {
         var collection = _dbContextProvider.GetCollection<Repo>("Repos");
-        return await collection.Find(_ => true).ToListAsync();
+        return await collection.Find(NotArchived).ToListAsync();
     }
 
     public async Task<List<Build>?> GetRepoBuildList(string repoId)
@@ -74,9 +78,12 @@ public class RepoRepository : IRepoRepository
         var blocksUserId = BlocksContext.GetContext().UserId;
         var repoCollection = _dbContextProvider.GetCollection<Repo>("Repos");
         var buildsCollection = _dbContextProvider.GetCollection<Build>("Builds");
+        var repoFilter = Builders<Repo>.Filter.Eq(r => r.BlocksUserId, blocksUserId) &
+                         Builders<Repo>.Filter.Eq(r => r.ProjectId, projectId) &
+                         NotArchived;
+
         var pipeline = repoCollection.Aggregate()                        // FROM repos
-            .Match(r => r.BlocksUserId == blocksUserId &&
-                        r.ProjectId == projectId)          // only this user
+            .Match(repoFilter)                             // only this user, archived repos excluded
             .Lookup<Repo, Build, RepoWithBuildsResponse>(                // JOIN builds
                 foreignCollection: buildsCollection,
                 localField: r => r.ItemId,
@@ -213,6 +220,92 @@ public class RepoRepository : IRepoRepository
         var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repo.ItemId);
         var result = await collection.ReplaceOneAsync(filter, repo, cancellationToken: default);
         return result.MatchedCount == 1;
+    }
+
+    /// <summary>
+    /// Clears the recorded deployment namespace and stamps the display status, in one atomic update against
+    /// the caller's tenant database - the same database <see cref="GetRepo(string, string)"/> reads from.
+    /// UpdateRepo(RepoUpdateRequest, tenantId) cannot be reused here: it skips null values, so it cannot clear a field.
+    /// </summary>
+    public async Task<bool> ClearDeployedNamespace(string repoId, string tenantId, string lastDeploymentStatus)
+    {
+        try
+        {
+            var _dbContext = _dbContextProvider.GetDatabase(tenantId);
+            var collection = _dbContext.GetCollection<Repo>("Repos");
+
+            var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+            var update = Builders<Repo>.Update
+                .Set(r => r.DeployedNamespace, null)
+                .Set(r => r.LastDeploymentStatus, lastDeploymentStatus);
+
+            var result = await collection.UpdateOneAsync(filter, update);
+            return result.MatchedCount == 1;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to clear deployed namespace for repo {RepoId}.", repoId);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Every repository of one project, read from that project's own tenant database rather than the
+    /// caller's - the queue-driven teardown has no ambient tenant context to fall back on.
+    /// Passing a resourceId narrows to the repository imported from that resource.
+    ///
+    /// Deliberately NOT filtered by <see cref="NotArchived"/>, unlike every other read here. blocks-os
+    /// archives a repository on its own side before it publishes the delete, so an archived repository
+    /// is the normal case for teardown - filtering them out would leave their namespaces running with
+    /// nothing left in any list to find them by. This is the one read whose job is not to answer
+    /// "what should the user see".
+    /// </summary>
+    public async Task<List<Repo>> GetProjectRepos(string tenantId, string? resourceId = null)
+    {
+        try
+        {
+            var _dbContext = _dbContextProvider.GetDatabase(tenantId);
+            var collection = _dbContext.GetCollection<Repo>("Repos");
+
+            var filter = Builders<Repo>.Filter.Eq(r => r.ProjectId, tenantId);
+
+            if (!string.IsNullOrWhiteSpace(resourceId))
+                filter &= Builders<Repo>.Filter.Eq(r => r.SourceRepoId, resourceId);
+
+            return await collection.Find(filter).ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to read repositories for project {ProjectId}.", tenantId);
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Marks a repository archived so it drops out of every read. Deliberately separate from
+    /// <see cref="ClearDeployedNamespace"/>: tearing a deployment down and retiring the repository
+    /// are different decisions, and the interactive delete-deployment path only does the former.
+    /// </summary>
+    public async Task<bool> ArchiveRepo(string repoId, string tenantId)
+    {
+        try
+        {
+            var _dbContext = _dbContextProvider.GetDatabase(tenantId);
+            var collection = _dbContext.GetCollection<Repo>("Repos");
+
+            var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+            var update = Builders<Repo>.Update
+                .Set(r => r.IsArchived, true)
+                .Set(r => r.LastUpdatedDate, DateTime.UtcNow);
+
+            var result = await collection.UpdateOneAsync(filter, update);
+            return result.MatchedCount == 1;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to archive repo {RepoId}.", repoId);
+            return false;
+        }
     }
 
     public async Task<BulkOperationSummary> UpdateRepoDomain(RepoDomainUpdateRequest request)

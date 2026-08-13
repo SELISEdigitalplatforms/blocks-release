@@ -11,9 +11,7 @@ function getHttpsConfig(): false | { key: Buffer; cert: Buffer } {
   const keyPath = process.env.RELEASE_SSL_KEY;
 
   if (!certPath || !keyPath) {
-    console.error(
-      "[vite] RELEASE_SSL_CERT / RELEASE_SSL_KEY not set - serving over HTTP.",
-    );
+    console.error("[vite] RELEASE_SSL_CERT / RELEASE_SSL_KEY not set - serving over HTTP.");
     return false;
   }
 
@@ -48,31 +46,13 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./app"),
         "@blocks-idp": path.resolve(__dirname, "./app/cross-modules/idp"),
         "@blocks-lmt": path.resolve(__dirname, "./app/cross-modules/lmt"),
-        "@blocks-storage": path.resolve(
-          __dirname,
-          "./app/cross-modules/storage",
-        ),
-        "@blocks-communication": path.resolve(
-          __dirname,
-          "./app/cross-modules/communication",
-        ),
-        "@blocks-identifier": path.resolve(
-          __dirname,
-          "./app/cross-modules/identifier",
-        ),
-        "@blocks-localization": path.resolve(
-          __dirname,
-          "./app/cross-modules/localization",
-        ),
-        "@blocks-utilities": path.resolve(
-          __dirname,
-          "./app/cross-modules/utilities",
-        ),
+        "@blocks-storage": path.resolve(__dirname, "./app/cross-modules/storage"),
+        "@blocks-communication": path.resolve(__dirname, "./app/cross-modules/communication"),
+        "@blocks-identifier": path.resolve(__dirname, "./app/cross-modules/identifier"),
+        "@blocks-localization": path.resolve(__dirname, "./app/cross-modules/localization"),
+        "@blocks-utilities": path.resolve(__dirname, "./app/cross-modules/utilities"),
         "@blocks-ai": path.resolve(__dirname, "./app/cross-modules/ai"),
-        "@blocks-deployment": path.resolve(
-          __dirname,
-          "./app/cross-modules/deployment",
-        ),
+        "@blocks-deployment": path.resolve(__dirname, "./app/cross-modules/deployment"),
       },
     },
     build: {
@@ -80,7 +60,6 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
     },
     server: {
-
       host: devHost, // Listen on all addresses or configured host
       port: 4000,
       strictPort: true,

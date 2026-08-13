@@ -42,6 +42,40 @@ export class ConsolePage {
     await settingsButton.click();
   }
 
+  async clickProjectEnvironment(projectName: string, environmentName: string) {
+    // Find the project card (a div containing the project name), then click the
+    // environment button inside it. Matches the existing console UI: each
+    // project has one button per environment (Development / Testing / ...).
+    const projectCard = this.page
+      .locator("div")
+      .filter({ has: this.page.getByText(projectName, { exact: false }) })
+      .filter({
+        has: this.page.getByRole("button", {
+          name: new RegExp(`^${environmentName}$`),
+        }),
+      })
+      .first();
+
+    const environmentButton = projectCard
+      .getByRole("button", { name: new RegExp(`^${environmentName}$`) })
+      .first();
+
+    await environmentButton.waitFor({ state: "visible", timeout: 30_000 });
+    await environmentButton.click();
+    await expect(this.page.getByRole("heading", { level: 3, name: "Project Details" })).toBeVisible(
+      { timeout: 60_000 },
+    );
+  }
+
+  async clickDeploymentLink() {
+    const deploymentLink = this.page.getByRole("link", { name: "Deployment" });
+    await deploymentLink.waitFor({ state: "visible", timeout: 30_000 });
+    await deploymentLink.click();
+    await expect(this.page.getByRole("heading", { name: "Deployment Overview" })).toBeVisible({
+      timeout: 30_000,
+    });
+  }
+
   async clickEnvironment(environmentName: string) {
     await this.page
       .locator("div")
@@ -52,9 +86,7 @@ export class ConsolePage {
 
   async clickDeleteButton() {
     // Click the main delete button (not the "Delete domain" buttons)
-    await this.page
-      .getByRole("button", { name: "Delete", exact: true })
-      .click();
+    await this.page.getByRole("button", { name: "Delete", exact: true }).click();
   }
 
   async confirmDelete() {
@@ -69,9 +101,7 @@ export class ConsolePage {
   async expectSuccessfullyDeletedToast() {
     // Target the specific toast div with "Successfully deleted" (not the status element)
     await expect(
-      this.page
-        .locator("div.text-sm.opacity-90")
-        .filter({ hasText: "Successfully deleted" }),
+      this.page.locator("div.text-sm.opacity-90").filter({ hasText: "Successfully deleted" }),
     ).toBeVisible();
   }
 }

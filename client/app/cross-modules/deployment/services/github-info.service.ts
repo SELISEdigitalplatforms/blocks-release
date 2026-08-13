@@ -5,6 +5,7 @@ import {
   IBranch,
   IBranchMatchResponse,
   ICloneRepo,
+  IDeleteDeploymentResponse,
   IRepository,
   IRepositoryUser,
 } from "@blocks-deployment/models/github-info";
@@ -145,6 +146,11 @@ export class GithubInfoService {
 
   async getRepoCardsAndBranches(): Promise<CardRepoAndBranchesResponse> {
     return this.httpClient.get(CLOUD_BUILD_ENDPOINTS.GITHUB_REPOS);
+  }
+
+  async deleteDeployment(repoId: string): Promise<IDeleteDeploymentResponse> {
+    const url = `${CLOUD_BUILD_ENDPOINTS.DELETE_DEPLOYMENT}?repoId=${encodeURIComponent(repoId)}`;
+    return this.httpClient.delete<IDeleteDeploymentResponse>(url);
   }
 }
 

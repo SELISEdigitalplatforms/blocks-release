@@ -44,6 +44,7 @@ IHostBuilder CreateHostBuilder(string[] args) =>
 
             services.AddSingleton<IConsumer<PostBuildQueue>, PostBuildConsumer>();
             services.AddSingleton<IConsumer<LogNotificationQueue>, LogNotificationConsumer>();
+            services.AddSingleton<IConsumer<ProjectDeleteQueue>, ProjectDeleteConsumer>();
 
             var workerMessageConfig = CloudBuildConstants.GetWorkerMessageConfiguration(secret.MessageConnectionString);
             ApplicationConfigurations.ConfigureWorker(services, workerMessageConfig);

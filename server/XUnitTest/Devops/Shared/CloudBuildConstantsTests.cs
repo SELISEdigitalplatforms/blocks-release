@@ -13,6 +13,7 @@ namespace XUnitTest.Devops.Shared
             CloudBuildConstants.GITHUB_BASE_URI.Should().Be("https://github.com");
             CloudBuildConstants.GITHUB_API_BASE_URI.Should().Be("https://api.github.com");
             CloudBuildConstants.POST_BUILD_LISTENER.Should().Be("blocks_release_post_build_listener");
+            CloudBuildConstants.PROJECT_DELETE_LISTENER.Should().Be("blocks_release_project_delete_listener");
             CloudBuildConstants.SONARQUBE_PERMISSIONS.Should().Contain("user");
             CloudBuildConstants.SAST_METRIC_KEYS.Should().Contain("bugs");
         }
@@ -60,6 +61,27 @@ namespace XUnitTest.Devops.Shared
 
             config.AzureServiceBusConfiguration.Should().NotBeNull();
             config.AzureServiceBusConfiguration.Queues.Should().Contain(CloudBuildConstants.POST_BUILD_LISTENER);
+        }
+
+        [Fact]
+        public void GetWorkerMessageConfiguration_BindsTheProjectDeleteQueue()
+        {
+            CloudBuildConstants.GetWorkerMessageConfiguration("not-a-uri")
+                .AzureServiceBusConfiguration.Queues.Should().Contain(CloudBuildConstants.PROJECT_DELETE_LISTENER);
+
+            CloudBuildConstants.GetWorkerMessageConfiguration("amqps://host:5671")
+                .RabbitMqConfiguration.ConsumerSubscriptions.Should().HaveCount(2);
+        }
+
+        /// <summary>
+        /// The API has no consumer for the project-delete message. Binding it there would let the broker
+        /// hand the API a delete it silently drops, so the queue must stay off the API configuration.
+        /// </summary>
+        [Fact]
+        public void GetApiMessageConfiguration_DoesNotBindTheProjectDeleteQueue()
+        {
+            CloudBuildConstants.GetApiMessageConfiguration("Endpoint=sb://foo.servicebus.windows.net/")
+                .AzureServiceBusConfiguration.Queues.Should().NotContain(CloudBuildConstants.PROJECT_DELETE_LISTENER);
         }
     }
 }

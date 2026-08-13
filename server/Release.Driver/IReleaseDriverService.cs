@@ -1,11 +1,11 @@
 using Devops.DomainService.Deployment.Models.Request;
 
-namespace DeploymentDriver
+namespace ReleaseDriver
 {
     /// <summary>
     /// Defines operations for managing deployment authentication and authorization.
     /// </summary>
-    public interface IDeploymentDriverService
+    public interface IReleaseDriverService
     {
         /// <summary>
         /// Checks whether the current user is authorized (has a valid access token).
@@ -33,9 +33,8 @@ namespace DeploymentDriver
         Task<BaseApiResponse> DeleteAuthorizationAsync();
 
         /// <summary>
-        /// Retrieves the list of repositories for the given project key.
+        /// Retrieves the list of repositories. Archived repositories are excluded.
         /// </summary>
-        /// <param name="projectKey">The project key used to scope the tenant context.</param>
         /// <returns>A response containing the list of repositories.</returns>
         Task<BaseApiResponse> GetReposListAsync();
 

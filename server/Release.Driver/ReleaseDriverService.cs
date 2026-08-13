@@ -6,16 +6,16 @@ using Devops.DomainService.VersionControlSystems.Interfaces;
 using Devops.DomainService.VersionControlSystems.Models.Request;
 using System.Net;
 
-namespace DeploymentDriver
+namespace ReleaseDriver
 {
-    public class DeploymentDriverService : IDeploymentDriverService
+    public class ReleaseDriverService : IReleaseDriverService
     {
         private readonly IAuthService _authService;
         private readonly IRepoRepository _repoRepository;
         private readonly IVersionControlService _githubService;
         private readonly IBuildService _buildService;
 
-        public DeploymentDriverService(
+        public ReleaseDriverService(
             IAuthService authService,
             IRepoRepository repoRepository,
             IVersionControlService githubService,

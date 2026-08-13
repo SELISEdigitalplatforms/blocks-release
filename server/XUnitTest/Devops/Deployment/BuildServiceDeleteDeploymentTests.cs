@@ -51,7 +51,7 @@ namespace XUnitTest.Devops.Deployment
                 .ReturnsAsync(new Repo { ItemId = RepoId, DeployedNamespace = deployedNamespace });
 
         private void GivenBuilds(params Build[] builds) =>
-            _f.BuildRepo.Setup(b => b.GetBuilds(RepoId)).ReturnsAsync(new List<Build>(builds));
+            _f.BuildRepo.Setup(b => b.GetBuilds(RepoId, TenantId)).ReturnsAsync(new List<Build>(builds));
 
         private void GivenNamespaceDeleteSucceeds() =>
             _f.CoreV1

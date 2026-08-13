@@ -250,9 +250,15 @@ public class RepoRepository : IRepoRepository
     }
 
     /// <summary>
-    /// Live repositories of one project, read from that project's own tenant database rather than the
+    /// Every repository of one project, read from that project's own tenant database rather than the
     /// caller's - the queue-driven teardown has no ambient tenant context to fall back on.
     /// Passing a resourceId narrows to the repository imported from that resource.
+    ///
+    /// Deliberately NOT filtered by <see cref="NotArchived"/>, unlike every other read here. blocks-os
+    /// archives a repository on its own side before it publishes the delete, so an archived repository
+    /// is the normal case for teardown - filtering them out would leave their namespaces running with
+    /// nothing left in any list to find them by. This is the one read whose job is not to answer
+    /// "what should the user see".
     /// </summary>
     public async Task<List<Repo>> GetProjectRepos(string tenantId, string? resourceId = null)
     {
@@ -261,7 +267,7 @@ public class RepoRepository : IRepoRepository
             var _dbContext = _dbContextProvider.GetDatabase(tenantId);
             var collection = _dbContext.GetCollection<Repo>("Repos");
 
-            var filter = Builders<Repo>.Filter.Eq(r => r.ProjectId, tenantId) & NotArchived;
+            var filter = Builders<Repo>.Filter.Eq(r => r.ProjectId, tenantId);
 
             if (!string.IsNullOrWhiteSpace(resourceId))
                 filter &= Builders<Repo>.Filter.Eq(r => r.SourceRepoId, resourceId);

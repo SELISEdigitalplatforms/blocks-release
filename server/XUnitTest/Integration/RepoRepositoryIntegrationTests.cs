@@ -375,9 +375,12 @@ namespace XUnitTest.Integration
         /// <summary>
         /// The queue-driven teardown reads a project's repositories out of that project's own tenant
         /// database, with no ambient tenant context, so this pins the tenant scoping and the resource filter.
+        ///
+        /// Unlike every other read, archived repositories are deliberately included: blocks-os archives
+        /// before it publishes the delete, so filtering them out would leave their namespaces running.
         /// </summary>
         [Fact]
-        public async Task GetProjectRepos_ReturnsLiveReposOfTheProjectAndNarrowsByResource()
+        public async Task GetProjectRepos_ReturnsEveryRepoOfTheProjectIncludingArchivedOnes()
         {
             var projectId = Guid.NewGuid().ToString("N");
             var sut = CreateRepo();
@@ -397,17 +400,23 @@ namespace XUnitTest.Integration
 
             var all = await sut.GetProjectRepos(projectId);
             all.Select(r => r.ItemId).Should()
-               .BeEquivalentTo(new[] { first.ItemId, second.ItemId });
+               .BeEquivalentTo(new[] { first.ItemId, second.ItemId, archived.ItemId });
+            all.Should().ContainSingle(r => r.ItemId == archived.ItemId && r.IsArchived);
 
             var narrowed = await sut.GetProjectRepos(projectId, "res-2");
             narrowed.Select(r => r.ItemId).Should().Equal(second.ItemId);
 
-            (await sut.GetProjectRepos(projectId, "res-3")).Should().BeEmpty();
+            // An archived repository is still reachable by its resource id - that is the teardown case.
+            (await sut.GetProjectRepos(projectId, "res-3")).Select(r => r.ItemId).Should().Equal(archived.ItemId);
             (await sut.GetProjectRepos(projectId, "no-such-resource")).Should().BeEmpty();
         }
 
+        /// <summary>
+        /// Archiving hides a repository from every user-facing read. GetProjectRepos is the one exception,
+        /// and is asserted separately above.
+        /// </summary>
         [Fact]
-        public async Task ArchiveRepo_HidesTheRepoFromEveryRead()
+        public async Task ArchiveRepo_HidesTheRepoFromEveryUserFacingRead()
         {
             var repo = NewRepo();
             var sut = CreateRepo();
@@ -416,7 +425,8 @@ namespace XUnitTest.Integration
             (await sut.ArchiveRepo(repo.ItemId, "any-tenant")).Should().BeTrue();
 
             (await sut.GetRepo(repo.ItemId)).Should().BeNull();
-            (await sut.GetProjectRepos(repo.ProjectId)).Should().BeEmpty();
+            (await sut.GetRepo(repo.ItemId, "any-tenant")).Should().BeNull();
+            (await sut.GetRepos()).Select(r => r.ItemId).Should().NotContain(repo.ItemId);
         }
 
         [Fact]

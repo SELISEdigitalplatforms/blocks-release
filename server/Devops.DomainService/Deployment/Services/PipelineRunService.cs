@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Net;
+using System.Text;
 using System.Text.Json;
 using Blocks.Genesis;
 using Devops.DomainService.Deployment.Entities;
@@ -18,6 +19,10 @@ namespace Devops.DomainService.Deployment.Services
 
     public class PipelineRunService
     {
+        private const string TektonGroup = "tekton.dev";
+        private const string TektonV1Beta1 = "v1beta1";
+        private const string PipelineRunsPlural = "pipelineruns";
+
         private readonly IKubernetes _k8sClient;
         private readonly ITokenRepository _tokenRepository;
         private readonly IConfiguration _configuration;
@@ -35,6 +40,16 @@ namespace Devops.DomainService.Deployment.Services
             _configuration = configuration;
             _cloudBuildSecret = cloudBuildSecret;
         }
+
+        /// <summary>
+        /// Value written to a PipelineRun's spec.status to cancel it. Current Tekton accepts "Cancelled" on
+        /// v1beta1; releases older than v0.32 only accept the deprecated "PipelineRunCancelled". Overridable
+        /// through configuration so an older cluster can be supported without a rebuild.
+        /// </summary>
+        private string PipelineRunCancelledStatus =>
+            string.IsNullOrWhiteSpace(_configuration["TektonCancelStatus"])
+                ? "Cancelled"
+                : _configuration["TektonCancelStatus"];
 
 
         private async Task<object?> SubmitKubernetesAsync(
@@ -73,12 +88,12 @@ namespace Devops.DomainService.Deployment.Services
             }
         }
 
-        public async Task<(string, string, string)> CreateNamespaceAsync(Repo repo)
+        public async Task<(string, string, string, string)> CreateNamespaceAsync(Repo repo)
         {
             if (repo == null)
             {
                 Console.WriteLine("Repository not found.");
-                return (null, null, "Repository not found.");
+                return (null, null, null, "Repository not found.");
             }
 
             try
@@ -100,7 +115,7 @@ namespace Devops.DomainService.Deployment.Services
                 if (string.IsNullOrEmpty(accessToken))
                 {
                     Console.WriteLine("\u274c Access token not found.");
-                    return (null, null, "Access token not found. Please authorize again.");
+                    return (null, null, null, "Access token not found. Please authorize again.");
                 }
 
                 var formattedProjectName = StringFormatterService.SanitizeString(repo.ProjectName);
@@ -111,7 +126,7 @@ namespace Devops.DomainService.Deployment.Services
                 var pipelineRunNameGuid = $"{truncatedRepoName}-{guid}";
                 var buildImageName = $"{_configuration["ImageReference"]}{formattedProjectName}/{formattedRepoName}:{guid}";
 
-                var pipelineRunData = PipelineRunSettings
+                var pipelineRunSettings = PipelineRunSettings
                     .fromYamlFile(yamlPath)
                     .setMetadataNamespace(pipelineRunNameGuid)
                     .setImageReference(buildImageName)
@@ -122,22 +137,27 @@ namespace Devops.DomainService.Deployment.Services
                     .setBranchName(repo.Branch)
                     .setAccessToken(accessToken)
                     .setSonarQubeProjectKey(repo.RepoName)
-                    .setCliBuildEnv(repo.Branch)
-                    .build();
+                    .setCliBuildEnv(repo.Branch);
+
+                var pipelineRunData = pipelineRunSettings.build();
+
+                // Captured from the builder that produced it - this exact string is what Tekton receives
+                // as the `namespace` param, and it is what the delete path will later act on.
+                var paramNamespace = pipelineRunSettings.ParamNamespace;
 
                 var result = await SubmitKubernetesAsync(
                     pipelineRunData,
-                    group: "tekton.dev",
-                    version: "v1beta1",
+                    group: TektonGroup,
+                    version: TektonV1Beta1,
                     namespaceName: namespaceName,
-                    plural: "pipelineruns");
+                    plural: PipelineRunsPlural);
 
-                return result is not null? (pipelineRunNameGuid, buildImageName, null):(null, null, null);
+                return result is not null? (pipelineRunNameGuid, buildImageName, paramNamespace, null):(null, null, null, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Unexpected error during PipelineRun creation: {ex.Message}");
-                return (null, null, ex.Message);
+                return (null, null, null, ex.Message);
             }
         }
 
@@ -164,10 +184,10 @@ namespace Devops.DomainService.Deployment.Services
 
                 var result = await SubmitKubernetesAsync(
                     pipelineRunData,
-                    group: "tekton.dev",
-                    version: "v1beta1",
+                    group: TektonGroup,
+                    version: TektonV1Beta1,
                     namespaceName: CloudBuildConstants.NAMESPACE_NAME,
-                    plural: "pipelineruns");
+                    plural: PipelineRunsPlural);
 
                 return result is not null? metadataName:null;
             }
@@ -184,10 +204,10 @@ namespace Devops.DomainService.Deployment.Services
             try
             {
                 var pipelineRun = await _k8sClient.CustomObjects.GetNamespacedCustomObjectAsync(
-                    group: "tekton.dev",
+                    group: TektonGroup,
                     version: "v1",
                     namespaceParameter: namespaceName,
-                    plural: "pipelineruns",
+                    plural: PipelineRunsPlural,
                     name: pipelineRunName
                 );
                 //Console.WriteLine($"[DEBUG] Raw PipelineRun object: {JsonSerializer.Serialize(pipelineRun, new JsonSerializerOptions { WriteIndented = false })}");
@@ -287,7 +307,7 @@ namespace Devops.DomainService.Deployment.Services
             try
             {
                 var taskRun = await _k8sClient.CustomObjects.GetNamespacedCustomObjectAsync(
-                    group: "tekton.dev",
+                    group: TektonGroup,
                     version: "v1",
                     namespaceParameter: namespaceName,
                     plural: "taskruns",
@@ -385,16 +405,169 @@ namespace Devops.DomainService.Deployment.Services
             return result;
         }
 
+        /// <summary>
+        /// Namespaces that must never be deleted, whatever a Repo document happens to hold.
+        /// Deleting tekton-pipelines would destroy the build system for every project.
+        /// </summary>
+        public static readonly IReadOnlySet<string> ProtectedNamespaces = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "tekton-pipelines",
+            "default",
+            "kube-system",
+            "kube-public",
+            "kube-node-lease"
+        };
+
+        public static bool IsProtectedNamespace(string namespaceName) =>
+            !string.IsNullOrWhiteSpace(namespaceName) && ProtectedNamespaces.Contains(namespaceName.Trim());
+
+        /// <summary>
+        /// Deletes a deployment's namespace, taking every resource it owns with it. Name-addressed:
+        /// no manifest is involved. Kubernetes returns as soon as the namespace enters Terminating.
+        /// </summary>
+        /// <returns>AlreadyGone is true when the namespace no longer existed, which counts as success.</returns>
+        public async Task<(bool Success, bool AlreadyGone, string Error)> DeleteNamespaceAsync(string namespaceName)
+        {
+            if (string.IsNullOrWhiteSpace(namespaceName))
+                return (false, false, "Namespace is required.");
+
+            if (IsProtectedNamespace(namespaceName))
+                return (false, false, $"Refusing to delete protected namespace '{namespaceName}'.");
+
+            try
+            {
+                await _k8sClient.CoreV1.DeleteNamespaceAsync(namespaceName.Trim());
+                Console.WriteLine($"Namespace '{namespaceName}' marked for deletion.");
+                return (true, false, null);
+            }
+            catch (HttpOperationException httpEx) when (httpEx.Response?.StatusCode == HttpStatusCode.NotFound)
+            {
+                Console.WriteLine($"Namespace '{namespaceName}' was already gone.");
+                return (true, true, null);
+            }
+            catch (HttpOperationException httpEx)
+            {
+                var message = KubernetesApiErrorHandler.HandleKubernetesError(httpEx);
+                Console.WriteLine($"Failed to delete namespace '{namespaceName}': {message}");
+                return (false, false, message);
+            }
+            catch (Exception ex)
+            {
+                var message = KubernetesApiErrorHandler.HandleGeneralError(ex);
+                Console.WriteLine($"Failed to delete namespace '{namespaceName}': {message}");
+                return (false, false, message);
+            }
+        }
+
+        /// <summary>
+        /// Cancels a running PipelineRun by patching spec.status. This is deliberately a cancel and not a
+        /// delete: removing the PipelineRun would lose the audit record and can orphan running pods.
+        /// </summary>
+        /// <summary>
+        /// Reports whether a PipelineRun is still running, so callers can skip cancelling one that has
+        /// already finished or been reaped. This only needs `get` on pipelineruns, which the read paths
+        /// already use - cancellation additionally needs `patch`, so checking first means a build record
+        /// left with a stale non-terminal status does not demand a permission nothing will be used for.
+        /// </summary>
+        /// <returns>IsRunning is false when the PipelineRun is absent or has reached a final condition.</returns>
+        public async Task<(bool IsRunning, string Error)> IsPipelineRunRunningAsync(string pipelineRunName)
+        {
+            if (string.IsNullOrWhiteSpace(pipelineRunName))
+                return (false, "PipelineRun name is required.");
+
+            try
+            {
+                var pipelineRun = await _k8sClient.CustomObjects.GetNamespacedCustomObjectAsync(
+                    group: TektonGroup,
+                    version: TektonV1Beta1,
+                    namespaceParameter: CloudBuildConstants.NAMESPACE_NAME,
+                    plural: PipelineRunsPlural,
+                    name: pipelineRunName);
+
+                var status = JObject.Parse(JsonSerializer.Serialize(pipelineRun))["status"] as JObject;
+                var condition = (status?["conditions"] as JArray)?.FirstOrDefault() as JObject;
+                var conditionStatus = condition?["status"]?.ToString();
+
+                // Tekton reports a finished run as True (succeeded) or False (failed/cancelled); Unknown
+                // means still running or pending. A run with no condition yet has only just been created,
+                // so treat it as running rather than risk deleting the namespace underneath it.
+                var isRunning = conditionStatus is not "True" and not "False";
+
+                Console.WriteLine($"PipelineRun '{pipelineRunName}' condition status '{conditionStatus ?? "none"}' -> running={isRunning}");
+                return (isRunning, null);
+            }
+            catch (HttpOperationException httpEx) when (httpEx.Response?.StatusCode == HttpStatusCode.NotFound)
+            {
+                Console.WriteLine($"PipelineRun '{pipelineRunName}' no longer exists; nothing to cancel.");
+                return (false, null);
+            }
+            catch (HttpOperationException httpEx)
+            {
+                var message = KubernetesApiErrorHandler.HandleKubernetesError(httpEx);
+                Console.WriteLine($"Failed to read PipelineRun '{pipelineRunName}': {message}");
+                return (false, message);
+            }
+            catch (Exception ex)
+            {
+                var message = KubernetesApiErrorHandler.HandleGeneralError(ex);
+                Console.WriteLine($"Failed to read PipelineRun '{pipelineRunName}': {message}");
+                return (false, message);
+            }
+        }
+
+        /// <returns>AlreadyGone is true when the PipelineRun no longer exists, which counts as finished.</returns>
+        public async Task<(bool Success, bool AlreadyGone, string Error)> CancelPipelineRunAsync(string pipelineRunName)
+        {
+            if (string.IsNullOrWhiteSpace(pipelineRunName))
+                return (false, false, "PipelineRun name is required.");
+
+            var patch = new Dictionary<string, object>
+            {
+                ["spec"] = new Dictionary<string, object> { ["status"] = PipelineRunCancelledStatus }
+            };
+
+            try
+            {
+                await _k8sClient.CustomObjects.PatchNamespacedCustomObjectAsync(
+                    body: patch,
+                    group: TektonGroup,
+                    version: TektonV1Beta1,
+                    namespaceParameter: CloudBuildConstants.NAMESPACE_NAME,
+                    plural: PipelineRunsPlural,
+                    name: pipelineRunName);
+
+                Console.WriteLine($"PipelineRun '{pipelineRunName}' cancelled.");
+                return (true, false, null);
+            }
+            catch (HttpOperationException httpEx) when (httpEx.Response?.StatusCode == HttpStatusCode.NotFound)
+            {
+                Console.WriteLine($"PipelineRun '{pipelineRunName}' no longer exists; treating as finished.");
+                return (true, true, null);
+            }
+            catch (HttpOperationException httpEx)
+            {
+                var message = KubernetesApiErrorHandler.HandleKubernetesError(httpEx);
+                Console.WriteLine($"Failed to cancel PipelineRun '{pipelineRunName}': {message}");
+                return (false, false, message);
+            }
+            catch (Exception ex)
+            {
+                var message = KubernetesApiErrorHandler.HandleGeneralError(ex);
+                Console.WriteLine($"Failed to cancel PipelineRun '{pipelineRunName}': {message}");
+                return (false, false, message);
+            }
+        }
+
         public async Task DeletePipelineRunAsync(string pipelineRunName)
         {
             Console.WriteLine($"Deleting Pipeline  {pipelineRunName}.");
             try
             {
                 await _k8sClient.CustomObjects.DeleteNamespacedCustomObjectAsync(
-                    group: "tekton.dev",
-                    version: "v1beta1",
+                    group: TektonGroup,
+                    version: TektonV1Beta1,
                     namespaceParameter: CloudBuildConstants.NAMESPACE_NAME,
-                    plural: "pipelineruns",
+                    plural: PipelineRunsPlural,
                     name: pipelineRunName
                 );
                 Console.WriteLine($"PipelineRun '{pipelineRunName}' deleted successfully");

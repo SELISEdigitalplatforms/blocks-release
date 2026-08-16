@@ -105,13 +105,28 @@ npm run codegen -- <E2E_BASE_URL>/login
 
 ```
 e2e/
-  tests/auth/login.spec.ts   # login through dev-iam -> /app/console
+  tests/auth/login.spec.ts   # setup: dev-iam login + create the run's project in OS
+  tests/                     # spec files (run by the chromium project)
+  pages/release/console.page.ts
+  pages/release/deployment.page.ts
+  pages/os/create-project.page.ts
+  pages/os/project.page.ts
   support/test-base.ts       # shared `test` with the post-test pause
-  fixtures/                  # auth storage state (gitignored)
+  support/project-name.ts    # reads the run's project name from fixtures
+  constants/                 # route paths + test data
+  fixtures/auth.json         # authenticated storage state (gitignored)
+  fixtures/project.json      # run's project name (gitignored)
   global-setup.ts            # local-build index.html patch
+  global-teardown.ts         # deletes the project after the suite
   playwright.config.ts       # baseURL + creds from .env.e2e
 ```
 
-The login spec is the `setup` project: it saves its authenticated session to
-`fixtures/auth.json`, and the `chromium` project depends on it, so any spec
-added later starts already logged in.
+The `tests/auth/login.spec.ts` is the `setup` project. It does the dev-iam
+login, then opens the OS app, creates a fresh `E2E Test <timestamp>` project
+with the configured test repo, persists the name to `fixtures/project.json`,
+and re-saves the authenticated session to `fixtures/auth.json`. The
+`chromium` project depends on it, so every spec starts already logged in and
+with the new project available; specs read the project name via
+`getProjectName()` from `support/project-name.ts`. After the suite,
+`globalTeardown` deletes the project through the same `ConsolePage` delete
+flow used by `tests_old/`.

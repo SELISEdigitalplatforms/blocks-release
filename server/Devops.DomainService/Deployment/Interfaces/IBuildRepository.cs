@@ -7,7 +7,7 @@ public interface IBuildRepository
 {
     public Task<Build?> GetBuild(string buildId);
     public Task<Build?> GetBuild(string buildId, string tenantId);
-    public Task<List<Build>?> GetBuilds(string repoId);
+    public Task<List<Build>?> GetBuilds(string repoId, string tenantId);
     public Task SaveBuild(Build pod);
     public Task SaveBuild(Build pod, string tenantId);
     public Task<Build?> UpdateBuild(Build pod);

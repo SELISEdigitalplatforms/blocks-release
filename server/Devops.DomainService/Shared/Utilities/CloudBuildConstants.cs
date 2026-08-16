@@ -12,6 +12,7 @@ namespace Devops.DomainService.Shared.Utilities
         public static readonly string GITHUB_API_BASE_URI = "https://api.github.com";
         public static readonly string[] SONARQUBE_PERMISSIONS = new[] { "codeviewer", "issueadmin", "securityhotspotadmin", "user" };
         public static readonly string POST_BUILD_LISTENER = "blocks_release_post_build_listener";
+        public static readonly string PROJECT_DELETE_LISTENER = "blocks_release_project_delete_listener";
         public static readonly string[] SAST_METRIC_KEYS = new string[]
         {
             "alert_status",
@@ -85,6 +86,8 @@ namespace Devops.DomainService.Shared.Utilities
             };
         }
 
+        // Only the worker binds PROJECT_DELETE_LISTENER. The API has no consumer for that message, and a
+        // binding without a consumer would let the broker hand it a delete it silently drops.
         public static MessageConfiguration GetWorkerMessageConfiguration(string messageConnectionString)
         {
             var provider = GetProvider(messageConnectionString);
@@ -97,7 +100,8 @@ namespace Devops.DomainService.Shared.Utilities
                     {
                         ConsumerSubscriptions =
                         [
-                            ConsumerSubscription.BindToQueue(POST_BUILD_LISTENER)
+                            ConsumerSubscription.BindToQueue(POST_BUILD_LISTENER),
+                            ConsumerSubscription.BindToQueue(PROJECT_DELETE_LISTENER)
                         ]
                     }
                 },
@@ -105,7 +109,7 @@ namespace Devops.DomainService.Shared.Utilities
                 {
                     AzureServiceBusConfiguration = new AzureServiceBusConfiguration
                     {
-                        Queues = [POST_BUILD_LISTENER],
+                        Queues = [POST_BUILD_LISTENER, PROJECT_DELETE_LISTENER],
                         Topics = []
                     }
                 }

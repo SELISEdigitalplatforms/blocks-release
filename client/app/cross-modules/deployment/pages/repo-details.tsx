@@ -24,10 +24,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useScopedPath } from "@/hooks/use-scoped-path";
 import { formatFullDate } from "@/utils/date.util";
-import NotificationListener from "@blocks-deployment/components/deployment-details/shared/notification-listener";
+import DeleteDeploymentButton from "@blocks-deployment/components/deployment-details/shared/delete-deployment-button";
+import DeploymentStatusIndicator from "@blocks-deployment/components/deployment-details/shared/deployment-status-indicator";
+import DeploymentTargetLink from "@blocks-deployment/components/deployment-details/shared/deployment-target-link";
 import { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
 import { REPO_DETAILS_PROVIDERS } from "@blocks-deployment/constants/alert.constant";
 import {
+  useDeleteDeployment,
   useGetRepoDetails,
   useInitialRepoDeployment,
 } from "@/cross-modules/deployment/hooks/use-github-info";
@@ -107,11 +110,14 @@ export default function RepoDetails() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [filteredBuilds, setFilteredBuilds] = useState<IPipeline[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isDeploymentSettingsForDeploy, setIsDeploymentSettingsForDeploy] =
     useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
 
   const { mutate: deployManually } = useInitialRepoDeployment();
+  const { mutate: deleteDeployment } = useDeleteDeployment();
 
   const { mutate: initialDeploy, isPending: isInitialDeploying } =
     useInitialRepoDeployment();
@@ -320,6 +326,43 @@ export default function RepoDetails() {
     setIsModalOpen(false);
   };
 
+  const handleDeleteCancel = () => {
+    setIsDeleteModalOpen(false);
+  };
+
+  const handleDeleteDeployment = () => {
+    setIsDeleting(true);
+
+    deleteDeployment(repoId, {
+      onSuccess: (response) => {
+        setIsDeleteModalOpen(false);
+
+        toast({
+          title: "Deletion Started",
+          description:
+            response?.message ||
+            "The deployment is being removed. This can take up to a minute.",
+          variant: "success",
+        });
+      },
+      onError: (error: CustomError) => {
+        const errorMessage =
+          error?.errors?.message ||
+          error?.message ||
+          "Failed to delete the deployment. Please try again.";
+
+        toast({
+          title: "Deletion Failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      },
+      onSettled: () => {
+        setIsDeleting(false);
+      },
+    });
+  };
+
   const confirmationData = {
     dialogTitle: "Confirm Deployment",
     dialogSubtitle: (
@@ -332,6 +375,18 @@ export default function RepoDetails() {
     confirmButton: "Deploy Now",
     cancelButton: "Cancel",
   };
+
+  // The recorded namespace is the only authority on whether something is deployed: absent means
+  // never deployed, or already deleted. The latest build survives deletion, so it cannot be used here.
+  const hasLiveDeployment = Boolean(repoDetails?.data?.repo?.deployedNamespace);
+
+  const deploymentUrl =
+    latestBuild?.defaultDeploymentUrl ||
+    repoDetails?.data?.repo?.defaultDeploymentUrl ||
+    "";
+
+  const repoDisplayName =
+    latestBuild?.repoName.split("/").pop() || latestBuild?.repoName;
 
   const handleSettingsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -518,30 +573,44 @@ export default function RepoDetails() {
                     <h3 className="text-lg font-semibold">
                       Deployment Information
                     </h3>
-                    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          onClick={() => setIsModalOpen(true)}
-                          disabled={isDeploying}
-                          className="w-full shadow-sm sm:w-auto">
-                          <div className="flex items-center justify-center gap-2">
-                            <Rocket size={20} />
-                            <span>
-                              {isDeploying ? "Deploying..." : "Deploy"}
-                            </span>
-                          </div>
-                        </Button>
-                      </DialogTrigger>
-                      <ConfirmationModal
-                        data={confirmationData}
-                        onCancel={handleCancel}
-                        onConfirm={handleManualDeploy}
-                        buttonState={{
-                          confirm: { disable: isDeploying },
-                        }}
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsModalOpen(true)}
+                            disabled={isDeploying || isDeleting}
+                            className="w-full shadow-sm sm:w-auto">
+                            <div className="flex items-center justify-center gap-2">
+                              <Rocket size={20} />
+                              <span>
+                                {isDeploying ? "Deploying..." : "Deploy"}
+                              </span>
+                            </div>
+                          </Button>
+                        </DialogTrigger>
+                        <ConfirmationModal
+                          data={confirmationData}
+                          onCancel={handleCancel}
+                          onConfirm={handleManualDeploy}
+                          buttonState={{
+                            confirm: { disable: isDeploying },
+                          }}
+                        />
+                      </Dialog>
+
+                      <DeleteDeploymentButton
+                        hasLiveDeployment={hasLiveDeployment}
+                        repoName={repoDisplayName}
+                        deploymentUrl={deploymentUrl}
+                        isDeleting={isDeleting}
+                        isDisabled={isDeploying}
+                        isModalOpen={isDeleteModalOpen}
+                        onModalOpenChange={setIsDeleteModalOpen}
+                        onConfirm={handleDeleteDeployment}
+                        onCancel={handleDeleteCancel}
                       />
-                    </Dialog>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {" "}
@@ -563,18 +632,10 @@ export default function RepoDetails() {
                           <p className="text-sm text-low-emphasis">
                             Deploys To
                           </p>
-                          <CopyToClipboardButton
-                            textToCopy={latestBuild?.defaultDeploymentUrl || ""}
-                            isHoverable={false}>
-                            <a
-                              href={latestBuild?.defaultDeploymentUrl || "#"}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block truncate text-sm text-primary hover:underline"
-                              onClick={(e) => e.stopPropagation()}>
-                              {latestBuild?.defaultDeploymentUrl || "N/A"}
-                            </a>
-                          </CopyToClipboardButton>
+                          <DeploymentTargetLink
+                            isLive={hasLiveDeployment}
+                            url={deploymentUrl}
+                          />
                         </div>
 
                         <div className="space-y-2">
@@ -610,13 +671,17 @@ export default function RepoDetails() {
 
                       <div className="grid grid-cols-1 gap-4 md:mb-4 md:gap-6">
                         <div className="space-y-4">
-                          <div className="space-y-2">
+                          <div className="space-y-2" data-testid="deployment-status">
                             <p className="text-sm text-low-emphasis">
                               Deployment Status
                             </p>
-                            <NotificationListener
+                            <DeploymentStatusIndicator
+                              hasLiveDeployment={hasLiveDeployment}
                               latestBuild={latestBuild}
-                              deploymentStatus={latestBuild?.status}
+                              buildStatus={latestBuild?.status}
+                              repoStatus={
+                                repoDetails?.data?.repo?.lastDeploymentStatus
+                              }
                             />
                           </div>
 

@@ -2,17 +2,17 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Version>4.0.0</Version>
+    <Version>4.0.1</Version>
     <PackageId>SeliseBlocks.ReleaseDriver.OS</PackageId>
     <Authors>SeliseBlocks</Authors>
     <Company>SeliseBlocks</Company>
-    <Description>Blocks Deployment Driver</Description>
+    <Description>Blocks Release Driver</Description>
     <IncludeBuildOutput>true</IncludeBuildOutput>
     <IncludeOutputAssemblies>true</IncludeOutputAssemblies>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>Genesis, BlocksGenesis, SeliseBlocksGenesis, Deployment, Driver</PackageTags>
-    <RepositoryUrl>https://github.com/SELISEdigitalplatforms/blocks-deployment</RepositoryUrl>
+    <PackageTags>Genesis, BlocksGenesis, SeliseBlocksGenesis, Release, Deployment, Driver</PackageTags>
+    <RepositoryUrl>https://github.com/SELISEdigitalplatforms/blocks-release</RepositoryUrl>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

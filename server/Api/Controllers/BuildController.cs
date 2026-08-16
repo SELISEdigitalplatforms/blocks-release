@@ -184,6 +184,17 @@ public class BuildController : ControllerBase
         });
     }
     
+    [HttpDelete("deployment")]
+    [ProtectedEndPoint("blocks-release::build::delete-deployment")]
+    public async Task<IActionResult> DeleteDeployment([FromQuery] string repoId)
+    {
+        var response = await _buildService.DeleteDeployment(repoId);
+
+        if (response.StatusCode == HttpStatusCode.OK) return Ok(response);
+        if (response.StatusCode == HttpStatusCode.NotFound) return NotFound(response);
+        return BadRequest(response);
+    }
+
     [HttpGet("reports")]
     [ProtectedEndPoint("blocks-release::build::reports")]
     public async Task<IActionResult> GetReports([FromQuery] string buildId, string type)

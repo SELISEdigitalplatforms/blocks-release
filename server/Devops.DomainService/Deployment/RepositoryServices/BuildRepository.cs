@@ -41,10 +41,15 @@ public class BuildRepository : IBuildRepository
         return build;
     }
 
-    public async Task<List<Build>?> GetBuilds(string repoId)
+    /// <summary>
+    /// Builds of one repository, read from the named tenant's database. The tenant is explicit rather
+    /// than ambient because the queue-driven teardown runs in the worker off any request: there the
+    /// ambient tenant is whatever the message's security context restored - the publisher's tenant, or
+    /// nothing at all - and never the project being torn down.
+    /// </summary>
+    public async Task<List<Build>?> GetBuilds(string repoId, string tenantId)
     {
-
-        var collection = _dbContextProvider.GetCollection<Build>("Builds");
+        var collection = _dbContextProvider.GetCollection<Build>(tenantId, "Builds");
         var filter = Builders<Build>.Filter.Eq(b => b.RepoId, repoId);
         var builds = await collection.Find(filter).ToListAsync();
         return builds;

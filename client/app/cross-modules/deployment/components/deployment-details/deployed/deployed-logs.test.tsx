@@ -1,4 +1,4 @@
-import { createEvent, fireEvent, render, screen } from "@testing-library/react";
+﻿import { createEvent, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import DeployedLogs from "./deployed-logs";
 
@@ -116,3 +116,195 @@ describe("DeployedLogs", () => {
     expect(container.innerHTML).toBe(before);
   });
 });
+
+// â”€â”€â”€ per-step timings (issue #155) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+const k8s = (iso: string, text = "working") => `${iso} ${text}`;
+
+/** The status line as the reader sees it, from both the desktop and mobile header. */
+const statusLines = (container: HTMLElement) =>
+  Array.from(container.querySelectorAll("p"))
+    .map((p) => p.textContent?.replace(/\s+/g, " ").trim() ?? "")
+    .filter((text) => text.startsWith("Successful at "));
+
+// Shaped like a real GET /api/build?buildId= response: nine-digit k8s fractions
+// on the log lines, poller stamps several seconds wider on the markers. Clone
+// really took 1.162s; the poller would have called it 7s.
+const timedCardData = {
+  status: "Completed",
+  eventName: "push",
+  events: [
+    {
+      buildId: "b1",
+      eventGroup: "Clone",
+      eventType: "EventStarted",
+      message: "",
+      createdAt: "2026-08-04T10:27:13Z",
+    },
+    {
+      buildId: "b1",
+      eventGroup: "Clone",
+      eventType: "Log",
+      message: `${k8s("2026-08-04T10:27:17.552157025Z", "cloning")}\n${k8s("2026-08-04T10:27:18.714271836Z", "cloned")}`,
+      createdAt: "2026-08-04T10:27:18Z",
+    },
+    {
+      buildId: "b1",
+      eventGroup: "Clone",
+      eventType: "EventFinished",
+      message: "",
+      createdAt: "2026-08-04T10:27:20Z",
+    },
+  ],
+} as never;
+
+// No k8s prefixes anywhere, so this build can only fall back to poller stamps.
+const pollerOnlyCardData = {
+  status: "Completed",
+  eventName: "push",
+  events: [
+    {
+      buildId: "b1",
+      eventGroup: "Build",
+      eventType: "EventStarted",
+      message: "",
+      createdAt: "2026-08-04T15:14:03Z",
+    },
+    {
+      buildId: "b1",
+      eventGroup: "Build",
+      eventType: "Log",
+      message: "compiling without a timestamp",
+      createdAt: "2026-08-04T15:14:20Z",
+    },
+    {
+      buildId: "b1",
+      eventGroup: "Build",
+      eventType: "EventFinished",
+      message: "",
+      createdAt: "2026-08-04T15:14:48Z",
+    },
+  ],
+} as never;
+
+// Neither a parseable log timestamp nor a start/end pair.
+const untimedCardData = {
+  status: "Completed",
+  eventName: "push",
+  events: [
+    {
+      buildId: "b1",
+      eventGroup: "Sca",
+      eventType: "Log",
+      message: "scanning with no timestamp",
+      createdAt: "2026-08-04T10:00:00Z",
+    },
+  ],
+} as never;
+
+describe("DeployedLogs step timings", () => {
+  it("shows the real log-derived duration, not the poller's", () => {
+    render(<DeployedLogs buildId="b1" isSuccess cardData={timedCardData} />);
+    expect(screen.getByText("1.2s")).toBeInTheDocument();
+    expect(screen.queryByText("7s")).not.toBeInTheDocument();
+  });
+
+  it("shows when the step ran once it is expanded", () => {
+    render(<DeployedLogs buildId="b1" isSuccess cardData={timedCardData} />);
+    // Clone auto-expands, so the meta bar is already on screen.
+    expect(screen.getByText(/^Started /)).toBeInTheDocument();
+    expect(screen.getByText(/^Ended /)).toBeInTheDocument();
+    expect(screen.getByText("Took 1.2s")).toBeInTheDocument();
+    // Millisecond precision is kept for a log-derived range.
+    expect(screen.getByText(/^Started \d{2}:\d{2}:\d{2}\.\d{3}$/)).toBeInTheDocument();
+  });
+
+  it("offers the full start and end on the chip tooltip", () => {
+    render(<DeployedLogs buildId="b1" isSuccess cardData={timedCardData} />);
+    const title = screen.getByText("1.2s").getAttribute("title") ?? "";
+    expect(title).toContain("Started ");
+    expect(title).toContain("Ended ");
+    expect(title).toContain("Took 1.2s");
+    // A measured value must not be hedged as approximate.
+    expect(title).not.toContain("Approximate");
+  });
+
+  it("totals the pipeline in both the desktop and the mobile header", () => {
+    const { container } = render(
+      <DeployedLogs buildId="b1" isSuccess cardData={timedCardData} />,
+    );
+    // The status line is assembled from several text nodes, so read the
+    // paragraphs directly rather than trying to match one node.
+    const headers = statusLines(container);
+    expect(headers).toHaveLength(2);
+    headers.forEach((text) => expect(text).toBe("Successful at push · 1.2s"));
+  });
+
+  it("marks a poller-derived duration approximate and drops the millis", () => {
+    render(<DeployedLogs buildId="b1" isSuccess cardData={pollerOnlyCardData} />);
+    const chip = screen.getByText("~45s");
+    expect(chip).toBeInTheDocument();
+    expect(chip.getAttribute("title")).toContain("Approximate");
+
+    fireEvent.click(screen.getByText("Build"));
+    expect(screen.getByText(/^Started ~\d{2}:\d{2}:\d{2}$/)).toBeInTheDocument();
+  });
+
+  it("leaves the total out when no step is log-derived", () => {
+    const { container } = render(
+      <DeployedLogs buildId="b1" isSuccess cardData={pollerOnlyCardData} />,
+    );
+    const headers = statusLines(container);
+    expect(headers).toHaveLength(2);
+    headers.forEach((text) => expect(text).toBe("Successful at push"));
+  });
+
+  it("shows a placeholder and no meta bar when nothing can be resolved", () => {
+    render(<DeployedLogs buildId="b1" isSuccess cardData={untimedCardData} />);
+    expect(screen.getByText("--")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("SCA"));
+    expect(screen.getByText("scanning with no timestamp")).toBeInTheDocument();
+    expect(screen.queryByText(/^Started/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Took/)).not.toBeInTheDocument();
+  });
+
+  it("still times a failed step and leaves it expanded", () => {
+    const failed = {
+      status: "Failed",
+      eventName: "push",
+      events: [
+        {
+          buildId: "b1",
+          eventGroup: "Deploy",
+          eventType: "Log",
+          message: `${k8s("2026-08-04T10:29:02.109Z", "deploying")}\n${k8s("2026-08-04T10:31:34.201Z", "failed")}`,
+          createdAt: "2026-08-04T10:31:00Z",
+        },
+        {
+          buildId: "b1",
+          eventGroup: "Deploy",
+          eventType: "EventFailed",
+          message: "",
+          createdAt: "2026-08-04T10:31:40Z",
+        },
+      ],
+    } as never;
+
+    render(<DeployedLogs buildId="b1" isSuccess cardData={failed} />);
+    expect(screen.getByText("2m 32s")).toBeInTheDocument();
+    // Auto-expanded because it failed, so its log body is already visible.
+    expect(screen.getByText(/deploying$/)).toBeInTheDocument();
+  });
+
+  it("leaves the log body, gutter and labels untouched", () => {
+    const { container } = render(
+      <DeployedLogs buildId="b1" isSuccess cardData={timedCardData} />,
+    );
+    // The RFC3339 prefix keeps rendering inline, exactly as before.
+    expect(screen.getByText(/^2026-08-04T10:27:17\.552157025Z cloning$/)).toBeInTheDocument();
+    expect(container.textContent).toContain("01");
+  });
+});
+
+

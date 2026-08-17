@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Clock, ChevronDown, ChevronRight } from "lucide-react";
 import { DeployedLogsService } from "@blocks-deployment/services/deployed-logs.service";
-import { DEPLOYMENT_LOG_EVENT_STATUS } from "@blocks-deployment/utils/deployment-logs.utils";
+import {
+  DEPLOYMENT_LOG_EVENT_STATUS,
+  formatDuration,
+  getPipelineTimeRange,
+  getStepTimingTooltip,
+} from "@blocks-deployment/utils/deployment-logs.utils";
 import { IBuildStep } from "@blocks-deployment/models/live-logs";
+import { StepTimingBar } from "@blocks-deployment/components/deployment-details/shared/step-timing-bar";
 import { useStatusIcon } from "@blocks-deployment/hooks/use-log-status-icon";
 import { IDeploymentPageData } from "@blocks-deployment/pages/deployment-details";
 
@@ -91,6 +97,13 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
     );
   }
 
+  // Wall clock across the whole pipeline, not the sum of the steps: steps can
+  // overlap, and the gaps between them are real time the build took.
+  const pipelineRange = getPipelineTimeRange(buildSteps);
+  const pipelineDuration = pipelineRange
+    ? formatDuration(pipelineRange.endMs - pipelineRange.startMs)
+    : "";
+
   if (!buildId || isLoading || buildSteps.length === 0) {
     return (
       <div className="mx-auto w-full bg-background">
@@ -120,6 +133,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
               {getStatusIcon(wholeDeploymentStatus ?? "")}
               <p className="text-sm text-gray-600">
                 {wholeDeploymentStatus} at {cardData?.eventName}
+                {pipelineDuration ? ` · ${pipelineDuration}` : ""}
               </p>
             </div>
           </div>
@@ -131,6 +145,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
               {getStatusIcon(wholeDeploymentStatus ?? "")}
               <p className="text-sm text-gray-600">
                 {wholeDeploymentStatus} at {cardData?.eventName}
+                {pipelineDuration ? ` · ${pipelineDuration}` : ""}
               </p>
             </div>
           </div>
@@ -177,7 +192,9 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
                       : step.name}
                   </span>
                 </div>
-                <div className="font-mono text-xs text-low-emphasis">
+                <div
+                  className="font-mono text-xs text-low-emphasis"
+                  title={getStepTimingTooltip(step)}>
                   {step.duration}
                 </div>
               </div>
@@ -187,6 +204,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
                 step.logs &&
                 step.logs.length > 0 && (
                   <div className="bg-gray-100">
+                    <StepTimingBar step={step} />
                     <div className="overflow-x-auto">
                       <div className="p-0">
                         {step.logs.map((log: string, logIndex: number) => (

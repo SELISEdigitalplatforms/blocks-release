@@ -1,41 +1,18 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { LiveLogsService } from "./live-logs.service";
 import {
   DeploymentEventType,
   DeploymentEventGroup,
 } from "@blocks-deployment/models/live-logs";
 import { MOCK_BUILD_ID } from "../test-utils/__mocks__";
+import { DeployedLogsService } from "./deployed-logs.service";
 
 describe("LiveLogsService", () => {
-  // ─── calculateDuration ─────────────────────────────────────────────────────
+  // calculateDuration was removed: the live and deployed views now share one
+  // duration implementation in deployment-logs.utils, which is where its cases
+  // (including the negative-delta one, now "--" rather than "0s") are covered.
 
-  describe("calculateDuration", () => {
-    it("should calculate seconds correctly", () => {
-      const start = "2023-01-01T00:00:00Z";
-      const end = "2023-01-01T00:00:10Z";
-      expect(LiveLogsService.calculateDuration(start, end)).toBe("10s");
-    });
-
-    it("should calculate minutes correctly", () => {
-      const start = "2023-01-01T00:00:00Z";
-      const end = "2023-01-01T00:01:30Z";
-      expect(LiveLogsService.calculateDuration(start, end)).toBe("1m 30s");
-    });
-
-    it("should calculate hours correctly", () => {
-      const start = "2023-01-01T00:00:00Z";
-      const end = "2023-01-01T01:05:10Z";
-      expect(LiveLogsService.calculateDuration(start, end)).toBe("1h 5m 10s");
-    });
-
-    it("should return 0s for negative duration", () => {
-      const start = "2023-01-01T00:00:10Z";
-      const end = "2023-01-01T00:00:00Z";
-      expect(LiveLogsService.calculateDuration(start, end)).toBe("0s");
-    });
-  });
-
-  // ─── isFinalStatus ─────────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ isFinalStatus Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   describe("isFinalStatus", () => {
     it("should return true for success and error", () => {
@@ -49,7 +26,7 @@ describe("LiveLogsService", () => {
     });
   });
 
-  // ─── getStepStatus ──────────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ getStepStatus Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   describe("getStepStatus", () => {
     it("should map EventStarted to running", () => {
@@ -77,7 +54,7 @@ describe("LiveLogsService", () => {
     });
   });
 
-  // ─── processLogMessage ──────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ processLogMessage Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   describe("processLogMessage", () => {
     it("should split multiline message and filter empty lines", () => {
@@ -94,7 +71,7 @@ describe("LiveLogsService", () => {
     });
   });
 
-  // ─── processHistoricalLogs ──────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ processHistoricalLogs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   describe("processHistoricalLogs", () => {
     it("should return empty array for empty logs", () => {
@@ -128,7 +105,7 @@ describe("LiveLogsService", () => {
       expect(result).toHaveLength(1);
       expect(result[0].status).toBe("success");
       expect(result[0].logs).toEqual(["Compiling..."]);
-      expect(result[0].duration).toBe("10s");
+      expect(result[0].duration).toBe("~10s");
     });
 
     it("should handle logs out of order", () => {
@@ -149,7 +126,7 @@ describe("LiveLogsService", () => {
 
       const result = LiveLogsService.processHistoricalLogs(logs);
       expect(result[0].status).toBe("success");
-      expect(result[0].duration).toBe("10s");
+      expect(result[0].duration).toBe("~10s");
     });
 
     it("should calculate duration in the second loop if missing", () => {
@@ -185,7 +162,7 @@ describe("LiveLogsService", () => {
     });
   });
 
-  // ─── updateStepWithNotification ─────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ updateStepWithNotification Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   describe("updateStepWithNotification", () => {
     it("should add new step if it doesn't exist", () => {
@@ -243,7 +220,7 @@ describe("LiveLogsService", () => {
         message,
       );
       expect(result[0].status).toBe("success");
-      expect(result[0].duration).toBe("10s");
+      expect(result[0].duration).toBe("~10s");
     });
 
     it("should update existing step when EventStarted occurs", () => {
@@ -262,7 +239,7 @@ describe("LiveLogsService", () => {
         message,
       );
       expect(result[0].status).toBe("running");
-      expect(result[0].startTime).toBe("2023-01-01T00:00:00Z");
+      expect(result[0].startTime).toBe("2023-01-01T00:00:00.000Z");
     });
 
     it("should not update status if already final", () => {
@@ -303,3 +280,105 @@ describe("LiveLogsService", () => {
     });
   });
 });
+
+// â”€â”€â”€ live / deployed parity (issue #155, H6) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+describe("live and deployed views agree", () => {
+  const k8s = (iso: string) => `${iso} working`;
+
+  const camel = [
+    {
+      id: "1",
+      buildId: MOCK_BUILD_ID,
+      eventGroup: DeploymentEventGroup.Clone,
+      eventType: DeploymentEventType.EventStarted,
+      message: "",
+      createdAt: "2026-08-04T10:27:13Z",
+    },
+    {
+      id: "2",
+      buildId: MOCK_BUILD_ID,
+      eventGroup: DeploymentEventGroup.Clone,
+      eventType: DeploymentEventType.Log,
+      message: `${k8s("2026-08-04T10:27:17.552157025Z")}\n${k8s("2026-08-04T10:27:18.714271836Z")}`,
+      createdAt: "2026-08-04T10:27:18Z",
+    },
+    {
+      id: "3",
+      buildId: MOCK_BUILD_ID,
+      eventGroup: DeploymentEventGroup.Clone,
+      eventType: DeploymentEventType.EventFinished,
+      message: "",
+      createdAt: "2026-08-04T10:27:20Z",
+    },
+  ];
+
+  // The notification pipeline delivers the same events PascalCased. If the live
+  // path failed to normalise them the shared resolver would match nothing and
+  // silently report "--", which is exactly the trap this pins.
+  const pascal = camel.map((e) => ({
+    Id: e.id,
+    BuildId: e.buildId,
+    EventGroup: e.eventGroup,
+    EventType: e.eventType,
+    Message: e.message,
+    CreatedAt: e.createdAt,
+  }));
+
+  it("reports the same log-derived duration from either path", () => {
+    const live = LiveLogsService.processHistoricalLogs(pascal);
+    const deployed = DeployedLogsService.processEventsToSteps(camel, MOCK_BUILD_ID);
+
+    expect(live[0].duration).toBe("1.2s");
+    expect(live[0].timingSource).toBe("logs");
+    expect(deployed[0].duration).toBe(live[0].duration);
+    expect(deployed[0].startTime).toBe(live[0].startTime);
+    expect(deployed[0].endTime).toBe(live[0].endTime);
+  });
+
+  it("does not fall back to the poller stamps when logs are available", () => {
+    const live = LiveLogsService.processHistoricalLogs(pascal);
+    // 10:27:13 -> 10:27:20 is the poller's 7s; the real work took 1.162s.
+    expect(live[0].duration).not.toBe("7s");
+    expect(live[0].durationMs).toBe(1162);
+  });
+
+  it("grows a running step's elapsed time from the newest log line, not the clock", () => {
+    const first = LiveLogsService.updateStepWithNotification([], {
+      BuildId: MOCK_BUILD_ID,
+      EventGroup: DeploymentEventGroup.Build,
+      EventType: DeploymentEventType.Log,
+      Message: `${k8s("2026-08-04T10:29:35.480Z")}`,
+      CreatedAt: "2026-08-04T10:29:36Z",
+    });
+
+    const later = LiveLogsService.updateStepWithNotification(first, {
+      BuildId: MOCK_BUILD_ID,
+      EventGroup: DeploymentEventGroup.Build,
+      EventType: DeploymentEventType.Log,
+      Message: `${k8s("2026-08-04T10:29:41.880Z")}`,
+      CreatedAt: "2026-08-04T10:29:42Z",
+    });
+
+    // Payloads replace the log lines rather than appending, so this only holds
+    // because the range is carried on the step and widened.
+    expect(later[0].duration).toBe("6.4s");
+    expect(later[0].timingSource).toBe("logs");
+  });
+
+  it("leaves a step with no usable timestamps as a placeholder", () => {
+    const steps = LiveLogsService.processHistoricalLogs([
+      {
+        BuildId: MOCK_BUILD_ID,
+        EventGroup: DeploymentEventGroup.Sca,
+        EventType: DeploymentEventType.Log,
+        Message: "no timestamp on this line",
+        CreatedAt: "",
+      },
+    ]);
+
+    expect(steps[0].duration).toBe("--");
+    expect(steps[0].timingSource).toBe("none");
+  });
+});
+

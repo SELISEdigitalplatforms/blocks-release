@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import {
+  formatClockTime,
   formatDate,
   formatFullDate,
   parseDateString,
@@ -65,5 +66,24 @@ describe("date.util", () => {
     it("returns false for dates before 1900-01-01", () => {
       expect(checkValidDate("1800-06-15")).toBe(false);
     });
+  });
+});
+
+
+describe("formatClockTime", () => {
+  // Built from local parts so the expectation does not depend on the runner's
+  // timezone - the function renders in the viewer's zone by design.
+  const at = new Date(2026, 7, 4, 16, 27, 17, 552);
+
+  it("keeps millisecond digits for a log-derived time", () => {
+    expect(formatClockTime(at, true)).toBe("16:27:17.552");
+  });
+
+  it("drops them for a poller-derived time, which has no such precision", () => {
+    expect(formatClockTime(at, false)).toBe("16:27:17");
+  });
+
+  it("zero-pads every field", () => {
+    expect(formatClockTime(new Date(2026, 0, 1, 3, 4, 5, 6), true)).toBe("03:04:05.006");
   });
 });

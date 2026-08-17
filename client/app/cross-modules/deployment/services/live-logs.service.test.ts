@@ -4,6 +4,7 @@ import {
   DeploymentEventType,
   DeploymentEventGroup,
 } from "@blocks-deployment/models/live-logs";
+import type { IBuildStep } from "@blocks-deployment/models/live-logs";
 import { MOCK_BUILD_ID } from "../test-utils/__mocks__";
 import { DeployedLogsService } from "./deployed-logs.service";
 
@@ -371,6 +372,81 @@ describe("live and deployed views agree", () => {
 
     expect(steps[0].duration).toBe("--");
     expect(steps[0].timingSource).toBe("none");
+  });
+});
+
+// ─── replayed events must not reopen a finished step ─────────────────────────
+//
+// The backend re-sends the build's whole event list on every 5-second poll
+// (LogRetrievalService.SendNotification loops the full array), so a step that
+// finished early keeps receiving its own EventStarted for as long as the
+// pipeline runs. Nothing about a finished step may move.
+
+describe("a finished step stays finished when its events are replayed", () => {
+  const notify = (
+    steps: IBuildStep[],
+    eventType: DeploymentEventType,
+    createdAt: string,
+    message = "",
+  ) =>
+    LiveLogsService.updateStepWithNotification(steps, {
+      BuildId: MOCK_BUILD_ID,
+      EventGroup: DeploymentEventGroup.Build,
+      EventType: eventType,
+      Message: message,
+      CreatedAt: createdAt,
+    });
+
+  const finishedBuild = () => {
+    const started = notify([], DeploymentEventType.EventStarted, "2026-08-04T10:29:30Z");
+    const logged = notify(
+      started,
+      DeploymentEventType.Log,
+      "2026-08-04T10:29:36Z",
+      "2026-08-04T10:29:35.480Z compiling\n2026-08-04T10:29:41.880Z linked",
+    );
+    return notify(logged, DeploymentEventType.EventFinished, "2026-08-04T10:29:45Z");
+  };
+
+  it("reaches success first", () => {
+    expect(finishedBuild()[0].status).toBe("success");
+  });
+
+  it("does not reopen on a replayed EventStarted", () => {
+    const replayed = notify(
+      finishedBuild(),
+      DeploymentEventType.EventStarted,
+      "2026-08-04T10:29:30Z",
+    );
+
+    expect(replayed[0].status).toBe("success");
+    expect(replayed[0].eventType).toBe(DeploymentEventType.EventFinished);
+  });
+
+  it("holds still across a whole replayed poll cycle", () => {
+    // One poll delivers Started, Log and Finished again, in that order.
+    let steps = finishedBuild();
+    const seen = new Set<string>();
+
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      steps = notify(steps, DeploymentEventType.EventStarted, "2026-08-04T10:29:30Z");
+      seen.add(steps[0].status);
+      steps = notify(
+        steps,
+        DeploymentEventType.Log,
+        "2026-08-04T10:29:36Z",
+        "2026-08-04T10:29:35.480Z compiling\n2026-08-04T10:29:41.880Z linked",
+      );
+      seen.add(steps[0].status);
+      steps = notify(steps, DeploymentEventType.EventFinished, "2026-08-04T10:29:45Z");
+      seen.add(steps[0].status);
+    }
+
+    // Never anything but success - not even transiently, which is what made the
+    // timing bar flip between "Ended" and "Running" on every message.
+    expect([...seen]).toEqual(["success"]);
+    expect(steps[0].duration).toBe("6.4s");
+    expect(steps[0].timingSource).toBe("logs");
   });
 });
 

@@ -188,7 +188,12 @@ export class LiveLogsService {
         if (deploymentMessage.EventType === DeploymentEventType.Log) {
           const newLogs = this.processLogMessage(deploymentMessage.Message);
           updatedStep.logs = [...newLogs];
-        } else {
+          // The backend re-sends the build's whole event list on every poll, so a
+          // step that finished early keeps receiving its own EventStarted for as
+          // long as the pipeline runs. A finished step is finished: without this
+          // guard it flipped back to "running" on every cycle, and the timing bar
+          // alternated between "Ended" and "Running" with it.
+        } else if (!isTerminalStepStatus(step.status)) {
           if (
             deploymentMessage.EventType === DeploymentEventType.EventStarted
           ) {
@@ -198,12 +203,8 @@ export class LiveLogsService {
             deploymentMessage.EventType === DeploymentEventType.EventFinished ||
             deploymentMessage.EventType === DeploymentEventType.EventFailed
           ) {
-            if (!isTerminalStepStatus(step.status)) {
-              updatedStep.status = this.getStepStatus(
-                deploymentMessage.EventType,
-              );
-              updatedStep.eventType = deploymentMessage.EventType;
-            }
+            updatedStep.status = this.getStepStatus(deploymentMessage.EventType);
+            updatedStep.eventType = deploymentMessage.EventType;
           }
         }
 

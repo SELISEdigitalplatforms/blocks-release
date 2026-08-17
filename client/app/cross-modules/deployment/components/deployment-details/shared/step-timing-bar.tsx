@@ -1,5 +1,8 @@
 import { IBuildStep } from "@blocks-deployment/models/live-logs";
-import { DURATION_PLACEHOLDER } from "@blocks-deployment/utils/deployment-logs.utils";
+import {
+  DURATION_PLACEHOLDER,
+  isTerminalStepStatus,
+} from "@blocks-deployment/utils/deployment-logs.utils";
 import { formatClockTime } from "@/utils/date.util";
 
 type StepTimingBarProps = {
@@ -15,9 +18,14 @@ type StepTimingBarProps = {
  * Poller-derived times drop the millisecond digits: the backend samples on a
  * five-second loop, so three trailing zeros would claim a precision it does not
  * have. The format itself is the signal for which clock the value came from.
+ *
+ * Only a step that has finished is described as having ended. While one is still
+ * running its resolved end is just the newest log line so far, so the bar says
+ * "Running" and calls the duration elapsed rather than taken. A step that never
+ * reached a terminal status makes no claim about its end either way.
  */
 export const StepTimingBar = ({ step }: StepTimingBarProps) => {
-  const { startTime, endTime, duration, timingSource } = step;
+  const { startTime, endTime, duration, timingSource, status } = step;
 
   // `duration` is the placeholder whenever the range is not presentable - no
   // range at all, or a lone start marker with nothing to span to.
@@ -39,6 +47,7 @@ export const StepTimingBar = ({ step }: StepTimingBarProps) => {
 
   const withMillis = timingSource === "logs";
   const approximate = timingSource === "events" ? "~" : "";
+  const isRunning = status === "running";
 
   return (
     <div className="border-default flex flex-wrap items-center gap-x-2 border-b bg-secondary px-3 py-1.5 text-xs text-medium-emphasis">
@@ -46,13 +55,25 @@ export const StepTimingBar = ({ step }: StepTimingBarProps) => {
         Started {approximate}
         {formatClockTime(start, withMillis)}
       </span>
+      {isTerminalStepStatus(status) && (
+        <>
+          <span aria-hidden="true">·</span>
+          <span>
+            Ended {approximate}
+            {formatClockTime(end, withMillis)}
+          </span>
+        </>
+      )}
+      {isRunning && (
+        <>
+          <span aria-hidden="true">·</span>
+          <span>Running</span>
+        </>
+      )}
       <span aria-hidden="true">·</span>
       <span>
-        Ended {approximate}
-        {formatClockTime(end, withMillis)}
+        {isRunning ? "Elapsed" : "Took"} {duration}
       </span>
-      <span aria-hidden="true">·</span>
-      <span>Took {duration}</span>
     </div>
   );
 };

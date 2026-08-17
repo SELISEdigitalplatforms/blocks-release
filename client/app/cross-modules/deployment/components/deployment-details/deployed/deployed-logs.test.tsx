@@ -269,6 +269,41 @@ describe("DeployedLogs step timings", () => {
     expect(screen.queryByText(/^Took/)).not.toBeInTheDocument();
   });
 
+  it("says a running step is running rather than giving it an end time", () => {
+    // EventStarted with logs but no terminal marker: the step is still in flight.
+    const running = {
+      status: "Running",
+      eventName: "push",
+      events: [
+        {
+          buildId: "b1",
+          eventGroup: "Build",
+          eventType: "EventStarted",
+          message: "",
+          createdAt: "2026-08-04T10:29:30Z",
+        },
+        {
+          buildId: "b1",
+          eventGroup: "Build",
+          eventType: "Log",
+          message: `${k8s("2026-08-04T10:29:35.480Z", "compiling")}\n${k8s("2026-08-04T10:29:41.880Z", "still compiling")}`,
+          createdAt: "2026-08-04T10:29:42Z",
+        },
+      ],
+    } as never;
+
+    render(<DeployedLogs buildId="b1" isSuccess cardData={running} />);
+    fireEvent.click(screen.getByText("Build"));
+
+    expect(screen.getByText("Running")).toBeInTheDocument();
+    expect(screen.getByText("Elapsed 6.4s")).toBeInTheDocument();
+    expect(screen.queryByText(/^Ended/)).not.toBeInTheDocument();
+    // The chip tooltip must not hedge it as finished either.
+    const title = screen.getByText("6.4s").getAttribute("title") ?? "";
+    expect(title).toContain("Last output ");
+    expect(title).not.toContain("Ended");
+  });
+
   it("still times a failed step and leaves it expanded", () => {
     const failed = {
       status: "Failed",
@@ -301,8 +336,15 @@ describe("DeployedLogs step timings", () => {
     const { container } = render(
       <DeployedLogs buildId="b1" isSuccess cardData={timedCardData} />,
     );
-    // The RFC3339 prefix keeps rendering inline, exactly as before.
-    expect(screen.getByText(/^2026-08-04T10:27:17\.552157025Z cloning$/)).toBeInTheDocument();
+    // The RFC3339 prefix keeps rendering inline, in place. It now sits in its own
+    // dimmed span, so the line is split across elements and has to be read off the
+    // container rather than matched as one text node.
+    expect(container.textContent).toContain(
+      "2026-08-04T10:27:17.552157025Z cloning",
+    );
+    expect(screen.getByText("2026-08-04T10:27:17.552157025Z")).toHaveClass(
+      "text-low-emphasis",
+    );
     expect(container.textContent).toContain("01");
   });
 });

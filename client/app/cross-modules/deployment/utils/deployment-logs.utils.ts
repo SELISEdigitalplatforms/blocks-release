@@ -19,6 +19,44 @@ export const DURATION_PLACEHOLDER = "--";
 export const APPROXIMATE_PREFIX = "~";
 
 /**
+ * Whether a step has reached a state it will not move out of.
+ *
+ * The single source of truth for "is this step still going". The timing bar asks
+ * it so it never claims a step ended while it is still producing output, and both
+ * services gate their status updates on the same question.
+ */
+export const isTerminalStepStatus = (status: IBuildStep["status"]): boolean =>
+  status === "success" || status === "error";
+
+/**
+ * Divides a log line into its k8s timestamp prefix and the message after it, so
+ * the prefix can be rendered dimmed without the message being touched.
+ *
+ * The line is only ever divided, never rewritten: `timestamp + separator + text`
+ * reconstructs the input exactly, for every input, including one with no prefix.
+ */
+export const splitLogLine = (
+  line: string,
+): { timestamp: string | null; separator: string; text: string } => {
+  if (typeof line !== "string" || line.length === 0) {
+    return { timestamp: null, separator: "", text: line || "" };
+  }
+
+  const match = LOG_LINE_TIMESTAMP.exec(line);
+  if (!match) return { timestamp: null, separator: "", text: line };
+
+  const timestamp = match[1];
+
+  return {
+    timestamp,
+    // Whatever whitespace the pattern consumed between prefix and message, taken
+    // verbatim rather than assumed to be a single space.
+    separator: line.slice(timestamp.length, match[0].length),
+    text: line.slice(match[0].length),
+  };
+};
+
+/**
  * Reads the k8s timestamp off the front of a log line.
  *
  * Returns null - never throws - for a missing, malformed or unparseable prefix,
@@ -221,6 +259,10 @@ export const applyStepTimeRange = (
 /**
  * Full local start/end plus duration, for the chip's hover tooltip. Poller-derived
  * values say so outright rather than quietly reading as measured.
+ *
+ * A running step's resolved end is only the newest log line seen so far, so it is
+ * labelled "Last output" rather than passed off as a finish time. A step that has
+ * not reached a terminal status at all claims nothing about its end.
  */
 export const getStepTimingTooltip = (step: IBuildStep): string | undefined => {
   if (!step.startTime || !step.endTime || !step.timingSource) return undefined;
@@ -233,7 +275,18 @@ export const getStepTimingTooltip = (step: IBuildStep): string | undefined => {
     return undefined;
   }
 
-  const base = `Started ${start.toLocaleString()} · Ended ${end.toLocaleString()} · Took ${step.duration}`;
+  const isRunning = step.status === "running";
+  const clauses = [`Started ${start.toLocaleString()}`];
+
+  if (isTerminalStepStatus(step.status)) {
+    clauses.push(`Ended ${end.toLocaleString()}`);
+  } else if (isRunning) {
+    clauses.push(`Last output ${end.toLocaleString()}`);
+  }
+
+  clauses.push(`${isRunning ? "Elapsed" : "Took"} ${step.duration}`);
+
+  const base = clauses.join(" · ");
 
   return step.timingSource === "events"
     ? `${base}\nApproximate — derived from backend polling, not log timestamps.`

@@ -10,17 +10,11 @@ import {
   getLogTimeRange,
   getStepTimeRange,
   getStoredStepTimeRange,
+  isTerminalStepStatus,
   mergeStepTimeRange,
 } from "@blocks-deployment/utils/deployment-logs.utils";
 
 export class LiveLogsService {
-  /**
-   * Check if a build step status is final (completed)
-   */
-  static isFinalStatus(status: IBuildStep["status"]): boolean {
-    return status === "success" || status === "error";
-  }
-
   /**
    * Get step status based on event type
    */
@@ -68,7 +62,7 @@ export class LiveLogsService {
           if (log.EventType === DeploymentEventType.Log) {
             const newLogs = this.processLogMessage(log.Message);
             existingStep.logs = [...newLogs];
-          } else if (!this.isFinalStatus(existingStep.status)) {
+          } else if (!isTerminalStepStatus(existingStep.status)) {
             existingStep.status = this.getStepStatus(log.EventType);
             existingStep.eventType = log.EventType;
           }
@@ -204,7 +198,7 @@ export class LiveLogsService {
             deploymentMessage.EventType === DeploymentEventType.EventFinished ||
             deploymentMessage.EventType === DeploymentEventType.EventFailed
           ) {
-            if (!this.isFinalStatus(step.status)) {
+            if (!isTerminalStepStatus(step.status)) {
               updatedStep.status = this.getStepStatus(
                 deploymentMessage.EventType,
               );

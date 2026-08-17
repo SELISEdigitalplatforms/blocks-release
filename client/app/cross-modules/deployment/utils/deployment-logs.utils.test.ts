@@ -13,14 +13,17 @@ import {
   getStepTimeRange,
   getStepTimingTooltip,
   getTimeDifference,
+  isTerminalStepStatus,
   mergeStepTimeRange,
   parseLogLineTimestamp,
   processLogMessage,
+  splitLogLine,
 } from "./deployment-logs.utils";
 import {
   DeploymentEventGroup,
   DeploymentEventType,
 } from "@blocks-deployment/models/live-logs";
+import type { IBuildStep } from "@blocks-deployment/models/live-logs";
 import type { IBuildEvent } from "@blocks-deployment/models/deployed-logs";
 
 const event = (
@@ -391,6 +394,109 @@ describe("getStepTimingTooltip", () => {
 
   it("has nothing to say without a range", () => {
     expect(getStepTimingTooltip(applyStepTimeRange(base, null))).toBeUndefined();
+  });
+});
+
+// ─── running-state wording and timestamp splitting (DEP-LOGS-TIMING-02) ──────
+
+describe("isTerminalStepStatus", () => {
+  it("is true only for a step that has finished one way or the other", () => {
+    expect(isTerminalStepStatus("success")).toBe(true);
+    expect(isTerminalStepStatus("error")).toBe(true);
+  });
+
+  it("is false while a step could still change", () => {
+    expect(isTerminalStepStatus("running")).toBe(false);
+    expect(isTerminalStepStatus("pending")).toBe(false);
+  });
+});
+
+describe("splitLogLine", () => {
+  const roundTrips = (line: string) => {
+    const { timestamp, separator, text } = splitLogLine(line);
+    return `${timestamp ?? ""}${separator}${text}` === line;
+  };
+
+  it("separates the k8s prefix from the message", () => {
+    expect(splitLogLine("2026-08-04T10:27:17.552157025Z cloning")).toEqual({
+      timestamp: "2026-08-04T10:27:17.552157025Z",
+      separator: " ",
+      text: "cloning",
+    });
+  });
+
+  it("leaves a line with no prefix entirely alone", () => {
+    expect(splitLogLine("compiling without a timestamp")).toEqual({
+      timestamp: null,
+      separator: "",
+      text: "compiling without a timestamp",
+    });
+  });
+
+  it("treats a malformed prefix as no prefix", () => {
+    expect(splitLogLine("2026-08-04 10:27:17Z not rfc3339").timestamp).toBeNull();
+  });
+
+  it("keeps the message verbatim, including its own inner spacing", () => {
+    const { text } = splitLogLine(
+      "2026-08-04T10:27:17Z [36mINFO[0m[0000]  two  spaces",
+    );
+    expect(text).toBe("[36mINFO[0m[0000]  two  spaces");
+  });
+
+  it("reconstructs every input exactly", () => {
+    expect(roundTrips("2026-08-04T10:27:17.552157025Z cloning")).toBe(true);
+    expect(roundTrips("2026-08-04T10:27:17Z x")).toBe(true);
+    expect(roundTrips("no prefix at all")).toBe(true);
+    expect(roundTrips("")).toBe(true);
+  });
+
+  it("survives a non-string without throwing", () => {
+    expect(splitLogLine(undefined as unknown as string)).toEqual({
+      timestamp: null,
+      separator: "",
+      text: "",
+    });
+  });
+});
+
+describe("getStepTimingTooltip by step state", () => {
+  const base = {
+    id: "s",
+    name: "Build",
+    eventType: DeploymentEventType.Log,
+    eventGroup: DeploymentEventGroup.Build,
+  };
+
+  const at = (status: IBuildStep["status"]) =>
+    getStepTimingTooltip(
+      applyStepTimeRange(
+        { ...base, status },
+        {
+          startMs: new Date("2026-08-04T10:29:35.480Z").getTime(),
+          endMs: new Date("2026-08-04T10:29:41.880Z").getTime(),
+          source: "logs",
+        },
+      ),
+    ) ?? "";
+
+  it("calls the newest log line 'Last output' while running, never 'Ended'", () => {
+    expect(at("running")).toContain("Last output ");
+    expect(at("running")).not.toContain("Ended");
+    expect(at("running")).toContain("Elapsed 6.4s");
+    expect(at("running")).not.toContain("Took");
+  });
+
+  it("says Ended and Took once the step has finished", () => {
+    expect(at("success")).toContain("Ended ");
+    expect(at("success")).toContain("Took 6.4s");
+    expect(at("error")).toContain("Ended ");
+  });
+
+  it("claims nothing about the end of a step that never reached one", () => {
+    expect(at("pending")).not.toContain("Ended");
+    expect(at("pending")).not.toContain("Last output");
+    expect(at("pending")).toContain("Took 6.4s");
   });
 });
 

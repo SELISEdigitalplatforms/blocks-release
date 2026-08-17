@@ -16,6 +16,7 @@ import {
   getStepTimingTooltip,
 } from "@blocks-deployment/utils/deployment-logs.utils";
 import { StepTimingBar } from "@blocks-deployment/components/deployment-details/shared/step-timing-bar";
+import { LogLineText } from "@blocks-deployment/components/deployment-details/shared/log-line-text";
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
 import { IDeploymentEvent } from "@blocks-deployment/pages/deployment-details";
 
@@ -364,7 +365,7 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
                                 {String(logIndex + 1).padStart(2, "0")}
                               </div>
                               <div className="flex-1 px-3 py-1">
-                                {log.trim()}
+                                <LogLineText line={log} />
                               </div>
                             </div>
                           ))}

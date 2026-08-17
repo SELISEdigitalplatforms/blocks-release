@@ -9,6 +9,7 @@ import {
 } from "@blocks-deployment/utils/deployment-logs.utils";
 import { IBuildStep } from "@blocks-deployment/models/live-logs";
 import { StepTimingBar } from "@blocks-deployment/components/deployment-details/shared/step-timing-bar";
+import { LogLineText } from "@blocks-deployment/components/deployment-details/shared/log-line-text";
 import { useStatusIcon } from "@blocks-deployment/hooks/use-log-status-icon";
 import { IDeploymentPageData } from "@blocks-deployment/pages/deployment-details";
 
@@ -214,7 +215,9 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
                             <div className="min-w-[3rem] select-none bg-secondary px-3 py-1 text-right">
                               {String(logIndex + 1).padStart(2, "0")}
                             </div>
-                            <div className="flex-1 px-3 py-1">{log}</div>
+                            <div className="flex-1 px-3 py-1">
+                              <LogLineText line={log} />
+                            </div>
                           </div>
                         ))}
                       </div>

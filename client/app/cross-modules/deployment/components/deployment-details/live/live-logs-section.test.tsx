@@ -287,7 +287,7 @@ describe("LiveDeploymentLogs step timings", () => {
   });
 
   it("shows when a step ran once it is expanded, and omits the bar when it cannot", () => {
-    render(
+    const { container } = render(
       <LiveDeploymentLogs
         buildId="b1"
         historicalEvents={
@@ -307,8 +307,12 @@ describe("LiveDeploymentLogs step timings", () => {
     fireEvent.click(screen.getByText("Build"));
     expect(screen.getByText("Took 6.4s")).toBeInTheDocument();
     expect(screen.getByText(/^Started \d{2}:\d{2}:\d{2}\.\d{3}$/)).toBeInTheDocument();
-    // The RFC3339 prefix keeps rendering inline in the log body.
-    expect(screen.getByText(/^2026-08-04T10:29:35\.480Z compiling$/)).toBeInTheDocument();
+    // The RFC3339 prefix keeps rendering inline in the log body - now in its own
+    // dimmed span, so it is read off the container rather than as one text node.
+    expect(container.textContent).toContain("2026-08-04T10:29:35.480Z compiling");
+    expect(screen.getByText("2026-08-04T10:29:35.480Z")).toHaveClass(
+      "text-low-emphasis",
+    );
   });
 
   it("grows a running step's elapsed time as further log lines arrive", () => {
@@ -332,5 +336,50 @@ describe("LiveDeploymentLogs step timings", () => {
 
     // Computed from the newest log timestamp, never from the wall clock.
     expect(screen.getByText("6.4s")).toBeInTheDocument();
+  });
+
+  it("says a running step is running instead of claiming it ended", () => {
+    render(<LiveDeploymentLogs buildId="b1" />);
+
+    dispatchNotification({
+      BuildId: "b1",
+      EventType: "Log",
+      EventGroup: "Build",
+      Message: `${k8sLine("2026-08-04T10:29:35.480Z", "compiling")}\n${k8sLine("2026-08-04T10:29:41.880Z", "still compiling")}`,
+      CreatedAt: "2026-08-04T10:29:42Z",
+    });
+
+    // A log notification auto-expands its step, so the bar is already on screen.
+    // The newest log line is only how far it has got, not when it finished.
+    expect(screen.getByText("Running")).toBeInTheDocument();
+    expect(screen.getByText("Elapsed 6.4s")).toBeInTheDocument();
+    expect(screen.queryByText(/^Ended/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Took/)).not.toBeInTheDocument();
+    // It still says when it started - that part is known.
+    expect(screen.getByText(/^Started \d{2}:\d{2}:\d{2}\.\d{3}$/)).toBeInTheDocument();
+  });
+
+  it("switches to Ended and Took once the step finishes", () => {
+    render(<LiveDeploymentLogs buildId="b1" />);
+
+    dispatchNotification({
+      BuildId: "b1",
+      EventType: "Log",
+      EventGroup: "Build",
+      Message: `${k8sLine("2026-08-04T10:29:35.480Z", "compiling")}\n${k8sLine("2026-08-04T10:29:41.880Z", "linked")}`,
+      CreatedAt: "2026-08-04T10:29:42Z",
+    });
+    dispatchNotification({
+      BuildId: "b1",
+      EventType: "EventFinished",
+      EventGroup: "Build",
+      Message: "",
+      CreatedAt: "2026-08-04T10:29:45Z",
+    });
+
+    expect(screen.getByText(/^Ended /)).toBeInTheDocument();
+    expect(screen.getByText("Took 6.4s")).toBeInTheDocument();
+    expect(screen.queryByText("Running")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Elapsed/)).not.toBeInTheDocument();
   });
 });

@@ -68,12 +68,9 @@ export class LiveLogsService {
           if (log.EventType === DeploymentEventType.Log) {
             const newLogs = this.processLogMessage(log.Message);
             existingStep.logs = [...newLogs];
-          } else {
-            if (!this.isFinalStatus(existingStep.status)) {
-              existingStep.status = this.getStepStatus(log.EventType);
-              existingStep.eventType = log.EventType;
-            }
-
+          } else if (!this.isFinalStatus(existingStep.status)) {
+            existingStep.status = this.getStepStatus(log.EventType);
+            existingStep.eventType = log.EventType;
           }
         } else {
           const initialLogs =
@@ -248,7 +245,7 @@ export class LiveLogsService {
 
     const stampMs = message.CreatedAt
       ? new Date(message.CreatedAt).getTime()
-      : NaN;
+      : Number.NaN;
     if (!Number.isFinite(stampMs)) return null;
 
     return { startMs: stampMs, endMs: stampMs, source: "events" };

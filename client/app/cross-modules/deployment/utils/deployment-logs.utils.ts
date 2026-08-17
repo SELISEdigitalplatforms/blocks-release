@@ -131,8 +131,10 @@ export const getPipelineTimeRange = (
 
   for (const step of steps) {
     if (step?.timingSource !== "logs") continue;
-    const start = step.startTime ? new Date(step.startTime).getTime() : NaN;
-    const end = step.endTime ? new Date(step.endTime).getTime() : NaN;
+    const start = step.startTime
+      ? new Date(step.startTime).getTime()
+      : Number.NaN;
+    const end = step.endTime ? new Date(step.endTime).getTime() : Number.NaN;
     if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
     found = true;
     if (start < startMs) startMs = start;

@@ -33,9 +33,14 @@ export default defineConfig({
   // would expire before the spec's own 45s waitForURL ever got the chance to.
   timeout: 120_000,
   reporter: [["html", { open: "never" }], ["list"]],
-  // Patches a locally-built index.html so BLOCKS_RELEASE_BASE_URL points at
+  // Patches a locally-built index.html using the global.setup.ts file so BLOCKS_RELEASE_BASE_URL points at
   // E2E_BASE_URL instead of the remote dev server. No-op against remote hosts.
-  globalSetup: "./global-setup.ts",
+  globalSetup: "./global.setup.ts",
+
+  // Removes the project, and the setup project created after the suite finishes using the global.teardown.ts file.
+  // Best-effort: logs and continues if anything goes wrong, so cleanup
+  // failures never mask the real test result.
+  globalTeardown: "./global.teardown.ts",
   use: {
     baseURL,
     trace: "on-first-retry",

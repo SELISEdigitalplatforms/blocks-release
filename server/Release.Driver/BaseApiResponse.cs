@@ -1,7 +1,7 @@
 using System.Net;
 using Blocks.Genesis;
 
-namespace DeploymentDriver
+namespace ReleaseDriver
 {
     public class BaseApiResponse : BaseResponse
     {

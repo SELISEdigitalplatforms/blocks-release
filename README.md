@@ -29,7 +29,7 @@ blocks-release/
 │   │   └── Properties/launchSettings.json
 │   ├── Worker/                   # Worker host + message consumers
 │   ├── Devops.DomainService/     # Domain logic (deployment, GitHub, pipelines, analytics)
-│   ├── Deployment.Driver/        # Packaged facade over the domain services
+│   ├── Release.Driver/           # Packaged facade over the domain services
 │   ├── XUnitTest/                # Backend unit tests (xUnit)
 │   ├── seed/                     # Permission seed documents (mongoimport / upsert)
 │   ├── Blocks.slnx               # Solution (SDK-style XML)

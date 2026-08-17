@@ -11,6 +11,11 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useStatusIcon } from "@blocks-deployment/hooks/use-log-status-icon";
 import { LiveLogsService } from "@blocks-deployment/services/live-logs.service";
+import {
+  DURATION_PLACEHOLDER,
+  getStepTimingTooltip,
+} from "@blocks-deployment/utils/deployment-logs.utils";
+import { StepTimingBar } from "@blocks-deployment/components/deployment-details/shared/step-timing-bar";
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
 import { IDeploymentEvent } from "@blocks-deployment/pages/deployment-details";
 
@@ -335,17 +340,20 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
                     </div>
                     <span className="text-sm font-medium">{step.name}</span>
                   </div>
-                  {step.duration && (
-                    <div className="font-mono text-xs text-low-emphasis">
-                      {step.duration}
-                    </div>
-                  )}
+                  {/* Always rendered: a step with no resolvable timing shows the
+                      placeholder rather than silently dropping the column. */}
+                  <div
+                    className="font-mono text-xs text-low-emphasis"
+                    title={getStepTimingTooltip(step)}>
+                    {step.duration ?? DURATION_PLACEHOLDER}
+                  </div>
                 </div>
 
                 {expandedSteps.has(step.id) &&
                   step.logs &&
                   step.logs.length > 0 && (
                     <div className="bg-secondary">
+                      <StepTimingBar step={step} />
                       <div className="overflow-x-auto">
                         <div className="p-0">
                           {step.logs.map((log, logIndex) => (

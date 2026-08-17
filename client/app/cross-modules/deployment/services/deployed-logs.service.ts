@@ -5,8 +5,9 @@ import {
 } from "@blocks-deployment/models/live-logs";
 import { IBuildEvent } from "@blocks-deployment/models/deployed-logs";
 import {
-  calculateStepDuration,
+  applyStepTimeRange,
   getStepStatus,
+  getStepTimeRange,
   processLogMessage,
 } from "@blocks-deployment/utils/deployment-logs.utils";
 
@@ -31,7 +32,6 @@ export class DeployedLogsService {
             id: stepId,
             name: event.eventGroup,
             status: "pending",
-            duration: "0s",
             logs: logLines,
             eventType: event.eventType,
             eventGroup: event.eventGroup,
@@ -48,7 +48,6 @@ export class DeployedLogsService {
             id: stepId,
             name: event.eventGroup,
             status,
-            duration: "0s",
             logs: [],
             eventType: event.eventType,
             eventGroup: event.eventGroup,
@@ -57,10 +56,9 @@ export class DeployedLogsService {
       }
     });
 
-    const steps = Array.from(stepGroups.values()).map((step) => ({
-      ...step,
-      duration: calculateStepDuration(events, step.eventGroup),
-    }));
+    const steps = Array.from(stepGroups.values()).map((step) =>
+      applyStepTimeRange(step, getStepTimeRange(events, step.eventGroup)),
+    );
 
     return this.sortStepsByOrder(steps);
   }

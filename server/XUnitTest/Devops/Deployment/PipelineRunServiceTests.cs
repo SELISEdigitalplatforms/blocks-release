@@ -110,6 +110,63 @@ namespace XUnitTest.Devops.Deployment
             return null;
         }
 
+        /// <summary>
+        /// The FE construct definition now comes from the vault, so any test that reaches the
+        /// PipelineRun build has to supply one. This is a synthetic minimum - the eight params the
+        /// builder rewrites, and nothing else. Real environment definitions are deliberately not
+        /// checked into this repository, so no test depends on one.
+        /// </summary>
+        private const string MinimalDefinition = """
+            apiVersion: tekton.dev/v1beta1
+            kind: PipelineRun
+            metadata:
+              namespace: tekton-pipelines
+              name: test-run
+            spec:
+              pipelineRef:
+                name: test-pipeline
+              params:
+                - name: repo-url
+                  value: https://example.com/org/repo.git
+                - name: revision
+                  value: "main"
+                - name: image-reference
+                  value: registry.example.com/demo:v1
+                - name: extra-args
+                  value:
+                    - "--build-arg"
+                    - "ci_build=prod"
+                - name: app-name
+                  value: "demo-app"
+                - name: namespace
+                  value: "demo"
+                - name: domains
+                  value: "demo.example.com"
+                - name: sonar-project-key
+                  value: "demo"
+            """;
+
+        private void StubPipelineDefinition() =>
+            _secret.SetupGet(s => s.PipelineRunFeConstruct)
+                   .Returns(Convert.ToBase64String(Encoding.UTF8.GetBytes(MinimalDefinition)));
+
+        private IList<object> SubmittedParams()
+        {
+            var spec = (_submittedPipelineRun as IDictionary<string, object>)?["spec"] as IDictionary<object, object>;
+            return spec?["params"] as IList<object>;
+        }
+
+        private object SubmittedParamValue(string name)
+        {
+            foreach (var item in SubmittedParams()!.OfType<IDictionary<object, object>>())
+            {
+                if (item.TryGetValue("name", out var key) && key?.ToString() == name)
+                    return item.TryGetValue("value", out var value) ? value : null;
+            }
+
+            return null;
+        }
+
         private void SetupPodLog(string logText) =>
             _coreV1
                 .Setup(c => c.ReadNamespacedPodLogWithHttpMessagesAsync(
@@ -808,6 +865,7 @@ namespace XUnitTest.Devops.Deployment
         {
             SetContext(userId: "user-1");
             _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            StubPipelineDefinition();
             SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
 
             var (name, image, deployedNamespace, error) = await Service().CreateNamespaceAsync(NewRepo());
@@ -831,6 +889,7 @@ namespace XUnitTest.Devops.Deployment
         {
             SetContext(userId: "user-1");
             _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            StubPipelineDefinition();
             _customObjects
                 .Setup(c => c.CreateNamespacedCustomObjectWithHttpMessagesAsync(
                     It.IsAny<object>(), It.IsAny<string>(), It.IsAny<string>(),
@@ -852,6 +911,7 @@ namespace XUnitTest.Devops.Deployment
         {
             SetContext();
             _tokenRepository.Setup(t => t.getToken("user-ctx")).ReturnsAsync("gh-token");
+            StubPipelineDefinition();
             SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
 
             var (_, _, _, error) = await Service().CreateNamespaceAsync(NewRepo());
@@ -867,6 +927,8 @@ namespace XUnitTest.Devops.Deployment
         {
             SetContext();
             _tokenRepository.Setup(t => t.getToken(It.IsAny<string>())).ReturnsAsync("gh-token");
+            // Stubbed so the failure provably comes from the null repo name, not a missing secret.
+            StubPipelineDefinition();
             var repo = NewRepo();
             repo.RepoName = null;
 
@@ -875,6 +937,79 @@ namespace XUnitTest.Devops.Deployment
             name.Should().BeNull();
             image.Should().BeNull();
             error.Should().NotBeNullOrEmpty();
+        }
+
+        // ---- CreateNamespaceAsync: the vaulted pipeline definition ----
+
+        [Fact]
+        public async Task CreateNamespaceAsync_MissingDefinitionSecret_ReturnsVaultErrorAndSubmitsNothing()
+        {
+            SetContext(userId: "user-1");
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
+            // _secret returns null for PipelineRunFeConstruct by default - the unseeded vault.
+
+            var (name, image, deployedNamespace, error) = await Service().CreateNamespaceAsync(NewRepo());
+
+            error.Should().Be("PipelineRunFeConstruct secret is missing from the vault.");
+            name.Should().BeNull();
+            image.Should().BeNull();
+            deployedNamespace.Should().BeNull();
+            _customObjects.Verify(c => c.CreateNamespacedCustomObjectWithHttpMessagesAsync(
+                It.IsAny<object>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task CreateNamespaceAsync_NoAccessTokenAndNoDefinitionSecret_StillReportsTheTokenFailure()
+        {
+            // Pins the guard ordering: the definition is decoded only after the access-token check,
+            // so a user who needs to re-authorize is told that rather than about a vault secret.
+            SetContext();
+            _tokenRepository.Setup(t => t.getToken(It.IsAny<string>())).ReturnsAsync(string.Empty);
+
+            var (_, _, _, error) = await Service().CreateNamespaceAsync(NewRepo());
+
+            error.Should().Be("Access token not found. Please authorize again.");
+        }
+
+        [Fact]
+        public async Task CreateNamespaceAsync_PlainYamlSecret_ProducesTheSameRunAsBase64()
+        {
+            SetContext(userId: "user-1");
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            _secret.SetupGet(s => s.PipelineRunFeConstruct).Returns(MinimalDefinition);
+            SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
+
+            var (name, image, _, error) = await Service().CreateNamespaceAsync(NewRepo());
+
+            error.Should().BeNull();
+            name.Should().StartWith("my-repository-with-a-");
+            image.Should().StartWith("registry.example.com/my-project/my-repository-with-a-long-name:");
+            SubmittedParamValue("app-name").Should().Be("my-project-main-my-repository-with-a-long-name");
+        }
+
+        [Fact]
+        public async Task CreateNamespaceAsync_MalformedDefinition_ReturnsErrorAndSubmitsNothing()
+        {
+            SetContext(userId: "user-1");
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            _secret.SetupGet(s => s.PipelineRunFeConstruct)
+                   .Returns(Convert.ToBase64String(Encoding.UTF8.GetBytes("apiVersion: v1\nkind: ConfigMap\n")));
+
+            var (name, _, _, error) = await Service().CreateNamespaceAsync(NewRepo());
+
+            name.Should().BeNull();
+            error.Should().NotBeNullOrEmpty();
+            _customObjects.Verify(c => c.CreateNamespacedCustomObjectWithHttpMessagesAsync(
+                It.IsAny<object>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                It.IsAny<CancellationToken>()), Times.Never);
         }
 
         // ---- CreateDataGetwayInstance ----

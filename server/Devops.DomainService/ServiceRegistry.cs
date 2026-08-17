@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 using Devops.DomainService.Deployment.Interfaces;
@@ -8,6 +7,7 @@ using Devops.DomainService.Deployment.RepositoryServices;
 using Devops.DomainService.Deployment.Services;
 using Devops.DomainService.Shared.Interfaces;
 using Devops.DomainService.Shared.Services;
+using Devops.DomainService.Shared.Utilities;
 using Devops.DomainService.Validators;
 using Devops.DomainService.VersionControlSystems.Interfaces;
 using Devops.DomainService.VersionControlSystems.RepositoryServices;
@@ -62,40 +62,13 @@ public static class ServiceRegistry
         services.AddSingleton<IDeploymentHubService, NullDeploymentHubService>();
         services.AddSingleton<ISonarQubeAuthService, SonarQubeAuthService>();
 
+        // Resolution order and the reasoning behind it live in KubernetesClientResolver. Production
+        // is unchanged: with no KubeConfig secret in its vault it still uses the in-cluster service
+        // account.
         services.AddSingleton<IKubernetes>(sp =>
-        {
-            var env = sp.GetRequiredService<IHostEnvironment>();
-
-            if (env.IsDevelopment())
-            {
-                try
-                {
-                    var kubeConfig = KubernetesClientConfiguration.BuildConfigFromConfigFile();
-                    return new Kubernetes(kubeConfig);
-                }
-                catch
-                {
-                    return null!;
-                }
-            }
-            try
-            {
-                var config = KubernetesClientConfiguration.InClusterConfig();
-                return new Kubernetes(config);
-            }
-            catch
-            {
-                try
-                {
-                    var kubeConfig = KubernetesClientConfiguration.BuildConfigFromConfigFile();
-                    return new Kubernetes(kubeConfig);
-                }
-                catch
-                {
-                    return null!;
-                }
-            }
-        });
+            KubernetesClientResolver.Resolve(
+                cloudBuildSecret,
+                sp.GetRequiredService<IHostEnvironment>().IsDevelopment()));
 
     }
 }

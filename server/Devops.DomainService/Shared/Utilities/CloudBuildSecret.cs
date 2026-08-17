@@ -16,6 +16,13 @@ namespace Blocks.Genesis
         public string GithubClientId { get; set; }
         public string SonarQubeToken { get; set; }
 
+        // Both are looked up in the vault by property name (see the reflection loop below), so the
+        // Key Vault secret names are exactly "KubeConfig" and "PipelineRunFeConstruct". A secret that
+        // does not exist is swallowed by the vault client and simply leaves the property null - that
+        // is deliberate, and is what keeps production working without a KubeConfig secret.
+        public string KubeConfig { get; set; }
+        public string PipelineRunFeConstruct { get; set; }
+
 
         public static async Task<ICloudBuildSecret> ProcessBlocksSecret(VaultType vaultType = VaultType.Azure)
         {

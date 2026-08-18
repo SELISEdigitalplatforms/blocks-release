@@ -36,11 +36,6 @@ export default defineConfig({
   // Patches a locally-built index.html using the global.setup.ts file so BLOCKS_RELEASE_BASE_URL points at
   // E2E_BASE_URL instead of the remote dev server. No-op against remote hosts.
   globalSetup: "./global.setup.ts",
-
-  // Removes the project, and the setup project created after the suite finishes using the global.teardown.ts file.
-  // Best-effort: logs and continues if anything goes wrong, so cleanup
-  // failures never mask the real test result.
-  globalTeardown: "./global.teardown.ts",
   use: {
     baseURL,
     trace: "on-first-retry",
@@ -77,22 +72,33 @@ export default defineConfig({
       }
     : {}),
   projects: [
-    // Setup: performs the real login once and saves the session to
-    // fixtures/auth.json (see login.spec.ts).
     {
       name: "setup",
       testMatch: /auth[\\/]login\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
-    // All other tests run authenticated by reusing that saved session, and
-    // only after "setup" (login) has succeeded.
     {
-      name: "chromium",
-      testIgnore: /auth[\\/]login\.spec\.ts/,
-      dependencies: ["setup"],
+      name: "release-setup",
+      testMatch: /release\.setup\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "release",
+      testMatch: /.*\.spec\.ts/,
+      testIgnore: /auth[\\/]|release\.(setup|teardown)\.spec\.ts/,
+      dependencies: ["release-setup"],
       use: {
         ...devices["Desktop Chrome"],
-        storageState: "fixtures/auth.json",
+        storageState: "fixtures/release-session.json",
+      },
+    },
+    {
+      name: "release-teardown",
+      testMatch: /release\.teardown\.spec\.ts/,
+      dependencies: ["release"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "fixtures/release-session.json",
       },
     },
   ],

@@ -1,18 +1,14 @@
 import { test, expect } from "@playwright/test";
-import { loginFresh, openFirstProject, sidebarNavItem } from "@/support/auth-helpers";
+import { sidebarNavItem } from "@/support/auth-helpers";
+import { openReleaseConsole, openReleaseOverview } from "@/support/release-helpers";
 
 /**
  * Console + Project Overview ("Project Details" / "Core APIs").
- *
- * Auth: each test logs in fresh (no shared storageState) so the file stays
- * fully self-contained, matching profile.spec.ts.
+ * Uses the shared project created in release.setup.spec.ts (one login per suite).
  */
 test.describe("Console & Project Overview", () => {
-  test.beforeEach(async ({ page }) => {
-    await loginFresh(page);
-  });
-
   test("Console - topbar", async ({ page }) => {
+    await openReleaseConsole(page);
     // Theme switcher (Auto/Light/Dark tabs). Only the active tab's text label
     // is visible in the DOM (others are display:none), so the tablist is
     // located via the "Light" tab, which is the default/active theme.
@@ -87,6 +83,7 @@ test.describe("Console & Project Overview", () => {
   });
 
   test("Console - project list", async ({ page }) => {
+    await openReleaseConsole(page);
     await test.step("[Positive] Your Blocks Projects section lists at least one project", async () => {
       await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible();
       await expect(page.getByText("Add Project", { exact: true })).toBeVisible();
@@ -101,8 +98,7 @@ test.describe("Console & Project Overview", () => {
   });
 
   test("Project Overview - Project Details", async ({ page }) => {
-    await openFirstProject(page);
-    await sidebarNavItem(page, "Overview").click();
+    await openReleaseOverview(page);
 
     await test.step("[Positive] Project Details card shows core metadata fields", async () => {
       await expect(page.getByRole("heading", { name: "Project Details" })).toBeVisible();
@@ -151,9 +147,7 @@ test.describe("Console & Project Overview", () => {
   });
 
   test("Project Overview - navigation to Deployment", async ({ page }) => {
-    await openFirstProject(page);
-    await sidebarNavItem(page, "Overview").click();
-    await expect(page.getByRole("heading", { name: "Project Details" })).toBeVisible();
+    await openReleaseOverview(page);
 
     await test.step("[Positive] Deployment nav item switches to the Deployment section", async () => {
       await sidebarNavItem(page, "Deployment").click();

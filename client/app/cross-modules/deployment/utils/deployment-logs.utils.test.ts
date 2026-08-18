@@ -182,6 +182,43 @@ describe("parseLogLineTimestamp", () => {
   it("requires whitespace after the prefix so a bare timestamp is not mistaken for a line", () => {
     expect(parseLogLineTimestamp("2026-08-04T10:27:17.552157025Z")).toBeNull();
   });
+
+  // The cluster does not always stamp in UTC. Matching only "Z" made every step
+  // silently fall back to the poller and report "~5.8s" for a second of work.
+  it("reads a numeric UTC offset, not only Z", () => {
+    expect(
+      parseLogLineTimestamp(k8sLine("2026-08-18T13:52:22.648344734+02:00")),
+    ).toBe(new Date("2026-08-18T13:52:22.648+02:00").getTime());
+
+    expect(parseLogLineTimestamp(k8sLine("2026-08-18T13:52:22-05:00"))).toBe(
+      new Date("2026-08-18T13:52:22-05:00").getTime(),
+    );
+  });
+
+  it("resolves the same instant however the zone is written", () => {
+    expect(parseLogLineTimestamp(k8sLine("2026-08-18T13:52:22.648+02:00"))).toBe(
+      parseLogLineTimestamp(k8sLine("2026-08-18T11:52:22.648Z")),
+    );
+  });
+
+  it("still rejects a malformed offset", () => {
+    expect(parseLogLineTimestamp(k8sLine("2026-08-18T13:52:22+2:00"))).toBeNull();
+    expect(parseLogLineTimestamp(k8sLine("2026-08-18T13:52:22+02"))).toBeNull();
+  });
+});
+
+describe("getLogTimeRange across zones", () => {
+  // Verbatim from a real Clone body: the poller called this 5.8s.
+  it("reports the real second of work, not the poller's six", () => {
+    const range = getLogTimeRange([
+      "2026-08-18T13:52:22.648344734+02:00 === Git Clone ===",
+      "2026-08-18T13:52:23.617487046+02:00 Clone complete.",
+    ]);
+
+    expect(formatDuration((range?.endMs ?? 0) - (range?.startMs ?? 0))).toBe(
+      "1.0s",
+    );
+  });
 });
 
 describe("getLogTimeRange", () => {
@@ -437,6 +474,16 @@ describe("splitLogLine", () => {
     expect(splitLogLine("2026-08-04 10:27:17Z not rfc3339").timestamp).toBeNull();
   });
 
+  it("separates an offset-stamped prefix too, so it is dimmed like any other", () => {
+    expect(
+      splitLogLine("2026-08-18T13:52:22.648344734+02:00 === Git Clone ==="),
+    ).toEqual({
+      timestamp: "2026-08-18T13:52:22.648344734+02:00",
+      separator: " ",
+      text: "=== Git Clone ===",
+    });
+  });
+
   it("keeps the message verbatim, including its own inner spacing", () => {
     const { text } = splitLogLine(
       "2026-08-04T10:27:17Z [36mINFO[0m[0000]  two  spaces",
@@ -447,6 +494,9 @@ describe("splitLogLine", () => {
   it("reconstructs every input exactly", () => {
     expect(roundTrips("2026-08-04T10:27:17.552157025Z cloning")).toBe(true);
     expect(roundTrips("2026-08-04T10:27:17Z x")).toBe(true);
+    expect(roundTrips("2026-08-18T13:52:22.648344734+02:00 === Git Clone ===")).toBe(
+      true,
+    );
     expect(roundTrips("no prefix at all")).toBe(true);
     expect(roundTrips("")).toBe(true);
   });

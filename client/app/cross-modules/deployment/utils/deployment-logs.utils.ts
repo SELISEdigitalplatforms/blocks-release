@@ -8,9 +8,19 @@ import {
 
 /**
  * A Kubernetes log line is prefixed with an RFC3339 timestamp, e.g.
- * `2026-08-04T10:27:17.552157025Z clone succeeded`. The fraction is 0-9 digits.
+ * `2026-08-04T10:27:17.552157025Z clone succeeded`. The fraction is 0-9 digits
+ * and may be absent entirely.
+ *
+ * The zone is not always `Z`. The same cluster emits `+02:00` from some nodes,
+ * and RFC3339 permits any numeric offset, so both forms must be read - matching
+ * only `Z` made every step fall back to the poller's stamps and report `~5.8s`
+ * for a second of real work.
+ *
+ * Captured as date-time / fraction / zone so the fraction can be cut down to the
+ * milliseconds `Date` understands without disturbing the offset that follows it.
  */
-const LOG_LINE_TIMESTAMP = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)\s/;
+const LOG_LINE_TIMESTAMP =
+  /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?([Zz]|[+-]\d{2}:\d{2})\s/;
 
 /** Milliseconds below which durations are shown with one decimal, e.g. `1.2s`. */
 const SUB_SECOND_PRECISION_BELOW_MS = 10_000;
@@ -45,7 +55,8 @@ export const splitLogLine = (
   const match = LOG_LINE_TIMESTAMP.exec(line);
   if (!match) return { timestamp: null, separator: "", text: line };
 
-  const timestamp = match[1];
+  const [, dateTime, fraction = "", zone] = match;
+  const timestamp = `${dateTime}${fraction}${zone}`;
 
   return {
     timestamp,
@@ -68,13 +79,13 @@ export const parseLogLineTimestamp = (line: string): number | null => {
   const match = LOG_LINE_TIMESTAMP.exec(line);
   if (!match) return null;
 
+  const [, dateTime, fraction, zone] = match;
+
   // Date only honours milliseconds; a 9-digit k8s fraction must be truncated
   // rather than rounded, so the value never drifts past the real instant.
-  const truncated = match[1].replace(/\.(\d+)Z$/, (_, digits: string) =>
-    `.${digits.slice(0, 3).padEnd(3, "0")}Z`,
-  );
+  const millis = fraction ? `.${fraction.slice(1, 4).padEnd(3, "0")}` : "";
 
-  const ms = new Date(truncated).getTime();
+  const ms = new Date(`${dateTime}${millis}${zone}`).getTime();
   return Number.isFinite(ms) ? ms : null;
 };
 

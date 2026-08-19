@@ -1,4 +1,5 @@
-import { test as base, expect } from "@playwright/test";
+import { test as base, expect } from "@playwright/test"
+import { markReleaseTestFailed } from "./run-outcome"
 
 // Shared `test` for the whole suite. Specs import from here instead of
 // "@playwright/test" so the pause below applies everywhere automatically.
@@ -32,11 +33,17 @@ export const test = base.extend<{ pauseAfterEachTest: void }>({
       // The pause runs inside the test's time budget, so give it back.
       if (ms > 0) testInfo.setTimeout(testInfo.timeout + ms);
 
-      await use();
+      await use()
+
+      if (testInfo.project.name === "release") {
+        if (testInfo.status !== "passed" && testInfo.status !== "skipped") {
+          markReleaseTestFailed()
+        }
+      }
 
       // Teardown: runs after the test body, before `page` is disposed.
       if (ms > 0 && !page.isClosed()) {
-        await page.waitForTimeout(ms);
+        await page.waitForTimeout(ms)
       }
     },
     { auto: true },

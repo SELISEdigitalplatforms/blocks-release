@@ -185,6 +185,7 @@ namespace XUnitTest.Api.Controllers
             json.Should().Contain("\"statusCode\":400");
             json.Should().Contain("\"repo\":null");
             json.Should().Contain("\"build\":[]");
+            json.Should().Contain("\"totalCount\":0");
             json.Should().Contain("\"message\":\"Repository not found\"");
             json.Should().Contain("\"errors\":[{\"code\":\"NOT_FOUND\",\"message\":\"Repository not found\"}]");
         }
@@ -246,6 +247,42 @@ namespace XUnitTest.Api.Controllers
             _f.RepoRepo.Verify(
                 r => r.GetRepoBuildList(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()),
                 Times.Never);
+            _f.RepoRepo.Verify(
+                r => r.GetRepoBuildCount(It.IsAny<string>(), It.IsAny<string>()),
+                Times.Never);
+        }
+
+        // The page on its own cannot tell a client how many pages follow it, so the total
+        // has to reach the client with it.
+        [Fact]
+        public async Task GetRepoDetails_ReturnsTheTotalBuildCountAlongsideThePage()
+        {
+            _f.RepoRepo.Setup(r => r.GetRepoBuildList("repo-1", It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+                       .ReturnsAsync([new Build { ItemId = "build-1" }]);
+            _f.RepoRepo.Setup(r => r.GetRepoBuildCount("repo-1", It.IsAny<string>()))
+                       .ReturnsAsync(42);
+            _f.RepoRepo.Setup(r => r.GetRepo("repo-1")).ReturnsAsync(new Repo { ItemId = "repo-1" });
+
+            var result = await CreateController().GetRepoDetails("repo-1", pageNumber: 1, pageSize: 5);
+
+            var json = Serialize(((OkObjectResult)result).Value);
+            json.Should().Contain("\"totalCount\":42");
+        }
+
+        // A total counted over a different filter than the page is how a client ends up
+        // paging into an empty tail, so the branch has to reach both calls.
+        [Fact]
+        public async Task GetRepoDetails_CountsOverTheSameBranchAsThePage()
+        {
+            _f.RepoRepo.Setup(r => r.GetRepoBuildList(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+                       .ReturnsAsync([]);
+            _f.RepoRepo.Setup(r => r.GetRepoBuildCount(It.IsAny<string>(), It.IsAny<string>()))
+                       .ReturnsAsync(0);
+            _f.RepoRepo.Setup(r => r.GetRepo("repo-1")).ReturnsAsync(new Repo { ItemId = "repo-1" });
+
+            await CreateController().GetRepoDetails("repo-1", "develop", 3, 5);
+
+            _f.RepoRepo.Verify(r => r.GetRepoBuildCount("repo-1", "develop"), Times.Once);
         }
 
         [Fact]

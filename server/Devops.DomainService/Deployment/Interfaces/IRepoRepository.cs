@@ -17,6 +17,12 @@ public interface IRepoRepository
         string? branch,
         int pageNumber,
         int pageSize);
+
+    /// <summary>
+    /// How many builds <see cref="GetRepoBuildList"/> pages over for the same repository and
+    /// branch. A paged client cannot know how many pages exist without it.
+    /// </summary>
+    public Task<long> GetRepoBuildCount(string RepoId, string? branch);
     public Task SaveRepo(Repo repo);
     public Task<bool> UpdateRepo(RepoUpdateRequest repo);
     public Task<bool> UpdateRepo(RepoUpdateRequest repo,string tenantId);

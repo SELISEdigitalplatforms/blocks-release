@@ -78,11 +78,7 @@ public class RepoRepository : IRepoRepository
     {
         var collection = _dbContextProvider.GetCollection<Build>("Builds");
 
-        var filter = Builders<Build>.Filter.Eq(r => r.RepoId, RepoId);
-        if (!string.IsNullOrWhiteSpace(branch))
-        {
-            filter &= Builders<Build>.Filter.Eq(r => r.Branch, branch);
-        }
+        var filter = BuildListFilter(RepoId, branch);
 
         var safePageNumber = Math.Max(1, pageNumber);
         var safePageSize = Math.Clamp(pageSize, MinPageSize, MaxPageSize);
@@ -108,6 +104,27 @@ public class RepoRepository : IRepoRepository
             .Skip(safeSkip)
             .Limit(safePageSize)
             .ToListAsync();
+    }
+
+    public async Task<long> GetRepoBuildCount(string RepoId, string? branch)
+    {
+        var collection = _dbContextProvider.GetCollection<Build>("Builds");
+
+        // Deliberately the same filter the list uses. A count built from its own copy of the
+        // predicate is the classic way for a total to drift out of step with the rows it is
+        // meant to describe, and a client would page into an empty tail because of it.
+        return await collection.CountDocumentsAsync(BuildListFilter(RepoId, branch));
+    }
+
+    private static FilterDefinition<Build> BuildListFilter(string RepoId, string? branch)
+    {
+        var filter = Builders<Build>.Filter.Eq(r => r.RepoId, RepoId);
+        if (!string.IsNullOrWhiteSpace(branch))
+        {
+            filter &= Builders<Build>.Filter.Eq(r => r.Branch, branch);
+        }
+
+        return filter;
     }
 
     public async Task<IReadOnlyList<RepoWithBuildsResponse>> GetReposWithBuildsAsync(string projectId)

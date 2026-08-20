@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
@@ -473,7 +473,7 @@ describe("RepoDetails page", () => {
     expect(deployMutate).toHaveBeenCalled();
   });
 
-  it("shows the history tab with a view-all toggle for many builds", () => {
+  it("renders the whole page of builds on the history tab", () => {
     const builds = [
       makeBuild({ itemId: "b1", createdDate: "2024-01-01T00:00:00Z" }),
       makeBuild({ itemId: "b2", createdDate: "2024-01-02T00:00:00Z" }),
@@ -482,7 +482,7 @@ describe("RepoDetails page", () => {
     ];
     vi.mocked(useGetRepoDetails).mockReturnValue({
       data: {
-        data: { repo: { ...baseRepo }, build: builds },
+        data: { repo: { ...baseRepo }, build: builds, totalCount: 4 },
         isSuccess: true,
       },
       isLoading: false,
@@ -494,9 +494,36 @@ describe("RepoDetails page", () => {
       route: "/app/deployment/repo/r1?tab=history",
       nuqs: true,
     });
-    const viewAll = screen.getByRole("button", { name: /View all history/i });
-    fireEvent.click(viewAll);
-    expect(screen.getByText(/View Less/i)).toBeInTheDocument();
+
+    // The old build was trimmed to three with a "View all history" toggle; a page is now
+    // rendered whole, and the toggle is gone.
+    expect(screen.getByText("Showing 1-4 of 4 deploys")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /View all history/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not offer a pager when the whole history fits on one page", () => {
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: {
+        data: {
+          repo: { ...baseRepo },
+          build: [makeBuild({ itemId: "b1" })],
+          totalCount: 1,
+        },
+        isSuccess: true,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    currentTab = "history";
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=history",
+      nuqs: true,
+    });
+    expect(screen.getByText("Showing 1-1 of 1 deploys")).toBeInTheDocument();
+    expect(screen.queryByText(/Page 1 of/i)).not.toBeInTheDocument();
   });
 
   it("opens the configure settings modal from the header", () => {
@@ -703,7 +730,7 @@ describe("RepoDetails page", () => {
     });
 
     // H4
-    it("asks for thirty builds on the History tab", () => {
+    it("asks for five builds on the History tab", () => {
       currentTab = "history";
       vi.mocked(useGetRepoDetails).mockReturnValue({
         data: okResponse,
@@ -717,8 +744,39 @@ describe("RepoDetails page", () => {
         nuqs: true,
       });
 
-      expect(lastCallOptions()?.pageSize).toBe(30);
+      expect(lastCallOptions()?.pageSize).toBe(5);
       expect(lastCallOptions()?.pageNumber).toBe(1);
+    });
+
+    // The whole point of a five-row page: the pager has to ask the server for the next
+    // one rather than slice a list it already holds.
+    it("requests the next page from the server when the pager advances", async () => {
+      currentTab = "history";
+      vi.mocked(useGetRepoDetails).mockReturnValue({
+        data: {
+          data: {
+            repo: { ...baseRepo },
+            build: [makeBuild({ itemId: "b1" })],
+            totalCount: 28,
+          },
+          isSuccess: true,
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as never);
+
+      renderWithProviders(<RepoDetails />, {
+        route: "/app/deployment/repo/r1?tab=history",
+        nuqs: true,
+      });
+
+      expect(lastCallOptions()?.pageNumber).toBe(1);
+
+      fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+
+      await waitFor(() => expect(lastCallOptions()?.pageNumber).toBe(2));
+      expect(lastCallOptions()?.pageSize).toBe(5);
     });
 
     // C3b: the silent-blank case. With a single-item request, a build whose branch differs

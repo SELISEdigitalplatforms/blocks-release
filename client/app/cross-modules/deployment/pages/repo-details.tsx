@@ -11,6 +11,7 @@ import { BackIconButton } from "@/components/buttons";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
 import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
+import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import {
   Select,
@@ -93,10 +94,10 @@ export interface IPipeline {
   customDeploymentURL?: string;
 }
 
-// Details shows a single build, History up to thirty. Named so each page size is one
+// Details shows a single build, History one page of five. Named so each page size is one
 // fact rather than a literal buried in a ternary.
 const DETAILS_BUILD_PAGE_SIZE = 1;
-const HISTORY_BUILD_PAGE_SIZE = 30;
+const HISTORY_BUILD_PAGE_SIZE = 5;
 
 export default function RepoDetails() {
   const navigate = useNavigate();
@@ -120,7 +121,8 @@ export default function RepoDetails() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeploymentSettingsForDeploy, setIsDeploymentSettingsForDeploy] =
     useState(false);
-  const [showAllHistory, setShowAllHistory] = useState(false);
+  // 1-based, matching the API. Reset whenever the page would otherwise point past the end.
+  const [historyPageNumber, setHistoryPageNumber] = useState(1);
 
   const { mutate: deployManually } = useInitialRepoDeployment();
   const { mutate: deleteDeployment } = useDeleteDeployment();
@@ -129,10 +131,13 @@ export default function RepoDetails() {
     useInitialRepoDeployment();
   const [forceRefresh, setForceRefresh] = useState(false);
 
-  // The Details tab needs only the newest build; History shows up to thirty. Asking for
-  // one instead of the whole history is the point of this endpoint's pagination.
-  const buildPageSize =
-    tabId === "history" ? HISTORY_BUILD_PAGE_SIZE : DETAILS_BUILD_PAGE_SIZE;
+  // The Details tab needs only the newest build; History shows one page of five. Asking
+  // for a page instead of the whole history is the point of this endpoint's pagination.
+  const isHistoryTab = tabId === "history";
+  const buildPageSize = isHistoryTab
+    ? HISTORY_BUILD_PAGE_SIZE
+    : DETAILS_BUILD_PAGE_SIZE;
+  const buildPageNumber = isHistoryTab ? historyPageNumber : 1;
 
   const {
     data: repoDetails,
@@ -143,9 +148,22 @@ export default function RepoDetails() {
     refetchOnMount: true,
     refetchOnWindowFocus: false,
     forceRefresh: forceRefresh,
-    pageNumber: 1,
+    pageNumber: buildPageNumber,
     pageSize: buildPageSize,
   });
+
+  // Total across every page, not the length of the page in hand - the page is five rows
+  // whether or not more follow it, so only the server's count can size the pager.
+  const totalBuildCount: number = repoDetails?.data?.totalCount ?? 0;
+
+  // A repository switch has to land on page one, otherwise the new repo opens at whatever
+  // page the previous one was left on and reads as an empty history. Adjusted during render
+  // rather than in an effect so the reset is applied before the stale page is ever painted.
+  const [pagedRepoId, setPagedRepoId] = useState(repoId);
+  if (pagedRepoId !== repoId) {
+    setPagedRepoId(repoId);
+    setHistoryPageNumber(1);
+  }
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -496,7 +514,7 @@ export default function RepoDetails() {
               isDeploymentFlow={isDeploymentSettingsForDeploy}
               onDeploy={handleDeployFromSettings}
               isDeploying={isDeploying}
-              pageNumber={1}
+              pageNumber={buildPageNumber}
               pageSize={buildPageSize}
             />
           </Card>
@@ -507,9 +525,9 @@ export default function RepoDetails() {
   const tabChangedHandler = (value: keyof typeof REPO_DETAILS_PROVIDERS) => {
     setTabId(value);
   };
-  const handleViewAllHistory = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowAllHistory(!showAllHistory);
+  // The Pagination control is 0-based; the API is 1-based.
+  const handleHistoryPageChange = (pageIndex: number) => {
+    setHistoryPageNumber(pageIndex + 1);
   };
 
   return (
@@ -779,22 +797,24 @@ export default function RepoDetails() {
                       Deployment History
                     </h3>
                   </div>
-                  {filteredBuilds?.length > 3 ? (
-                    <Button
-                      variant="outline"
-                      size="xs"
-                      onClick={handleViewAllHistory}
-                      className="w-full shadow-sm sm:w-auto">
-                      {showAllHistory
-                        ? "View Less"
-                        : `View all history (${filteredBuilds?.length || 0})`}
-                    </Button>
-                  ) : null}
                 </div>
                 <DeploymentObservability
                   builds={filteredBuilds}
-                  showAllHistory={showAllHistory}
+                  startIndex={
+                    (historyPageNumber - 1) * HISTORY_BUILD_PAGE_SIZE + 1
+                  }
+                  totalCount={totalBuildCount}
                 />
+                {totalBuildCount > HISTORY_BUILD_PAGE_SIZE && (
+                  <div className="mt-4 flex items-center px-4 pb-4 md:justify-end">
+                    <Pagination
+                      page={historyPageNumber - 1}
+                      pageSize={HISTORY_BUILD_PAGE_SIZE}
+                      onChange={handleHistoryPageChange}
+                      totalCount={totalBuildCount}
+                    />
+                  </div>
+                )}
               </Card>
             </TabsContent>
             <TabsContent value="secrets">
@@ -813,7 +833,7 @@ export default function RepoDetails() {
           isDeploymentFlow={isDeploymentSettingsForDeploy}
           onDeploy={handleDeployFromSettings}
           isDeploying={isDeploying}
-          pageNumber={1}
+          pageNumber={buildPageNumber}
           pageSize={buildPageSize}
         />
       </div>

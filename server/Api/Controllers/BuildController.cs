@@ -109,7 +109,8 @@ public class BuildController : ControllerBase
                     Data = new
                     {
                         Repo = (Repo?)null,
-                        Build = Array.Empty<Build>()
+                        Build = Array.Empty<Build>(),
+                        TotalCount = 0L
                     },
                     Errors = new[]
                     {
@@ -126,11 +127,17 @@ public class BuildController : ControllerBase
                 branch,
                 pageNumber,
                 pageSize);
+
+            // The page alone cannot tell a client how many pages follow it - a full page is
+            // indistinguishable from the last one - so the total travels with it.
+            var totalCount = await _repoRepository.GetRepoBuildCount(RepoId, branch);
+
             return Ok(new BaseApiResponse()
             {
                 Data = new {
                     Repo = repo,
-                    Build = repoBuildList
+                    Build = repoBuildList,
+                    TotalCount = totalCount
                 },
                 IsSuccess = true,
                 StatusCode = HttpStatusCode.OK

@@ -271,20 +271,36 @@ public class MonitorControllerTests
         logger.Entries.Should().Contain(e => e.Level == LogLevel.Error && e.Exception == exception);
     }
 
+    /// <summary>
+    /// The controller must declare exactly one route template, and that template must not carry an
+    /// "api/" prefix of its own.
+    /// </summary>
+    /// <remarks>
+    /// Genesis applies an <c>ApiRoutePrefixConvention</c> that first strips a leading "api/" from
+    /// each declared template and then re-adds the "api" prefix. A controller that declares both
+    /// "[controller]" and "api/[controller]" therefore normalizes to the same "api/Monitor"
+    /// template twice, and every request to it fails with <c>AmbiguousMatchException</c>. This test
+    /// is the regression guard for that outage.
+    /// </remarks>
     [Fact]
-    public void RouteMetadata_ResolvesToBothMonitorAndApiMonitorRoutes()
+    public void RouteMetadata_DeclaresASingleUnprefixedRoute()
     {
         var controllerRoutes = typeof(MonitorController).GetCustomAttributes<RouteAttribute>()
             .Select(r => r.Template)
             .ToArray();
+
+        controllerRoutes.Should().ContainSingle(
+            "a second [Route] normalizes to the same template and makes every request ambiguous");
+        controllerRoutes[0].Should().Be("[controller]");
+        controllerRoutes.Should().NotContain(
+            r => r.StartsWith("api/", StringComparison.OrdinalIgnoreCase),
+            "Genesis adds the \"api\" prefix; declaring it here duplicates the endpoint");
+
         var actionRoute = GetAction().GetCustomAttribute<HttpGetAttribute>()!.Template;
+        var fullRoute = $"{controllerRoutes[0]}/{actionRoute}"
+            .Replace("[controller]", "Monitor", StringComparison.Ordinal);
 
-        var fullRoutes = controllerRoutes
-            .Select(r => $"{r}/{actionRoute}".Replace("[controller]", "Monitor", StringComparison.Ordinal))
-            .ToArray();
-
-        fullRoutes.Should().Contain("api/Monitor/GetMonitorListByRepoId");
-        fullRoutes.Should().Contain("Monitor/GetMonitorListByRepoId");
+        fullRoute.Should().Be("Monitor/GetMonitorListByRepoId");
     }
 
     [Fact]

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui-kits/table/table";
 import { Button } from "@/components/ui-kits/button/button";
 import { useRepoSecretAudit } from "@blocks-deployment/hooks/use-repo-secrets";
+import type { IRepoSecretAuditRow } from "@blocks-deployment/models/repo-secrets.model";
 import { useState } from "react";
 
 type SecretAuditModalProps = {
@@ -25,6 +26,68 @@ type SecretAuditModalProps = {
 };
 
 const PAGE_SIZE = 10;
+
+/**
+ * The three states of the audit list, kept as one component with early returns so the
+ * loading/empty/populated branches stay readable instead of nesting as ternaries in JSX.
+ */
+const SecretAuditBody = ({
+  isLoading,
+  rows,
+}: {
+  isLoading: boolean;
+  rows: IRepoSecretAuditRow[];
+}) => {
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-2" data-testid="audit-loading">
+        {Array.from({ length: 4 }, (_, index) => (
+          <Skeleton key={index} className="h-10 w-full" />
+        ))}
+      </div>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">
+        No activity recorded yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Action</TableHead>
+            <TableHead>Outcome</TableHead>
+            <TableHead>Actor</TableHead>
+            <TableHead>When</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row) => (
+            <TableRow key={row.auditId}>
+              <TableCell>{row.action}</TableCell>
+              <TableCell>
+                {row.outcome}
+                {row.reason ? ` (${row.reason})` : ""}
+              </TableCell>
+              <TableCell className="font-mono text-xs">
+                {row.actorUserId}
+              </TableCell>
+              <TableCell>
+                {new Date(row.createdDate).toLocaleString()}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
 
 /**
  * The audit trail for this repository's secret.
@@ -61,47 +124,7 @@ export const SecretAuditModal = ({
           </DialogDescription>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="flex flex-col gap-2" data-testid="audit-loading">
-            {Array.from({ length: 4 }, (_, index) => (
-              <Skeleton key={index} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : rows.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            No activity recorded yet.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Outcome</TableHead>
-                  <TableHead>Actor</TableHead>
-                  <TableHead>When</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row.auditId}>
-                    <TableCell>{row.action}</TableCell>
-                    <TableCell>
-                      {row.outcome}
-                      {row.reason ? ` (${row.reason})` : ""}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {row.actorUserId}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(row.createdDate).toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+        <SecretAuditBody isLoading={isLoading} rows={rows} />
 
         {totalCount > PAGE_SIZE && (
           <div className="flex items-center justify-end gap-2">

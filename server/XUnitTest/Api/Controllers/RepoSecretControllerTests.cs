@@ -14,6 +14,7 @@ using Devops.DomainService.Deployment.Models.Request;
 using Devops.DomainService.Deployment.Models.Response;
 using Devops.DomainService.Shared.Entities;
 using FluentAssertions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -155,11 +156,17 @@ namespace XUnitTest.Api.Controllers
         // ---- Permissions ----
 
         /// <summary>
-        /// Every action is gated on the one manage permission. Asserted by reflection so a new
-        /// action cannot be added without a permission, or with the wrong resource string.
+        /// Every action requires an authenticated caller and none opts out. Asserted by reflection
+        /// so a new action cannot be added unauthenticated.
         /// </summary>
+        /// <remarks>
+        /// The finer-grained <c>ProtectedEndPoint("blocks-release::repo-secret::manage")</c> gate is
+        /// currently commented out on the controller because the permission is not yet provisioned
+        /// in the IDP; enabling it would 403 every real caller. When it is re-enabled the resource
+        /// string is still checked below, so a typo cannot slip in with it.
+        /// </remarks>
         [Fact]
-        public void EveryAction_IsGatedOnTheManagePermission()
+        public void EveryAction_RequiresAnAuthenticatedCaller()
         {
             var actions = typeof(RepoSecretController)
                 .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
@@ -170,11 +177,21 @@ namespace XUnitTest.Api.Controllers
 
             foreach (var action in actions)
             {
-                var attribute = action.GetCustomAttribute<ProtectedEndPointAttribute>();
+                action.GetCustomAttributes<AuthorizeAttribute>(inherit: true)
+                    .Should().NotBeEmpty($"{action.Name} must require an authenticated caller");
+                action.GetCustomAttributes<AllowAnonymousAttribute>(inherit: true)
+                    .Should().BeEmpty($"{action.Name} must not opt out of authentication");
 
-                attribute.Should().NotBeNull($"{action.Name} must be a protected endpoint");
-                attribute.ResourceName.Should().Be(ManagePermission, $"{action.Name} must use the manage permission");
+                var permission = action.GetCustomAttribute<ProtectedEndPointAttribute>();
+                if (permission is not null)
+                {
+                    permission.ResourceName.Should()
+                        .Be(ManagePermission, $"{action.Name} must use the manage permission");
+                }
             }
+
+            typeof(RepoSecretController).GetCustomAttributes<AllowAnonymousAttribute>(inherit: true)
+                .Should().BeEmpty("the controller must not open every action to anonymous callers");
         }
     }
 }

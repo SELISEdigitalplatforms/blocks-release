@@ -103,7 +103,7 @@ export const REPO_SECRET_ERROR = {
  * Client mirror of the server's key rule. Duplicated deliberately so a typo is caught before a
  * round trip; the server re-validates and remains the authority.
  */
-export const REPO_SECRET_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+export const REPO_SECRET_KEY_PATTERN = /^[A-Za-z_]\w*$/;
 
 export const REPO_SECRET_KEY_MAX_LENGTH = 128;
 

@@ -252,7 +252,7 @@ public class DeploymentTeardownService : IDeploymentTeardownService
             // Already deleted - a redelivered message, not a failure. The consumer deliberately
             // does not rethrow so redelivery is expected, and counting this would fill Failures
             // with noise and make HasFailures useless as a signal.
-            _logger.LogInformation(
+            _logger.LogInformation(ex,
                 "Secret for repository {RepoId} was already deleted, nothing to do. tenant={TenantId}",
                 repo.ItemId, tenantId);
         }

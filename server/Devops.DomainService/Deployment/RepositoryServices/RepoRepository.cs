@@ -69,17 +69,16 @@ public class RepoRepository : IRepoRepository
     // future, can drive this query with a negative skip or an unbounded limit.
     private const int MinPageSize = 1;
     private const int MaxPageSize = 100;
-    private const int DefaultPageSize = 30;
 
     public async Task<List<Build>?> GetRepoBuildList(
-        string repoId,
+        string RepoId,
         string? branch,
         int pageNumber,
         int pageSize)
     {
         var collection = _dbContextProvider.GetCollection<Build>("Builds");
 
-        var filter = Builders<Build>.Filter.Eq(r => r.RepoId, repoId);
+        var filter = Builders<Build>.Filter.Eq(r => r.RepoId, RepoId);
         if (!string.IsNullOrWhiteSpace(branch))
         {
             filter &= Builders<Build>.Filter.Eq(r => r.Branch, branch);

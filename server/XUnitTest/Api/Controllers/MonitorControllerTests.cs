@@ -272,13 +272,19 @@ public class MonitorControllerTests
     }
 
     [Fact]
-    public void RouteMetadata_ResolvesToApiMonitorGetMonitorListByRepoId()
+    public void RouteMetadata_ResolvesToBothMonitorAndApiMonitorRoutes()
     {
-        var controllerRoute = typeof(MonitorController).GetCustomAttribute<RouteAttribute>()!.Template;
+        var controllerRoutes = typeof(MonitorController).GetCustomAttributes<RouteAttribute>()
+            .Select(r => r.Template)
+            .ToArray();
         var actionRoute = GetAction().GetCustomAttribute<HttpGetAttribute>()!.Template;
-        var route = $"{controllerRoute}/{actionRoute}".Replace("[controller]", "Monitor");
 
-        route.Should().Be("api/Monitor/GetMonitorListByRepoId");
+        var fullRoutes = controllerRoutes
+            .Select(r => $"{r}/{actionRoute}".Replace("[controller]", "Monitor", StringComparison.Ordinal))
+            .ToArray();
+
+        fullRoutes.Should().Contain("api/Monitor/GetMonitorListByRepoId");
+        fullRoutes.Should().Contain("Monitor/GetMonitorListByRepoId");
     }
 
     [Fact]

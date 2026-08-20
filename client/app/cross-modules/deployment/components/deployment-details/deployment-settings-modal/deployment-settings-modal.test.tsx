@@ -136,4 +136,38 @@ describe("DeploymentSettingsModal", () => {
     );
     expect(navigateMock).toHaveBeenCalled();
   });
+
+  // ─── Pagination (#175) ──────────────────────────────────────────────────────
+
+  // This modal is mounted even while closed and always calls useGetRepoDetails, so once
+  // the query key carries paging it would issue a SECOND request alongside the page's.
+  // Forwarding the caller's paging keeps both on one cache entry. The modal reads only
+  // data.repo, so which page it asks for is immaterial to it.
+  it("forwards the paging it was given so it shares the caller's query", () => {
+    renderWithProviders(
+      <DeploymentSettingsModal
+        isOpen
+        onClose={vi.fn()}
+        repoId="r1"
+        pageNumber={1}
+        pageSize={1}
+      />,
+    );
+
+    expect(useGetRepoDetails).toHaveBeenCalledWith("r1", {
+      pageNumber: 1,
+      pageSize: 1,
+    });
+  });
+
+  it("falls back to the endpoint's own defaults when given no paging", () => {
+    renderWithProviders(
+      <DeploymentSettingsModal isOpen onClose={vi.fn()} repoId="r1" />,
+    );
+
+    expect(useGetRepoDetails).toHaveBeenCalledWith("r1", {
+      pageNumber: 1,
+      pageSize: 30,
+    });
+  });
 });

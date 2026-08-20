@@ -5,6 +5,7 @@ export type ReleaseProjectFixture = {
   projectName: string
   itemId: string
   dashboardUrl: string
+  deploymentUrl: string
 }
 
 const FIXTURE_PATH = path.resolve(__dirname, "../fixtures/release-project.json")
@@ -22,5 +23,12 @@ export function writeReleaseProject(fixture: ReleaseProjectFixture) {
 
 export function clearReleaseProject() {
   if (fs.existsSync(FIXTURE_PATH)) fs.unlinkSync(FIXTURE_PATH)
+}
+
+export function clearReleaseSession() {
   if (fs.existsSync(RELEASE_SESSION_PATH)) fs.unlinkSync(RELEASE_SESSION_PATH)
+}
+
+export function releaseSessionExists(): boolean {
+  return fs.existsSync(RELEASE_SESSION_PATH)
 }

@@ -141,18 +141,32 @@ export const useGetAllRepoBuilds = (
 export const useGetRepoDetails = (
   repoId: string,
   options?: {
-    refetchOnMount: boolean;
-    refetchOnWindowFocus: boolean;
+    refetchOnMount?: boolean;
+    refetchOnWindowFocus?: boolean;
     forceRefresh?: boolean;
+    branch?: string;
+    pageNumber?: number;
+    pageSize?: number;
   },
 ) => {
+  const { branch, pageNumber, pageSize } = options ?? {};
+
   return useQuery({
-    queryKey: ["repo-details", repoId],
+    // repoId stays in second position so ["repo-details", repoId] remains a prefix of
+    // this key and existing invalidateQueries calls keep matching it.
+    queryKey: ["repo-details", repoId, branch, pageNumber, pageSize],
     queryFn: () => {
       if (!repoId) {
         throw new Error("Repo ID is required");
       }
-      return githubInfoService.getRepoDetails(repoId);
+      // Only pass params when the caller actually asked for some, so callers that do
+      // not paginate keep the exact single-argument call they had before.
+      const hasParams =
+        branch !== undefined || pageNumber !== undefined || pageSize !== undefined;
+
+      return hasParams
+        ? githubInfoService.getRepoDetails(repoId, { branch, pageNumber, pageSize })
+        : githubInfoService.getRepoDetails(repoId);
     },
     enabled: !!repoId,
     staleTime: options?.forceRefresh ? 0 : 5 * 60 * 1000,

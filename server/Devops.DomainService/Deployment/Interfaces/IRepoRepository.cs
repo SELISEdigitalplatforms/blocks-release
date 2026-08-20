@@ -12,7 +12,11 @@ public interface IRepoRepository
     public Task<Repo> GetRepo(string repoId, string tenantId);
     public Task<Repo?> GetRepoByBranch(string tenantId, string repoName, string branch);
     public Task<List<Repo>?> GetRepos();
-    public Task<List<Build>?> GetRepoBuildList(string RepoId);
+    public Task<List<Build>?> GetRepoBuildList(
+        string RepoId,
+        string? branch,
+        int pageNumber,
+        int pageSize);
     public Task SaveRepo(Repo repo);
     public Task<bool> UpdateRepo(RepoUpdateRequest repo);
     public Task<bool> UpdateRepo(RepoUpdateRequest repo,string tenantId);

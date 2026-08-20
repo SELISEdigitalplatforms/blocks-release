@@ -96,6 +96,16 @@ const repoDetailsEmpty = {
   isSuccess: true,
 };
 
+// The repo's branch is "main"; this build is on another branch. That combination is what
+// the Details tab's single-item request makes dangerous, so it gets its own fixture.
+const repoDetailsForeignBranch = {
+  data: {
+    repo: { ...baseRepo },
+    build: [makeBuild({ branch: "some-other-branch", itemId: "foreign-1" })],
+  },
+  isSuccess: true,
+};
+
 describe("RepoDetails page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -656,5 +666,86 @@ describe("RepoDetails page", () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Go Back" }));
     expect(navigateMock).toHaveBeenCalledWith(-1);
+  });
+
+  // ─── Pagination (#175) ──────────────────────────────────────────────────────
+
+  describe("build pagination", () => {
+    const okResponse = {
+      data: { repo: { ...baseRepo }, build: [makeBuild()] },
+      isSuccess: true,
+    };
+
+    const lastCallOptions = () => {
+      const calls = vi.mocked(useGetRepoDetails).mock.calls;
+      return calls[calls.length - 1][1] as
+        | { pageNumber?: number; pageSize?: number }
+        | undefined;
+    };
+
+    // H3
+    it("asks for a single build on the Details tab", () => {
+      currentTab = "details";
+      vi.mocked(useGetRepoDetails).mockReturnValue({
+        data: okResponse,
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as never);
+
+      renderWithProviders(<RepoDetails />, {
+        route: "/app/deployment/repo/r1?tab=details",
+        nuqs: true,
+      });
+
+      expect(lastCallOptions()?.pageSize).toBe(1);
+      expect(lastCallOptions()?.pageNumber).toBe(1);
+    });
+
+    // H4
+    it("asks for thirty builds on the History tab", () => {
+      currentTab = "history";
+      vi.mocked(useGetRepoDetails).mockReturnValue({
+        data: okResponse,
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as never);
+
+      renderWithProviders(<RepoDetails />, {
+        route: "/app/deployment/repo/r1?tab=history",
+        nuqs: true,
+      });
+
+      expect(lastCallOptions()?.pageSize).toBe(30);
+      expect(lastCallOptions()?.pageNumber).toBe(1);
+    });
+
+    // C3b: the silent-blank case. With a single-item request, a build whose branch differs
+    // from the repo's would be dropped by the page's branch filter, leaving the panel empty
+    // while the empty state (which tests the raw response) never renders either. The latest
+    // build is therefore taken from the raw, server-sorted response.
+    it("still shows the newest build when its branch differs from the repo's", () => {
+      currentTab = "details";
+      vi.mocked(useGetRepoDetails).mockReturnValue({
+        data: repoDetailsForeignBranch,
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as never);
+
+      renderWithProviders(<RepoDetails />, {
+        route: "/app/deployment/repo/r1?tab=details",
+        nuqs: true,
+      });
+
+      // This panel renders `latestBuild?.repoUrl || "N/A"`, so the URL appearing proves
+      // latestBuild is populated. (Not asserting the absence of "N/A" anywhere on the
+      // page - other fields legitimately render it, e.g. a null commit.) The probe that
+      // reverts this derivation to the filtered list is what proves the assertion bites.
+      expect(
+        screen.getByText("https://github.com/acme/app"),
+      ).toBeInTheDocument();
+    });
   });
 });

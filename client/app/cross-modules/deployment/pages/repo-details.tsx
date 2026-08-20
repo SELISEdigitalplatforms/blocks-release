@@ -93,6 +93,11 @@ export interface IPipeline {
   customDeploymentURL?: string;
 }
 
+// Details shows a single build, History up to thirty. Named so each page size is one
+// fact rather than a literal buried in a ternary.
+const DETAILS_BUILD_PAGE_SIZE = 1;
+const HISTORY_BUILD_PAGE_SIZE = 30;
+
 export default function RepoDetails() {
   const navigate = useNavigate();
   const params = useParams();
@@ -124,6 +129,11 @@ export default function RepoDetails() {
     useInitialRepoDeployment();
   const [forceRefresh, setForceRefresh] = useState(false);
 
+  // The Details tab needs only the newest build; History shows up to thirty. Asking for
+  // one instead of the whole history is the point of this endpoint's pagination.
+  const buildPageSize =
+    tabId === "history" ? HISTORY_BUILD_PAGE_SIZE : DETAILS_BUILD_PAGE_SIZE;
+
   const {
     data: repoDetails,
     isLoading,
@@ -133,6 +143,8 @@ export default function RepoDetails() {
     refetchOnMount: true,
     refetchOnWindowFocus: false,
     forceRefresh: forceRefresh,
+    pageNumber: 1,
+    pageSize: buildPageSize,
   });
 
   useEffect(() => {
@@ -202,11 +214,17 @@ export default function RepoDetails() {
   }, [repoDetails, projectEnvironment, navigate]);
 
   const latestBuild = useMemo(() => {
-    if (!filteredBuilds) {
+    // Deliberately the RAW, server-sorted list rather than the branch-filtered one. With
+    // a single-item Details request, a build whose branch differs from the repo's would be
+    // dropped by that filter and leave this panel silently blank - the server has already
+    // narrowed to this repo and sorted newest-first, which is what "latest" means here.
+    const builds: IPipeline[] | undefined = repoDetails?.data?.build;
+
+    if (!builds) {
       return null;
     }
 
-    const latest = filteredBuilds.reduce<IPipeline | null>(
+    const latest = builds.reduce<IPipeline | null>(
       (latest, current) => {
         if (!latest) return current;
 
@@ -219,7 +237,7 @@ export default function RepoDetails() {
     );
 
     return latest;
-  }, [filteredBuilds]);
+  }, [repoDetails]);
 
   const handleGoBack = () => {
     navigate(scoped("deployment"));
@@ -478,6 +496,8 @@ export default function RepoDetails() {
               isDeploymentFlow={isDeploymentSettingsForDeploy}
               onDeploy={handleDeployFromSettings}
               isDeploying={isDeploying}
+              pageNumber={1}
+              pageSize={buildPageSize}
             />
           </Card>
         </div>
@@ -793,6 +813,8 @@ export default function RepoDetails() {
           isDeploymentFlow={isDeploymentSettingsForDeploy}
           onDeploy={handleDeployFromSettings}
           isDeploying={isDeploying}
+          pageNumber={1}
+          pageSize={buildPageSize}
         />
       </div>
     </>

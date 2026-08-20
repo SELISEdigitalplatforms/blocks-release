@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Api.Controllers;
 using Blocks.Genesis;
@@ -22,6 +23,13 @@ namespace XUnitTest.Api.Controllers
 {
     public class BuildControllerTests : IDisposable
     {
+        // Mirrors the wire format the client actually receives, so contract assertions are
+        // made against the serialized shape rather than against C# property names.
+        private static string Serialize(object value) =>
+            JsonSerializer.Serialize(
+                value,
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
         private readonly DeploymentServiceFactory _f = new();
         private readonly Mock<IDataGatewayDeploymentService> _dataGateway = new();
 
@@ -61,7 +69,8 @@ namespace XUnitTest.Api.Controllers
         [Fact]
         public async Task GetRepoDetails_RepoFound_ReturnsOk()
         {
-            _f.RepoRepo.Setup(r => r.GetRepoBuildList("id")).ReturnsAsync(new List<Build>());
+            _f.RepoRepo.Setup(r => r.GetRepoBuildList("id", It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+                       .ReturnsAsync(new List<Build>());
             _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(new Repo());
             (await CreateController().GetRepoDetails("id")).Should().BeOfType<OkObjectResult>();
         }
@@ -69,7 +78,8 @@ namespace XUnitTest.Api.Controllers
         [Fact]
         public async Task GetRepoDetails_RepoNull_ReturnsBadRequest()
         {
-            _f.RepoRepo.Setup(r => r.GetRepoBuildList("id")).ReturnsAsync(new List<Build>());
+            _f.RepoRepo.Setup(r => r.GetRepoBuildList("id", It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+                       .ReturnsAsync(new List<Build>());
             _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync((Repo)null);
             (await CreateController().GetRepoDetails("id")).Should().BeOfType<BadRequestObjectResult>();
         }
@@ -143,7 +153,7 @@ namespace XUnitTest.Api.Controllers
         [Fact]
         public async Task GetRepoDetails_ReturnsTheRepoWithItsBuildHistory()
         {
-            _f.RepoRepo.Setup(r => r.GetRepoBuildList("repo-1"))
+            _f.RepoRepo.Setup(r => r.GetRepoBuildList("repo-1", It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
                        .ReturnsAsync([new Build { ItemId = "build-1" }]);
             _f.RepoRepo.Setup(r => r.GetRepo("repo-1"))
                        .ReturnsAsync(new Repo { ItemId = "repo-1", RepoName = "web" });
@@ -159,19 +169,94 @@ namespace XUnitTest.Api.Controllers
         [Fact]
         public async Task GetRepoDetails_RejectsAnUnknownRepo()
         {
-            _f.RepoRepo.Setup(r => r.GetRepoBuildList(It.IsAny<string>())).ReturnsAsync([]);
+            _f.RepoRepo.Setup(r => r.GetRepoBuildList(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+                       .ReturnsAsync([]);
             _f.RepoRepo.Setup(r => r.GetRepo(It.IsAny<string>())).ReturnsAsync((Repo)null);
 
             var result = await CreateController().GetRepoDetails("gone");
 
             result.Should().BeOfType<BadRequestObjectResult>();
-            ((BaseApiResponse)((BadRequestObjectResult)result).Value).IsSuccess.Should().BeFalse();
+
+            // Asserted on the serialized payload rather than a typed property: the body is
+            // deliberately not a BaseApiResponse (its inherited Errors is a dictionary and
+            // the contract calls for an array), so only the wire shape is meaningful here.
+            var json = Serialize(((BadRequestObjectResult)result).Value);
+            json.Should().Contain("\"isSuccess\":false");
+            json.Should().Contain("\"statusCode\":400");
+            json.Should().Contain("\"repo\":null");
+            json.Should().Contain("\"build\":[]");
+            json.Should().Contain("\"message\":\"Repository not found\"");
+            json.Should().Contain("\"errors\":[{\"code\":\"NOT_FOUND\",\"message\":\"Repository not found\"}]");
+        }
+
+        // C5: an existing repo with no builds is a 200 with an empty array, NOT a 400 and
+        // not a null repo, and the rest of the success envelope has to stay intact.
+        [Fact]
+        public async Task GetRepoDetails_ValidRepoWithNoBuilds_Returns200AndAnEmptyBuildArray()
+        {
+            _f.RepoRepo.Setup(r => r.GetRepoBuildList(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+                       .ReturnsAsync([]);
+            _f.RepoRepo.Setup(r => r.GetRepo("repo-1"))
+                       .ReturnsAsync(new Repo { ItemId = "repo-1", RepoName = "org/web" });
+
+            var result = await CreateController().GetRepoDetails("repo-1");
+
+            result.Should().BeOfType<OkObjectResult>();
+            var json = Serialize(((OkObjectResult)result).Value);
+            json.Should().Contain("\"isSuccess\":true");
+            json.Should().Contain("\"build\":[]");
+            json.Should().Contain("\"errors\":null");
+            json.Should().Contain("\"message\":null");
+            json.Should().Contain("org/web");
+        }
+
+        // H2: the defaults are part of the contract, so they are asserted on the arguments
+        // the repository actually received rather than inferred from the response.
+        [Fact]
+        public async Task GetRepoDetails_WithoutPagingArguments_UsesPageOneAndThirty()
+        {
+            _f.RepoRepo.Setup(r => r.GetRepoBuildList(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+                       .ReturnsAsync([]);
+            _f.RepoRepo.Setup(r => r.GetRepo("repo-1")).ReturnsAsync(new Repo { ItemId = "repo-1" });
+
+            await CreateController().GetRepoDetails("repo-1");
+
+            _f.RepoRepo.Verify(r => r.GetRepoBuildList("repo-1", null, 1, 30), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetRepoDetails_PassesBranchAndPagingStraightThrough()
+        {
+            _f.RepoRepo.Setup(r => r.GetRepoBuildList(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+                       .ReturnsAsync([]);
+            _f.RepoRepo.Setup(r => r.GetRepo("repo-1")).ReturnsAsync(new Repo { ItemId = "repo-1" });
+
+            await CreateController().GetRepoDetails("repo-1", "develop", 3, 5);
+
+            _f.RepoRepo.Verify(r => r.GetRepoBuildList("repo-1", "develop", 3, 5), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetRepoDetails_DoesNotQueryBuildsForARepoThatDoesNotExist()
+        {
+            _f.RepoRepo.Setup(r => r.GetRepo(It.IsAny<string>())).ReturnsAsync((Repo)null);
+
+            await CreateController().GetRepoDetails("gone");
+
+            _f.RepoRepo.Verify(
+                r => r.GetRepoBuildList(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()),
+                Times.Never);
         }
 
         [Fact]
         public async Task GetRepoDetails_TurnsARepositoryFailureIntoABadRequest()
         {
-            _f.RepoRepo.Setup(r => r.GetRepoBuildList(It.IsAny<string>()))
+            // The repo is resolved first now, so this has to succeed for the build query
+            // to be reached at all - otherwise the test would pass on the not-found path
+            // and prove nothing about failure handling.
+            _f.RepoRepo.Setup(r => r.GetRepo(It.IsAny<string>()))
+                       .ReturnsAsync(new Repo { ItemId = "repo-1" });
+            _f.RepoRepo.Setup(r => r.GetRepoBuildList(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
                        .ThrowsAsync(new TimeoutException("mongo unreachable"));
 
             var result = await CreateController().GetRepoDetails("repo-1");

@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import dotenv from "dotenv";
+import fs from "fs";
 import path from "path";
 
 // Load credentials + target host from the gitignored .env.e2e file.
@@ -19,10 +20,11 @@ if (!baseURL) {
 // host, when you already have the app running yourself, or on a machine
 // without Git Bash's `bash` on PATH).
 const autoStartServer = process.env.E2E_NO_WEBSERVER !== "1";
+const releaseSessionPath = path.resolve(__dirname, "fixtures/release-session.json");
 
 export default defineConfig({
   testDir: "./tests",
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   // Serial: these tests exercise shared backend state on a live dev host, so
@@ -89,7 +91,9 @@ export default defineConfig({
       dependencies: ["release-setup"],
       use: {
         ...devices["Desktop Chrome"],
-        storageState: "fixtures/release-session.json",
+        ...(fs.existsSync(releaseSessionPath)
+          ? { storageState: "fixtures/release-session.json" }
+          : {}),
       },
     },
     {
@@ -98,7 +102,9 @@ export default defineConfig({
       dependencies: ["release"],
       use: {
         ...devices["Desktop Chrome"],
-        storageState: "fixtures/release-session.json",
+        ...(fs.existsSync(releaseSessionPath)
+          ? { storageState: "fixtures/release-session.json" }
+          : {}),
       },
     },
   ],

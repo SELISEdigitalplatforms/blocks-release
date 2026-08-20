@@ -291,6 +291,15 @@ public class MonitorControllerTests
         startupSource.Should().Contain(".AddHttpClient(");
     }
 
+    [Fact]
+    public void ReleasePermissionSeed_ContainsMonitorListPermission()
+    {
+        var seedPath = FindRepoFile(Path.Combine("server", "seed", "release-permissions.upsert.json"));
+        var seedSource = File.ReadAllText(seedPath);
+
+        seedSource.Should().Contain("\"Resource\": \"blocks-release::monitor::get-list-by-repo-id\"");
+    }
+
     private static MonitorController CreateController(
         CapturingHandler handler,
         IDictionary<string, string?> config,

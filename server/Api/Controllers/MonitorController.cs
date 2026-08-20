@@ -11,7 +11,6 @@ namespace Api.Controllers;
 [Route("api/[controller]")]
 public class MonitorController : ControllerBase
 {
-    private const string MonitorListPath = "/Monitor/GetMonitorListByRepoId";
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<MonitorController> _logger;
@@ -101,9 +100,11 @@ public class MonitorController : ControllerBase
             _configuration["BLOCKS_MONITOR_BASE_URL"],
             _configuration["FrontendRuntime:BLOCKS_MONITOR_BASE_URL"],
             Environment.GetEnvironmentVariable("BLOCKS_MONITOR_BASE_URL"),
+            Environment.GetEnvironmentVariable("FrontendRuntime__BLOCKS_MONITOR_BASE_URL"),
             _configuration["BLOCKS_LOGIC_BASE_URL"],
             _configuration["FrontendRuntime:BLOCKS_LOGIC_BASE_URL"],
             Environment.GetEnvironmentVariable("BLOCKS_LOGIC_BASE_URL"),
+            Environment.GetEnvironmentVariable("FrontendRuntime__BLOCKS_LOGIC_BASE_URL"),
         };
 
         return candidates
@@ -116,7 +117,12 @@ public class MonitorController : ControllerBase
     {
         var encodedProjectKey = Uri.EscapeDataString(projectKey);
         var encodedRepoId = Uri.EscapeDataString(repoId);
-        return $"{baseUrl}{MonitorListPath}?ProjectKey={encodedProjectKey}&repoId={encodedRepoId}";
+        var normalizedBase = baseUrl.TrimEnd('/');
+        var path = normalizedBase.EndsWith("/api", StringComparison.OrdinalIgnoreCase)
+            ? "/Monitor/GetMonitorListByRepoId"
+            : "/api/Monitor/GetMonitorListByRepoId";
+
+        return $"{normalizedBase}{path}?ProjectKey={encodedProjectKey}&repoId={encodedRepoId}";
     }
 
     private static void ForwardHeader(HttpRequestMessage upstreamRequest, string headerName, string? headerValue)

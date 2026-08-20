@@ -43,7 +43,7 @@ public class MonitorControllerTests
         result.Should().BeOfType<ContentResult>();
         handler.Requests.Should().ContainSingle();
         handler.Requests[0].RequestUri!.AbsoluteUri.Should()
-            .Be("https://monitor.example/Monitor/GetMonitorListByRepoId?ProjectKey=project%20key&repoId=repo%2Fid");
+            .Be("https://monitor.example/api/Monitor/GetMonitorListByRepoId?ProjectKey=project%20key&repoId=repo%2Fid");
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class MonitorControllerTests
 
             handler.Requests.Should().ContainSingle();
             handler.Requests[0].RequestUri!.ToString().Should()
-                .StartWith("https://logic.example/Monitor/GetMonitorListByRepoId");
+                .StartWith("https://logic.example/api/Monitor/GetMonitorListByRepoId");
         }
         finally
         {

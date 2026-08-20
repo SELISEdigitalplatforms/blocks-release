@@ -29,6 +29,7 @@ builder.Services.Configure<FormOptions>(options =>
 
 var services = builder.Services;
 
+services.AddHttpClient();
 services.AddHealthChecks();
 
 // serviceName ("blocks-os-api") is used for log/metric/trace collections, but the

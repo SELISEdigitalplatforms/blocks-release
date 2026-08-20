@@ -96,8 +96,193 @@ namespace XUnitTest.Integration
             var builds = _fixture.Collection<Build>("Builds");
             await builds.InsertOneAsync(new Build { ItemId = Guid.NewGuid().ToString("N"), RepoId = repoId, RepoName = "org/r" });
 
-            var result = await CreateRepo().GetRepoBuildList(repoId);
+            var result = await CreateRepo().GetRepoBuildList(repoId, null, 1, 30);
             result.Should().HaveCount(1);
+        }
+
+        private static Build NewBuild(string repoId, string branch, DateTime createdDate,
+                                      string itemId = null) => new()
+        {
+            ItemId = itemId ?? Guid.NewGuid().ToString("N"),
+            RepoId = repoId,
+            RepoName = "org/r",
+            Branch = branch,
+            CreatedDate = createdDate
+        };
+
+        // H1: only the requested repo's builds come back. The unrelated repo deliberately
+        // shares the requested BRANCH - without that, an implementation filtering only by
+        // branch would pass this test.
+        [Fact]
+        public async Task GetRepoBuildList_ReturnsOnlyTheRequestedRepo_EvenWhenAnotherRepoSharesTheBranch()
+        {
+            var repoId = Guid.NewGuid().ToString("N");
+            var otherRepoId = Guid.NewGuid().ToString("N");
+            var builds = _fixture.Collection<Build>("Builds");
+            var now = DateTime.UtcNow;
+
+            await builds.InsertManyAsync(new[]
+            {
+                NewBuild(repoId, "main", now.AddMinutes(-1), "mine-1"),
+                NewBuild(repoId, "main", now.AddMinutes(-2), "mine-2"),
+                NewBuild(otherRepoId, "main", now, "theirs-newest")
+            });
+
+            var result = await CreateRepo().GetRepoBuildList(repoId, "main", 1, 30);
+
+            result.Select(b => b.ItemId).Should().BeEquivalentTo(new[] { "mine-1", "mine-2" });
+        }
+
+        // H1b: an omitted branch means NO branch filtering. Without this, "filters by
+        // branch when asked" and "always filters by branch" are indistinguishable.
+        [Fact]
+        public async Task GetRepoBuildList_WithoutABranch_ReturnsEveryBranch()
+        {
+            var repoId = Guid.NewGuid().ToString("N");
+            var builds = _fixture.Collection<Build>("Builds");
+            var now = DateTime.UtcNow;
+
+            await builds.InsertManyAsync(new[]
+            {
+                NewBuild(repoId, "main", now.AddMinutes(-1), "on-main"),
+                NewBuild(repoId, "develop", now.AddMinutes(-2), "on-develop")
+            });
+
+            var all = await CreateRepo().GetRepoBuildList(repoId, null, 1, 30);
+            all.Select(b => b.ItemId).Should().BeEquivalentTo(new[] { "on-main", "on-develop" });
+
+            var onlyMain = await CreateRepo().GetRepoBuildList(repoId, "main", 1, 30);
+            onlyMain.Select(b => b.ItemId).Should().BeEquivalentTo(new[] { "on-main" });
+        }
+
+        // H1: newest first, and paging walks backwards through time.
+        [Fact]
+        public async Task GetRepoBuildList_SortsNewestFirstAndPagesThroughTheHistory()
+        {
+            var repoId = Guid.NewGuid().ToString("N");
+            var builds = _fixture.Collection<Build>("Builds");
+            var now = DateTime.UtcNow;
+
+            // Inserted oldest-first so natural order is the opposite of the expected order.
+            await builds.InsertManyAsync(new[]
+            {
+                NewBuild(repoId, "main", now.AddMinutes(-5), "b5"),
+                NewBuild(repoId, "main", now.AddMinutes(-4), "b4"),
+                NewBuild(repoId, "main", now.AddMinutes(-3), "b3"),
+                NewBuild(repoId, "main", now.AddMinutes(-2), "b2"),
+                NewBuild(repoId, "main", now.AddMinutes(-1), "b1")
+            });
+
+            var sut = CreateRepo();
+
+            (await sut.GetRepoBuildList(repoId, null, 1, 2))
+                .Select(b => b.ItemId).Should().Equal("b1", "b2");
+            (await sut.GetRepoBuildList(repoId, null, 2, 2))
+                .Select(b => b.ItemId).Should().Equal("b3", "b4");
+            (await sut.GetRepoBuildList(repoId, null, 3, 2))
+                .Select(b => b.ItemId).Should().Equal("b5");
+            (await sut.GetRepoBuildList(repoId, null, 1, 1))
+                .Select(b => b.ItemId).Should().Equal("b1");
+        }
+
+        // H1c: CreatedDate is not a total order. Two builds share a timestamp and are
+        // inserted so that natural order DISAGREES with _id descending - otherwise
+        // removing the tiebreaker could still produce the expected order by accident.
+        [Fact]
+        public async Task GetRepoBuildList_BreaksCreatedDateTiesById()
+        {
+            var repoId = Guid.NewGuid().ToString("N");
+            var builds = _fixture.Collection<Build>("Builds");
+            var sameInstant = DateTime.UtcNow.AddMinutes(-1);
+
+            await builds.InsertManyAsync(new[]
+            {
+                NewBuild(repoId, "main", sameInstant, "aaa-lowest-id"),
+                NewBuild(repoId, "main", sameInstant, "zzz-highest-id")
+            });
+
+            var result = await CreateRepo().GetRepoBuildList(repoId, null, 1, 30);
+
+            result.Select(b => b.ItemId).Should().Equal("zzz-highest-id", "aaa-lowest-id");
+        }
+
+        // C2: clamping, with enough documents seeded that an UNCLAMPED implementation
+        // would visibly return a different count.
+        [Fact]
+        public async Task GetRepoBuildList_ClampsPageSizeAboveTheMaximum()
+        {
+            var repoId = Guid.NewGuid().ToString("N");
+            var builds = _fixture.Collection<Build>("Builds");
+            var now = DateTime.UtcNow;
+
+            await builds.InsertManyAsync(Enumerable.Range(0, 101)
+                .Select(i => NewBuild(repoId, "main", now.AddSeconds(-i))));
+
+            var result = await CreateRepo().GetRepoBuildList(repoId, null, 1, 5000);
+
+            result.Should().HaveCount(100);
+        }
+
+        [Fact]
+        public async Task GetRepoBuildList_ClampsPageSizeBelowTheMinimum()
+        {
+            var repoId = Guid.NewGuid().ToString("N");
+            var builds = _fixture.Collection<Build>("Builds");
+            var now = DateTime.UtcNow;
+
+            await builds.InsertManyAsync(new[]
+            {
+                NewBuild(repoId, "main", now.AddMinutes(-1), "min-newest"),
+                NewBuild(repoId, "main", now.AddMinutes(-2), "min-older")
+            });
+
+            var result = await CreateRepo().GetRepoBuildList(repoId, null, 1, 0);
+
+            result.Select(b => b.ItemId).Should().Equal("min-newest");
+        }
+
+        [Fact]
+        public async Task GetRepoBuildList_ClampsANegativePageNumberToTheFirstPage()
+        {
+            var repoId = Guid.NewGuid().ToString("N");
+            var builds = _fixture.Collection<Build>("Builds");
+            var now = DateTime.UtcNow;
+
+            await builds.InsertManyAsync(new[]
+            {
+                NewBuild(repoId, "main", now.AddMinutes(-1), "neg-newest"),
+                NewBuild(repoId, "main", now.AddMinutes(-2), "neg-older")
+            });
+
+            var result = await CreateRepo().GetRepoBuildList(repoId, null, -5, 1);
+
+            result.Select(b => b.ItemId).Should().Equal("neg-newest");
+        }
+
+        // C2: (pageNumber - 1) * pageSize overflows int near the maximum and lands
+        // NEGATIVE, which is exactly the negative skip the clamp exists to prevent. An
+        // absurd page must come back empty rather than throwing or wrapping around.
+        [Fact]
+        public async Task GetRepoBuildList_AnAbsurdPageNumberReturnsNothingRatherThanThrowing()
+        {
+            var repoId = Guid.NewGuid().ToString("N");
+            var builds = _fixture.Collection<Build>("Builds");
+            await builds.InsertOneAsync(NewBuild(repoId, "main", DateTime.UtcNow));
+
+            var result = await CreateRepo().GetRepoBuildList(repoId, null, int.MaxValue, 30);
+
+            result.Should().BeEmpty();
+        }
+
+        // C5 at the repository level: a repo with no builds is an empty list, not null.
+        [Fact]
+        public async Task GetRepoBuildList_RepoWithNoBuilds_ReturnsEmptyNotNull()
+        {
+            var result = await CreateRepo().GetRepoBuildList(
+                Guid.NewGuid().ToString("N"), null, 1, 30);
+
+            result.Should().NotBeNull();
+            result.Should().BeEmpty();
         }
 
         [Fact]

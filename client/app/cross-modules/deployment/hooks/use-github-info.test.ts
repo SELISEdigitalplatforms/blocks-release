@@ -1,5 +1,7 @@
 import { createWrapper } from "@/test-utils/test-providers/query-client";
 import { renderHook, waitFor } from "@testing-library/react";
+import React from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import {
   mockRepository,
@@ -344,6 +346,105 @@ describe("Github Info Hooks", () => {
       expect(githubInfoService.getRepoDetails).toHaveBeenCalledWith(
         MOCK_REPO_ID,
       );
+    });
+
+    // H5/H6
+    it("forwards branch and paging to the service", async () => {
+      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as any);
+
+      const { result } = renderHook(
+        () =>
+          useGetRepoDetails(MOCK_REPO_ID, {
+            branch: "develop",
+            pageNumber: 1,
+            pageSize: 1,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(githubInfoService.getRepoDetails).toHaveBeenCalledWith(MOCK_REPO_ID, {
+        branch: "develop",
+        pageNumber: 1,
+        pageSize: 1,
+      });
+    });
+
+    // H5: paging must produce a distinct cache entry, so a different page size fetches
+    // again rather than reading the previous page's data.
+    it("caches each page size separately", async () => {
+      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as any);
+      const wrapper = createWrapper();
+
+      const one = renderHook(
+        () => useGetRepoDetails(MOCK_REPO_ID, { pageNumber: 1, pageSize: 1 }),
+        { wrapper },
+      );
+      await waitFor(() => expect(one.result.current.isSuccess).toBe(true));
+
+      const thirty = renderHook(
+        () => useGetRepoDetails(MOCK_REPO_ID, { pageNumber: 1, pageSize: 30 }),
+        { wrapper },
+      );
+      await waitFor(() => expect(thirty.result.current.isSuccess).toBe(true));
+
+      expect(githubInfoService.getRepoDetails).toHaveBeenCalledTimes(2);
+    });
+
+    // H5: the must-not-break requirement. ["repo-details", repoId] has to stay a usable
+    // invalidation prefix, which is why repoId keeps second position in the tuple. This
+    // asserts the behaviour (a refetch happens) rather than comparing key arrays, since a
+    // key that merely looks right can still fail prefix matching.
+    it("still refetches when invalidated by the repoId prefix alone", async () => {
+      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as any);
+
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      const wrapper = ({ children }: { children: React.ReactNode }) =>
+        React.createElement(QueryClientProvider, { client: queryClient }, children);
+
+      const { result } = renderHook(
+        () =>
+          useGetRepoDetails(MOCK_REPO_ID, {
+            branch: "develop",
+            pageNumber: 1,
+            pageSize: 1,
+          }),
+        { wrapper },
+      );
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(githubInfoService.getRepoDetails).toHaveBeenCalledTimes(1);
+
+      await queryClient.invalidateQueries({
+        queryKey: ["repo-details", MOCK_REPO_ID],
+      });
+
+      await waitFor(() =>
+        expect(githubInfoService.getRepoDetails).toHaveBeenCalledTimes(2),
+      );
+    });
+
+    // C1: null and empty are tested independently, because the criterion names both.
+    it("makes no request for an empty repoId", async () => {
+      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as any);
+
+      renderHook(() => useGetRepoDetails(""), { wrapper: createWrapper() });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(githubInfoService.getRepoDetails).not.toHaveBeenCalled();
+    });
+
+    it("makes no request for a null repoId", async () => {
+      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as any);
+
+      renderHook(
+        () => useGetRepoDetails(null as unknown as string),
+        { wrapper: createWrapper() },
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(githubInfoService.getRepoDetails).not.toHaveBeenCalled();
     });
   });
 

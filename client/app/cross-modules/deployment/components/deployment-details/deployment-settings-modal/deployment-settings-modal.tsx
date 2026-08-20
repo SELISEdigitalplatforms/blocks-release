@@ -36,6 +36,11 @@ interface IDeploymentSettingsModalProps {
   isDeploymentFlow?: boolean;
   onDeploy?: (deploymentData: DeploymentFormData) => void;
   isDeploying?: boolean;
+  /** Mirrors the caller's paging so both share one cached repo-details query instead of
+   *  issuing a second request. This modal only reads `data.repo`. Defaults match the
+   *  endpoint's own defaults for callers that do not paginate. */
+  pageNumber?: number;
+  pageSize?: number;
 }
 
 const DeploymentSettingsModal = ({
@@ -45,6 +50,8 @@ const DeploymentSettingsModal = ({
   isDeploymentFlow = false,
   onDeploy,
   isDeploying = false,
+  pageNumber = 1,
+  pageSize = 30,
 }: IDeploymentSettingsModalProps) => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
@@ -80,7 +87,7 @@ const DeploymentSettingsModal = ({
     data: repoDetails,
     isError,
     error,
-  } = useGetRepoDetails(repoId);
+  } = useGetRepoDetails(repoId, { pageNumber, pageSize });
   const { data: specs, isLoading: isSpecsLoading } = useGetSpecs() as any;
   const { mutate: updateRepoSettings, isPending } = useUpdateRepoSettings({
     onSuccess: () => {

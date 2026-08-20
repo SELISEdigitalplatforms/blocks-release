@@ -16,6 +16,12 @@ import {
   IManualDeploymentPayload,
 } from "@blocks-deployment/models/utils";
 
+export interface IRepoDetailsParams {
+  branch?: string;
+  pageNumber?: number;
+  pageSize?: number;
+}
+
 export class GithubInfoService {
   private readonly httpClient = serviceInstances.deploymentService;
   async verifyAuthorization(code: string): Promise<string> {
@@ -119,8 +125,27 @@ export class GithubInfoService {
     return this.httpClient.get(CLOUD_BUILD_ENDPOINTS.REPOS_LIST);
   }
 
-  async getRepoDetails(repoId: string): Promise<any> {
-    const url = `${CLOUD_BUILD_ENDPOINTS.REPO_DETAILS}?RepoId=${encodeURIComponent(repoId)}`;
+  /** Optional paging/filtering for repo-details. Omitting a field leaves the server
+   *  default in place; sending 0 is a real request that the server clamps. */
+  async getRepoDetails(
+    repoId: string,
+    params?: IRepoDetailsParams,
+  ): Promise<any> {
+    let url = `${CLOUD_BUILD_ENDPOINTS.REPO_DETAILS}?RepoId=${encodeURIComponent(repoId)}`;
+
+    // Each parameter is appended when DEFINED rather than when truthy: pageSize 0 is a
+    // meaningful request that the server clamps to 1, and a truthiness check would drop
+    // it and silently fall back to the server default instead.
+    if (params?.branch !== undefined) {
+      url += `&branch=${encodeURIComponent(params.branch)}`;
+    }
+    if (params?.pageNumber !== undefined) {
+      url += `&pageNumber=${encodeURIComponent(String(params.pageNumber))}`;
+    }
+    if (params?.pageSize !== undefined) {
+      url += `&pageSize=${encodeURIComponent(String(params.pageSize))}`;
+    }
+
     return this.httpClient.get(url);
   }
 

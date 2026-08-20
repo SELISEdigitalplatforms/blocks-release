@@ -483,4 +483,19 @@ public class RepoRepository : IRepoRepository
         var result = await collection.UpdateOneAsync(filter, update);
         return result.MatchedCount == 1 && result.ModifiedCount == 1;
     }
+
+    public async Task<bool> UpdateRepoSecretStoreItemId(string repoId, string secretStoreItemId, string tenantId)
+    {
+        var _dbContext = _dbContextProvider.GetDatabase(tenantId);
+        var collection = _dbContext.GetCollection<Repo>("Repos");
+        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+        var update = Builders<Repo>.Update.Set(r => r.SecretStoreItemId, secretStoreItemId);
+
+        // MatchedCount only: re-pointing a repository at the id it already holds is a no-op in
+        // Mongo (ModifiedCount 0) but is still a success from the caller's point of view. The
+        // DependencyTrack sibling above checks both because it is only ever called with a value
+        // that differs; this one is reached on the create path where a retry can repeat the id.
+        var result = await collection.UpdateOneAsync(filter, update);
+        return result.MatchedCount == 1;
+    }
 }

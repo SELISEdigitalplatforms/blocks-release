@@ -28,6 +28,7 @@ import DeleteDeploymentButton from "@blocks-deployment/components/deployment-det
 import DeploymentStatusIndicator from "@blocks-deployment/components/deployment-details/shared/deployment-status-indicator";
 import DeploymentTargetLink from "@blocks-deployment/components/deployment-details/shared/deployment-target-link";
 import { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
+import SecretsTab from "@blocks-deployment/components/deployment-details/tabs/secrets-tab";
 import { REPO_DETAILS_PROVIDERS } from "@blocks-deployment/constants/alert.constant";
 import {
   useDeleteDeployment,
@@ -551,6 +552,7 @@ export default function RepoDetails() {
                   <SelectContent>
                     <SelectItem value="details">Details</SelectItem>
                     <SelectItem value="history">History</SelectItem>
+                    <SelectItem value="secrets">Secrets</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -561,6 +563,9 @@ export default function RepoDetails() {
                   </TabsTrigger>
                   <TabsTrigger value="history" className="w-20">
                     History
+                  </TabsTrigger>
+                  <TabsTrigger value="secrets" className="w-20">
+                    Secrets
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -771,6 +776,12 @@ export default function RepoDetails() {
                   showAllHistory={showAllHistory}
                 />
               </Card>
+            </TabsContent>
+            <TabsContent value="secrets">
+              <SecretsTab
+                repoId={repoId}
+                repoName={repoDetails?.data?.repo.repoName}
+              />
             </TabsContent>
           </Tabs>
         </div>

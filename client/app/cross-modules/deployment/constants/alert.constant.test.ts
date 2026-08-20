@@ -19,6 +19,8 @@ describe("alert constants", () => {
     expect(HttpMethods.GET).toBe("1");
     expect(ScheduleOptions.CRON).toBe("2");
     expect(REPO_DETAILS_PROVIDERS.DETAILS).toBe("details");
+    expect(REPO_DETAILS_PROVIDERS.HISTORY).toBe("history");
+    expect(REPO_DETAILS_PROVIDERS.SECRETS).toBe("secrets");
     expect(MONITOR_SOURCE_TYPES.BlocksServices).toBe("2");
   });
 

@@ -439,5 +439,26 @@
         "DependentPermissions": [],
         "Roles": [],
         "OrganizationId": "default"
+    },
+    {
+        "_id": "0a5cfb12-ca0e-4f80-b72d-95cee774bece",
+        "CreatedDate": ISODate("2026-07-09T11:38:01.473+0000"),
+        "LastUpdatedDate": ISODate("2026-07-09T11:38:01.473+0000"),
+        "CreatedBy": "1554751b-e91c-4ea4-8500-cdaf714b248e",
+        "Language": null,
+        "LastUpdatedBy": "1554751b-e91c-4ea4-8500-cdaf714b248e",
+        "OrganizationIds": [],
+        "Tags": [],
+        "Name": "Manage Repository Secrets",
+        "Type": NumberInt(1),
+        "Description": "Create, read, replace and manage the lifecycle of the secret key/value set attached to a repository. Values are held in Azure Key Vault; only the reference is stored on the repository. Covers: POST /RepoSecret/save, GET /RepoSecret/get, GET /RepoSecret/value, POST /RepoSecret/lock, POST /RepoSecret/unlock, DELETE /RepoSecret/delete, POST /RepoSecret/restore, GET /RepoSecret/audit. Grants plaintext read of every repository secret in the tenant - these are service-type secrets with no per-user access list, so this permission is the only gate on the value endpoint.",
+        "Resource": "blocks-release::repo-secret::manage",
+        "ResourceGroup": "release",
+        "IsBuiltIn": true,
+        "IsArchived": false,
+        "PermissionSeverity": NumberInt(0),
+        "DependentPermissions": [],
+        "Roles": [],
+        "OrganizationId": "default"
     }
 ]

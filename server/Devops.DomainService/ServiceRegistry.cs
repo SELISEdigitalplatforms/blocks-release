@@ -41,6 +41,11 @@ public static class ServiceRegistry
         services.AddScoped<BuildService>();
         services.AddScoped<IBuildService, BuildService>();
         services.AddScoped<IDeploymentTeardownService, DeploymentTeardownService>();
+
+        // Scoped, like the secrets package's own services: they read the request-scoped
+        // BlocksContext, so a singleton would capture the first caller's tenant and serve that
+        // identity to everyone afterwards.
+        services.AddScoped<IRepoSecretService, RepoSecretService>();
         
         services.AddScoped<TestReportService>();
         services.AddScoped<SASTStrategy>();

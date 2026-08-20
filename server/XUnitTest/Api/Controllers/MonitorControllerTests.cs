@@ -167,9 +167,10 @@ public class MonitorControllerTests
         {
             ["BLOCKS_MONITOR_BASE_URL"] = "https://monitor.example"
         });
-        controller.ControllerContext.HttpContext.Request.Headers[headerName] = headerValue;
+        var authorization = headerName == "Authorization" ? headerValue : null;
+        var blocksKey = headerName == "x-blocks-key" ? headerValue : null;
 
-        await controller.GetMonitorListByRepoId(ProjectKey, RepoId);
+        await controller.GetMonitorListByRepoId(ProjectKey, RepoId, authorization, blocksKey);
 
         handler.Requests[0].Headers.TryGetValues(headerName, out var values).Should().BeTrue();
         values.Should().ContainSingle().Which.Should().Be(headerValue);
@@ -184,10 +185,9 @@ public class MonitorControllerTests
         {
             ["BLOCKS_MONITOR_BASE_URL"] = "https://monitor.example"
         });
-        controller.ControllerContext.HttpContext.Request.Headers.Cookie =
-            $"idp_session=opaque; dev-release.blocksdevelopers.com={jwt}; rt_dev-release.blocksdevelopers.com=refresh";
+        const string cookie = $"idp_session=opaque; dev-release.blocksdevelopers.com={jwt}; rt_dev-release.blocksdevelopers.com=refresh";
 
-        await controller.GetMonitorListByRepoId(ProjectKey, RepoId);
+        await controller.GetMonitorListByRepoId(ProjectKey, RepoId, cookie: cookie);
 
         handler.Requests[0].Headers.TryGetValues("Authorization", out var values).Should().BeTrue();
         values.Should().ContainSingle().Which.Should().Be($"Bearer {jwt}");

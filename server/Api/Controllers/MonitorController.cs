@@ -29,7 +29,10 @@ public class MonitorController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetMonitorListByRepoId(
         [FromQuery] string ProjectKey,
-        [FromQuery] string repoId)
+        [FromQuery] string repoId,
+        [FromHeader(Name = "Authorization")] string? authorization = null,
+        [FromHeader(Name = "x-blocks-key")] string? blocksKey = null,
+        [FromHeader(Name = "Cookie")] string? cookie = null)
     {
         if (string.IsNullOrWhiteSpace(ProjectKey) || string.IsNullOrWhiteSpace(repoId))
         {
@@ -52,8 +55,8 @@ public class MonitorController : ControllerBase
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, upstreamUrl);
-            ForwardAuthorization(request);
-            ForwardHeader(request, "x-blocks-key");
+            ForwardAuthorization(request, authorization, cookie);
+            ForwardHeader(request, "x-blocks-key", blocksKey);
 
             var client = _httpClientFactory.CreateClient();
             using var response = await client.SendAsync(request);
@@ -115,39 +118,40 @@ public class MonitorController : ControllerBase
         return $"{baseUrl}{MonitorListPath}?ProjectKey={encodedProjectKey}&repoId={encodedRepoId}";
     }
 
-    private void ForwardHeader(HttpRequestMessage upstreamRequest, string headerName)
+    private static void ForwardHeader(HttpRequestMessage upstreamRequest, string headerName, string? headerValue)
     {
-        if (!Request.Headers.TryGetValue(headerName, out var values) || values.Count == 0)
+        if (!string.IsNullOrWhiteSpace(headerValue))
+        {
+            upstreamRequest.Headers.TryAddWithoutValidation(headerName, headerValue.Trim());
+        }
+    }
+
+    private static void ForwardAuthorization(HttpRequestMessage upstreamRequest, string? authorization, string? cookieHeader)
+    {
+        if (!string.IsNullOrWhiteSpace(authorization))
+        {
+            upstreamRequest.Headers.TryAddWithoutValidation("Authorization", authorization.Trim());
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(cookieHeader))
         {
             return;
         }
 
-        var nonEmptyValues = values.Where(value => !string.IsNullOrWhiteSpace(value)).ToArray();
-        if (nonEmptyValues.Length > 0)
-        {
-            upstreamRequest.Headers.TryAddWithoutValidation(headerName, nonEmptyValues);
-        }
-    }
-
-    private void ForwardAuthorization(HttpRequestMessage upstreamRequest)
-    {
-        if (Request.Headers.TryGetValue("Authorization", out var values) && values.Count > 0)
-        {
-            var nonEmptyValues = values.Where(value => !string.IsNullOrWhiteSpace(value)).ToArray();
-            if (nonEmptyValues.Length > 0)
+        var jwtCookie = cookieHeader
+            .Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(c => c.Trim())
+            .Select(c =>
             {
-                upstreamRequest.Headers.TryAddWithoutValidation("Authorization", nonEmptyValues);
-                return;
-            }
-        }
-
-        var jwtCookie = Request.Cookies
-            .Select(cookie => cookie.Value)
+                var equalsIndex = c.IndexOf('=');
+                return equalsIndex >= 0 ? c[(equalsIndex + 1)..] : c;
+            })
             .FirstOrDefault(IsJwtLike);
 
         if (!string.IsNullOrWhiteSpace(jwtCookie))
         {
-            upstreamRequest.Headers.TryAddWithoutValidation("Authorization", $"Bearer {jwtCookie}");
+            upstreamRequest.Headers.TryAddWithoutValidation("Authorization", $"Bearer {jwtCookie.Trim()}");
         }
     }
 
@@ -164,7 +168,7 @@ public class MonitorController : ControllerBase
             && value.StartsWith("eyJ", StringComparison.Ordinal);
     }
 
-    private IActionResult HandleProxyException(Exception ex)
+    private ObjectResult HandleProxyException(Exception ex)
     {
         _logger.LogError(ex, "Failed to fetch monitor list from upstream.");
         return StatusCode((int)HttpStatusCode.InternalServerError, CreateEnvelope(

@@ -8,7 +8,6 @@ namespace Api.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-[Route("api/[controller]")]
 public class MonitorController : ControllerBase
 {
     private readonly IHttpClientFactory _httpClientFactory;

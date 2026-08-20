@@ -32,6 +32,7 @@ public interface IRepoRepository
     public Task<BulkOperationSummary> UpsertRepoCustomDomainsAsync(List<RepoCustomDomain> repoCustomDomains);
     public Task<List<string>> GetProjectPeopleList(string tenantId);
     public Task<bool> UpdateRepoDependencyTrackProjectUuid(string repoId, string dependencyTrackProjectUuid, string tenantId);
+    public Task<bool> UpdateRepoSecretStoreItemId(string repoId, string secretStoreItemId, string tenantId);
 
 
 

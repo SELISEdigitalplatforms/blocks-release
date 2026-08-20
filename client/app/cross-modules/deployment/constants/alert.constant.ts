@@ -74,6 +74,7 @@ export const REVERSE_REQUEST_TIMEOUT: { [key: number]: number } = {
 export enum REPO_DETAILS_PROVIDERS {
   DETAILS = "details",
   HISTORY = "history",
+  SECRETS = "secrets",
 }
 
 export enum MONITOR_SOURCE_TYPES {

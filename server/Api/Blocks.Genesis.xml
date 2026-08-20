@@ -11,6 +11,35 @@
             a shared <c>X-Internal-Secret</c> header — never expose to public traffic.
             </summary>
         </member>
+        <member name="T:Api.Controllers.RepoSecretController">
+            <summary>
+            Manages the secret key/value set attached to a repository.
+            </summary>
+            <remarks>
+            Routing and envelopes only. Every rule - validation, tenant scope, status, audit - lives in
+            <see cref="T:Devops.DomainService.Deployment.Interfaces.IRepoSecretService"/> and the secrets package beneath it, and domain failures reach
+            the client through <c>SecretExceptionFilter</c> rather than through try/catch here.
+            <para>
+            Every action is keyed on a repository id. None accepts a secret id, so a caller cannot address
+            a secret that does not belong to a repository their tenant can see.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Api.Controllers.RepoSecretController.Save(Devops.DomainService.Deployment.Models.Request.RepoSecretSaveRequest,System.Threading.CancellationToken)">
+            <summary>Creates or replaces the repository's whole secret set.</summary>
+        </member>
+        <member name="M:Api.Controllers.RepoSecretController.Get(System.String,System.Threading.CancellationToken)">
+            <summary>Metadata only. Never returns a value or a key name.</summary>
+        </member>
+        <member name="M:Api.Controllers.RepoSecretController.Value(System.String,System.Threading.CancellationToken)">
+            <summary>Reads the plaintext set. Audited server-side on every call.</summary>
+        </member>
+        <member name="M:Api.Controllers.RepoSecretController.Unlock(Devops.DomainService.Deployment.Models.Request.RepoSecretIdRequest,System.Threading.CancellationToken)">
+            <summary>Unlocks. Shares the manage permission - lock and unlock are one capability.</summary>
+        </member>
+        <member name="M:Api.Controllers.RepoSecretController.Delete(System.String,System.Threading.CancellationToken)">
+            <summary>Soft-deletes. The vault value is retained so restore works.</summary>
+        </member>
         <member name="T:Program">
             <summary>
             Auto-generated public partial Program class for top-level statement apps.

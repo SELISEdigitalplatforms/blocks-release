@@ -264,6 +264,31 @@ describe("RepoDetails page", () => {
     expect(currentTab).toBe("history");
   });
 
+  it("offers the Secrets tab on both the desktop list and the mobile select", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: {
+        data: { repo: { ...baseRepo }, build: [makeBuild()] },
+        isSuccess: true,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+
+    expect(screen.getByRole("tab", { name: "Secrets" })).toBeInTheDocument();
+
+    // The mobile fallback is a separate hand-maintained list; without this a below-md user
+    // could not reach the tab at all.
+    await user.click(screen.getByRole("combobox"));
+    fireEvent.click(await screen.findByRole("option", { name: "Secrets" }));
+    expect(currentTab).toBe("secrets");
+  });
+
   it("renders deployment information when builds exist", () => {
     vi.mocked(useGetRepoDetails).mockReturnValue({
       data: {

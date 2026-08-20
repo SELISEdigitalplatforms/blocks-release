@@ -17,6 +17,12 @@ public class DeploymentTeardownSummary
 
     public int ReposArchived { get; set; }
 
+    /// <summary>
+    /// Archived repositories whose secret set was also soft-deleted. Lower than
+    /// <see cref="ReposArchived"/> is normal - most repositories have no secrets at all.
+    /// </summary>
+    public int SecretsDeleted { get; set; }
+
     /// <summary>One entry per repository that could not be torn down. The run continues past each.</summary>
     public List<string> Failures { get; } = [];
 

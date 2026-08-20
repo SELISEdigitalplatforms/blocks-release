@@ -1,9 +1,11 @@
 using BlocksTemplate.Api.Hubs;
 using Blocks.Genesis;
+using Blocks.Secrets;
 using Devops.DomainService;
 using Devops.DomainService.Deployment.Interfaces;
 using Devops.DomainService.Shared.Utilities;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc;
 using SeliseBlocks.ConfigurationDriver;
 
 var serviceName = "blocks-release-api";
@@ -37,6 +39,20 @@ services.AddHealthChecks();
 // "blocks-os". Genesis 10's HasServiceAccess check requires an exact match, so the
 // service-access resource name is set explicitly to "blocks-os" to accept those tokens.
 ApplicationConfigurations.ConfigureApi(services, serviceName, serviceAccessResourceName: "blocks-release");
+
+builder.Services.Configure<MvcOptions>(options =>
+{
+    // Turns secret-domain exceptions into status codes. Registered here rather than inside
+    // Blocks.Secrets so the package stays usable from workers with no HTTP pipeline. It handles
+    // only the five SecretException subtypes and leaves every other exception alone, so no
+    // existing controller's error behaviour changes.
+    options.Filters.Add<SecretExceptionFilter>();
+});
+
+// Scoped internally: these read the request-scoped BlocksContext. The Key Vault client behind
+// them is a lazily-constructed singleton, so registering this does not require a reachable vault
+// at startup - only a request that actually touches a secret does.
+services.AddBlocksSecrets();
 
 var wwwrootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
 Directory.CreateDirectory(wwwrootPath);

@@ -6,8 +6,7 @@ namespace Devops.DomainService.Shared.Utilities
     public class CloudBuildConstants
     {
         public static readonly string NAMESPACE_NAME = "tekton-pipelines";
-        // The FE construct PipelineRun now comes from the vaulted "PipelineRunFeConstruct" secret,
-        // one document per environment. Only the data gateway pipeline is still a local asset.
+        public static readonly string YAML_PATH = Path.Combine(AppContext.BaseDirectory, "Assets" , "pipeline_fe_react_construct.yaml");
         public static readonly string DATA_GATEWAY_YAML_PATH = Path.Combine(AppContext.BaseDirectory, "Assets" , "pipeline_run_uds.yaml");
         public static readonly string GITHUB_BASE_URI = "https://github.com";
         public static readonly string GITHUB_API_BASE_URI = "https://api.github.com";

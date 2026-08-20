@@ -19,15 +19,23 @@ namespace Devops.DomainService.Shared.Entities
         public string GithubClientId { get; set; }
 
         /// <summary>
-        /// Base64-encoded kubeconfig, seeded only in the dev and stg vaults. Its presence is what
-        /// selects the vaulted cluster credential; production leaves it unset and keeps using the
-        /// in-cluster service account.
+        /// Base64-encoded kubeconfig, seeded in the dev and stg vaults.
+        /// <para>
+        /// NOT READ RIGHT NOW. The Kubernetes client is temporarily back on the machine credential
+        /// (local kubeconfig in Development, otherwise the in-cluster service account) - see
+        /// ServiceRegistry. The vault side is left in place, along with KubernetesClientResolver,
+        /// so switching back is a one-line change in that registration.
+        /// </para>
         /// </summary>
         public string KubeConfig { get; set; }
 
         /// <summary>
         /// Base64-encoded (or plain) Tekton PipelineRun definition for the FE construct build.
-        /// Seeded in every vault - each environment maintains its own document.
+        /// <para>
+        /// NOT READ RIGHT NOW. The FE construct is temporarily back on the checked-in asset,
+        /// Assets/pipeline_fe_react_construct.yaml via CloudBuildConstants.YAML_PATH. To switch
+        /// back, feed this secret through VaultSecret.DecodeText into PipelineRunSettings.fromYaml.
+        /// </para>
         /// </summary>
         public string PipelineRunFeConstruct { get; set; }
     }

@@ -52,19 +52,6 @@ namespace Devops.DomainService.Deployment.Services
                 : _configuration["TektonCancelStatus"];
 
 
-        /// <summary>
-        /// The FE construct PipelineRun comes from the vaulted "PipelineRunFeConstruct" secret - one
-        /// document per environment, each maintained independently. There is no on-disk fallback, so
-        /// an unseeded vault is a hard failure rather than a silently stale build.
-        /// </summary>
-        private static string DecodePipelineDefinition(string secretValue)
-        {
-            if (string.IsNullOrWhiteSpace(secretValue))
-                throw new InvalidDataException("PipelineRunFeConstruct secret is missing from the vault.");
-
-            return VaultSecret.DecodeText(secretValue);
-        }
-
         private async Task<object?> SubmitKubernetesAsync(
         object resourceObject,
         string group,
@@ -121,6 +108,7 @@ namespace Devops.DomainService.Deployment.Services
                     : repo.CreatedBy;
 
                 var namespaceName = CloudBuildConstants.NAMESPACE_NAME;
+                var yamlPath = CloudBuildConstants.YAML_PATH;
                 var guid = Guid.NewGuid().ToString();
 
                 var accessToken = await _tokenRepository.getToken(blocksUserId);
@@ -129,9 +117,6 @@ namespace Devops.DomainService.Deployment.Services
                     Console.WriteLine("\u274c Access token not found.");
                     return (null, null, null, "Access token not found. Please authorize again.");
                 }
-
-                // Read after the access-token guard so that guard keeps returning its own message.
-                var pipelineYaml = DecodePipelineDefinition(_cloudBuildSecret.PipelineRunFeConstruct);
 
                 var formattedProjectName = StringFormatterService.SanitizeString(repo.ProjectName);
                 var formattedRepoName = StringFormatterService.SanitizeString(repo.RepoName);
@@ -142,7 +127,7 @@ namespace Devops.DomainService.Deployment.Services
                 var buildImageName = $"{_configuration["ImageReference"]}{formattedProjectName}/{formattedRepoName}:{guid}";
 
                 var pipelineRunSettings = PipelineRunSettings
-                    .fromYaml(pipelineYaml)
+                    .fromYamlFile(yamlPath)
                     .setMetadataNamespace(pipelineRunNameGuid)
                     .setImageReference(buildImageName)
                     .setAppName($"{formattedProjectName}-{formattedBranchName}-{formattedRepoName}")

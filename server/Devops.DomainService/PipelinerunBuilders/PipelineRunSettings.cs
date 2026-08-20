@@ -24,6 +24,7 @@ public class PipelineRunSettings
     private string accessToken;
     private string sonarQubeProjectKey;
     private string cliBuildEnv;
+    private IReadOnlyDictionary<string, string> extraBuildArgs = new Dictionary<string, string>();
 
     public PipelineRunSettings(IDictionary<string, object> root) => myDictionary = root;
 
@@ -47,7 +48,7 @@ public class PipelineRunSettings
         applyCpu();
         applyMemory();
         applySonarQube();
-        applyCliBuildEnv();
+        applyBuildArgs();
         return myDictionary;
     }
 
@@ -163,6 +164,22 @@ public class PipelineRunSettings
         return this;
     }
 
+    /// <summary>
+    /// Per-repository values forwarded to the image build as additional --build-arg pairs,
+    /// alongside the ci_build one. Null or empty leaves the run exactly as it was before.
+    /// </summary>
+    /// <remarks>
+    /// A Dockerfile only receives an arg it declares with a matching ARG instruction; kaniko
+    /// drops the rest without failing the build. So a repository can carry a key its Dockerfile
+    /// has not adopted yet, and its builds keep working unchanged.
+    /// </remarks>
+    public PipelineRunSettings setExtraBuildArgs(IReadOnlyDictionary<string, string> buildArgs)
+    {
+        extraBuildArgs = buildArgs ?? new Dictionary<string, string>();
+        Console.WriteLine($" Extra build args : {extraBuildArgs.Count}");
+        return this;
+    }
+
     private void applyMetadataNamespace()
     {
         if (metadataNamespace == null)
@@ -252,12 +269,42 @@ public class PipelineRunSettings
         applyParams("sonar-project-key", sonarQubeProjectKey);
     }
 
-    private void applyCliBuildEnv()
+    /// <summary>
+    /// Writes the whole extra-args list: the ci_build pair first, then any per-repository pairs.
+    /// </summary>
+    /// <remarks>
+    /// applyListParams assigns rather than merges, so this is the single writer of extra-args -
+    /// whatever the source document holds is replaced. When there is nothing to write the
+    /// document keeps its own value, which is the pre-existing behaviour for a run with no
+    /// build env.
+    /// </remarks>
+    private void applyBuildArgs()
     {
-        if (cliBuildEnv == null)
+        var args = new List<string>();
+
+        if (cliBuildEnv != null)
+        {
+            CloudBuildConstants.BranchToEnvironmentMap.TryGetValue(cliBuildEnv, out var buildEnv);
+            args.Add("--build-arg");
+            args.Add($"ci_build={buildEnv ?? cliBuildEnv}");
+        }
+
+        foreach (var pair in extraBuildArgs)
+        {
+            // A blank key would produce a "=value" arg that kaniko rejects, failing a build over
+            // a stray entry. RepoSecretService already enforces the POSIX name rule on save; this
+            // only guards a set that reached the vault by some other route.
+            if (string.IsNullOrWhiteSpace(pair.Key))
+                continue;
+
+            args.Add("--build-arg");
+            args.Add($"{pair.Key}={pair.Value}");
+        }
+
+        if (args.Count == 0)
             return;
-        CloudBuildConstants.BranchToEnvironmentMap.TryGetValue(cliBuildEnv, out var buildEnv);
-        applyListParams("extra-args", new List<string> { "--build-arg", $"ci_build={buildEnv ?? cliBuildEnv}" });
+
+        applyListParams("extra-args", args);
     }
 
     private void applyParams(string key, string value)

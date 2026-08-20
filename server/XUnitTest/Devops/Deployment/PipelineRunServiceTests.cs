@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Genesis;
 using Devops.DomainService.Deployment.Entities;
+using Devops.DomainService.Deployment.Interfaces;
+using Devops.DomainService.Deployment.Models.Response;
 using Devops.DomainService.Deployment.Services;
 using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.VersionControlSystems.Interfaces;
@@ -17,6 +19,7 @@ using k8s;
 using k8s.Autorest;
 using k8s.Models;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
 
@@ -34,6 +37,7 @@ namespace XUnitTest.Devops.Deployment
         private readonly Mock<ICoreV1Operations> _coreV1 = new();
         private readonly Mock<ITokenRepository> _tokenRepository = new();
         private readonly Mock<ICloudBuildSecret> _secret = new();
+        private readonly Mock<IRepoSecretService> _repoSecrets = new();
         private object _submittedPipelineRun;
         private object _submittedPatch;
         private readonly IConfiguration _configuration = new ConfigurationBuilder()
@@ -60,6 +64,36 @@ namespace XUnitTest.Devops.Deployment
 
         private PipelineRunService Service() =>
             new(_k8s.Object, _tokenRepository.Object, _configuration, _secret.Object);
+
+        /// <summary>
+        /// The production wiring: a real scope factory over a container holding the mocked
+        /// IRepoSecretService, so the scoped-into-singleton resolution is exercised rather than
+        /// stubbed away.
+        /// </summary>
+        private PipelineRunService ServiceWithRepoSecrets()
+        {
+            var provider = new ServiceCollection()
+                .AddScoped(_ => _repoSecrets.Object)
+                .BuildServiceProvider();
+
+            return new PipelineRunService(
+                _k8s.Object, _tokenRepository.Object, _configuration, _secret.Object,
+                provider.GetRequiredService<IServiceScopeFactory>());
+        }
+
+        private IList<object> SubmittedExtraArgs()
+        {
+            var spec = (_submittedPipelineRun as IDictionary<string, object>)?["spec"] as IDictionary<object, object>;
+            var paramList = spec?["params"] as IList<object>;
+
+            foreach (var item in paramList.OfType<IDictionary<object, object>>())
+            {
+                if (item.TryGetValue("name", out var name) && name?.ToString() == "extra-args")
+                    return item["value"] as IList<object>;
+            }
+
+            return null;
+        }
 
         private static HttpOperationResponse<T> Response<T>(T body) =>
             new()
@@ -875,6 +909,109 @@ namespace XUnitTest.Devops.Deployment
             name.Should().BeNull();
             image.Should().BeNull();
             error.Should().NotBeNullOrEmpty();
+        }
+
+        // ---- CreateNamespaceAsync: repository secrets as build args ----
+
+        [Fact]
+        public async Task CreateNamespaceAsync_ForwardsRepoSecretsAsBuildArgs()
+        {
+            SetContext(userId: "user-1");
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
+
+            var repo = NewRepo();
+            repo.SecretStoreItemId = "secret-1";
+
+            _repoSecrets.Setup(r => r.GetValueAsync("repo-1", It.IsAny<CancellationToken>()))
+                        .ReturnsAsync(new RepoSecretValueResponse
+                        {
+                            RepoId = "repo-1",
+                            SecretId = "secret-1",
+                            Secrets = new Dictionary<string, string>
+                            {
+                                ["VITE_BLOCKS_EXTRA_ARG"] = "NBM"
+                            }
+                        });
+
+            var (_, _, _, error) = await ServiceWithRepoSecrets().CreateNamespaceAsync(repo);
+
+            error.Should().BeNull();
+
+            var args = SubmittedExtraArgs().Select(x => x?.ToString()).ToList();
+            args.Should().Equal(
+                "--build-arg", "ci_build=prod",
+                "--build-arg", "VITE_BLOCKS_EXTRA_ARG=NBM");
+        }
+
+        /// <summary>
+        /// The first-run state. The pointer on the repository is checked before the service, so a
+        /// repository without secrets costs no vault call and leaves no audit entry.
+        /// </summary>
+        [Fact]
+        public async Task CreateNamespaceAsync_NoRepoSecret_ReadsNothingAndKeepsCiBuildOnly()
+        {
+            SetContext(userId: "user-1");
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
+
+            var (_, _, _, error) = await ServiceWithRepoSecrets().CreateNamespaceAsync(NewRepo());
+
+            error.Should().BeNull();
+
+            _repoSecrets.Verify(
+                r => r.GetValueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+
+            var args = SubmittedExtraArgs().Select(x => x?.ToString()).ToList();
+            args.Should().Equal("--build-arg", "ci_build=prod");
+        }
+
+        /// <summary>
+        /// A locked or soft-deleted set throws on read. Losing an optional build arg is
+        /// recoverable; refusing to deploy is not, so the build goes ahead without them.
+        /// </summary>
+        [Fact]
+        public async Task CreateNamespaceAsync_UnreadableRepoSecret_StillDeploys()
+        {
+            SetContext(userId: "user-1");
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
+
+            var repo = NewRepo();
+            repo.SecretStoreItemId = "secret-1";
+
+            _repoSecrets.Setup(r => r.GetValueAsync("repo-1", It.IsAny<CancellationToken>()))
+                        .ThrowsAsync(new InvalidOperationException("secret is locked"));
+
+            var (name, _, _, error) = await ServiceWithRepoSecrets().CreateNamespaceAsync(repo);
+
+            error.Should().BeNull();
+            name.Should().NotBeNull();
+
+            var args = SubmittedExtraArgs().Select(x => x?.ToString()).ToList();
+            args.Should().Equal("--build-arg", "ci_build=prod");
+        }
+
+        /// <summary>
+        /// The four-argument construction used elsewhere in the codebase keeps working and simply
+        /// forwards no repository args.
+        /// </summary>
+        [Fact]
+        public async Task CreateNamespaceAsync_WithoutScopeFactory_ForwardsNoRepoArgs()
+        {
+            SetContext(userId: "user-1");
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
+
+            var repo = NewRepo();
+            repo.SecretStoreItemId = "secret-1";
+
+            var (_, _, _, error) = await Service().CreateNamespaceAsync(repo);
+
+            error.Should().BeNull();
+
+            var args = SubmittedExtraArgs().Select(x => x?.ToString()).ToList();
+            args.Should().Equal("--build-arg", "ci_build=prod");
         }
 
         // ---- CreateDataGetwayInstance ----

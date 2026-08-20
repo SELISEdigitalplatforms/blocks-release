@@ -44,7 +44,7 @@ namespace XUnitTest.Devops.Deployment
             new(_repos.Object, _secrets.Object, new Mock<ILogger<RepoSecretService>>().Object);
 
         private void HaveRepo(string secretStoreItemId = null) =>
-            _repos.Setup(r => r.GetRepo(RepoId)).ReturnsAsync(new Repo
+            _repos.Setup(r => r.GetRepo(RepoId, It.IsAny<string>())).ReturnsAsync(new Repo
             {
                 ItemId = RepoId,
                 RepoName = "acme/api",
@@ -59,6 +59,32 @@ namespace XUnitTest.Devops.Deployment
 
         private static RepoSecretSaveRequest SaveRequest(string secretsJson, string repoId = RepoId) =>
             new() { RepoId = repoId, Secrets = Json(secretsJson) };
+
+        // ---- tenant scoping ----
+
+        /// <summary>
+        /// Every read resolves the repository through the context tenant, the same one the
+        /// SecretStoreItemId stamp and the secret itself are keyed on.
+        /// </summary>
+        /// <remarks>
+        /// The parameterless GetRepo overload resolves the database from the request instead, and
+        /// under impersonation that is a different tenant than the token carries. Reading the
+        /// repository from one database while stamping it in another makes the pointer read back
+        /// as absent: saves retry the create path and fail NAME_TAKEN against the secret the
+        /// repository already owns, and the metadata call reports no secrets for a live one.
+        /// </remarks>
+        [Fact]
+        public async Task Reads_ResolveTheRepositoryThroughTheContextTenant()
+        {
+            HaveRepo(SecretId);
+            _secrets.Setup(s => s.GetAsync(SecretId, It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new SecretResult { SecretId = SecretId, Name = $"repo-{RepoId}", Status = SecretStatuses.Active });
+
+            await CreateService().GetMetaAsync(RepoId);
+
+            _repos.Verify(r => r.GetRepo(RepoId, TenantId), Times.Once);
+            _repos.Verify(r => r.GetRepo(It.IsAny<string>()), Times.Never);
+        }
 
         // ---- H1: create path ----
 
@@ -413,7 +439,7 @@ namespace XUnitTest.Devops.Deployment
         [Fact]
         public async Task AnyOperation_UnknownOrArchivedRepository_IsNotFound()
         {
-            _repos.Setup(r => r.GetRepo(It.IsAny<string>())).ReturnsAsync((Repo)null);
+            _repos.Setup(r => r.GetRepo(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync((Repo)null);
             var service = CreateService();
 
             await service.Invoking(s => s.GetMetaAsync(RepoId)).Should().ThrowAsync<SecretNotFoundException>();

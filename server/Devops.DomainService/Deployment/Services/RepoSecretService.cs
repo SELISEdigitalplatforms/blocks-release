@@ -274,13 +274,29 @@ public sealed partial class RepoSecretService : IRepoSecretService
     }
 
     /// <remarks>
-    /// <c>GetRepo</c> is tenant-scoped and already excludes archived repositories, so absent,
-    /// archived and belonging-to-another-tenant all collapse into the same 404. That uniformity is
+    /// <para>
+    /// The tenant is passed explicitly, and it is the same one <see cref="RequireTenantId"/>
+    /// gives the write path and the secret itself. The parameterless <c>GetRepo</c> overload
+    /// cannot be used here: it resolves the database from the request (Genesis reads the tenant
+    /// off the x-blocks-key header), while the secret and the SecretStoreItemId stamp are keyed
+    /// on the context tenant from the token. Under impersonation those are two different ids -
+    /// the console sends the root key while the token carries the project being impersonated -
+    /// so the repository would be read from one database and stamped in another. The pointer
+    /// then reads back as absent, every save retries CreateAsync and fails NAME_TAKEN against
+    /// the secret it already owns, and GetMetaAsync reports HasSecrets false for a repository
+    /// whose secret is sitting there active.
+    /// </para>
+    /// <para>
+    /// The overload still excludes archived repositories, so absent, archived and
+    /// belonging-to-another-tenant all collapse into the same 404. That uniformity is
     /// deliberate: distinguishing them would confirm which repository ids exist elsewhere.
+    /// </para>
     /// </remarks>
     private async Task<Repo> LoadRepoAsync(string repoId)
     {
-        var repo = await _repoRepository.GetRepo(repoId).ConfigureAwait(false);
+        var repo = await _repoRepository
+            .GetRepo(repoId, RequireTenantId())
+            .ConfigureAwait(false);
 
         return repo ?? throw new SecretNotFoundException(repoId);
     }

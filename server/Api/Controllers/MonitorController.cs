@@ -1,6 +1,7 @@
 using System.Net;
 using Blocks.Genesis;
 using Devops.DomainService.Shared.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers;
@@ -25,7 +26,7 @@ public class MonitorController : ControllerBase
     }
 
     [HttpGet("GetMonitorListByRepoId")]
-    [ProtectedEndPoint("blocks-release::monitor::get-list-by-repo-id")]
+    [Authorize]
     public async Task<IActionResult> GetMonitorListByRepoId(
         [FromQuery] string ProjectKey,
         [FromQuery] string repoId)
@@ -51,7 +52,7 @@ public class MonitorController : ControllerBase
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, upstreamUrl);
-            ForwardHeader(request, "Authorization");
+            ForwardAuthorization(request);
             ForwardHeader(request, "x-blocks-key");
 
             var client = _httpClientFactory.CreateClient();
@@ -126,6 +127,41 @@ public class MonitorController : ControllerBase
         {
             upstreamRequest.Headers.TryAddWithoutValidation(headerName, nonEmptyValues);
         }
+    }
+
+    private void ForwardAuthorization(HttpRequestMessage upstreamRequest)
+    {
+        if (Request.Headers.TryGetValue("Authorization", out var values) && values.Count > 0)
+        {
+            var nonEmptyValues = values.Where(value => !string.IsNullOrWhiteSpace(value)).ToArray();
+            if (nonEmptyValues.Length > 0)
+            {
+                upstreamRequest.Headers.TryAddWithoutValidation("Authorization", nonEmptyValues);
+                return;
+            }
+        }
+
+        var jwtCookie = Request.Cookies
+            .Select(cookie => cookie.Value)
+            .FirstOrDefault(IsJwtLike);
+
+        if (!string.IsNullOrWhiteSpace(jwtCookie))
+        {
+            upstreamRequest.Headers.TryAddWithoutValidation("Authorization", $"Bearer {jwtCookie}");
+        }
+    }
+
+    private static bool IsJwtLike(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var parts = value.Split('.');
+        return parts.Length == 3
+            && parts.All(part => !string.IsNullOrWhiteSpace(part))
+            && value.StartsWith("eyJ", StringComparison.Ordinal);
     }
 
     private IActionResult HandleProxyException(Exception ex)

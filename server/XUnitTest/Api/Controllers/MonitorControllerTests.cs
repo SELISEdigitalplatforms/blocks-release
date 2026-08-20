@@ -176,6 +176,24 @@ public class MonitorControllerTests
     }
 
     [Fact]
+    public async Task MissingAuthorizationHeader_ForwardsJwtCookieAsBearerToken()
+    {
+        const string jwt = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.signature";
+        var handler = new CapturingHandler(JsonResponse(HttpStatusCode.OK, "{}"));
+        var controller = CreateController(handler, new Dictionary<string, string?>
+        {
+            ["BLOCKS_MONITOR_BASE_URL"] = "https://monitor.example"
+        });
+        controller.ControllerContext.HttpContext.Request.Headers.Cookie =
+            $"idp_session=opaque; dev-release.blocksdevelopers.com={jwt}; rt_dev-release.blocksdevelopers.com=refresh";
+
+        await controller.GetMonitorListByRepoId(ProjectKey, RepoId);
+
+        handler.Requests[0].Headers.TryGetValues("Authorization", out var values).Should().BeTrue();
+        values.Should().ContainSingle().Which.Should().Be($"Bearer {jwt}");
+    }
+
+    [Fact]
     public async Task UpstreamSuccess_ReturnsStatusAndJsonBody()
     {
         const string upstreamBody = "{\"data\":{},\"isSuccess\":true,\"statusCode\":200}";
@@ -264,14 +282,9 @@ public class MonitorControllerTests
     }
 
     [Fact]
-    public void ProtectedEndpointAttribute_IsPresentWithExpectedPermission()
+    public void AuthorizeAttribute_IsPresentOnAction()
     {
-        var protectedEndpoint = CustomAttributeData.GetCustomAttributes(GetAction())
-            .Single(attribute => attribute.AttributeType.Name == "ProtectedEndPointAttribute");
-
-        protectedEndpoint.ConstructorArguments.Should().ContainSingle();
-        protectedEndpoint.ConstructorArguments[0].Value.Should()
-            .Be("blocks-release::monitor::get-list-by-repo-id");
+        GetAction().GetCustomAttributes<AuthorizeAttribute>(inherit: true).Should().NotBeEmpty();
     }
 
     [Fact]

@@ -1,5 +1,9 @@
 import { expect, type Page } from "@playwright/test"
-import { ensureConsole, namedProjectCard } from "./create-and-delete-project"
+import {
+  ensureConsole,
+  namedProjectCard,
+  openNamedProjectDashboard,
+} from "./create-and-delete-project"
 import { ensureAuthenticatedOnCurrentOrigin } from "./login-helper"
 import { readReleaseProject } from "./release-project"
 import { sidebarNavItem } from "./auth-helpers"
@@ -7,29 +11,66 @@ import { sidebarNavItem } from "./auth-helpers"
 const consoleHeading = (page: Page) =>
   page.getByRole("heading", { name: /Your Blocks Projects|Welcome to SELISE Blocks/ })
 
+const workspaceReady = (page: Page) => page.getByText(/^workspace$/i)
+
+/** Open the shared project shell (workspace sidebar). Deep-links often bounce to console. */
+async function openSharedProjectWorkspace(page: Page) {
+  const fixture = readReleaseProject()
+  if (!fixture) {
+    throw new Error("Release project fixture not found. Did release-setup run?")
+  }
+
+  // 1) Try seeded dashboard URL (same as e2e_logic fixture deep-link).
+  if (fixture.dashboardUrl) {
+    await page.goto(fixture.dashboardUrl, { waitUntil: "domcontentloaded" })
+    if (await workspaceReady(page).isVisible({ timeout: 8_000 }).catch(() => false)) {
+      return fixture
+    }
+  }
+
+  // 2) Fallback: console → project card → Development (reliable path).
+  await openNamedProjectDashboard(page, fixture.projectName)
+  await expect(workspaceReady(page)).toBeVisible({ timeout: 50_000 })
+  return fixture
+}
+
 export async function openReleaseConsole(page: Page) {
   await page.goto("/app/console")
   await expect(consoleHeading(page)).toBeVisible({ timeout: 30_000 })
 }
 
 export async function openReleaseDashboard(page: Page) {
-  const fixture = readReleaseProject()
-  if (!fixture?.dashboardUrl) {
-    throw new Error("Shared release project missing. Run release-setup first.")
-  }
-
-  await page.goto(fixture.dashboardUrl)
-  await expect(page.getByText(/^workspace$/i)).toBeVisible({ timeout: 50_000 })
+  const fixture = await openSharedProjectWorkspace(page)
+  return { projectName: fixture.projectName }
 }
 
+/**
+ * Same idea as e2e_logic `openWorkflowList`:
+ * enter the project shell, then click the feature nav link.
+ */
 export async function openReleaseOverview(page: Page) {
-  await openReleaseDashboard(page)
-  await sidebarNavItem(page, "Overview").click()
-  await expect(page.getByRole("heading", { name: "Project Details" })).toBeVisible({
-    timeout: 30_000,
-  })
+  const fixture = await openSharedProjectWorkspace(page)
+
+  const overviewLink = sidebarNavItem(page, "Overview")
+  await overviewLink.waitFor({ state: "visible", timeout: 30_000 })
+  await overviewLink.click()
+
+  await expect(page.getByRole("heading", { name: "Project Details" }))
+    .toBeVisible({ timeout: 30_000 })
+    .catch(async () => {
+      await overviewLink.click()
+      await expect(page.getByRole("heading", { name: "Project Details" })).toBeVisible({
+        timeout: 30_000,
+      })
+    })
+
+  return { projectName: fixture.projectName }
 }
 
+/**
+ * Same idea as e2e_logic `openWorkflowList`:
+ * try seeded deployment URL, else open project via console card → Deployment.
+ */
 export async function openReleaseDeployment(page: Page) {
   const fixture = readReleaseProject()
   if (!fixture) {
@@ -37,18 +78,29 @@ export async function openReleaseDeployment(page: Page) {
   }
 
   if (fixture.deploymentUrl) {
-    await page.goto(fixture.deploymentUrl)
-    await expect(page.getByRole("heading", { name: "Deployment Overview" })).toBeVisible({
-      timeout: 30_000,
-    })
-    return
+    await page.goto(fixture.deploymentUrl, { waitUntil: "domcontentloaded" })
+    const heading = page.getByRole("heading", { name: "Deployment Overview" })
+    if (await heading.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      return { projectName: fixture.projectName }
+    }
   }
 
-  await openReleaseDashboard(page)
-  await sidebarNavItem(page, "Deployment").click()
-  await expect(page.getByRole("heading", { name: "Deployment Overview" })).toBeVisible({
-    timeout: 30_000,
-  })
+  await openSharedProjectWorkspace(page)
+
+  const deploymentLink = sidebarNavItem(page, "Deployment")
+  await deploymentLink.waitFor({ state: "visible", timeout: 30_000 })
+  await deploymentLink.click()
+
+  await expect(page.getByRole("heading", { name: "Deployment Overview" }))
+    .toBeVisible({ timeout: 30_000 })
+    .catch(async () => {
+      await deploymentLink.click()
+      await expect(page.getByRole("heading", { name: "Deployment Overview" })).toBeVisible({
+        timeout: 30_000,
+      })
+    })
+
+  return { projectName: fixture.projectName }
 }
 
 async function openSharedProjectRepositories(osPage: Page) {

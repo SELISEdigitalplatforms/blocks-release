@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "fs"
+import path from "path"
 
 /**
  * Point a locally-served Blocks Release at itself, not the remote dev host.
@@ -19,26 +19,26 @@ import path from "path";
  * wwwroot to patch, so this logs a skip warning and does nothing — expected.
  */
 export default function globalSetup() {
-  const baseURL = process.env.E2E_BASE_URL;
-  if (!baseURL) return; // playwright.config.ts already throws when unset
+  const baseURL = process.env.E2E_BASE_URL
+  if (!baseURL) return // playwright.config.ts already throws when unset
 
-  const indexHtml = path.resolve(__dirname, "../server/Api/wwwroot/index.html");
+  const indexHtml = path.resolve(__dirname, "../server/Api/wwwroot/index.html")
   if (!fs.existsSync(indexHtml)) {
     console.warn(
       `[e2e] index.html not found at ${indexHtml} — skipping BLOCKS_RELEASE_BASE_URL patch. ` +
         `Expected when testing a remote host; build the FE first (run.sh -a) for a local run.`,
-    );
-    return;
+    )
+    return
   }
 
-  const original = fs.readFileSync(indexHtml, "utf8");
-  const patched = original.replace(/(BLOCKS_RELEASE_BASE_URL:\s*")([^"]*)(")/g, `$1${baseURL}$3`);
+  const original = fs.readFileSync(indexHtml, "utf8")
+  const patched = original.replace(/(BLOCKS_RELEASE_BASE_URL:\s*")([^"]*)(")/g, `$1${baseURL}$3`)
 
   if (patched === original) {
-    console.log(`[e2e] BLOCKS_RELEASE_BASE_URL already "${baseURL}" — no patch needed.`);
-    return;
+    console.log(`[e2e] BLOCKS_RELEASE_BASE_URL already "${baseURL}" — no patch needed.`)
+    return
   }
 
-  fs.writeFileSync(indexHtml, patched);
-  console.log(`[e2e] Patched BLOCKS_RELEASE_BASE_URL -> "${baseURL}" in served index.html.`);
+  fs.writeFileSync(indexHtml, patched)
+  console.log(`[e2e] Patched BLOCKS_RELEASE_BASE_URL -> "${baseURL}" in served index.html.`)
 }

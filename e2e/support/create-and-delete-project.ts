@@ -196,11 +196,14 @@ async function freeProjectSlotIfNeeded(page: Page) {
   const addProjectButton = page.getByText("Add Project", { exact: true }).first()
   if (await isVisibleNow(addProjectButton)) return
 
+  const atProjectLimit = page.getByText("Please delete an existing project to create a new one.")
+  if (!(await isVisibleNow(atProjectLimit))) return
+
   for (let attempt = 0; attempt < 8; attempt++) {
     const orphanNames = await listOrphanProjectNames(page)
     if (orphanNames.length === 0) break
 
-    await deleteCreatedProject(page, orphanNames[0])
+    await deleteCreatedProject(page, orphanNames[0]).catch(() => {})
     await ensureConsole(page, "release")
 
     if (await isVisibleNow(addProjectButton)) return
@@ -350,10 +353,17 @@ export async function reuseOrCreateSharedProject(
     return { projectName, dashboardUrl: page.url(), itemId }
   }
 
-  // Release: createProject frees orphan slots on OS before clicking Add Project.
-  const created = await createProject(page)
-  const itemId = new URL(created.dashboardUrl).pathname.split("/")[2] ?? ""
-  return { ...created, itemId }
+  const addProjectButton = page.getByText("Add Project", { exact: true }).first()
+  if (await addProjectButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    const created = await createProject(page)
+    const itemId = new URL(created.dashboardUrl).pathname.split("/")[2] ?? ""
+    return { ...created, itemId }
+  }
+
+  throw new Error(
+    "No project to reuse and Add Project is unavailable. " +
+      "Set E2E_REUSE_PROJECT_NAME (e.g. test) or E2E_PROJECT_ID, or free a console slot.",
+  )
 }
 
 /** Delete project on Blocks OS (mandatory path per BLOCKS-E2E-SPEC). */

@@ -100,3 +100,7 @@ export async function ensureAuthenticatedOnCurrentOrigin(page: Page) {
 
   await loginThroughOidc(page, { loginPath: `${origin}/login` })
 }
+
+export async function loginFresh(page: Page) {
+  await loginThroughOidc(page, { loginPath: e2eBaseUrl() })
+}

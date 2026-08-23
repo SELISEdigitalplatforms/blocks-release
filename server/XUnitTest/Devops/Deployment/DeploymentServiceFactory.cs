@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Blocks.Genesis;
+using Blocks.Secrets;
 using Devops.DomainService.AnalyticsTool.Services.Sca;
 using Devops.DomainService.DataGatewayDeployment.Services;
 using Devops.DomainService.Deployment.Interfaces;
@@ -94,8 +95,10 @@ namespace XUnitTest.Devops.Deployment
                 PipelineRunService(), Webhook.Object,
                 DomainValidator.Object, MessageClient.Object);
 
+        public Mock<ISecretService> SecretService { get; } = new();
+
         public DeploymentTeardownService DeploymentTeardownService() =>
             new(new Mock<ILogger<DeploymentTeardownService>>().Object,
-                TenantLookup.Object, RepoRepo.Object, BuildService());
+                TenantLookup.Object, RepoRepo.Object, BuildService(), SecretService.Object);
     }
 }

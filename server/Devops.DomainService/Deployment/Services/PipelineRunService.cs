@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Blocks.Genesis;
 using Devops.DomainService.Deployment.Entities;
+using Devops.DomainService.Deployment.Interfaces;
 using Devops.DomainService.Deployment.Models.Dtos;
 using Devops.DomainService.PipelinerunBuilders;
 using Devops.DomainService.Shared.Entities;
@@ -12,6 +13,7 @@ using Devops.DomainService.VersionControlSystems.Interfaces;
 using k8s;
 using k8s.Autorest;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
 
 namespace Devops.DomainService.Deployment.Services
@@ -28,17 +30,70 @@ namespace Devops.DomainService.Deployment.Services
         private readonly IConfiguration _configuration;
         private readonly ICloudBuildSecret _cloudBuildSecret;
 
+        /// <summary>
+        /// This service is a singleton and IRepoSecretService is scoped, so the secret set is read
+        /// through a scope opened per build rather than through a captured instance. Optional: a
+        /// null factory simply means no repository build args, which keeps the older four-argument
+        /// construction working.
+        /// </summary>
+        private readonly IServiceScopeFactory _scopeFactory;
+
         public PipelineRunService(
                                 IKubernetes k8sClient,
                                 ITokenRepository tokenRepository,
                                 IConfiguration configuration,
-                                ICloudBuildSecret cloudBuildSecret
+                                ICloudBuildSecret cloudBuildSecret,
+                                IServiceScopeFactory scopeFactory = null
                                 )
         {
             _k8sClient = k8sClient;
             _tokenRepository = tokenRepository;
             _configuration = configuration;
             _cloudBuildSecret = cloudBuildSecret;
+            _scopeFactory = scopeFactory;
+        }
+
+        /// <summary>
+        /// The repository's secret set, forwarded to the image build as --build-arg pairs.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A repository with no secret is the common first-run state, so the pointer on the
+        /// repository document is checked before the service is reached - no secret means no vault
+        /// call and no audit entry.
+        /// </para>
+        /// <para>
+        /// A set that cannot be read - locked, soft-deleted, or a pointer the store no longer has -
+        /// yields no build args rather than failing the build. Losing an optional build arg is
+        /// recoverable; refusing to deploy is not.
+        /// </para>
+        /// </remarks>
+        private async Task<IReadOnlyDictionary<string, string>> LoadRepoBuildArgsAsync(Repo repo)
+        {
+            var empty = new Dictionary<string, string>();
+
+            if (_scopeFactory is null || string.IsNullOrWhiteSpace(repo.SecretStoreItemId))
+                return empty;
+
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var repoSecrets = scope.ServiceProvider.GetRequiredService<IRepoSecretService>();
+
+                var value = await repoSecrets.GetValueAsync(repo.ItemId);
+
+                return value?.Secrets is { Count: > 0 } secrets
+                    ? secrets
+                    : empty;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"Repository secrets are unavailable for {repo.ItemId}, building without them "
+                    + $"({ex.GetType().Name}: {ex.Message}).");
+
+                return empty;
+            }
         }
 
         /// <summary>
@@ -137,7 +192,8 @@ namespace Devops.DomainService.Deployment.Services
                     .setBranchName(repo.Branch)
                     .setAccessToken(accessToken)
                     .setSonarQubeProjectKey(repo.RepoName)
-                    .setCliBuildEnv(repo.Branch);
+                    .setCliBuildEnv(repo.Branch)
+                    .setExtraBuildArgs(await LoadRepoBuildArgsAsync(repo));
 
                 var pipelineRunData = pipelineRunSettings.build();
 

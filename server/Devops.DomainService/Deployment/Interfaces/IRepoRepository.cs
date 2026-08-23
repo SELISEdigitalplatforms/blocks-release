@@ -12,7 +12,17 @@ public interface IRepoRepository
     public Task<Repo> GetRepo(string repoId, string tenantId);
     public Task<Repo?> GetRepoByBranch(string tenantId, string repoName, string branch);
     public Task<List<Repo>?> GetRepos();
-    public Task<List<Build>?> GetRepoBuildList(string RepoId);
+    public Task<List<Build>?> GetRepoBuildList(
+        string RepoId,
+        string? branch,
+        int pageNumber,
+        int pageSize);
+
+    /// <summary>
+    /// How many builds <see cref="GetRepoBuildList"/> pages over for the same repository and
+    /// branch. A paged client cannot know how many pages exist without it.
+    /// </summary>
+    public Task<long> GetRepoBuildCount(string RepoId, string? branch);
     public Task SaveRepo(Repo repo);
     public Task<bool> UpdateRepo(RepoUpdateRequest repo);
     public Task<bool> UpdateRepo(RepoUpdateRequest repo,string tenantId);
@@ -28,6 +38,7 @@ public interface IRepoRepository
     public Task<BulkOperationSummary> UpsertRepoCustomDomainsAsync(List<RepoCustomDomain> repoCustomDomains);
     public Task<List<string>> GetProjectPeopleList(string tenantId);
     public Task<bool> UpdateRepoDependencyTrackProjectUuid(string repoId, string dependencyTrackProjectUuid, string tenantId);
+    public Task<bool> UpdateRepoSecretStoreItemId(string repoId, string secretStoreItemId, string tenantId);
 
 
 

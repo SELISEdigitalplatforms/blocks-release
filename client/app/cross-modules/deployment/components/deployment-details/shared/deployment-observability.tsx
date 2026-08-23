@@ -18,14 +18,21 @@ import DASTLogo from "@blocks-deployment/assets/icons/DAST.png";
 
 interface DeploymentObservabilityProps {
   builds: IPipeline[];
-  showAllHistory?: boolean;
   viewLatestBuild?: boolean;
+  /**
+   * 1-based position of the first build in `builds` within the whole history. The caller
+   * pages on the server, so the component cannot work this out from `builds` alone.
+   */
+  startIndex?: number;
+  /** Total builds across every page. Defaults to what was handed in when unpaged. */
+  totalCount?: number;
 }
 
 const DeploymentObservability = ({
   builds,
-  showAllHistory = false,
   viewLatestBuild = false,
+  startIndex = 1,
+  totalCount,
 }: DeploymentObservabilityProps) => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
@@ -64,9 +71,9 @@ const DeploymentObservability = ({
       new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime(),
   );
 
-  const displayedBuilds = showAllHistory
-    ? sortedBuilds
-    : sortedBuilds.slice(0, 3);
+  // Every build handed in is rendered. Trimming the list here would silently drop rows the
+  // caller already paid a request for, and it would make the footer's range a lie.
+  const displayedBuilds = sortedBuilds;
 
   const renderActionIcon = (action: string) => {
     switch (action) {
@@ -273,7 +280,9 @@ const DeploymentObservability = ({
       </div>
 
       <div className="border-default mt-2 border-t px-4 py-3 text-xs text-medium-emphasis">
-        Showing 1-{displayedBuilds.length} of {sortedBuilds.length} deploys
+        {displayedBuilds.length === 0
+          ? `Showing 0 of ${totalCount ?? 0} deploys`
+          : `Showing ${startIndex}-${startIndex + displayedBuilds.length - 1} of ${totalCount ?? displayedBuilds.length} deploys`}
       </div>
     </div>
   );

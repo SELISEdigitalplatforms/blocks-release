@@ -206,6 +206,142 @@ namespace XUnitTest.Devops.PipelinerunBuilders
             value.Should().Contain("ci_build=feature-x");
         }
 
+        // ---- extra build args forwarded from the repository secret set ----
+
+        [Fact]
+        public void SetExtraBuildArgs_AppendsPairsAfterCiBuild()
+        {
+            var root = BuildRoot();
+            var settings = new PipelineRunSettings(root)
+                .setCliBuildEnv("main")
+                .setExtraBuildArgs(new Dictionary<string, string>
+                {
+                    ["VITE_BLOCKS_EXTRA_ARG"] = "NBM"
+                });
+
+            var value = settings.build();
+
+            var args = (GetParamValue(value, "extra-args") as IList<object>)
+                .Select(x => x?.ToString()).ToList();
+
+            // ci_build stays first, so a Dockerfile that reads it is unaffected by the addition.
+            args.Should().Equal(
+                "--build-arg", "ci_build=prod",
+                "--build-arg", "VITE_BLOCKS_EXTRA_ARG=NBM");
+        }
+
+        [Fact]
+        public void SetExtraBuildArgs_EmptySet_LeavesTheRunUnchanged()
+        {
+            var root = BuildRoot();
+            var settings = new PipelineRunSettings(root)
+                .setCliBuildEnv("main")
+                .setExtraBuildArgs(new Dictionary<string, string>());
+
+            var value = settings.build();
+
+            var args = (GetParamValue(value, "extra-args") as IList<object>)
+                .Select(x => x?.ToString()).ToList();
+
+            args.Should().Equal("--build-arg", "ci_build=prod");
+        }
+
+        [Fact]
+        public void SetExtraBuildArgs_Null_IsTreatedAsNoArgs()
+        {
+            var root = BuildRoot();
+            var settings = new PipelineRunSettings(root)
+                .setCliBuildEnv("main")
+                .setExtraBuildArgs(null);
+
+            var value = settings.build();
+
+            var args = (GetParamValue(value, "extra-args") as IList<object>)
+                .Select(x => x?.ToString()).ToList();
+
+            args.Should().Equal("--build-arg", "ci_build=prod");
+        }
+
+        /// <summary>
+        /// A value carrying an equals sign, a space or a comma stays one argv entry. kaniko splits
+        /// KEY=VALUE on the first equals, so the rest reaches the Dockerfile verbatim.
+        /// </summary>
+        [Fact]
+        public void SetExtraBuildArgs_PreservesValuesVerbatim()
+        {
+            var root = BuildRoot();
+            var settings = new PipelineRunSettings(root)
+                .setCliBuildEnv("main")
+                .setExtraBuildArgs(new Dictionary<string, string>
+                {
+                    ["VITE_API_URL"] = "https://api.example.com/?a=1&b=2",
+                    ["VITE_TITLE"] = "Hello World, again"
+                });
+
+            var value = settings.build();
+
+            var args = (GetParamValue(value, "extra-args") as IList<object>)
+                .Select(x => x?.ToString()).ToList();
+
+            args.Should().Contain("VITE_API_URL=https://api.example.com/?a=1&b=2");
+            args.Should().Contain("VITE_TITLE=Hello World, again");
+        }
+
+        [Fact]
+        public void SetExtraBuildArgs_BlankKey_IsSkipped()
+        {
+            var root = BuildRoot();
+            var settings = new PipelineRunSettings(root)
+                .setCliBuildEnv("main")
+                .setExtraBuildArgs(new Dictionary<string, string>
+                {
+                    ["   "] = "orphan",
+                    ["VITE_KEPT"] = "yes"
+                });
+
+            var value = settings.build();
+
+            var args = (GetParamValue(value, "extra-args") as IList<object>)
+                .Select(x => x?.ToString()).ToList();
+
+            args.Should().Equal(
+                "--build-arg", "ci_build=prod",
+                "--build-arg", "VITE_KEPT=yes");
+        }
+
+        /// <summary>
+        /// Without a build env there is nothing to write, so the source document keeps whatever
+        /// extra-args it shipped with - the behaviour a run had before repository args existed.
+        /// </summary>
+        [Fact]
+        public void NoBuildEnvAndNoExtraArgs_LeavesTheDocumentValue()
+        {
+            var root = BuildRoot();
+            var settings = new PipelineRunSettings(root);
+
+            var value = settings.build();
+
+            GetParamValue(value, "extra-args").Should().Be("");
+        }
+
+        /// <summary>
+        /// Repository args do not need a build env to travel.
+        /// </summary>
+        [Fact]
+        public void SetExtraBuildArgs_WithoutBuildEnv_StillWritesThePairs()
+        {
+            var root = BuildRoot();
+            var settings = new PipelineRunSettings(root)
+                .setExtraBuildArgs(new Dictionary<string, string> { ["VITE_ONLY"] = "1" });
+
+            var value = settings.build();
+
+            var args = (GetParamValue(value, "extra-args") as IList<object>)
+                .Select(x => x?.ToString()).ToList();
+
+            args.Should().Equal("--build-arg", "VITE_ONLY=1");
+        }
+
         [Fact]
         public void SetSonarQubeProjectKey_ReplacesSlashesWithDash()
         {

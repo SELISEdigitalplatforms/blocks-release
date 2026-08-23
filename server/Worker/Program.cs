@@ -1,4 +1,5 @@
 using Blocks.Genesis;
+using Blocks.Secrets;
 using Devops.DomainService;
 using Devops.DomainService.AnalyticsTool.Models;
 using Devops.DomainService.Deployment.Interfaces;
@@ -40,6 +41,13 @@ IHostBuilder CreateHostBuilder(string[] args) =>
             services.AddHostedService<PeriodicPingBackgroundService>();
 
             services.RegisterApplicationServices(cloudBuildSecret);
+
+            // The teardown path soft-deletes an archived repository's secret. That delete is
+            // metadata-only, so this needs no Key Vault permission - but the value store is a
+            // constructor dependency of the secret service and reads KeyVault__KeyVaultUrl when it
+            // is first built, so the variable has to be present in the worker's environment.
+            services.AddBlocksSecrets();
+
             services.AddSingleton<IDeploymentHubService, HttpDeploymentHubService>();
 
             services.AddSingleton<IConsumer<PostBuildQueue>, PostBuildConsumer>();

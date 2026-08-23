@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
@@ -93,6 +93,16 @@ const makeBuild = (overrides = {}) => ({
 
 const repoDetailsEmpty = {
   data: { repo: { ...baseRepo }, build: [] },
+  isSuccess: true,
+};
+
+// The repo's branch is "main"; this build is on another branch. That combination is what
+// the Details tab's single-item request makes dangerous, so it gets its own fixture.
+const repoDetailsForeignBranch = {
+  data: {
+    repo: { ...baseRepo },
+    build: [makeBuild({ branch: "some-other-branch", itemId: "foreign-1" })],
+  },
   isSuccess: true,
 };
 
@@ -252,6 +262,31 @@ describe("RepoDetails page", () => {
     fireEvent.click(await screen.findByRole("option", { name: "History" }));
     // tabChangedHandler updated the mocked query state.
     expect(currentTab).toBe("history");
+  });
+
+  it("offers the Secrets tab on both the desktop list and the mobile select", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: {
+        data: { repo: { ...baseRepo }, build: [makeBuild()] },
+        isSuccess: true,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+
+    expect(screen.getByRole("tab", { name: "Environment Variables" })).toBeInTheDocument();
+
+    // The mobile fallback is a separate hand-maintained list; without this a below-md user
+    // could not reach the tab at all.
+    await user.click(screen.getByRole("combobox"));
+    fireEvent.click(await screen.findByRole("option", { name: "Environment Variables" }));
+    expect(currentTab).toBe("secrets");
   });
 
   it("renders deployment information when builds exist", () => {
@@ -438,7 +473,7 @@ describe("RepoDetails page", () => {
     expect(deployMutate).toHaveBeenCalled();
   });
 
-  it("shows the history tab with a view-all toggle for many builds", () => {
+  it("renders the whole page of builds on the history tab", () => {
     const builds = [
       makeBuild({ itemId: "b1", createdDate: "2024-01-01T00:00:00Z" }),
       makeBuild({ itemId: "b2", createdDate: "2024-01-02T00:00:00Z" }),
@@ -447,7 +482,7 @@ describe("RepoDetails page", () => {
     ];
     vi.mocked(useGetRepoDetails).mockReturnValue({
       data: {
-        data: { repo: { ...baseRepo }, build: builds },
+        data: { repo: { ...baseRepo }, build: builds, totalCount: 4 },
         isSuccess: true,
       },
       isLoading: false,
@@ -459,9 +494,36 @@ describe("RepoDetails page", () => {
       route: "/app/deployment/repo/r1?tab=history",
       nuqs: true,
     });
-    const viewAll = screen.getByRole("button", { name: /View all history/i });
-    fireEvent.click(viewAll);
-    expect(screen.getByText(/View Less/i)).toBeInTheDocument();
+
+    // The old build was trimmed to three with a "View all history" toggle; a page is now
+    // rendered whole, and the toggle is gone.
+    expect(screen.getByText("Showing 1-4 of 4 deploys")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /View all history/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not offer a pager when the whole history fits on one page", () => {
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: {
+        data: {
+          repo: { ...baseRepo },
+          build: [makeBuild({ itemId: "b1" })],
+          totalCount: 1,
+        },
+        isSuccess: true,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    currentTab = "history";
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=history",
+      nuqs: true,
+    });
+    expect(screen.getByText("Showing 1-1 of 1 deploys")).toBeInTheDocument();
+    expect(screen.queryByText(/Page 1 of/i)).not.toBeInTheDocument();
   });
 
   it("opens the configure settings modal from the header", () => {
@@ -631,5 +693,117 @@ describe("RepoDetails page", () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Go Back" }));
     expect(navigateMock).toHaveBeenCalledWith(-1);
+  });
+
+  // ─── Pagination (#175) ──────────────────────────────────────────────────────
+
+  describe("build pagination", () => {
+    const okResponse = {
+      data: { repo: { ...baseRepo }, build: [makeBuild()] },
+      isSuccess: true,
+    };
+
+    const lastCallOptions = () => {
+      const calls = vi.mocked(useGetRepoDetails).mock.calls;
+      return calls[calls.length - 1][1] as
+        | { pageNumber?: number; pageSize?: number }
+        | undefined;
+    };
+
+    // H3
+    it("asks for a single build on the Details tab", () => {
+      currentTab = "details";
+      vi.mocked(useGetRepoDetails).mockReturnValue({
+        data: okResponse,
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as never);
+
+      renderWithProviders(<RepoDetails />, {
+        route: "/app/deployment/repo/r1?tab=details",
+        nuqs: true,
+      });
+
+      expect(lastCallOptions()?.pageSize).toBe(1);
+      expect(lastCallOptions()?.pageNumber).toBe(1);
+    });
+
+    // H4
+    it("asks for five builds on the History tab", () => {
+      currentTab = "history";
+      vi.mocked(useGetRepoDetails).mockReturnValue({
+        data: okResponse,
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as never);
+
+      renderWithProviders(<RepoDetails />, {
+        route: "/app/deployment/repo/r1?tab=history",
+        nuqs: true,
+      });
+
+      expect(lastCallOptions()?.pageSize).toBe(5);
+      expect(lastCallOptions()?.pageNumber).toBe(1);
+    });
+
+    // The whole point of a five-row page: the pager has to ask the server for the next
+    // one rather than slice a list it already holds.
+    it("requests the next page from the server when the pager advances", async () => {
+      currentTab = "history";
+      vi.mocked(useGetRepoDetails).mockReturnValue({
+        data: {
+          data: {
+            repo: { ...baseRepo },
+            build: [makeBuild({ itemId: "b1" })],
+            totalCount: 28,
+          },
+          isSuccess: true,
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as never);
+
+      renderWithProviders(<RepoDetails />, {
+        route: "/app/deployment/repo/r1?tab=history",
+        nuqs: true,
+      });
+
+      expect(lastCallOptions()?.pageNumber).toBe(1);
+
+      fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+
+      await waitFor(() => expect(lastCallOptions()?.pageNumber).toBe(2));
+      expect(lastCallOptions()?.pageSize).toBe(5);
+    });
+
+    // C3b: the silent-blank case. With a single-item request, a build whose branch differs
+    // from the repo's would be dropped by the page's branch filter, leaving the panel empty
+    // while the empty state (which tests the raw response) never renders either. The latest
+    // build is therefore taken from the raw, server-sorted response.
+    it("still shows the newest build when its branch differs from the repo's", () => {
+      currentTab = "details";
+      vi.mocked(useGetRepoDetails).mockReturnValue({
+        data: repoDetailsForeignBranch,
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as never);
+
+      renderWithProviders(<RepoDetails />, {
+        route: "/app/deployment/repo/r1?tab=details",
+        nuqs: true,
+      });
+
+      // This panel renders `latestBuild?.repoUrl || "N/A"`, so the URL appearing proves
+      // latestBuild is populated. (Not asserting the absence of "N/A" anywhere on the
+      // page - other fields legitimately render it, e.g. a null commit.) The probe that
+      // reverts this derivation to the filtered list is what proves the assertion bites.
+      expect(
+        screen.getByText("https://github.com/acme/app"),
+      ).toBeInTheDocument();
+    });
   });
 });

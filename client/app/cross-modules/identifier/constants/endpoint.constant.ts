@@ -10,14 +10,6 @@ export const PROJECT_ENDPOINTS = {
   ADD_ASSET: `${API_BASE}${PROJECT_SUBPATH}/AddAsset`,
 } as const;
 
-// ─── Service Registry endpoints ───────────────────────────────────────────────
-
-const SERVICE_SUBPATH = "/Service";
-
-export const SERVICE_REGISTRY_ENDPOINTS = {
-  GET_ALL: `${API_BASE}${SERVICE_SUBPATH}/GetAll`,
-} as const;
-
 // ─── Cloud Build endpoints ────────────────────────────────────────────────────
 
 const BUILD_SUBPATH = "/build";

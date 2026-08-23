@@ -1,3 +1,5 @@
+using Blocks.Genesis;
+using Blocks.Secrets;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Interfaces;
 using Devops.DomainService.Deployment.Models.Response;
@@ -29,17 +31,20 @@ public class DeploymentTeardownService : IDeploymentTeardownService
     private readonly ITenantLookupRepository _tenantLookupRepository;
     private readonly IRepoRepository _repoRepository;
     private readonly BuildService _buildService;
+    private readonly ISecretService _secretService;
 
     public DeploymentTeardownService(
         ILogger<DeploymentTeardownService> logger,
         ITenantLookupRepository tenantLookupRepository,
         IRepoRepository repoRepository,
-        BuildService buildService)
+        BuildService buildService,
+        ISecretService secretService)
     {
         _logger = logger;
         _tenantLookupRepository = tenantLookupRepository;
         _repoRepository = repoRepository;
         _buildService = buildService;
+        _secretService = secretService;
     }
 
     public async Task<DeploymentTeardownSummary> TearDownAsync(ProjectDeleteQueue message)
@@ -173,6 +178,10 @@ public class DeploymentTeardownService : IDeploymentTeardownService
             if (await _repoRepository.ArchiveRepo(repo.ItemId, tenantId))
             {
                 summary.ReposArchived++;
+
+                // Strictly after the archive, and never inside it. Archiving is the load-bearing
+                // step; a secret-store problem must not be able to undo or misreport it.
+                await DeleteRepoSecretAsync(repo, tenantId, summary);
             }
             else
             {
@@ -192,6 +201,102 @@ public class DeploymentTeardownService : IDeploymentTeardownService
                 tenantId, repo.ItemId);
         }
     }
+
+    /// <summary>
+    /// Soft-deletes an archived repository's secret set, best effort.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Has its own try/catch rather than relying on the caller's: an exception reaching the outer
+    /// handler would record a repository that was archived successfully as a teardown failure, and
+    /// would stop the remaining work for that repository. Here, the worst case is a live secret on
+    /// a dead repository plus one entry in <c>Failures</c>.
+    /// </para>
+    /// <para>
+    /// The delete is metadata-only inside the secrets package - the vault value is retained so the
+    /// secret stays restorable - so this needs no Key Vault permission, only a resolvable context.
+    /// </para>
+    /// </remarks>
+    private async Task DeleteRepoSecretAsync(Repo repo, string tenantId, DeploymentTeardownSummary summary)
+    {
+        // The overwhelming majority of repositories have never had secrets. Leaving early keeps
+        // them on exactly the path they were on before this step existed - no context, no
+        // service call, no log line.
+        if (string.IsNullOrWhiteSpace(repo.SecretStoreItemId))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(tenantId))
+        {
+            // Fail closed. The secret store separates tenants by a TenantId filter alone, so a
+            // guessed or defaulted tenant is worse than not deleting.
+            RecordSecretFailure(repo, tenantId, summary, "no tenant on the message");
+            return;
+        }
+
+        try
+        {
+            // A queue consumer has no HTTP request and therefore no ambient BlocksContext, and the
+            // secrets package refuses to act without one by design. The synthesized identity is
+            // what lands in the audit row's actor and in DeletedBy.
+            await BlocksContext.ExecuteInContext(
+                BuildWorkerContext(tenantId),
+                () => _secretService.DeleteAsync(repo.SecretStoreItemId));
+
+            summary.SecretsDeleted++;
+        }
+        catch (SecretStateException ex) when (
+            string.Equals(ex.CurrentStatus, SecretStatuses.Deleted, StringComparison.Ordinal))
+        {
+            // Already deleted - a redelivered message, not a failure. The consumer deliberately
+            // does not rethrow so redelivery is expected, and counting this would fill Failures
+            // with noise and make HasFailures useless as a signal.
+            _logger.LogInformation(ex,
+                "Secret for repository {RepoId} was already deleted, nothing to do. tenant={TenantId}",
+                repo.ItemId, tenantId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to delete the secret for an archived repository, continuing. tenant={TenantId} repo={RepoId} secret={SecretId}",
+                tenantId, repo.ItemId, repo.SecretStoreItemId);
+
+            RecordSecretFailure(repo, tenantId, summary, ex.Message);
+        }
+    }
+
+    private static void RecordSecretFailure(
+        Repo repo,
+        string tenantId,
+        DeploymentTeardownSummary summary,
+        string reason) =>
+        summary.Failures.Add($"{tenantId}/{repo.ItemId} ({repo.RepoName}): secret delete failed - {reason}");
+
+    /// <summary>
+    /// The identity background secret work acts under. Recognisable on purpose, so an audit row
+    /// written by teardown is not mistaken for a person's action.
+    /// </summary>
+    private static BlocksContext BuildWorkerContext(string tenantId) =>
+        BlocksContext.Create(
+            tenantId,
+            roles: [],
+            userId: WorkerUserId,
+            isAuthenticated: true,
+            requestUri: WorkerRequestUri,
+            organizationId: DefaultOrganizationId,
+            expireOn: DateTime.UtcNow.AddMinutes(5),
+            email: null,
+            permissions: [],
+            userName: WorkerUserId,
+            phoneNumber: null,
+            displayName: WorkerUserId,
+            oauthToken: null,
+            originalTenantId: tenantId);
+
+    private const string WorkerUserId = "blocks-release-worker";
+    private const string WorkerRequestUri = "worker/project-delete";
+    private const string DefaultOrganizationId = "default";
 
     private static string Normalize(string value) =>
         string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();

@@ -11,11 +11,12 @@ import { serviceInstances } from "@/lib/http-client";
 import { ALERT_ENDPOINTS } from "@blocks-deployment/constants/endpoint.constant";
 
 class AlertsService {
-  private readonly httpClient = serviceInstances.logicService;
+  private readonly logicClient = serviceInstances.logicService;
+  private readonly deploymentClient = serviceInstances.deploymentService;
 
   async updateSingleMonitor(payload: Partial<IUpdateSingleMonitorPayload>) {
     const url = ALERT_ENDPOINTS.UPDATE_MONITOR;
-    return this.httpClient.post<IAlertResponse<IAddSingleMonitorResponse>>(
+    return this.logicClient.post<IAlertResponse<IAddSingleMonitorResponse>>(
       url,
       payload,
     );
@@ -23,22 +24,22 @@ class AlertsService {
 
   async deleteSingleMonitor(itemId: string) {
     const url = `${ALERT_ENDPOINTS.DELETE_MONITOR}?itemId=${encodeURIComponent(itemId)}`;
-    return this.httpClient.delete<IAlertResponse<null>>(url);
+    return this.logicClient.delete<IAlertResponse<null>>(url);
   }
 
   async getMonitorListById(projectKey: string, repoId: string) {
-    const url = `${ALERT_ENDPOINTS.GET_MONITOR_LIST_BY_REPO_ID}?ProjectKey=${encodeURIComponent(projectKey)}&repoId=${repoId}`;
-    return this.httpClient.get<IGetMonitorList>(url);
+    const url = `${ALERT_ENDPOINTS.GET_MONITOR_LIST_BY_REPO_ID}?ProjectKey=${encodeURIComponent(projectKey)}&repoId=${encodeURIComponent(repoId)}`;
+    return this.deploymentClient.get<IGetMonitorList>(url);
   }
 
   async updateHealth(payload: Partial<IUpdateHealth>) {
     const url = ALERT_ENDPOINTS.UPDATE_HEALTH;
-    return this.httpClient.post<ISaveSingleHealthResponse>(url, payload);
+    return this.logicClient.post<ISaveSingleHealthResponse>(url, payload);
   }
 
   async deleteHealth(itemId: string) {
     const url = `${ALERT_ENDPOINTS.DELETE_HEALTH}?itemId=${encodeURIComponent(itemId)}`;
-    return this.httpClient.delete<IDeleteHealthResponse>(url);
+    return this.logicClient.delete<IDeleteHealthResponse>(url);
   }
 }
 export const alertsService = new AlertsService();

@@ -61,8 +61,8 @@ namespace Devops.DomainService.Deployment.Services
             };
 
 
-            var blocksKey = _configuration["RootTenantId"];
-            var tenantId = _configuration["RootTenantId"];
+            var blocksKey = TenantId;
+            var tenantId = TenantId;
             var salt = _tenants.GetTenantByID(tenantId)?.TenantSalt;
             var actulalSecret = _cryptoService.Hash(tenantId, salt);
 
@@ -115,8 +115,8 @@ namespace Devops.DomainService.Deployment.Services
             };
 
 
-            var blocksKey = _configuration["RootTenantId"];
-            var tenantId = _configuration["RootTenantId"];
+            var blocksKey = TenantId;
+            var tenantId = TenantId;
             var salt = _tenants.GetTenantByID(tenantId)?.TenantSalt;
             var actulalSecret = _cryptoService.Hash(tenantId, salt);
 

@@ -117,9 +117,9 @@ export const SecretAuditModal = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Secret activity</DialogTitle>
+          <DialogTitle>Environment variable activity</DialogTitle>
           <DialogDescription>
-            Every action taken on this repository&apos;s secrets. Values are
+            Every action taken on this repository&apos;s environment variables. Values are
             never recorded here.
           </DialogDescription>
         </DialogHeader>

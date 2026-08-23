@@ -55,7 +55,7 @@ const RevealSecretBody = ({ secrets }: { secrets: RepoSecretMap | null }) => {
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Repository secrets</DialogTitle>
+        <DialogTitle>Environment variables</DialogTitle>
         <DialogDescription>
           These values are shown in full. Reading them is recorded in the
           activity log.
@@ -132,7 +132,7 @@ const RevealSecretBody = ({ secrets }: { secrets: RepoSecretMap | null }) => {
               readOnly
               value={json}
               rows={Math.min(entries.length * 2 + 4, 16)}
-              aria-label="Secrets as JSON"
+              aria-label="Environment variables as JSON"
               className="font-mono text-sm"
             />
           </div>

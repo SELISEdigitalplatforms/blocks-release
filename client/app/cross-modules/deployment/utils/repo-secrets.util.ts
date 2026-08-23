@@ -85,7 +85,7 @@ export const parseSecretJson = (text: string): ParseResult => {
   }
 
   if (Object.keys(value).length === 0) {
-    return { ok: false, message: "Add at least one secret." };
+    return { ok: false, message: "Add at least one variable." };
   }
 
   const tooLarge = exceedsSizeLimit(value);

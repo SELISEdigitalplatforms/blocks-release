@@ -88,7 +88,7 @@ export const SecretKvEditor = ({
             type="button"
             variant="ghost"
             size="icon"
-            aria-label={`Remove secret ${index + 1}`}
+            aria-label={`Remove variable ${index + 1}`}
             disabled={disabled || fields.length === 1}
             onClick={() => remove(index)}>
             <Trash2 className="h-4 w-4" />

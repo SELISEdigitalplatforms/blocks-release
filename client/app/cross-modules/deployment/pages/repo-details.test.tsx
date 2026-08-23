@@ -280,12 +280,12 @@ describe("RepoDetails page", () => {
       nuqs: true,
     });
 
-    expect(screen.getByRole("tab", { name: "Secrets" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Environment Variables" })).toBeInTheDocument();
 
     // The mobile fallback is a separate hand-maintained list; without this a below-md user
     // could not reach the tab at all.
     await user.click(screen.getByRole("combobox"));
-    fireEvent.click(await screen.findByRole("option", { name: "Secrets" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Environment Variables" }));
     expect(currentTab).toBe("secrets");
   });
 

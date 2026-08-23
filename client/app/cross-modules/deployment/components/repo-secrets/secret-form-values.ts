@@ -70,7 +70,7 @@ export const secretFormSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["rows"],
-        message: "Add at least one secret.",
+        message: "Add at least one variable.",
       });
 
       return;

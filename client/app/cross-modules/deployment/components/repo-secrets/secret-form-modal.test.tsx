@@ -53,7 +53,7 @@ describe("SecretFormModal", () => {
 
     await userEvent.type(screen.getByPlaceholderText("API_KEY"), "DB_PASSWORD");
     await userEvent.type(screen.getByPlaceholderText("value"), "p@ss");
-    await userEvent.click(screen.getByRole("button", { name: /save secrets/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save variables/i }));
 
     await waitFor(() =>
       expect(save.mutateAsync).toHaveBeenCalledWith({
@@ -62,7 +62,7 @@ describe("SecretFormModal", () => {
       }),
     );
     expect(showSuccessToast).toHaveBeenCalledWith({
-      description: "Secrets saved successfully",
+      description: "Environment variables saved successfully",
     });
   });
 
@@ -80,7 +80,7 @@ describe("SecretFormModal", () => {
     renderModal();
 
     await userEvent.type(screen.getByPlaceholderText("API_KEY"), "db-password");
-    await userEvent.click(screen.getByRole("button", { name: /save secrets/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save variables/i }));
 
     expect(
       await screen.findByText(/start with a letter or underscore/i),
@@ -96,7 +96,7 @@ describe("SecretFormModal", () => {
 
     const keyInputs = screen.getAllByPlaceholderText("API_KEY");
     await userEvent.type(keyInputs[1], "A");
-    await userEvent.click(screen.getByRole("button", { name: /save secrets/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save variables/i }));
 
     expect(
       await screen.findByText(/each key may appear only once/i),
@@ -144,7 +144,7 @@ describe("SecretFormModal", () => {
     fireEvent.change(screen.getByRole("textbox", { name: /json/i }), {
       target: { value: '{"A":1}' },
     });
-    await userEvent.click(screen.getByRole("button", { name: /save secrets/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save variables/i }));
 
     expect(
       await screen.findByText(/must be text in quotes/i),
@@ -159,7 +159,7 @@ describe("SecretFormModal", () => {
     expect(screen.getByDisplayValue("API_KEY")).toBeInTheDocument();
     expect(screen.getByDisplayValue("abc")).toBeInTheDocument();
     expect(screen.getByDisplayValue("DB")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /edit secrets/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /edit environment variables/i })).toBeInTheDocument();
   });
 
   it("routes a server key error back onto the field and keeps the input", async () => {
@@ -175,7 +175,7 @@ describe("SecretFormModal", () => {
 
     await userEvent.type(screen.getByPlaceholderText("API_KEY"), "DB");
     await userEvent.type(screen.getByPlaceholderText("value"), "x");
-    await userEvent.click(screen.getByRole("button", { name: /save secrets/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save variables/i }));
 
     expect(
       await screen.findByText("Secret key 'DB' is invalid."),
@@ -196,7 +196,7 @@ describe("SecretFormModal", () => {
     renderModal();
 
     await userEvent.type(screen.getByPlaceholderText("API_KEY"), "DB");
-    await userEvent.click(screen.getByRole("button", { name: /save secrets/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save variables/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "The secret store is currently unavailable.",

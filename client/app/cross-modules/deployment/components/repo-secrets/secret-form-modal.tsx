@@ -123,7 +123,7 @@ const SecretForm = ({
   /** Routes a server reason code back onto the field that caused it (FRONTEND_DESIGN §6). */
   const applyServerError = (error: unknown) => {
     const reason = getServerReason(error);
-    const message = getServerMessage(error) ?? "The secrets could not be saved.";
+    const message = getServerMessage(error) ?? "The environment variables could not be saved.";
 
     const fieldMappable =
       reason === REPO_SECRET_ERROR.KeyInvalid ||
@@ -173,7 +173,7 @@ const SecretForm = ({
 
     try {
       await saveMutation.mutateAsync({ repoId, secrets });
-      showSuccessToast({ description: "Secrets saved successfully" });
+      showSuccessToast({ description: "Environment variables saved successfully" });
       onOpenChange(false);
     } catch (error) {
       // Deliberately leaves the dialog open so the user's input survives the failure.
@@ -184,7 +184,9 @@ const SecretForm = ({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{isEdit ? "Edit secrets" : "Add secrets"}</DialogTitle>
+        <DialogTitle>
+          {isEdit ? "Edit environment variables" : "Add environment variables"}
+        </DialogTitle>
         <DialogDescription>
           Saving replaces the whole set for this repository. Values are stored
           in Key Vault, never in the repository.
@@ -255,7 +257,7 @@ const SecretForm = ({
               Cancel
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving…" : "Save secrets"}
+              {isPending ? "Saving…" : "Save variables"}
             </Button>
           </DialogFooter>
         </form>

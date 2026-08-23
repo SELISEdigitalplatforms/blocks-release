@@ -584,13 +584,13 @@ export default function RepoDetails() {
                       value as keyof typeof REPO_DETAILS_PROVIDERS,
                     )
                   }>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-52">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="details">Details</SelectItem>
                     <SelectItem value="history">History</SelectItem>
-                    <SelectItem value="secrets">Secrets</SelectItem>
+                    <SelectItem value="secrets">Environment Variables</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -602,8 +602,8 @@ export default function RepoDetails() {
                   <TabsTrigger value="history" className="w-20">
                     History
                   </TabsTrigger>
-                  <TabsTrigger value="secrets" className="w-20">
-                    Secrets
+                  <TabsTrigger value="secrets" className="px-4">
+                    Environment Variables
                   </TabsTrigger>
                 </TabsList>
               </div>

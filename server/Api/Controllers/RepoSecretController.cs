@@ -34,8 +34,7 @@ public class RepoSecretController : ControllerBase
 
     /// <summary>Creates or replaces the repository's whole secret set.</summary>
     [HttpPost("save")]
-    // [ProtectedEndPoint("blocks-release::repo-secret::manage")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release::repo-secret::manage")]
     public async Task<IActionResult> Save([FromBody] RepoSecretSaveRequest request, CancellationToken cancellationToken)
     {
         var result = await _repoSecretService.SaveAsync(request, cancellationToken);
@@ -44,8 +43,7 @@ public class RepoSecretController : ControllerBase
 
     /// <summary>Metadata only. Never returns a value or a key name.</summary>
     [HttpGet("get")]
-    // [ProtectedEndPoint("blocks-release::repo-secret::manage")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release::repo-secret::manage")]
     public async Task<IActionResult> Get([FromQuery] string repoId, CancellationToken cancellationToken)
     {
         var result = await _repoSecretService.GetMetaAsync(repoId, cancellationToken);
@@ -54,8 +52,7 @@ public class RepoSecretController : ControllerBase
 
     /// <summary>Reads the plaintext set. Audited server-side on every call.</summary>
     [HttpGet("value")]
-    // [ProtectedEndPoint("blocks-release::repo-secret::manage")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release::repo-secret::manage")]
     public async Task<IActionResult> Value([FromQuery] string repoId, CancellationToken cancellationToken)
     {
         var result = await _repoSecretService.GetValueAsync(repoId, cancellationToken);
@@ -68,8 +65,7 @@ public class RepoSecretController : ControllerBase
     }
 
     [HttpPost("lock")]
-    // [ProtectedEndPoint("blocks-release::repo-secret::manage")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release::repo-secret::manage")]
     public async Task<IActionResult> Lock([FromBody] RepoSecretIdRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -80,8 +76,7 @@ public class RepoSecretController : ControllerBase
 
     /// <summary>Unlocks. Shares the manage permission - lock and unlock are one capability.</summary>
     [HttpPost("unlock")]
-    // [ProtectedEndPoint("blocks-release::repo-secret::manage")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release::repo-secret::manage")]
     public async Task<IActionResult> Unlock([FromBody] RepoSecretIdRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -92,8 +87,7 @@ public class RepoSecretController : ControllerBase
 
     /// <summary>Soft-deletes. The vault value is retained so restore works.</summary>
     [HttpDelete("delete")]
-    // [ProtectedEndPoint("blocks-release::repo-secret::manage")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release::repo-secret::manage")]
     public async Task<IActionResult> Delete([FromQuery] string repoId, CancellationToken cancellationToken)
     {
         await _repoSecretService.DeleteAsync(repoId, cancellationToken);
@@ -101,8 +95,7 @@ public class RepoSecretController : ControllerBase
     }
 
     [HttpPost("restore")]
-    // [ProtectedEndPoint("blocks-release::repo-secret::manage")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release::repo-secret::manage")]
     public async Task<IActionResult> Restore([FromBody] RepoSecretIdRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -112,8 +105,7 @@ public class RepoSecretController : ControllerBase
     }
 
     [HttpGet("audit")]
-    // [ProtectedEndPoint("blocks-release::repo-secret::manage")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release::repo-secret::manage")]
     public async Task<IActionResult> Audit(
         [FromQuery] string repoId,
         [FromQuery] SecretAuditFilter filter,

@@ -39,7 +39,7 @@ describe("RevealSecretModal", () => {
 
     await userEvent.click(screen.getByRole("radio", { name: "JSON" }));
 
-    expect(screen.getByRole("textbox", { name: /secrets as json/i })).toHaveValue(
+    expect(screen.getByRole("textbox", { name: /environment variables as json/i })).toHaveValue(
       JSON.stringify(secrets, null, 2),
     );
     // The pair inputs are gone; JSON is the whole view.
@@ -58,7 +58,7 @@ describe("RevealSecretModal", () => {
   it("renders nothing but the shell when there are no secrets", () => {
     renderModal({});
 
-    expect(screen.getByText("Repository secrets")).toBeInTheDocument();
+    expect(screen.getByText("Environment variables")).toBeInTheDocument();
     expect(screen.queryByDisplayValue("abc123")).toBeNull();
   });
 });

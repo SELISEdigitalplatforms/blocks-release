@@ -90,9 +90,9 @@ describe("RepoSecretsPanel", () => {
 
     renderPanel();
 
-    expect(screen.getByText("No secrets yet")).toBeInTheDocument();
+    expect(screen.getByText("No environment variables yet")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Add secrets" }),
+      screen.getByRole("button", { name: "Add variables" }),
     ).toBeInTheDocument();
     expect(reveal.mutateAsync).not.toHaveBeenCalled();
   });
@@ -108,7 +108,7 @@ describe("RepoSecretsPanel", () => {
     renderPanel();
 
     expect(
-      screen.getByText(/do not have permission to manage secrets/i),
+      screen.getByText(/do not have permission to manage environment variables/i),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /reveal/i })).toBeNull();
   });

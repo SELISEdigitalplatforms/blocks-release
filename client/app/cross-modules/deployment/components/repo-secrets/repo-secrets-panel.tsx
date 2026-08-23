@@ -56,7 +56,7 @@ export const RepoSecretsPanelLoading = () => (
 );
 
 /**
- * The Secrets tab body: status, lifecycle actions, and the modals they open.
+ * The Environment Variables tab body: status, lifecycle actions, and the modals they open.
  *
  * Values are never fetched to render this panel — only a deliberate Reveal or Edit triggers the
  * audited read, and the fetched set is dropped as soon as its dialog closes.
@@ -86,8 +86,8 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
       <Card>
         <CardContent className="px-6 py-12 text-center text-sm text-muted-foreground">
           {forbidden
-            ? "You do not have permission to manage secrets for this repository."
-            : "The secrets for this repository could not be loaded."}
+            ? "You do not have permission to manage environment variables for this repository."
+            : "The environment variables for this repository could not be loaded."}
         </CardContent>
       </Card>
     );
@@ -173,7 +173,7 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
       <Card className={isBusy ? "opacity-60 transition-opacity" : undefined}>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <h3 className="text-base font-semibold">Secrets</h3>
+            <h3 className="text-base font-semibold">Environment Variables</h3>
             {status && (
               <Badge variant={isDeleted ? "outline" : "secondary"}>
                 {REPO_SECRET_STATUS_LABEL[status]}
@@ -200,7 +200,7 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                   </TooltipTrigger>
                   {isLocked && (
                     <TooltipContent>
-                      Unlock this secret to read or change it.
+                      Unlock these variables to read or change them.
                     </TooltipContent>
                   )}
                 </Tooltip>
@@ -226,7 +226,7 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                   variant="outline"
                   size="sm"
                   disabled={isBusy}
-                  onClick={() => runLifecycle(unlock, "Secrets unlocked")}>
+                  onClick={() => runLifecycle(unlock, "Environment variables unlocked")}>
                   <Unlock className="mr-2 h-4 w-4" />
                   Unlock
                 </Button>
@@ -236,7 +236,7 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                   variant="outline"
                   size="sm"
                   disabled={isBusy}
-                  onClick={() => runLifecycle(lock, "Secrets locked")}>
+                  onClick={() => runLifecycle(lock, "Environment variables locked")}>
                   <Lock className="mr-2 h-4 w-4" />
                   Lock
                 </Button>
@@ -248,7 +248,7 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                 variant="outline"
                 size="sm"
                 disabled={isBusy}
-                onClick={() => runLifecycle(restore, "Secrets restored")}>
+                onClick={() => runLifecycle(restore, "Environment variables restored")}>
                 Restore
               </Button>
             )}
@@ -277,13 +277,13 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                 </DialogTrigger>
                 <ConfirmationModal
                   data={{
-                    dialogTitle: "Delete repository secrets",
-                    dialogSubtitle: `The secrets for ${repoName || "this repository"} will stop being available to deployments. You can restore them later.`,
+                    dialogTitle: "Delete environment variables",
+                    dialogSubtitle: `The environment variables for ${repoName || "this repository"} will stop being available to deployments. You can restore them later.`,
                     confirmButton: "Delete",
                   }}
                   onCancel={() => setIsDeleteOpen(false)}
                   onConfirm={async () => {
-                    await runLifecycle(remove, "Secrets deleted");
+                    await runLifecycle(remove, "Environment variables deleted");
                     setIsDeleteOpen(false);
                   }}
                   buttonState={{ confirm: { disable: remove.isPending } }}
@@ -295,7 +295,7 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
 
         <CardContent className="flex flex-col gap-2 text-sm text-muted-foreground">
           <p>
-            Stored in Key Vault. Key names and values are shown only through a
+            Stored in Key Vault. Variable names and values are shown only through a
             deliberate reveal, which is recorded in the activity log.
           </p>
           {data.lastRotatedDate && (

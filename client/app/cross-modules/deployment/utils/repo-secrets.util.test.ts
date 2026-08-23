@@ -48,7 +48,7 @@ describe("parseSecretJson", () => {
     ["[1,2]", "Provide a JSON object"],
     ["null", "Provide a JSON object"],
     ['"a string"', "Provide a JSON object"],
-    ["{}", "Add at least one secret."],
+    ["{}", "Add at least one variable."],
     ['{"A":1}', 'The value for "A" must be text in quotes.'],
     ['{"A":{"b":"c"}}', 'The value for "A" must be text in quotes.'],
     ['{"A":["b"]}', 'The value for "A" must be text in quotes.'],

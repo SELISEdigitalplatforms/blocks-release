@@ -133,6 +133,47 @@ describe("SecretFormModal", () => {
     expect(screen.getByRole("textbox", { name: /json/i })).toBeInTheDocument();
   });
 
+  it("saves pasted JSON on a new set, where the rows are still blank", async () => {
+    const save = mockSave();
+    renderModal();
+
+    await userEvent.click(screen.getByRole("radio", { name: /paste json/i }));
+
+    // fireEvent.change rather than userEvent.type: "{" and "}" are control sequences in
+    // userEvent's keyboard grammar, so typing raw JSON does not produce the text it looks like.
+    fireEvent.change(screen.getByRole("textbox", { name: /json/i }), {
+      target: { value: '{"API_KEY":"abc"}' },
+    });
+    await userEvent.click(screen.getByRole("button", { name: /save variables/i }));
+
+    // The blank row the key/value editor starts with must not fail the JSON submit: its error
+    // would land on a field this mode does not render, leaving Save looking inert.
+    await waitFor(() =>
+      expect(save.mutateAsync).toHaveBeenCalledWith({
+        repoId: REPO_ID,
+        secrets: { API_KEY: "abc" },
+      }),
+    );
+  });
+
+  it("saves pasted JSON when editing an existing set", async () => {
+    const save = mockSave();
+    renderModal({ EXISTING: "v" });
+
+    await userEvent.click(screen.getByRole("radio", { name: /paste json/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /json/i }), {
+      target: { value: '{"API_KEY":"abc"}' },
+    });
+    await userEvent.click(screen.getByRole("button", { name: /save variables/i }));
+
+    await waitFor(() =>
+      expect(save.mutateAsync).toHaveBeenCalledWith({
+        repoId: REPO_ID,
+        secrets: { API_KEY: "abc" },
+      }),
+    );
+  });
+
   it("rejects a non-string JSON value", async () => {
     const save = mockSave();
     renderModal();

@@ -166,6 +166,42 @@ describe("RepoDetails page", () => {
     expect(screen.getByText("acme/app")).toBeInTheDocument();
   });
 
+  it("offers the Environment Variables tab before the first deployment", () => {
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: repoDetailsEmpty,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+
+    // The set is keyed on the repository alone, so it has to be reachable before the first
+    // build exists - otherwise it could only be created after a deployment that needed it.
+    expect(
+      screen.getByRole("tab", { name: "Environment Variables" }),
+    ).toBeInTheDocument();
+  });
+
+  it("falls back to Details when a stale ?tab=history reaches the empty state", () => {
+    currentTab = "history";
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: repoDetailsEmpty,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=history",
+      nuqs: true,
+    });
+
+    // History has no tab here, so an unclamped value would select nothing and render a blank page.
+    expect(screen.getByText("No deployments available")).toBeInTheDocument();
+  });
+
   it("goes back from the empty state", () => {
     vi.mocked(useGetRepoDetails).mockReturnValue({
       data: repoDetailsEmpty,

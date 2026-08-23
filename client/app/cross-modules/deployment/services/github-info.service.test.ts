@@ -285,6 +285,58 @@ describe("GithubInfoService", () => {
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockResponse);
     });
+
+    // H6
+    it("puts branch, pageNumber and pageSize on the query string", async () => {
+      vi.mocked(http.get).mockResolvedValue({});
+
+      await githubInfoService.getRepoDetails(MOCK_REPO_ID, {
+        branch: "develop",
+        pageNumber: 2,
+        pageSize: 30,
+      });
+
+      const url = vi.mocked(http.get).mock.calls[0][0] as string;
+      expect(url).toContain(`RepoId=${encodeURIComponent(MOCK_REPO_ID)}`);
+      expect(url).toContain("branch=develop");
+      expect(url).toContain("pageNumber=2");
+      expect(url).toContain("pageSize=30");
+    });
+
+    it("encodes a branch name containing a slash", async () => {
+      vi.mocked(http.get).mockResolvedValue({});
+
+      await githubInfoService.getRepoDetails(MOCK_REPO_ID, {
+        branch: "feature/new-thing",
+      });
+
+      const url = vi.mocked(http.get).mock.calls[0][0] as string;
+      // Unencoded, the slash would read as a path segment rather than a value.
+      expect(url).toContain("branch=feature%2Fnew-thing");
+      expect(url).not.toContain("branch=feature/new-thing");
+    });
+
+    it("sends pageSize 0 rather than dropping it", async () => {
+      vi.mocked(http.get).mockResolvedValue({});
+
+      await githubInfoService.getRepoDetails(MOCK_REPO_ID, { pageSize: 0 });
+
+      // A truthiness check would omit this and silently fall back to the server default
+      // of 30 instead of the clamped 1 the caller would actually get.
+      const url = vi.mocked(http.get).mock.calls[0][0] as string;
+      expect(url).toContain("pageSize=0");
+    });
+
+    it("omits parameters that were not supplied", async () => {
+      vi.mocked(http.get).mockResolvedValue({});
+
+      await githubInfoService.getRepoDetails(MOCK_REPO_ID, { pageSize: 1 });
+
+      const url = vi.mocked(http.get).mock.calls[0][0] as string;
+      expect(url).toContain("pageSize=1");
+      expect(url).not.toContain("branch=");
+      expect(url).not.toContain("pageNumber=");
+    });
   });
 
   // ─── getCardRepoAndBranches ────────────────────────────────────────────────

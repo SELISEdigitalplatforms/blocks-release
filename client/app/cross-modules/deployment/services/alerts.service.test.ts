@@ -1,5 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
-import { mockHttpClientFactory } from "@/test-utils/__mocks__";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   mockAlert,
   MOCK_MONITOR_ID,
@@ -7,101 +6,136 @@ import {
   mockSuccessResponse,
   mockDeleteSuccessResponse,
 } from "../test-utils/__mocks__";
-import { http } from "@/lib/http-client";
+import { serviceInstances } from "@/lib/http-client";
 import { ALERT_ENDPOINTS } from "@blocks-deployment/constants/endpoint.constant";
 import { alertsService } from "./alerts.service";
 import { TEST_PROJECT_KEY } from "@/test-utils/__mocks__/data.mock";
 
-vi.mock("@/lib/http-client", () => mockHttpClientFactory());
+const httpClientMocks = vi.hoisted(() => {
+  const createHttpMock = () => ({
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+    stream: vi.fn(),
+  });
+
+  return {
+    deploymentService: createHttpMock(),
+    logicService: createHttpMock(),
+    idpService: createHttpMock(),
+  };
+});
+
+vi.mock("@/lib/http-client", () => ({
+  http: httpClientMocks.deploymentService,
+  serviceInstances: httpClientMocks,
+  HttpClient: class MockHttpClient {},
+  HttpError: class MockHttpError extends Error {
+    status: number;
+    errors: Record<string, string | string[]>;
+    constructor(
+      status: number,
+      error: { errors: Record<string, string | string[]> },
+    ) {
+      super(String(error));
+      this.status = status;
+      this.errors = error.errors;
+    }
+  },
+}));
+
+const deploymentService = vi.mocked(serviceInstances.deploymentService);
+const logicService = vi.mocked(serviceInstances.logicService);
 
 describe("AlertsService", () => {
-  // ─── updateSingleMonitor ───────────────────────────────────────────────────
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   describe("updateSingleMonitor", () => {
-    it("should call correct endpoint with payload", async () => {
+    it("calls logicService.post with the update endpoint and payload", async () => {
       const mockResponse = {
         ...mockSuccessResponse,
         data: mockAlert,
         statusCode: 200,
       };
-      vi.mocked(http.post).mockResolvedValue(mockResponse);
+      logicService.post.mockResolvedValue(mockResponse);
 
       const payload = { itemId: MOCK_MONITOR_ID, isActive: false };
       const result = await alertsService.updateSingleMonitor(payload);
 
-      expect(http.post).toHaveBeenCalledWith(
+      expect(logicService.post).toHaveBeenCalledWith(
         ALERT_ENDPOINTS.UPDATE_MONITOR,
         payload,
       );
+      expect(deploymentService.post).not.toHaveBeenCalled();
       expect(result).toEqual(mockResponse);
     });
   });
 
-  // ─── deleteSingleMonitor ────────────────────────────────────────────────────
-
   describe("deleteSingleMonitor", () => {
-    it("should call correct endpoint with itemId", async () => {
+    it("calls logicService.delete with the delete endpoint and itemId", async () => {
       const mockResponse = {
         ...mockDeleteSuccessResponse,
         data: null,
         statusCode: 200,
       };
-      vi.mocked(http.delete).mockResolvedValue(mockResponse);
+      logicService.delete.mockResolvedValue(mockResponse);
 
       const result = await alertsService.deleteSingleMonitor(MOCK_MONITOR_ID);
 
       const expectedUrl = `${ALERT_ENDPOINTS.DELETE_MONITOR}?itemId=${encodeURIComponent(MOCK_MONITOR_ID)}`;
-      expect(http.delete).toHaveBeenCalledWith(expectedUrl);
+      expect(logicService.delete).toHaveBeenCalledWith(expectedUrl);
+      expect(deploymentService.delete).not.toHaveBeenCalled();
       expect(result).toEqual(mockResponse);
     });
   });
 
-  // ─── getMonitorListById ─────────────────────────────────────────────────────
-
   describe("getMonitorListById", () => {
-    it("should call correct endpoint with projectKey and repoId", async () => {
-      vi.mocked(http.get).mockResolvedValue(mockSuccessResponse);
+    it("calls deploymentService.get and not logicService.get", async () => {
+      deploymentService.get.mockResolvedValue(mockSuccessResponse);
 
       const result = await alertsService.getMonitorListById(
         TEST_PROJECT_KEY,
         MOCK_REPO_ID,
       );
 
-      const expectedUrl = `${ALERT_ENDPOINTS.GET_MONITOR_LIST_BY_REPO_ID}?ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}&repoId=${MOCK_REPO_ID}`;
-      expect(http.get).toHaveBeenCalledWith(expectedUrl);
+      const expectedUrl = `${ALERT_ENDPOINTS.GET_MONITOR_LIST_BY_REPO_ID}?ProjectKey=${encodeURIComponent(TEST_PROJECT_KEY)}&repoId=${encodeURIComponent(MOCK_REPO_ID)}`;
+      expect(deploymentService.get).toHaveBeenCalledWith(expectedUrl);
+      expect(logicService.get).not.toHaveBeenCalled();
       expect(result).toEqual(mockSuccessResponse);
     });
   });
 
-  // ─── updateHealth ──────────────────────────────────────────────────────────
-
   describe("updateHealth", () => {
-    it("should call correct endpoint with payload", async () => {
+    it("calls logicService.post with the health endpoint and payload", async () => {
       const mockResponse = { ...mockSuccessResponse, data: {} };
-      vi.mocked(http.post).mockResolvedValue(mockResponse);
+      logicService.post.mockResolvedValue(mockResponse);
 
       const payload = { itemId: MOCK_MONITOR_ID, isActive: false };
       const result = await alertsService.updateHealth(payload);
 
-      expect(http.post).toHaveBeenCalledWith(
+      expect(logicService.post).toHaveBeenCalledWith(
         ALERT_ENDPOINTS.UPDATE_HEALTH,
         payload,
       );
+      expect(deploymentService.post).not.toHaveBeenCalled();
       expect(result).toEqual(mockResponse);
     });
   });
 
-  // ─── deleteHealth ──────────────────────────────────────────────────────────
-
   describe("deleteHealth", () => {
-    it("should call correct endpoint with itemId", async () => {
+    it("calls logicService.delete with the health delete endpoint and itemId", async () => {
       const mockResponse = { ...mockDeleteSuccessResponse, data: null };
-      vi.mocked(http.delete).mockResolvedValue(mockResponse);
+      logicService.delete.mockResolvedValue(mockResponse);
 
       const result = await alertsService.deleteHealth(MOCK_MONITOR_ID);
 
       const expectedUrl = `${ALERT_ENDPOINTS.DELETE_HEALTH}?itemId=${encodeURIComponent(MOCK_MONITOR_ID)}`;
-      expect(http.delete).toHaveBeenCalledWith(expectedUrl);
+      expect(logicService.delete).toHaveBeenCalledWith(expectedUrl);
+      expect(deploymentService.delete).not.toHaveBeenCalled();
       expect(result).toEqual(mockResponse);
     });
   });

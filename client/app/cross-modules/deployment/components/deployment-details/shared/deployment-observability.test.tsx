@@ -50,7 +50,7 @@ describe("DeploymentObservability", () => {
 
   it("renders the full history view and opens a deployment", () => {
     renderWithProviders(
-      <DeploymentObservability builds={builds} showAllHistory />,
+      <DeploymentObservability builds={builds} />,
       { route: "/app/deployment/repo/r1" },
     );
     expect(screen.getAllByText(/SAST|SCA|DAST/i).length).toBeGreaterThan(0);
@@ -114,7 +114,7 @@ describe("DeploymentObservability", () => {
 
   it("opens a history row with Enter and with Space", () => {
     renderWithProviders(
-      <DeploymentObservability builds={builds} showAllHistory />,
+      <DeploymentObservability builds={builds} />,
       { route: "/app/deployment/repo/r1" },
     );
     const row = screen.getByRole("button", { name: /ID: b2/ });
@@ -128,9 +128,40 @@ describe("DeploymentObservability", () => {
     expect(navigateMock).toHaveBeenCalledTimes(2);
   });
 
+  it("renders every build handed in rather than trimming the list", () => {
+    renderWithProviders(<DeploymentObservability builds={builds} />, {
+      route: "/app/deployment/repo/r1",
+    });
+    expect(screen.getByRole("button", { name: /ID: b1/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /ID: b2/ })).toBeInTheDocument();
+  });
+
+  it("reports the page's range within the whole history, not within the page", () => {
+    renderWithProviders(
+      <DeploymentObservability builds={builds} startIndex={6} totalCount={28} />,
+      { route: "/app/deployment/repo/r1" },
+    );
+    expect(screen.getByText("Showing 6-7 of 28 deploys")).toBeInTheDocument();
+  });
+
+  it("falls back to the builds it was given when no total is supplied", () => {
+    renderWithProviders(<DeploymentObservability builds={builds} />, {
+      route: "/app/deployment/repo/r1",
+    });
+    expect(screen.getByText("Showing 1-2 of 2 deploys")).toBeInTheDocument();
+  });
+
+  it("reads sensibly on an empty page", () => {
+    renderWithProviders(
+      <DeploymentObservability builds={[]} startIndex={11} totalCount={28} />,
+      { route: "/app/deployment/repo/r1" },
+    );
+    expect(screen.getByText("Showing 0 of 28 deploys")).toBeInTheDocument();
+  });
+
   it("ignores other keys and nested buttons on a history row", () => {
     renderWithProviders(
-      <DeploymentObservability builds={builds} showAllHistory />,
+      <DeploymentObservability builds={builds} />,
       { route: "/app/deployment/repo/r1" },
     );
     const row = screen.getByRole("button", { name: /ID: b2/ });

@@ -30,6 +30,19 @@ export const formatFullDate = (date: Date, withoutTime?: boolean): string => {
   return `${dateStr} at ${timeStr}`;
 };
 
+/**
+ * Wall-clock time in the viewer's own timezone, 24-hour and zero-padded.
+ *
+ * `withMillis` is deliberate rather than always-on: a value that came from the
+ * backend's 5-second poller has no millisecond precision to show, and printing
+ * three zeros would imply accuracy it does not have.
+ */
+export const formatClockTime = (date: Date, withMillis: boolean): string => {
+  const timeStr = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  if (!withMillis) return timeStr;
+  return `${timeStr}.${date.getMilliseconds().toString().padStart(3, "0")}`;
+};
+
 export function parseDateString(dateString: string): Date {
   return new Date(dateString);
 }

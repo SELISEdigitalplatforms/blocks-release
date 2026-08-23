@@ -1,3 +1,16 @@
+/**
+ * Where a step's timing came from. "logs" is the real Kubernetes per-line
+ * timestamp; "events" is the backend poller's 5-second loop and is therefore
+ * only ever approximate.
+ */
+export type TimingSource = "logs" | "events" | "none";
+
+export interface IStepTimeRange {
+  startMs: number;
+  endMs: number;
+  source: "logs" | "events";
+}
+
 export interface IBuildStep {
   id: string;
   name: string;
@@ -5,8 +18,12 @@ export interface IBuildStep {
   logs?: string[];
   eventType: DeploymentEventType;
   eventGroup: DeploymentEventGroup;
+  /** Formatted for display; prefixed "~" when derived from poller stamps. */
   duration?: string;
   startTime?: string;
+  endTime?: string;
+  durationMs?: number;
+  timingSource?: TimingSource;
 }
 
 export interface IDeploymentLogsDenormalizedPayload {

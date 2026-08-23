@@ -16,6 +16,17 @@ namespace Blocks.Genesis
         public string GithubClientId { get; set; }
         public string SonarQubeToken { get; set; }
 
+        // Both are looked up in the vault by property name (see the reflection loop below), so the
+        // Key Vault secret names are exactly "KubeConfig" and "PipelineRunFeConstruct". A secret that
+        // does not exist is swallowed by the vault client and simply leaves the property null.
+        //
+        // Nothing reads either one at the moment - the kubeconfig and the FE construct PipelineRun
+        // are temporarily back on the machine and the checked-in asset. The properties stay so the
+        // vault secrets keep being carried through and the switch back stays a small change; see
+        // ICloudBuildSecret for where each one plugs in.
+        public string KubeConfig { get; set; }
+        public string PipelineRunFeConstruct { get; set; }
+
 
         public static async Task<ICloudBuildSecret> ProcessBlocksSecret(VaultType vaultType = VaultType.Azure)
         {

@@ -68,6 +68,7 @@ export function Pagination({
           <Button
             variant="outline"
             className={`flex h-8 w-8 p-0 disabled:cursor-not-allowed`}
+            aria-label="First page"
             onClick={() => {
               pageChangeHandler(0);
             }}
@@ -78,6 +79,7 @@ export function Pagination({
           <Button
             variant="outline"
             className="h-8 w-8 p-0"
+            aria-label="Previous page"
             onClick={() => {
               pageChangeHandler(page - 1);
             }}
@@ -88,6 +90,7 @@ export function Pagination({
           <Button
             variant="outline"
             className="h-8 w-8 p-0"
+            aria-label="Next page"
             onClick={() => {
               pageChangeHandler(page + 1);
             }}
@@ -98,6 +101,7 @@ export function Pagination({
           <Button
             variant="outline"
             className="flex h-8 w-8 p-0"
+            aria-label="Last page"
             onClick={() => {
               pageChangeHandler(totalPage - 1);
             }}

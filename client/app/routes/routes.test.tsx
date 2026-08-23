@@ -27,11 +27,14 @@ const stubLocation = () => {
 };
 
 describe("routes config", () => {
+  // Explicit timeout: this assertion is cheap, but `import("./index")` pulls in the whole route
+  // tree, so its runtime tracks the app's module count and grows every time a screen is added.
+  // At the default 5s it already ran to ~3.5s and flaked under full-suite parallel load.
   it("exports a non-empty route tree", async () => {
     const mod = await import("./index");
     expect(Array.isArray(mod.routes)).toBe(true);
     expect(mod.routes.length).toBeGreaterThan(0);
-  });
+  }, 20000);
 });
 
 describe("LoginPage", () => {

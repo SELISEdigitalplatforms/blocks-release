@@ -16,6 +16,13 @@ namespace Api.Controllers;
 [Route("[controller]")]
 public class BuildController : ControllerBase
 {
+    // repo-details paging defaults. These are the controller's contract (H2); the hard
+    // bounds that keep the query safe live in the repository.
+    private const int DefaultPageNumber = 1;
+    private const int DefaultPageSize = 30;
+    public const string RepoNotFoundCode = "NOT_FOUND";
+    public const string RepoNotFoundMessage = "Repository not found";
+
     private readonly BuildService _buildService;
     private readonly IBuildRepository _buildRepository;
     private readonly IRepoRepository _repoRepository;
@@ -79,30 +86,58 @@ public class BuildController : ControllerBase
 
     [HttpGet("repo-details")]
     [ProtectedEndPoint("blocks-release::build::repo-details")]
-    public async Task<IActionResult> GetRepoDetails([FromQuery] string RepoId)
+    public async Task<IActionResult> GetRepoDetails(
+        [FromQuery] string RepoId,
+        [FromQuery] string? branch = null,
+        [FromQuery] int pageNumber = DefaultPageNumber,
+        [FromQuery] int pageSize = DefaultPageSize)
     {
         try
         {
-            var repoBuildList = await _repoRepository.GetRepoBuildList(RepoId);
+            // The repo is resolved first: when it does not exist the contract is an empty
+            // build array, so querying builds beforehand was both wasted work and the reason
+            // the not-found body could carry builds in it.
             var repo = await _repoRepository.GetRepo(RepoId);
             if (repo is null)
             {
-                return BadRequest(new BaseApiResponse()
+                // Built explicitly rather than as a BaseApiResponse: the inherited Errors
+                // property is an IDictionary<string, string>, and the contract for this
+                // endpoint calls for an array of { code, message }. The five envelope keys
+                // are reproduced exactly so the shape the client sees is unchanged.
+                return BadRequest(new
                 {
                     Data = new
                     {
-                        Repo = repo,
-                        Build = repoBuildList
+                        Repo = (Repo?)null,
+                        Build = Array.Empty<Build>(),
+                        TotalCount = 0L
+                    },
+                    Errors = new[]
+                    {
+                        new { Code = RepoNotFoundCode, Message = RepoNotFoundMessage }
                     },
                     IsSuccess = false,
-                    StatusCode = HttpStatusCode.BadRequest
+                    Message = RepoNotFoundMessage,
+                    StatusCode = (int)HttpStatusCode.BadRequest
                 });
             }
+
+            var repoBuildList = await _repoRepository.GetRepoBuildList(
+                RepoId,
+                branch,
+                pageNumber,
+                pageSize);
+
+            // The page alone cannot tell a client how many pages follow it - a full page is
+            // indistinguishable from the last one - so the total travels with it.
+            var totalCount = await _repoRepository.GetRepoBuildCount(RepoId, branch);
+
             return Ok(new BaseApiResponse()
             {
                 Data = new {
                     Repo = repo,
-                    Build = repoBuildList
+                    Build = repoBuildList,
+                    TotalCount = totalCount
                 },
                 IsSuccess = true,
                 StatusCode = HttpStatusCode.OK

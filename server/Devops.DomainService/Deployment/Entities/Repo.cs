@@ -29,6 +29,13 @@ namespace Devops.DomainService.Deployment.Entities
         public string RepositoryType { get; set; }
         public string DependencyTrackProjectUuid { get; set; }
         public bool IsArchived { get; set; }
+
+        // ItemId of this repository's secret in the SecretStore database. Null means no secrets
+        // have ever been saved. Only ever written by RepoRepository.UpdateRepoSecretStoreItemId -
+        // deliberately absent from RepoUpdateRequest, so a settings save can never clear it and
+        // orphan the vault value it points at. Retained after a soft delete so a restore can
+        // still reach the secret.
+        public string SecretStoreItemId { get; set; }
     }
 
     public class GithubWebhook

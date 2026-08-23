@@ -8,6 +8,17 @@ export const ALERT_ENDPOINTS = {
   DELETE_HEALTH: `${API_BASE}/Health/DeleteHealth`,
 } as const;
 
+export const REPO_SECRET_ENDPOINTS = {
+  SAVE: `${API_BASE}/RepoSecret/save`,
+  GET: `${API_BASE}/RepoSecret/get`,
+  VALUE: `${API_BASE}/RepoSecret/value`,
+  LOCK: `${API_BASE}/RepoSecret/lock`,
+  UNLOCK: `${API_BASE}/RepoSecret/unlock`,
+  DELETE: `${API_BASE}/RepoSecret/delete`,
+  RESTORE: `${API_BASE}/RepoSecret/restore`,
+  AUDIT: `${API_BASE}/RepoSecret/audit`,
+} as const;
+
 export const CLOUD_BUILD_ENDPOINTS = {
   ACCESS_TOKEN: `${API_BASE}/auth/AccessToken`,
   IS_AUTHORIZED: `${API_BASE}/auth/isAuthorized`,

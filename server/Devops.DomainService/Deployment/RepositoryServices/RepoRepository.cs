@@ -65,11 +65,66 @@ public class RepoRepository : IRepoRepository
         return await collection.Find(NotArchived).ToListAsync();
     }
 
-    public async Task<List<Build>?> GetRepoBuildList(string repoId)
+    // Page bounds live here rather than in the controller so that no caller, present or
+    // future, can drive this query with a negative skip or an unbounded limit.
+    private const int MinPageSize = 1;
+    private const int MaxPageSize = 100;
+
+    public async Task<List<Build>?> GetRepoBuildList(
+        string RepoId,
+        string? branch,
+        int pageNumber,
+        int pageSize)
     {
         var collection = _dbContextProvider.GetCollection<Build>("Builds");
-        var filter = Builders<Build>.Filter.Eq(r => r.RepoId, repoId);
-        return await collection.Find(filter).ToListAsync();
+
+        var filter = BuildListFilter(RepoId, branch);
+
+        var safePageNumber = Math.Max(1, pageNumber);
+        var safePageSize = Math.Clamp(pageSize, MinPageSize, MaxPageSize);
+
+        // Computed in long: (pageNumber - 1) * pageSize overflows int for page numbers near
+        // int.MaxValue and lands NEGATIVE, which is precisely the negative skip the clamp
+        // above exists to prevent. An absurd page is bounded to a page that simply has no
+        // documents rather than throwing.
+        var skip = (long)(safePageNumber - 1) * safePageSize;
+        var safeSkip = skip > int.MaxValue ? int.MaxValue : (int)skip;
+
+        // CreatedDate alone is not a total order - two builds can share a timestamp - so
+        // _id breaks the tie and makes paging deterministic. The raw field name is used
+        // rather than a mapped property so the sort does not depend on how the base entity
+        // maps its identifier.
+        var sort = Builders<Build>.Sort
+            .Descending(b => b.CreatedDate)
+            .Descending("_id");
+
+        return await collection
+            .Find(filter)
+            .Sort(sort)
+            .Skip(safeSkip)
+            .Limit(safePageSize)
+            .ToListAsync();
+    }
+
+    public async Task<long> GetRepoBuildCount(string RepoId, string? branch)
+    {
+        var collection = _dbContextProvider.GetCollection<Build>("Builds");
+
+        // Deliberately the same filter the list uses. A count built from its own copy of the
+        // predicate is the classic way for a total to drift out of step with the rows it is
+        // meant to describe, and a client would page into an empty tail because of it.
+        return await collection.CountDocumentsAsync(BuildListFilter(RepoId, branch));
+    }
+
+    private static FilterDefinition<Build> BuildListFilter(string RepoId, string? branch)
+    {
+        var filter = Builders<Build>.Filter.Eq(r => r.RepoId, RepoId);
+        if (!string.IsNullOrWhiteSpace(branch))
+        {
+            filter &= Builders<Build>.Filter.Eq(r => r.Branch, branch);
+        }
+
+        return filter;
     }
 
     public async Task<IReadOnlyList<RepoWithBuildsResponse>> GetReposWithBuildsAsync(string projectId)
@@ -482,5 +537,20 @@ public class RepoRepository : IRepoRepository
 
         var result = await collection.UpdateOneAsync(filter, update);
         return result.MatchedCount == 1 && result.ModifiedCount == 1;
+    }
+
+    public async Task<bool> UpdateRepoSecretStoreItemId(string repoId, string secretStoreItemId, string tenantId)
+    {
+        var _dbContext = _dbContextProvider.GetDatabase(tenantId);
+        var collection = _dbContext.GetCollection<Repo>("Repos");
+        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+        var update = Builders<Repo>.Update.Set(r => r.SecretStoreItemId, secretStoreItemId);
+
+        // MatchedCount only: re-pointing a repository at the id it already holds is a no-op in
+        // Mongo (ModifiedCount 0) but is still a success from the caller's point of view. The
+        // DependencyTrack sibling above checks both because it is only ever called with a value
+        // that differs; this one is reached on the create path where a retry can repeat the id.
+        var result = await collection.UpdateOneAsync(filter, update);
+        return result.MatchedCount == 1;
     }
 }

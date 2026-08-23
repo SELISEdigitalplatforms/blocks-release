@@ -44,11 +44,18 @@ const valueField = z.string();
  *
  * Kept as a single schema rather than two so the form keeps one resolver across a mode switch;
  * swapping resolvers mid-edit would discard the errors already on screen.
+ *
+ * The object shape deliberately accepts any string as a row key: shape validation runs for both
+ * modes, so enforcing `keyField` there failed the whole form on the rows the user is not editing.
+ * In JSON mode those rows still hold whatever the key/value editor was last seeded with - for a
+ * new set, one blank row - and a blank key made every JSON save fail on `rows.0.key`, a field
+ * that is not on screen in that mode. Submit became a no-op with nothing to explain it. The key
+ * rules therefore live in the refinement below, which only reaches them in key/value mode.
  */
 export const secretFormSchema = z
   .object({
     mode: z.enum(["kv", "json"]),
-    rows: z.array(z.object({ key: keyField, value: valueField })),
+    rows: z.array(z.object({ key: z.string(), value: valueField })),
     json: z.string(),
   })
   .superRefine((values, ctx) => {
@@ -65,6 +72,28 @@ export const secretFormSchema = z
 
       return;
     }
+
+    // Each key is checked against the shared field rules and reported on its own row, so the
+    // wording still cannot drift between the two modes.
+    let hasInvalidKey = false;
+
+    values.rows.forEach((row, index) => {
+      const result = keyField.safeParse(row.key);
+
+      if (result.success) return;
+
+      hasInvalidKey = true;
+
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["rows", index, "key"],
+        message: result.error.issues[0].message,
+      });
+    });
+
+    // Duplicate and size checks read the keys, so they are only meaningful once every key is
+    // valid; running them on a half-typed set would stack a second error onto the same row.
+    if (hasInvalidKey) return;
 
     if (values.rows.length === 0) {
       ctx.addIssue({

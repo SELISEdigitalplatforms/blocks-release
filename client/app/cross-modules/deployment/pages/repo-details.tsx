@@ -472,6 +472,14 @@ export default function RepoDetails() {
     repoDetails?.data?.build.length === 0 &&
     repoDetails?.data?.repo !== null
   ) {
+    // History has nothing to show before the first build, so the tab strip here is Details plus
+    // Environment Variables only. A ?tab=history left over from a deployed repository would
+    // otherwise select a tab that does not exist and render an empty page.
+    const preDeployTab =
+      tabId === REPO_DETAILS_PROVIDERS.SECRETS
+        ? REPO_DETAILS_PROVIDERS.SECRETS
+        : REPO_DETAILS_PROVIDERS.DETAILS;
+
     return (
       <div className="mx-auto pb-8">
         <div className="mt-2 space-y-2">
@@ -485,39 +493,80 @@ export default function RepoDetails() {
             </div>
           </div>
 
-          <Card>
-            <div className="flex h-auto flex-col items-center justify-center self-stretch rounded-sm bg-background px-1 py-5">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
-                <GitBranch className="h-8 w-8 text-low-emphasis" />
+          {/* Environment variables are deliberately reachable before the first deployment: the
+              server keys them on the repository alone, and the first pipeline run reads whatever
+              is stored at that point. Without this the set could only be created after a
+              deployment that already needed it. */}
+          <Tabs value={preDeployTab} onValueChange={setTabId}>
+            <div className="mb-5 mt-6 flex items-center justify-between rounded text-base">
+              <div className="md:hidden">
+                <Select value={preDeployTab} onValueChange={setTabId}>
+                  <SelectTrigger className="w-52">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="details">Details</SelectItem>
+                    <SelectItem value="secrets">
+                      Environment Variables
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="flex flex-col items-center gap-2">
-                <h3 className="py-4 text-xl font-semibold text-high-emphasis">
-                  No deployments available
-                </h3>
-
-                <p className="max-w-md items-center text-center text-sm text-low-emphasis">
-                  This repository has not been deployed yet. Click the deploy
-                  button to create your first deployment.
-                </p>
+              <div className="hidden md:block">
+                <TabsList>
+                  <TabsTrigger value="details" className="w-20">
+                    Details
+                  </TabsTrigger>
+                  <TabsTrigger value="secrets" className="px-4">
+                    Environment Variables
+                  </TabsTrigger>
+                </TabsList>
               </div>
-              <Button
-                onClick={handleDeploy}
-                disabled={isProcessing}
-                className="mt-4">
-                Deploy Now
-              </Button>
             </div>
-            <DeploymentSettingsModal
-              isOpen={isSettingsModalOpen}
-              onClose={handleCloseModal}
-              repoId={repoId}
-              isDeploymentFlow={isDeploymentSettingsForDeploy}
-              onDeploy={handleDeployFromSettings}
-              isDeploying={isDeploying}
-              pageNumber={buildPageNumber}
-              pageSize={buildPageSize}
-            />
-          </Card>
+
+            <TabsContent value="details">
+              <Card>
+                <div className="flex h-auto flex-col items-center justify-center self-stretch rounded-sm bg-background px-1 py-5">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
+                    <GitBranch className="h-8 w-8 text-low-emphasis" />
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <h3 className="py-4 text-xl font-semibold text-high-emphasis">
+                      No deployments available
+                    </h3>
+
+                    <p className="max-w-md items-center text-center text-sm text-low-emphasis">
+                      This repository has not been deployed yet. Click the
+                      deploy button to create your first deployment.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleDeploy}
+                    disabled={isProcessing}
+                    className="mt-4">
+                    Deploy Now
+                  </Button>
+                </div>
+                <DeploymentSettingsModal
+                  isOpen={isSettingsModalOpen}
+                  onClose={handleCloseModal}
+                  repoId={repoId}
+                  isDeploymentFlow={isDeploymentSettingsForDeploy}
+                  onDeploy={handleDeployFromSettings}
+                  isDeploying={isDeploying}
+                  pageNumber={buildPageNumber}
+                  pageSize={buildPageSize}
+                />
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="secrets">
+              <SecretsTab
+                repoId={repoId}
+                repoName={repoDetails?.data?.repo.repoName}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     );

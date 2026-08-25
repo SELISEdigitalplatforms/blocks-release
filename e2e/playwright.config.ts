@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test"
 import dotenv from "dotenv"
+import fs from "fs"
 import path from "path"
 
 dotenv.config({ path: path.resolve(__dirname, ".env.e2e") })
@@ -13,9 +14,7 @@ if (!baseURL) {
 }
 
 const autoStartServer = process.env.E2E_NO_WEBSERVER !== "1"
-// Always attach — release-setup writes this file before [release] starts.
-// Do not gate on existsSync at config load (file may be missing or empty then).
-const releaseSessionPath = "fixtures/release-session.json"
+const releaseSessionPath = path.resolve(__dirname, "fixtures/release-session.json")
 
 export default defineConfig({
   testDir: "./tests",
@@ -28,6 +27,7 @@ export default defineConfig({
   globalSetup: "./global-setup.ts",
   use: {
     baseURL,
+    permissions: ["clipboard-read", "clipboard-write"],
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -55,36 +55,39 @@ export default defineConfig({
     : {}),
   projects: [
     {
-      name: "release-setup",
-      testMatch: /release\.setup\.spec\.ts/,
+      name: "setup",
+      testMatch: /auth[\\/]login\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
-      name: "setup",
-      testMatch: /auth[\\/]login\.spec\.ts/,
-      dependencies: ["release-setup"],
+      name: "release-setup",
+      testMatch: /suite\.setup\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
       name: "release",
-      // Anchor on tests/release/ — a bare /release/ also matches this repo path
-      // (…/blocks-release/…).
-      testMatch: /[\\/]tests[\\/]release[\\/].*\.spec\.ts/,
-      testIgnore: /release\.(setup|teardown)\.spec\.ts/,
-      // release-setup (project fixture) → setup (fresh session) → release → teardown
-      dependencies: ["setup"],
+      testMatch: /.*\.spec\.ts/,
+      testIgnore: [
+        /auth[\\/]login\.spec\.ts/,
+        /suite\.(setup|teardown)\.spec\.ts/,
+      ],
+      dependencies: ["release-setup"],
       use: {
         ...devices["Desktop Chrome"],
-        storageState: releaseSessionPath,
+        ...(fs.existsSync(releaseSessionPath)
+          ? { storageState: "fixtures/release-session.json" }
+          : {}),
       },
     },
     {
       name: "release-teardown",
-      testMatch: /release\.teardown\.spec\.ts/,
+      testMatch: /suite\.teardown\.spec\.ts/,
       dependencies: ["release"],
       use: {
         ...devices["Desktop Chrome"],
-        storageState: releaseSessionPath,
+        ...(fs.existsSync(releaseSessionPath)
+          ? { storageState: "fixtures/release-session.json" }
+          : {}),
       },
     },
   ],

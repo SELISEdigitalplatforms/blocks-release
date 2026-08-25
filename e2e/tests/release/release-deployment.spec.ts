@@ -12,7 +12,7 @@ import {
  * "Deploy" confirm click) since that provisions real Blocks Cloud
  * infrastructure. Modal/dialog interactions are verified via Cancel only.
  *
- * Auth: uses the shared project from release.setup.spec.ts (one login per suite).
+ * Auth: uses the shared project from suite.setup.spec.ts (one login per suite).
  */
 test.describe("Deployment", () => {
   test.beforeEach(async ({ page }) => {

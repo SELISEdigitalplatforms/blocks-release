@@ -5,7 +5,7 @@ export type ReleaseProjectFixture = {
   projectName: string
   itemId: string
   dashboardUrl: string
-  deploymentUrl: string
+  deploymentUrl?: string
 }
 
 const FIXTURE_PATH = path.resolve(__dirname, "../fixtures/release-project.json")

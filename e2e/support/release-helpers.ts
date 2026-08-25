@@ -1,47 +1,24 @@
 import { expect, type Page } from "@playwright/test"
-import {
-  ensureConsole,
-  namedProjectCard,
-  openNamedProjectDashboard,
-} from "./create-and-delete-project"
-import { ensureAuthenticatedOnCurrentOrigin } from "./login-helper"
+import { ensureConsole, namedProjectCard } from "./create-and-delete-project"
+import { ensureAuthenticated, ensureAuthenticatedOnCurrentOrigin } from "./login-helper"
 import { readReleaseProject } from "./release-project"
+import { openSharedProjectDashboard } from "./suite-helpers"
 import { sidebarNavItem } from "./auth-helpers"
 
 const consoleHeading = (page: Page) =>
   page.getByRole("heading", { name: /Your Blocks Projects|Welcome to SELISE Blocks/ })
 
-const workspaceReady = (page: Page) => page.getByText(/^workspace$/i)
-
-/** Open the shared project shell (workspace sidebar). Deep-links often bounce to console. */
-async function openSharedProjectWorkspace(page: Page) {
-  const fixture = readReleaseProject()
-  if (!fixture) {
-    throw new Error("Release project fixture not found. Did release-setup run?")
-  }
-
-  // 1) Try seeded dashboard URL (same as e2e_logic fixture deep-link).
-  if (fixture.dashboardUrl) {
-    await page.goto(fixture.dashboardUrl, { waitUntil: "domcontentloaded" })
-    if (await workspaceReady(page).isVisible({ timeout: 8_000 }).catch(() => false)) {
-      return fixture
-    }
-  }
-
-  // 2) Fallback: console → project card → Development (reliable path).
-  await openNamedProjectDashboard(page, fixture.projectName)
-  await expect(workspaceReady(page)).toBeVisible({ timeout: 50_000 })
-  return fixture
-}
-
+/** Open the Release console; re-login if the suite session expired. */
 export async function openReleaseConsole(page: Page) {
-  await page.goto("/app/console")
+  await ensureAuthenticated(page)
   await expect(consoleHeading(page)).toBeVisible({ timeout: 30_000 })
 }
 
+/** Open the shared suite project dashboard (re-login + same project if session expired). */
 export async function openReleaseDashboard(page: Page) {
-  const fixture = await openSharedProjectWorkspace(page)
-  return { projectName: fixture.projectName }
+  await openSharedProjectDashboard(page)
+  const fixture = readReleaseProject()
+  return { projectName: fixture!.projectName }
 }
 
 /**
@@ -49,7 +26,8 @@ export async function openReleaseDashboard(page: Page) {
  * enter the project shell, then click the feature nav link.
  */
 export async function openReleaseOverview(page: Page) {
-  const fixture = await openSharedProjectWorkspace(page)
+  await openSharedProjectDashboard(page)
+  const fixture = readReleaseProject()
 
   const overviewLink = sidebarNavItem(page, "Overview")
   await overviewLink.waitFor({ state: "visible", timeout: 30_000 })
@@ -64,7 +42,7 @@ export async function openReleaseOverview(page: Page) {
       })
     })
 
-  return { projectName: fixture.projectName }
+  return { projectName: fixture!.projectName }
 }
 
 /**
@@ -85,7 +63,7 @@ export async function openReleaseDeployment(page: Page) {
     }
   }
 
-  await openSharedProjectWorkspace(page)
+  await openSharedProjectDashboard(page)
 
   const deploymentLink = sidebarNavItem(page, "Deployment")
   await deploymentLink.waitFor({ state: "visible", timeout: 30_000 })

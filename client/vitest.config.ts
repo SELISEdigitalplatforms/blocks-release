@@ -11,6 +11,10 @@ export default defineConfig({
       // read env/process at module-eval time), so the design-system is aliased
       // to lightweight stubs for unit tests. Subpaths must precede the barrel so
       // the more specific match wins.
+      "@seliseblocks/genesis-os/observability": path.resolve(
+        __dirname,
+        "./app/test-utils/stubs/blocks-kit-observability.tsx",
+      ),
       "@seliseblocks/genesis-os/hooks": path.resolve(
         __dirname,
         "./app/test-utils/stubs/blocks-kit-hooks.tsx",

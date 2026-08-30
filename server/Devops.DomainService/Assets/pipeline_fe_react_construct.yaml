@@ -140,9 +140,9 @@ spec:
     - name: domains
       value: "demo.seliseblocks.com,site2.seliseblocks.com,handle-all.seliseblocks.com"
     - name: cpu-request
-      value: "200m"
+      value: "100m"
     - name: memory-request
-      value: "256Mi"
+      value: "200Mi"
     - name: cpu-limit
       value: "500m"
     - name: memory-limit

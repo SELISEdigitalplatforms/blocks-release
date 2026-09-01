@@ -114,8 +114,8 @@ e2e/
   support/test-base.ts       # shared `test` with the post-test pause
   support/project-name.ts    # reads the run's project name from fixtures
   constants/                 # route paths + test data
-  fixtures/auth.json         # authenticated storage state (gitignored)
-  fixtures/project.json      # run's project name (gitignored)
+  fixtures/release-session.json   # authenticated storage state (gitignored)
+  fixtures/project.json          # run's project name (gitignored)
   global-setup.ts            # local-build index.html patch
   global-teardown.ts         # deletes the project after the suite
   playwright.config.ts       # baseURL + creds from .env.e2e

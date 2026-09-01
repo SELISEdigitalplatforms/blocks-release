@@ -4,7 +4,7 @@ import {
   namedProjectCard,
   openNamedProjectDashboard,
 } from "./create-and-delete-project"
-import { ensureAuthenticatedOnCurrentOrigin } from "./login-helper"
+import { ensureAuthenticated, ensureAuthenticatedOnCurrentOrigin } from "./login-helper"
 import { readReleaseProject } from "./release-project"
 import { sidebarNavItem } from "./auth-helpers"
 
@@ -21,10 +21,18 @@ async function openSharedProjectWorkspace(page: Page) {
   }
 
   // 1) Try seeded dashboard URL (same as e2e_logic fixture deep-link).
+  // After Project Overview's logout, the SPA's in-memory route guard may
+  // interrupt the deep-link goto and redirect to /app/console — catch that
+  // and fall through to the card-click path (in-app navigation, no
+  // deep-link).
   if (fixture.dashboardUrl) {
-    await page.goto(fixture.dashboardUrl, { waitUntil: "domcontentloaded" })
-    if (await workspaceReady(page).isVisible({ timeout: 8_000 }).catch(() => false)) {
-      return fixture
+    try {
+      await page.goto(fixture.dashboardUrl, { waitUntil: "domcontentloaded" })
+      if (await workspaceReady(page).isVisible({ timeout: 8_000 }).catch(() => false)) {
+        return fixture
+      }
+    } catch {
+      // SPA bounced the deep-link — fall through to the card click path.
     }
   }
 
@@ -68,8 +76,14 @@ export async function openReleaseOverview(page: Page) {
 }
 
 /**
- * Same idea as e2e_logic `openWorkflowList`:
- * try seeded deployment URL, else open project via console card → Deployment.
+ * Open the Deployment route for the shared project.
+ *
+ * The env badge on the console project card navigates straight to
+ * `/app/deployment` (not through the `/app/<id>/dashboard` shell), so the
+ * dashboard-shell helpers used elsewhere don't apply here. We rely on the
+ * seeded `deploymentUrl` from `release.setup.spec.ts` and wait for the
+ * "Deployment Overview" heading to mount — that's the only signal that the
+ * SPA has finished bootstrapping the deployment data.
  */
 export async function openReleaseDeployment(page: Page) {
   const fixture = readReleaseProject()
@@ -77,28 +91,53 @@ export async function openReleaseDeployment(page: Page) {
     throw new Error("Release project fixture not found. Did release-setup run?")
   }
 
-  if (fixture.deploymentUrl) {
-    await page.goto(fixture.deploymentUrl, { waitUntil: "domcontentloaded" })
-    const heading = page.getByRole("heading", { name: "Deployment Overview" })
-    if (await heading.isVisible({ timeout: 10_000 }).catch(() => false)) {
-      return { projectName: fixture.projectName }
-    }
+  // The OIDC access token in the saved storage state has a short lifetime
+  // (~30 min). If a previous release test logged out (or the token simply
+  // expired), `ensureAuthenticated` re-logs-in via dev-iam and brings the
+  // session back into a valid state. Without this, deep-linking to
+  // fixture.deploymentUrl silently redirects to /login and the test
+  // hangs waiting for the Deployment Overview heading.
+  //
+  // Project Overview's logout step leaves the storage state with logged-out
+  // cookies on disk; the next test loads them and the SPA's in-memory route
+  // guard silently bounces /app/<id>/deployment back to /app/console until
+  // the browser context is wiped. Clearing cookies before re-login forces a
+  // fully fresh session.
+  await page.context().clearCookies()
+  await ensureAuthenticated(page)
+
+  if (!fixture.deploymentUrl) {
+    throw new Error(
+      "Release project fixture has no deploymentUrl. Did release-setup run?",
+    )
   }
 
+  const deploymentHeading = page.getByRole("heading", { name: "Deployment Overview" })
+
+  // 1) Try the seeded deployment URL directly (the fast path).
+  //
+  // After the Project Overview logout, the SPA's in-memory route guard
+  // immediately interrupts a deep-link goto and redirects to /app/console.
+  // page.goto then throws "Navigation interrupted by another navigation".
+  // Catch that and fall through to the workspace-opener fallback — the
+  // single try/catch here is the only place this redirect needs handling.
+  try {
+    await page.goto(fixture.deploymentUrl, { waitUntil: "domcontentloaded" })
+    if (await deploymentHeading.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      return { projectName: fixture.projectName }
+    }
+  } catch {
+    // SPA bounced the deep-link — fall through to the fallback below.
+  }
+
+  // 2) Direct deep-link bounced. Use the same workspace-opener as the
+  // Project Overview test — that path is known-good because the
+  // dashboardUrl deep-link + workspace mount is exactly what the SPA
+  // expects after a re-login.
   await openSharedProjectWorkspace(page)
-
-  const deploymentLink = sidebarNavItem(page, "Deployment")
-  await deploymentLink.waitFor({ state: "visible", timeout: 30_000 })
+  const deploymentLink = page.getByRole("link", { name: /^Deployment$/ }).first()
   await deploymentLink.click()
-
-  await expect(page.getByRole("heading", { name: "Deployment Overview" }))
-    .toBeVisible({ timeout: 30_000 })
-    .catch(async () => {
-      await deploymentLink.click()
-      await expect(page.getByRole("heading", { name: "Deployment Overview" })).toBeVisible({
-        timeout: 30_000,
-      })
-    })
+  await expect(deploymentHeading).toBeVisible({ timeout: 30_000 })
 
   return { projectName: fixture.projectName }
 }

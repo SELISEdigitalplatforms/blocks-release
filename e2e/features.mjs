@@ -11,36 +11,39 @@ export const RELEASE_FEATURES = [
     id: "overview",
     name: "Release – console & project overview",
     enabled: true,
-    spec: "tests/release/release-overview.spec.ts",
+    spec: "tests/01-overview/overview.spec.ts",
   },
   {
     id: "deployment",
     name: "Release – deployment",
     enabled: true,
-    spec: "tests/release/release-deployment.spec.ts",
+    spec: "tests/02-deployment/deployment.spec.ts",
   },
-]
+];
 
 export function resolveEnabledFeatures() {
-  const override = process.env.E2E_FEATURES?.trim()
+  const override = process.env.E2E_FEATURES?.trim();
 
   if (!override || override === "all") {
-    return RELEASE_FEATURES.filter((feature) => feature.enabled)
+    return RELEASE_FEATURES.filter((feature) => feature.enabled);
   }
 
-  const ids = override.split(",").map((id) => id.trim()).filter(Boolean)
+  const ids = override
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
   /** @type {typeof RELEASE_FEATURES} */
-  const selected = []
+  const selected = [];
 
   for (const id of ids) {
-    const feature = RELEASE_FEATURES.find((entry) => entry.id === id)
+    const feature = RELEASE_FEATURES.find((entry) => entry.id === id);
     if (!feature) {
       throw new Error(
         `Unknown E2E feature "${id}". Valid ids: ${RELEASE_FEATURES.map((f) => f.id).join(", ")}`,
-      )
+      );
     }
-    selected.push(feature)
+    selected.push(feature);
   }
 
-  return selected
+  return selected;
 }

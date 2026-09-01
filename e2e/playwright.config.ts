@@ -67,10 +67,10 @@ export default defineConfig({
     },
     {
       name: "release",
-      // Anchor on tests/release/ — a bare /release/ also matches this repo path
-      // (…/blocks-release/…).
-      testMatch: /[\\/]tests[\\/]release[\\/].*\.spec\.ts/,
-      testIgnore: /release\.(setup|teardown)\.spec\.ts/,
+      // Match the numbered feature suites (01-overview, 02-deployment). The
+      // suite/ folder holds setup/teardown which is anchored by their own
+      // project names, so a path-based ignore is not needed here.
+      testMatch: /[\\/]tests[\\/](01-overview|02-deployment)[\\/].*\.spec\.ts/,
       // release-setup (project fixture) → setup (fresh session) → release → teardown
       dependencies: ["setup"],
       use: {

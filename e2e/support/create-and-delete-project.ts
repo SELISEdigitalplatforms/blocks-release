@@ -2,7 +2,11 @@ import { Page, expect, test } from "@playwright/test"
 import { e2eBaseUrl, e2eOsBaseUrl, e2eProjectId } from "./env"
 import { ensureAuthenticated, ensureAuthenticatedOnCurrentOrigin } from "./login-helper"
 
-const ORPHAN_PROJECT_PATTERN = /Test Project \d+/g
+// Match the full "Test Project <timestamp>" name plus any user-added suffix
+// (e.g. "Test Project 1788154850949 Renamed"). Stopping at a newline keeps the
+// match on the single project-name line in the console; trailing whitespace is
+// trimmed so downstream exact-text card matching lines up with the DOM.
+const ORPHAN_PROJECT_PATTERN = /Test Project \d+[^\n]*/g
 const ENV_BUTTON =
   /Development|Testing|Staging|IAT|UAT|Production|Pre-Prod|Prod Shadow/
 const HOME_APP_NAME = /Release/i
@@ -13,7 +17,11 @@ const isVisibleNow = async (locator: { isVisible: (opts: { timeout: number }) =>
 
 async function listOrphanProjectNames(page: Page): Promise<string[]> {
   const bodyText = await page.locator("body").innerText().catch(() => "")
-  return [...new Set([...bodyText.matchAll(ORPHAN_PROJECT_PATTERN)].map((match) => match[0]))]
+  return [
+    ...new Set(
+      [...bodyText.matchAll(ORPHAN_PROJECT_PATTERN)].map((match) => match[0].trim()),
+    ),
+  ]
 }
 
 /** Blocks console on Release or OS. */
@@ -26,7 +34,13 @@ export async function ensureConsole(page: Page, host: "release" | "os" = "releas
     /\/app\/console\/?$/.test(new URL(href).pathname)
 
   if (!onConsole) {
-    await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
+    try {
+      await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
+    } catch {
+      // SPA may bounce the deep-link to /app/console mid-redirect; the
+      // heading assertion below verifies we end up on the right page
+      // regardless of how we got there.
+    }
   }
 
   await expect(
@@ -54,7 +68,12 @@ async function waitForProjectCard(page: Page, projectName: string, host: "releas
     }
 
     if (attempt < 5) {
-      await page.reload({ waitUntil: "domcontentloaded" })
+      try {
+        await page.reload({ waitUntil: "domcontentloaded" })
+      } catch {
+        // SPA interrupted the reload (e.g. mid-redirect); next loop
+        // iteration re-evaluates the card state.
+      }
       await page.waitForTimeout(500)
     }
   }
@@ -62,10 +81,20 @@ async function waitForProjectCard(page: Page, projectName: string, host: "releas
   throw new Error(`Project "${projectName}" did not appear on the ${host} console`)
 }
 
-/** Release project dashboard — workspace shell + project name. */
+/**
+ * Release project dashboard — workspace shell + project name.
+ *
+ * The SPA deep-link sometimes lands on `/app/<id>/dashboard` before the
+ * project bootstrap finishes, in which case the app silently routes back
+ * to `/app/console` and the workspace sidebar never renders. We therefore
+ * wait for the sidebar text first (it only mounts on a real dashboard) and
+ * treat the URL assertion as a postcondition. If the sidebar never mounts
+ * within the timeout, we throw so the caller can fall back to console →
+ * card navigation.
+ */
 async function waitForReleaseDashboardReady(page: Page, projectName: string) {
-  await expect(page).toHaveURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 30_000 })
   await expect(page.getByText(/^workspace$/i)).toBeVisible({ timeout: 30_000 })
+  await expect(page).toHaveURL(/\/app\/(?!project\/)[^/]+\/dashboard/, { timeout: 30_000 })
   await expect(page.getByText(projectName, { exact: true }).first()).toBeVisible({ timeout: 30_000 })
 }
 
@@ -97,7 +126,12 @@ async function readProjectNameFromDashboard(page: Page): Promise<string> {
 }
 
 async function openProjectById(page: Page, projectId: string) {
-  await page.goto(`${e2eBaseUrl()}/app/${projectId}/dashboard`, { waitUntil: "domcontentloaded" })
+  try {
+    await page.goto(`${e2eBaseUrl()}/app/${projectId}/dashboard`, { waitUntil: "domcontentloaded" })
+  } catch {
+    // SPA may bounce the deep-link; readiness check below handles either
+    // landing page.
+  }
   const projectName = await readProjectNameFromDashboard(page)
   await waitForReleaseDashboardReady(page, projectName)
   return { projectName, dashboardUrl: page.url(), itemId: projectId }
@@ -109,7 +143,11 @@ export async function openNamedProjectDashboard(
   options?: { dashboardUrl?: string },
 ) {
   if (options?.dashboardUrl) {
-    await page.goto(options.dashboardUrl, { waitUntil: "domcontentloaded" })
+    try {
+      await page.goto(options.dashboardUrl, { waitUntil: "domcontentloaded" })
+    } catch {
+      // SPA bounced the deep-link; fall through to card navigation below.
+    }
     try {
       await waitForReleaseDashboardReady(page, projectName)
       return

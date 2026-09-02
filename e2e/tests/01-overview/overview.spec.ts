@@ -5,16 +5,16 @@ import { openReleaseConsole, openReleaseOverview } from "../../support/release-h
 
 /**
  * Console + Project Overview ("Project Details" / "Core APIs") as a single
- * end-to-end pass through the console → project → deployment nav → logout.
+ * end-to-end pass through the console → project → deployment nav.
  *
  * One top-level `test` is used (rather than separate tests per section) so the
- * whole file can be invoked as a single test invocation and so the destructive
- * logout step at the end is the natural end of the same browser session.
+ * whole file can be invoked as a single test invocation.
  *
- * Uses the shared project from release.setup.spec.ts (one login per suite).
+ * Uses the shared project from suite.setup.spec.ts (one login per suite).
+ * Does not log out: later suite tests reuse this same authenticated session.
  */
 test.describe("Console & Project Overview", () => {
-  test("Console, Project Overview, Deployment nav, and logout", async ({ page }) => {
+  test("Console, Project Overview, and Deployment nav", async ({ page }) => {
     // -------------------------------------------------------------------------
     // Section 1: Console topbar (theme / language / notifications / app switcher /
     // user menu)
@@ -257,37 +257,6 @@ test.describe("Console & Project Overview", () => {
     await test.step("[Positive] Back to console returns to the project list", async () => {
       await page.getByRole("button", { name: "Back to console" }).click();
       await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible();
-    });
-
-    // -------------------------------------------------------------------------
-    // Section 5: Logout (M18). Runs LAST because it ends the in-memory session.
-    // Playwright reloads the storage state from disk at the start of every test
-    // in this project, so combining it into one test keeps the destructive
-    // step at the natural end of the same browser session.
-    // -------------------------------------------------------------------------
-    await test.step("[Positive] Logging out ends the session and lands on /login (M18)", async () => {
-      await openReleaseConsole(page);
-      const userMenuButton = page.getByRole("button", { name: "Open user menu" });
-      await expect(userMenuButton).toBeVisible({ timeout: 10_000 });
-      await userMenuButton.click();
-      const userMenu = page.getByRole("menu", { name: "Open user menu" });
-      await expect(userMenu).toBeVisible();
-
-      await userMenu.getByText("Log out", { exact: true }).click();
-
-      // The handleLogout flow calls window.location.replace(`${origin}/login`).
-      // The /login route then redirects into the OIDC provider, so accept any
-      // of the typical post-logout origins. The contract we care about is
-      // "no longer on the console".
-      await expect(page).not.toHaveURL(/\/app\/console/, { timeout: 15_000 });
-      await expect(page).toHaveURL(/\/login|dev-iam|auth/i, { timeout: 15_000 });
-    });
-
-    await test.step("[Security] re-opening the menu after logout no longer exposes the user identity (M18)", async () => {
-      // After window.location.replace, local tokens are cleared but the new
-      // page is on /login (or the OIDC provider). The console topbar should
-      // not be visible anymore.
-      await expect(page.getByRole("button", { name: "Open user menu" })).toHaveCount(0);
     });
   });
 });

@@ -1,6 +1,5 @@
 import { test, expect } from "../../support/test-base";
 import {
-  connectFirstRepository,
   openReleaseDeployment,
   verifyAddRepositoryOpensOsTab,
 } from "../../support/release-helpers";
@@ -16,7 +15,7 @@ import {
  * One top-level `test` is used (rather than separate tests per section) so the
  * whole file can be invoked as a single test invocation.
  *
- * Auth: uses the shared project from release.setup.spec.ts (one login per suite).
+ * Auth: uses the shared project from suite.setup.spec.ts (one login per suite).
  */
 test.describe("Deployment", () => {
   test("Deployment Overview and Repository Details", async ({ page }) => {
@@ -62,28 +61,13 @@ test.describe("Deployment", () => {
     });
 
     // -------------------------------------------------------------------------
-    // Section 2: Repository Details — make sure a repo card is reachable
+    // Section 2: Repository Details — only when a repo is already linked.
+    // Best-effort GitHub linking is skipped here: OAuth is unavailable in CI /
+    // shared e2e accounts and previously burned the full test timeout. Empty
+    // state + "opens OS in a new tab" are covered above; repo-detail sections
+    // below early-return when no card exists.
     // -------------------------------------------------------------------------
-    await test.step("Ensure repository is available", async () => {
-      if (await repoCard.isVisible().catch(() => false)) return;
-
-      // Best-effort: connectFirstRepository opens the OS tab and walks the
-      // GitHub picker. In CI without a persisted GitHub session the picker
-      // rejects and the helper returns false; we deliberately do NOT
-      // re-call openReleaseDeployment here — the deep-link re-open would
-      // add ~60–90s of retry time for no functional gain, since Sections
-      // 3–10 already gate on repoCard visibility below.
-      await connectFirstRepository(page);
-    });
-
     if (!(await repoCard.isVisible().catch(() => false))) {
-      // No repository is linked — the shared project's repo state cannot be
-      // mutated in CI (GitHub OAuth is not available in this environment).
-      // Sections 3–10 all require a repository card to open its details page,
-      // so they would early-return anyway. Instead of marking the whole test
-      // as skipped (which leaves it out of the pass count), exit gracefully
-      // and let Sections 1–2 cover the empty-state contract that we *can*
-      // verify.
       return
     }
 

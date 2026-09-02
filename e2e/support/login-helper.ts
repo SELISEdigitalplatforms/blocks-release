@@ -22,6 +22,38 @@ const consoleHeading = (page: Page) =>
 const authenticatedConsoleHeading = (page: Page) =>
   page.getByRole("heading", { name: "Your Blocks Projects" })
 
+function resolveLoginBase(loginPath: string): string {
+  try {
+    return new URL(loginPath).origin
+  } catch {
+    return e2eBaseUrl()
+  }
+}
+
+/** True when the page is the product login gate or OIDC credential form. */
+export async function isLoginSurface(page: Page): Promise<boolean> {
+  if (
+    await page
+      .getByRole("button", { name: "Log in to your account" })
+      .isVisible({ timeout: 500 })
+      .catch(() => false)
+  ) {
+    return true
+  }
+
+  if (await oidcEmailField(page).isVisible({ timeout: 500 }).catch(() => false)) {
+    return true
+  }
+
+  try {
+    if (/\/login\/?$/i.test(new URL(page.url()).pathname)) return true
+  } catch {
+    // ignore invalid URL
+  }
+
+  return false
+}
+
 async function fillCredentialsAndSubmit(page: Page) {
   const { email, password } = e2eCredentials()
   const emailField = oidcEmailField(page)
@@ -32,9 +64,17 @@ async function fillCredentialsAndSubmit(page: Page) {
   await page.getByRole("button", { name: "Login", exact: true }).click()
 }
 
+/**
+ * OIDC login against a product origin.
+ *
+ * Important: when `loginPath` is on Blocks OS (teardown delete), every
+ * console redirect must stay on that origin — never fall back to
+ * `E2E_BASE_URL` (Release), or OS auth lands on a blank/wrong host.
+ */
 export async function loginThroughOidc(page: Page, options?: { loginPath?: string }) {
-  const base = e2eBaseUrl()
-  const loginPath = options?.loginPath ?? `${base}/login`
+  const loginPath = options?.loginPath ?? `${e2eBaseUrl()}/login`
+  const base = resolveLoginBase(loginPath)
+  const consoleUrl = `${base}/app/console`
 
   try {
     await page.goto(loginPath, { waitUntil: "domcontentloaded" })
@@ -48,18 +88,26 @@ export async function loginThroughOidc(page: Page, options?: { loginPath?: strin
       return
     }
 
+    // Empty tenant console still counts as authenticated.
+    if (
+      (await consoleHeading(page).isVisible({ timeout: 1_000 }).catch(() => false)) &&
+      !(await isLoginSurface(page))
+    ) {
+      return
+    }
+
     const loginButton = page.getByRole("button", { name: "Log in to your account" })
     if (await loginButton.isVisible({ timeout: 3_000 }).catch(() => false)) {
       try {
         await loginButton.click({ timeout: 8_000 })
       } catch {
-        if (await authenticatedConsoleHeading(page).isVisible({ timeout: 3_000 }).catch(() => false)) return
+        if (await authenticatedConsoleHeading(page).isVisible({ timeout: 3_000 }).catch(() => false)) {
+          return
+        }
         try {
-          await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
+          await page.goto(consoleUrl, { waitUntil: "domcontentloaded" })
         } catch {
-          // SPA bounced the navigation (e.g. mid-redirect to the OIDC
-          // provider). The next loop iteration will see /app/console already
-          // loaded (or the provider page) and re-evaluate.
+          // SPA bounced; next iteration re-evaluates.
         }
         continue
       }
@@ -68,7 +116,10 @@ export async function loginThroughOidc(page: Page, options?: { loginPath?: strin
       await Promise.race([
         emailField.waitFor({ state: "visible", timeout: 30_000 }),
         authenticatedConsoleHeading(page).waitFor({ state: "visible", timeout: 30_000 }),
-        page.waitForURL(/\/app\/console/, { timeout: 30_000 }),
+        page.waitForURL(
+          (url) => url.origin === base && /\/app\/console\/?$/i.test(url.pathname),
+          { timeout: 30_000 },
+        ),
       ]).catch(() => {})
 
       if (await authenticatedConsoleHeading(page).isVisible().catch(() => false)) {
@@ -77,27 +128,40 @@ export async function loginThroughOidc(page: Page, options?: { loginPath?: strin
 
       if (await emailField.isVisible().catch(() => false)) {
         await fillCredentialsAndSubmit(page)
-        await page.waitForURL(/\/app\/console/, { timeout: 45_000 })
+        await page.waitForURL(
+          (url) => url.origin === base && /\/app\/console\/?$/i.test(url.pathname),
+          { timeout: 45_000 },
+        )
         return
       }
 
       try {
-        await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
+        await page.goto(consoleUrl, { waitUntil: "domcontentloaded" })
       } catch {
         // SPA redirected mid-flight; the next loop iteration re-evaluates.
       }
       continue
     }
 
+    // Already on OIDC form (no gate button).
+    if (await oidcEmailField(page).isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await fillCredentialsAndSubmit(page)
+      await page.waitForURL(
+        (url) => url.origin === base && /\/app\/console\/?$/i.test(url.pathname),
+        { timeout: 45_000 },
+      )
+      return
+    }
+
     try {
-      await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
+      await page.goto(consoleUrl, { waitUntil: "domcontentloaded" })
     } catch {
       // Same as above — let the next loop iteration check the URL.
     }
   }
 
   try {
-    await page.goto(`${base}/app/console`, { waitUntil: "domcontentloaded" })
+    await page.goto(consoleUrl, { waitUntil: "domcontentloaded" })
   } catch {
     // Final fallback — assert the console heading on whatever page we land on.
   }
@@ -114,6 +178,13 @@ export async function ensureAuthenticated(page: Page) {
   }
 
   if (await authenticatedConsoleHeading(page).isVisible({ timeout: 15_000 }).catch(() => false)) {
+    return
+  }
+
+  if (
+    (await consoleHeading(page).isVisible({ timeout: 2_000 }).catch(() => false)) &&
+    !(await isLoginSurface(page))
+  ) {
     return
   }
 
@@ -138,9 +209,17 @@ export async function ensureAuthenticatedOnCurrentOrigin(page: Page) {
     return
   }
 
+  if (
+    (await consoleHeading(page).isVisible({ timeout: 2_000 }).catch(() => false)) &&
+    !(await isLoginSurface(page))
+  ) {
+    return
+  }
+
   await loginThroughOidc(page, { loginPath: `${origin}/login` })
+  await expect(consoleHeading(page)).toBeVisible({ timeout: 30_000 })
 }
 
 export async function loginFresh(page: Page) {
-  await loginThroughOidc(page, { loginPath: e2eBaseUrl() })
+  await loginThroughOidc(page, { loginPath: `${e2eBaseUrl()}/login` })
 }

@@ -8,9 +8,9 @@ import {
 } from "../../support/release-project"
 import { shouldDeleteSharedProject } from "../../support/run-outcome"
 
-test.describe("release teardown", () => {
-  test("delete shared project when all release tests passed", async ({ page }) => {
-    test.setTimeout(120_000)
+test.describe("release suite teardown", () => {
+  test("delete shared project when all suite tests passed", async ({ page }) => {
+    test.setTimeout(300_000)
 
     const fixture = readReleaseProject()
     if (!fixture) return

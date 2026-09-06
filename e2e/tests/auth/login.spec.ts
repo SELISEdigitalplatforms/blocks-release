@@ -27,7 +27,6 @@ test.describe("Authentication", () => {
     // jar so feature deep-links do not bounce to /login.
     fs.mkdirSync(path.dirname(RELEASE_SESSION_PATH), { recursive: true })
     await page.context().storageState({ path: RELEASE_SESSION_PATH })
-    await page.context().storageState({ path: "fixtures/auth.json" })
 
     if (holdMs > 0) {
       await page.waitForTimeout(holdMs)

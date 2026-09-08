@@ -1,5 +1,5 @@
-import { createEvent, fireEvent, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, createEvent, fireEvent, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
 import DeploymentObservability from "./deployment-observability";
 import type { IPipeline } from "@blocks-deployment/pages/repo-details";
@@ -173,5 +173,187 @@ describe("DeploymentObservability", () => {
       key: "Enter",
     });
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+});
+
+// ─── the duration line ───────────────────────────────────────────────────────
+//
+// This row used to read "Deployed in 16s" over a deployment that was still cloning.
+// `lastUpdatedDate` is rewritten on every event the backend records, so mid-run the gap
+// between it and `createdDate` is how far the pipeline had got at the last write - not a
+// total, and not a deployment. These cover the wording following the status, the number
+// advancing while the deployment runs, and the number surviving the moment it lands.
+
+const RUN_START = "2026-09-08T08:09:06.000Z";
+
+/** The build from the bug report: created, one write 16s later, still going. */
+const runningBuild = [
+  {
+    itemId: "live-1",
+    repoId: "r1",
+    status: "Running",
+    eventName: "Clone",
+    createdDate: RUN_START,
+    lastUpdatedDate: "2026-09-08T08:09:22.000Z",
+  },
+] as unknown as IPipeline[];
+
+const notifyBuildStatus = (buildId: string, buildStatus: string) => {
+  act(() => {
+    window.dispatchEvent(
+      new CustomEvent("BuildLogNotification", {
+        detail: {
+          message: {
+            denormalizedPayload: JSON.stringify({
+              Message: { BuildId: buildId },
+              RepoStatus: { BuildStatus: buildStatus },
+            }),
+          },
+        },
+      }),
+    );
+  });
+};
+
+describe("DeploymentObservability duration line", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // The response landed the instant the last write did, so the row starts out showing
+    // exactly what the server measured.
+    vi.setSystemTime(new Date("2026-09-08T08:09:22.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const fetchedAt = () => new Date("2026-09-08T08:09:22.000Z").getTime();
+
+  it("counts a running deployment up instead of claiming it deployed", () => {
+    renderWithProviders(
+      <DeploymentObservability
+        builds={runningBuild}
+        viewLatestBuild
+        dataUpdatedAt={fetchedAt()}
+      />,
+      { route: "/app/deployment/repo/r1" },
+    );
+
+    expect(screen.getByText("Deployment is running · 16s")).toBeInTheDocument();
+    expect(screen.queryByText(/Deployed in/)).not.toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    expect(screen.getByText("Deployment is running · 21s")).toBeInTheDocument();
+  });
+
+  // The bug in one assertion: when the deployment finishes, the record in hand is still
+  // the stale one that says 16s. Reverting to it would put the wrong number back.
+  it("holds the elapsed it reached when the deployment lands, not the stale record's", () => {
+    renderWithProviders(
+      <DeploymentObservability
+        builds={runningBuild}
+        viewLatestBuild
+        dataUpdatedAt={fetchedAt()}
+      />,
+      { route: "/app/deployment/repo/r1" },
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(120_000);
+    });
+    expect(screen.getByText("Deployment is running · 2m 16s")).toBeInTheDocument();
+
+    notifyBuildStatus("live-1", "Succeeded");
+
+    expect(screen.getByText("Deployed in 2m 16s")).toBeInTheDocument();
+    // The exact string from the bug report, which is what the stale record still says.
+    expect(screen.queryByText("Deployed in 16s")).not.toBeInTheDocument();
+
+    // And it stops there rather than going on counting.
+    act(() => {
+      vi.advanceTimersByTime(30_000);
+    });
+    expect(screen.getByText("Deployed in 2m 16s")).toBeInTheDocument();
+  });
+
+  it("takes the server's total once a refetch supplies one", () => {
+    const { rerender } = renderWithProviders(
+      <DeploymentObservability
+        builds={runningBuild}
+        viewLatestBuild
+        dataUpdatedAt={fetchedAt()}
+      />,
+      { route: "/app/deployment/repo/r1" },
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    notifyBuildStatus("live-1", "Succeeded");
+
+    const settled = [
+      {
+        ...runningBuild[0],
+        status: "Succeeded",
+        lastUpdatedDate: "2026-09-08T08:12:48.000Z",
+      },
+    ] as unknown as IPipeline[];
+
+    rerender(
+      <DeploymentObservability
+        builds={settled}
+        viewLatestBuild
+        dataUpdatedAt={new Date("2026-09-08T08:12:50.000Z").getTime()}
+      />,
+    );
+
+    expect(screen.getByText("Deployed in 3m 42s")).toBeInTheDocument();
+  });
+
+  it("says a failed deployment failed rather than that it deployed", () => {
+    const failed = [
+      {
+        ...runningBuild[0],
+        status: "Failed",
+        lastUpdatedDate: "2026-09-08T08:12:48.000Z",
+      },
+    ] as unknown as IPipeline[];
+
+    renderWithProviders(
+      <DeploymentObservability
+        builds={failed}
+        viewLatestBuild
+        dataUpdatedAt={fetchedAt()}
+      />,
+      { route: "/app/deployment/repo/r1" },
+    );
+
+    expect(screen.getByText("Failed after 3m 42s")).toBeInTheDocument();
+  });
+
+  // A history row that was already finished when it rendered must report only what the
+  // server measured. Data served from cache can be minutes old, and counting from the
+  // fetch would add that wait to a duration that is already final.
+  it("leaves an already-finished row's total alone however stale the response is", () => {
+    const finished = [
+      {
+        ...runningBuild[0],
+        status: "Succeeded",
+        lastUpdatedDate: "2026-09-08T08:12:48.000Z",
+      },
+    ] as unknown as IPipeline[];
+
+    renderWithProviders(
+      <DeploymentObservability
+        builds={finished}
+        dataUpdatedAt={fetchedAt() - 240_000}
+      />,
+      { route: "/app/deployment/repo/r1" },
+    );
+
+    expect(screen.getByText("Deployed in 3m 42s")).toBeInTheDocument();
   });
 });

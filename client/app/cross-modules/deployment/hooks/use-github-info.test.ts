@@ -1,8 +1,8 @@
 import { createWrapper } from "@/test-utils/test-providers/query-client";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   mockRepository,
   mockRepositories,
@@ -329,6 +329,86 @@ describe("Github Info Hooks", () => {
   });
 
   // ─── useGetRepoDetails ────────────────────────────────────────────────────
+
+  // ─── polling a live build ───────────────────────────────────────────────────
+  //
+  // Notifications keep the status badge live, but nothing pushes the build record's own
+  // timestamps, the repo's deployment date or its URL. Without a poll the page holds the
+  // response it opened with, which is how a running deployment kept reporting the elapsed
+  // time it had reached at the backend's last write.
+  describe("polling while a build is live", () => {
+    const buildsResponse = (status: string) => ({
+      data: {
+        repo: {},
+        build: [{ status, createdDate: "2026-09-08T08:12:33.676Z" }],
+      },
+    });
+
+    const renderPolled = (pollWhileBuilding: boolean) =>
+      renderHook(
+        () => useGetRepoDetails(MOCK_REPO_ID, { pollWhileBuilding }),
+        { wrapper: createWrapper() },
+      );
+
+    beforeEach(() => {
+      // shouldAdvanceTime keeps waitFor working while the interval stays under our control.
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("re-reads the repo while its newest build is still running", async () => {
+      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue(
+        buildsResponse("Running"),
+      );
+
+      const { result } = renderPolled(true);
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(githubInfoService.getRepoDetails).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000);
+      });
+
+      expect(
+        vi.mocked(githubInfoService.getRepoDetails).mock.calls.length,
+      ).toBeGreaterThan(1);
+    });
+
+    it("stops once the newest build has landed", async () => {
+      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue(
+        buildsResponse("Succeeded"),
+      );
+
+      const { result } = renderPolled(true);
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+
+      expect(githubInfoService.getRepoDetails).toHaveBeenCalledTimes(1);
+    });
+
+    // Opt-in on purpose: the settings modal reads the same query and stays mounted while
+    // closed, and has no reason to sit on a timer.
+    it("leaves callers that did not ask for it unpolled", async () => {
+      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue(
+        buildsResponse("Running"),
+      );
+
+      const { result } = renderPolled(false);
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+
+      expect(githubInfoService.getRepoDetails).toHaveBeenCalledTimes(1);
+    });
+  });
 
   describe("useGetRepoDetails", () => {
     it("should fetch repo details successfully", async () => {

@@ -144,12 +144,14 @@ export default function RepoDetails() {
     isLoading,
     isError,
     error,
+    dataUpdatedAt,
   } = useGetRepoDetails(repoId, {
     refetchOnMount: true,
     refetchOnWindowFocus: false,
     forceRefresh: forceRefresh,
     pageNumber: buildPageNumber,
     pageSize: buildPageSize,
+    pollWhileBuilding: true,
   });
 
   // Total across every page, not the length of the page in hand - the page is five rows
@@ -826,6 +828,7 @@ export default function RepoDetails() {
                       <DeploymentObservability
                         builds={filteredBuilds}
                         viewLatestBuild={true}
+                        dataUpdatedAt={dataUpdatedAt}
                       />
                     </div>
                   </CardContent>
@@ -853,6 +856,7 @@ export default function RepoDetails() {
                     (historyPageNumber - 1) * HISTORY_BUILD_PAGE_SIZE + 1
                   }
                   totalCount={totalBuildCount}
+                  dataUpdatedAt={dataUpdatedAt}
                 />
                 {totalBuildCount > HISTORY_BUILD_PAGE_SIZE && (
                   <div className="mt-4 flex items-center px-4 pb-4 md:justify-end">

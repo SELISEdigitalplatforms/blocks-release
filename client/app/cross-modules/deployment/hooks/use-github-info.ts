@@ -7,6 +7,49 @@ import type {
   IManualDeploymentPayload,
   IUpdateRepoSettingsPayload,
 } from "@blocks-deployment/models/utils";
+import { isLiveBuildStatus } from "@blocks-deployment/utils/deployment-logs.utils";
+
+/**
+ * How often a repository whose newest build is still going is re-read.
+ *
+ * Nothing pushes the build record's own fields at the page - the status badge is kept
+ * live by notifications, but the timestamps behind the elapsed time, the repo's
+ * deployment date and its deployment URL only change when the record is fetched again.
+ * Ten seconds keeps those close enough to the badge without polling a build that is
+ * usually minutes long once a second.
+ */
+const LIVE_BUILD_POLL_INTERVAL_MS = 10_000;
+
+/** Only the part of the repo-details response the poll has to look at. */
+type RepoDetailsPollData = {
+  data?: { build?: { status?: string; createdDate?: string }[] };
+};
+
+/**
+ * Whether the newest build in a response is still going.
+ *
+ * The newest build only - not `some` - because a build abandoned mid-run keeps whatever
+ * status it had, and polling on any live-looking row would leave the page refetching
+ * forever over a record that will never change again.
+ */
+const hasLiveBuild = (data: RepoDetailsPollData | undefined): boolean => {
+  const builds = data?.data?.build;
+  if (!Array.isArray(builds) || builds.length === 0) return false;
+
+  // Seeded with the first build rather than relying on reduce's no-initial-value form,
+  // which throws on an empty array. The length guard above already rules that out, but
+  // the seed makes the function safe to read on its own.
+  const newest = builds.reduce(
+    (latest, current) =>
+      new Date(current?.createdDate ?? 0) > new Date(latest?.createdDate ?? 0)
+        ? current
+        : latest,
+    builds[0],
+  );
+
+  return isLiveBuildStatus(newest?.status);
+};
+
 export const useGithubVerification = (code: string) => {
   return useQuery({
     queryKey: ["github-verification", code],
@@ -147,6 +190,12 @@ export const useGetRepoDetails = (
     branch?: string;
     pageNumber?: number;
     pageSize?: number;
+    /**
+     * Keep re-reading the repo while its newest build is still running, and stop once it
+     * lands. Opt-in, so callers that only need the record once - the settings modal, which
+     * stays mounted while closed - are not put on a timer.
+     */
+    pollWhileBuilding?: boolean;
   },
 ) => {
   const { branch, pageNumber, pageSize } = options ?? {};
@@ -172,6 +221,15 @@ export const useGetRepoDetails = (
     staleTime: options?.forceRefresh ? 0 : 5 * 60 * 1000,
     refetchOnMount: options?.refetchOnMount ? "always" : true,
     refetchOnWindowFocus: options?.refetchOnWindowFocus ?? false,
+    // Read off the query's own data rather than a value computed in the caller, so the
+    // polling stops on the response that reports the build finished instead of a render
+    // later. `refetchIntervalInBackground` is left off: a hidden tab need not poll.
+    refetchInterval: options?.pollWhileBuilding
+      ? (query) =>
+          hasLiveBuild(query.state.data as RepoDetailsPollData | undefined)
+            ? LIVE_BUILD_POLL_INTERVAL_MS
+            : false
+      : false,
     retry: false,
   });
 };

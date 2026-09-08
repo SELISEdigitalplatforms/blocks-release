@@ -542,22 +542,90 @@ export function getDeploymentLogEventBadgeClassName(status: string) {
   return `inline-flex w-fit items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${style.bg} ${style.text} ${style.hoverBg} ${style.hoverText}`;
 }
 
-export const getTimeDifference = (
-  start: string | number | Date,
-  end: string | number | Date,
-) => {
-  const diffMs = new Date(end).getTime() - new Date(start).getTime();
-  const diffSeconds = Math.round(diffMs / 1000);
-  if (diffSeconds < 60) {
-    return `${diffSeconds}s`;
+/**
+ * A wall-clock span, in the same shape the deployment rows have always shown it:
+ * whole seconds under a minute, then `1m 30s`, then `2h 30m`.
+ *
+ * Deliberately coarser than `formatDuration`, which is for individual pipeline steps
+ * where telling 1.2s from 7s is the whole point. A deployment's total does not need
+ * tenths, and a ticking one would only jitter.
+ */
+export const formatElapsedTime = (durationMs: number): string => {
+  if (!Number.isFinite(durationMs)) return DURATION_PLACEHOLDER;
+
+  // Clamped rather than allowed to go negative: the elapsed shown while a deployment
+  // runs is extrapolated from the browser's clock, which need not agree with the
+  // server's, and "-3s" would be a worse answer than "0s".
+  const totalSeconds = Math.max(0, Math.round(durationMs / 1000));
+
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
   }
-  if (diffSeconds < 3600) {
-    const minutes = Math.floor(diffSeconds / 60);
-    const seconds = diffSeconds % 60;
-    return `${minutes}m ${seconds}s`;
+  if (totalSeconds < 3600) {
+    return `${Math.floor(totalSeconds / 60)}m ${totalSeconds % 60}s`;
   }
-  const hours = Math.floor(diffSeconds / 3600);
-  const remainingSeconds = diffSeconds % 3600;
-  const minutes = Math.floor(remainingSeconds / 60);
-  return `${hours}h ${minutes}m`;
+  const hours = Math.floor(totalSeconds / 3600);
+  return `${hours}h ${Math.floor((totalSeconds % 3600) / 60)}m`;
+};
+
+/**
+ * Build statuses grouped by what they let the UI claim about a deployment.
+ *
+ * Each set holds both vocabularies on purpose. A status reaching the rows can be the
+ * repository's `BuildStatus` or, when a notification carries no repo status, the raw
+ * event type it fell back to - see `useDeploymentStatus`. Covering only one of the two
+ * would leave a finished deployment reading as if it were still going.
+ *
+ * Anything absent from all three - `Unknown`, `Deleted`, `Skipped`, `NoBuild` - claims
+ * nothing. There is no honest duration to report for a build in those states.
+ */
+const LIVE_BUILD_STATUSES: ReadonlySet<string> = new Set([
+  DEPLOYMENT_LOG_EVENT_STATUS.PENDING,
+  DEPLOYMENT_LOG_EVENT_STATUS.RUNNING,
+  DEPLOYMENT_LOG_EVENT_STATUS.STARTED,
+  DEPLOYMENT_LOG_EVENT_STATUS.EVENT_STARTED,
+  "Queued",
+  "Paused",
+  "Resumed",
+]);
+
+const SUCCEEDED_BUILD_STATUSES: ReadonlySet<string> = new Set([
+  DEPLOYMENT_LOG_EVENT_STATUS.SUCCESS,
+  DEPLOYMENT_LOG_EVENT_STATUS.COMPLETED,
+  DEPLOYMENT_LOG_EVENT_STATUS.PASSED,
+  DEPLOYMENT_LOG_EVENT_STATUS.PUBLISHED,
+  DEPLOYMENT_LOG_EVENT_STATUS.EVENT_FINISHED,
+]);
+
+const FAILED_BUILD_STATUSES: ReadonlySet<string> = new Set([
+  DEPLOYMENT_LOG_EVENT_STATUS.FAILED,
+  DEPLOYMENT_LOG_EVENT_STATUS.ERROR,
+  DEPLOYMENT_LOG_EVENT_STATUS.EVENT_FAILED,
+  "Cancelled",
+  "Timeout",
+]);
+
+/** Whether a build is still going, and so still accumulating elapsed time. */
+export const isLiveBuildStatus = (status?: string | null): boolean =>
+  !!status && LIVE_BUILD_STATUSES.has(status);
+
+/**
+ * What a deployment row says beneath its date.
+ *
+ * The wording is chosen by status rather than fixed, because the row used to read
+ * "Deployed in 16s" over a deployment that was still cloning - the 16s being how far it
+ * had got at the last write, not a total, and not a deployment.
+ */
+export const getBuildDurationLabel = (
+  status: string | null | undefined,
+  elapsedMs: number,
+): string => {
+  const elapsed = formatElapsedTime(elapsedMs);
+  if (elapsed === DURATION_PLACEHOLDER) return DURATION_PLACEHOLDER;
+
+  if (isLiveBuildStatus(status)) return `Deployment is running · ${elapsed}`;
+  if (status && SUCCEEDED_BUILD_STATUSES.has(status)) return `Deployed in ${elapsed}`;
+  if (status && FAILED_BUILD_STATUSES.has(status)) return `Failed after ${elapsed}`;
+
+  return DURATION_PLACEHOLDER;
 };

@@ -3,8 +3,11 @@ import {
   applyStepTimeRange,
   calculateStepDuration,
   DEPLOYMENT_LOG_EVENT_STATUS,
+  DURATION_PLACEHOLDER,
   formatDuration,
+  formatElapsedTime,
   formatStepDuration,
+  getBuildDurationLabel,
   getDeploymentLogEventBadgeClassName,
   getDeploymentLogEventBadgeStyle,
   getLogTimeRange,
@@ -12,7 +15,7 @@ import {
   getStepStatus,
   getStepTimeRange,
   getStepTimingTooltip,
-  getTimeDifference,
+  isLiveBuildStatus,
   isTerminalStepStatus,
   mergeStepTimeRange,
   parseLogLineTimestamp,
@@ -118,21 +121,82 @@ describe("badge styles", () => {
   });
 });
 
-describe("getTimeDifference", () => {
+describe("formatElapsedTime", () => {
   it("formats seconds", () => {
-    expect(getTimeDifference("2024-01-01T00:00:00Z", "2024-01-01T00:00:30Z")).toBe(
-      "30s",
-    );
+    expect(formatElapsedTime(30_000)).toBe("30s");
   });
   it("formats minutes and seconds", () => {
-    expect(getTimeDifference("2024-01-01T00:00:00Z", "2024-01-01T00:01:30Z")).toBe(
-      "1m 30s",
-    );
+    expect(formatElapsedTime(90_000)).toBe("1m 30s");
   });
   it("formats hours and minutes", () => {
-    expect(getTimeDifference("2024-01-01T00:00:00Z", "2024-01-01T02:30:00Z")).toBe(
-      "2h 30m",
+    expect(formatElapsedTime(9_000_000)).toBe("2h 30m");
+  });
+  // A deployment's elapsed is extrapolated against the browser's clock, which can sit
+  // behind the server's. Zero is a wrong-but-harmless answer; "-4s" is a bug report.
+  it("clamps a negative span to zero rather than showing a negative duration", () => {
+    expect(formatElapsedTime(-4000)).toBe("0s");
+  });
+  it("returns the placeholder for an unusable span", () => {
+    expect(formatElapsedTime(Number.NaN)).toBe(DURATION_PLACEHOLDER);
+  });
+});
+
+// ─── deployment row wording ──────────────────────────────────────────────────
+//
+// The row used to read "Deployed in 16s" over a deployment that was still cloning: the
+// label was fixed and the number was the elapsed at the backend's last write. Wording
+// now follows the status, in both the vocabularies a live status can arrive in.
+
+describe("isLiveBuildStatus", () => {
+  it.each(["Running", "Started", "Pending", "Queued", "EventStarted"])(
+    "treats %s as still going",
+    (status) => {
+      expect(isLiveBuildStatus(status)).toBe(true);
+    },
+  );
+
+  it.each(["Succeeded", "Failed", "Cancelled", "EventFinished", "EventFailed"])(
+    "treats %s as finished",
+    (status) => {
+      expect(isLiveBuildStatus(status)).toBe(false);
+    },
+  );
+
+  it("treats a missing status as finished rather than running forever", () => {
+    expect(isLiveBuildStatus(undefined)).toBe(false);
+    expect(isLiveBuildStatus(null)).toBe(false);
+  });
+});
+
+describe("getBuildDurationLabel", () => {
+  it("counts a running deployment up rather than claiming it deployed", () => {
+    expect(getBuildDurationLabel("Running", 72_000)).toBe(
+      "Deployment is running · 1m 12s",
     );
+  });
+
+  it("reports a finished deployment's total", () => {
+    expect(getBuildDurationLabel("Succeeded", 222_000)).toBe("Deployed in 3m 42s");
+  });
+
+  // The same line used to say "Deployed in" over a deployment that never deployed.
+  it("says a failed deployment failed", () => {
+    expect(getBuildDurationLabel("Failed", 222_000)).toBe("Failed after 3m 42s");
+    expect(getBuildDurationLabel("Cancelled", 222_000)).toBe("Failed after 3m 42s");
+  });
+
+  it("reads the event-type vocabulary a notification can fall back to", () => {
+    expect(getBuildDurationLabel("EventStarted", 5_000)).toBe(
+      "Deployment is running · 5s",
+    );
+    expect(getBuildDurationLabel("EventFinished", 5_000)).toBe("Deployed in 5s");
+    expect(getBuildDurationLabel("EventFailed", 5_000)).toBe("Failed after 5s");
+  });
+
+  it("claims nothing for a status with no honest duration", () => {
+    expect(getBuildDurationLabel("NoBuild", 5_000)).toBe(DURATION_PLACEHOLDER);
+    expect(getBuildDurationLabel("Unknown", 5_000)).toBe(DURATION_PLACEHOLDER);
+    expect(getBuildDurationLabel(undefined, 5_000)).toBe(DURATION_PLACEHOLDER);
   });
 });
 

@@ -1,17 +1,19 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
-import { Badge } from "@/components/ui-kits/badge/badge";
 import { useNavigate } from "react-router";
 import {
-  getDeploymentLogEventBadgeClassName,
-  getTimeDifference,
+  getBuildDurationLabel,
+  isLiveBuildStatus,
 } from "@blocks-deployment/utils/deployment-logs.utils";
 import { IPipeline } from "@blocks-deployment/pages/repo-details";
-import NotificationListener from "./notification-listener";
-import { cn } from "@/lib/utils";
+import {
+  DeploymentStatusBadge,
+  useDeploymentStatus,
+} from "./notification-listener";
 import { formatFullDate } from "@/utils/date.util";
 import { useScopedPath } from "@/hooks/use-scoped-path";
+import { useTickingNow } from "@/hooks/use-ticking-now";
 import SASTLogo from "@blocks-deployment/assets/icons/SAST.svg";
 import SCALogo from "@blocks-deployment/assets/icons/SCA.svg";
 import DASTLogo from "@blocks-deployment/assets/icons/DAST.png";
@@ -26,13 +28,83 @@ interface DeploymentObservabilityProps {
   startIndex?: number;
   /** Total builds across every page. Defaults to what was handed in when unpaged. */
   totalCount?: number;
+  /**
+   * When the builds in hand were fetched, as react-query's `dataUpdatedAt`. The running
+   * timer counts wall time from this instant, so it stays right for data served from
+   * cache - a row reached again within the query's stale time is minutes old, and a
+   * timer anchored to mount would restart from wherever that stale record left off.
+   */
+  dataUpdatedAt?: number;
 }
+
+interface BuildDurationProps {
+  build: IPipeline;
+  /**
+   * The row's status, live where the row has a live one. The wording is driven by the
+   * same value as the badge beside it so the two can never disagree.
+   */
+  status: string;
+  dataUpdatedAt?: number;
+}
+
+/**
+ * The line beneath a build's date: how long it has been running, or how long it took.
+ *
+ * The number is built from the response's own two stamps plus wall time since the
+ * response landed, never from the browser's clock against a server timestamp. The two
+ * stamps sit on the same server clock, so their difference is exact, and measuring only
+ * the part after the fetch keeps a browser clock that disagrees with the server's out
+ * of the answer.
+ */
+const BuildDuration = ({ build, status, dataUpdatedAt }: BuildDurationProps) => {
+  const measuredMs =
+    new Date(build.lastUpdatedDate).getTime() -
+    new Date(build.createdDate).getTime();
+
+  const isRunning = isLiveBuildStatus(status);
+
+  // Only used where the caller supplies no fetch time - the ticker still needs
+  // something to count from, and mount is the closest instant available. Held in state
+  // rather than a ref because it is read while rendering.
+  const [mountedAtMs] = useState<number>(() => Date.now());
+  const anchorMs = dataUpdatedAt ?? mountedAtMs;
+
+  const now = useTickingNow(isRunning);
+  const liveMs = measuredMs + Math.max(0, now - anchorMs);
+
+  // A build that finishes between polls leaves a stale `lastUpdatedDate` behind: the
+  // record still says what it said at the last write. That is exactly how a deployment
+  // three minutes into its run came to report "Deployed in 16s". Hold the elapsed the
+  // ticker had reached until a refetch brings the real one.
+  const [frozenMs, setFrozenMs] = useState<number | null>(null);
+  const wasRunningRef = useRef(false);
+
+  useEffect(() => {
+    if (isRunning) {
+      wasRunningRef.current = true;
+      return;
+    }
+    // Rows already finished when they first rendered have nothing to hold. Their
+    // `lastUpdatedDate` IS the finish time, and freezing here would add however long a
+    // cached response had been sitting around to a duration that is already final.
+    if (!wasRunningRef.current) return;
+    setFrozenMs((held) => held ?? liveMs);
+  }, [isRunning, liveMs]);
+
+  // Once finished, the server's own measurement is the authority - but only once it has
+  // actually arrived. Taking the larger of the two picks the held value while the record
+  // is still stale, the server's the moment it catches up, and never moves backwards.
+  const elapsedMs = isRunning ? liveMs : Math.max(measuredMs, frozenMs ?? 0);
+
+  return <>{getBuildDurationLabel(status, elapsedMs)}</>;
+};
 
 const DeploymentObservability = ({
   builds,
   viewLatestBuild = false,
   startIndex = 1,
   totalCount,
+  dataUpdatedAt,
 }: DeploymentObservabilityProps) => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
@@ -44,6 +116,16 @@ const DeploymentObservability = ({
       : latest;
   }, builds[0]);
   const latestBuildStatus = latestBuild?.status;
+
+  // Subscribed to once, here, rather than inside each badge: the duration text needs the
+  // same live status the badge shows, and a second subscription would be a second copy
+  // of the same state to keep in step.
+  const liveLatestStatus = useDeploymentStatus(latestBuild, latestBuildStatus);
+
+  /** The status a row should present: live for the newest build, as fetched for the rest. */
+  const statusOf = (build: IPipeline) =>
+    latestBuild?.itemId === build.itemId ? liveLatestStatus : build.status;
+
   const handleActionClick = (
     action: string,
     repoId: string,
@@ -136,10 +218,7 @@ const DeploymentObservability = ({
                       <span className="text-sm font-medium">
                         {build.eventName}
                       </span>
-                      <NotificationListener
-                        latestBuild={latestBuild}
-                        deploymentStatus={latestBuildStatus}
-                      />
+                      <DeploymentStatusBadge status={statusOf(build)} />
                     </div>
                     <span className="text-xs text-medium-emphasis sm:text-sm">
                       ID: {build.itemId}
@@ -172,11 +251,11 @@ const DeploymentObservability = ({
                     {formatFullDate(new Date(build.createdDate))}
                   </div>
                   <div className="text-xs text-gray-600">
-                    Deployed in{" "}
-                    {getTimeDifference(
-                      build.createdDate,
-                      build.lastUpdatedDate,
-                    )}
+                    <BuildDuration
+                      build={build}
+                      status={statusOf(build)}
+                      dataUpdatedAt={dataUpdatedAt}
+                    />
                   </div>
                 </div>
                 <Button
@@ -219,19 +298,7 @@ const DeploymentObservability = ({
                     <span className="text-sm font-medium">
                       {build.eventName}
                     </span>
-                    {latestBuild?.itemId === build.itemId ? (
-                      <NotificationListener
-                        latestBuild={latestBuild}
-                        deploymentStatus={latestBuildStatus}
-                      />
-                    ) : (
-                      <Badge
-                        className={getDeploymentLogEventBadgeClassName(
-                          build.status,
-                        )}>
-                        {build.status}
-                      </Badge>
-                    )}
+                    <DeploymentStatusBadge status={statusOf(build)} />
                   </div>
                   <span className="text-xs sm:text-sm">ID: {build.itemId}</span>
                 </span>
@@ -263,8 +330,11 @@ const DeploymentObservability = ({
                   {formatFullDate(new Date(build.createdDate))}
                 </div>
                 <div className="text-xs text-gray-600">
-                  Deployed in{" "}
-                  {getTimeDifference(build.createdDate, build.lastUpdatedDate)}
+                  <BuildDuration
+                    build={build}
+                    status={statusOf(build)}
+                    dataUpdatedAt={dataUpdatedAt}
+                  />
                 </div>
               </div>
               <Button

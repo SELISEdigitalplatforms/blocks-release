@@ -36,10 +36,15 @@ const hasLiveBuild = (data: RepoDetailsPollData | undefined): boolean => {
   const builds = data?.data?.build;
   if (!Array.isArray(builds) || builds.length === 0) return false;
 
-  const newest = builds.reduce((latest, current) =>
-    new Date(current?.createdDate ?? 0) > new Date(latest?.createdDate ?? 0)
-      ? current
-      : latest,
+  // Seeded with the first build rather than relying on reduce's no-initial-value form,
+  // which throws on an empty array. The length guard above already rules that out, but
+  // the seed makes the function safe to read on its own.
+  const newest = builds.reduce(
+    (latest, current) =>
+      new Date(current?.createdDate ?? 0) > new Date(latest?.createdDate ?? 0)
+        ? current
+        : latest,
+    builds[0],
   );
 
   return isLiveBuildStatus(newest?.status);

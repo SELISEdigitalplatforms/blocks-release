@@ -18,9 +18,9 @@ export const useTickingNow = (enabled: boolean): number => {
   useEffect(() => {
     if (!enabled) return;
 
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    const id = globalThis.setInterval(() => setNow(Date.now()), 1000);
 
-    return () => window.clearInterval(id);
+    return () => globalThis.clearInterval(id);
   }, [enabled]);
 
   return now;

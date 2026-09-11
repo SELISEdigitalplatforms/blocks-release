@@ -349,13 +349,113 @@ namespace XUnitTest.Devops.VersionControlSystems
             msg.Should().BeNull();
         }
 
-        // ---- Clone ----
+        // ---- GetPushCredential ----
+
+        private void ValidationReturns(HttpStatusCode code) =>
+            _http.Setup(h => h.MakeHttpRequest<object>(It.IsAny<string>(), It.IsAny<string>(), HttpMethod.Get, null, It.IsAny<Dictionary<string, string>>(), null))
+                 .ReturnsAsync(((object)null, Resp(code)));
 
         [Fact]
-        public async Task Clone_ReturnsTrue()
+        public async Task GetPushCredential_NoToken_ReturnsNull()
         {
-            var result = await CreateService().Clone("org/repo");
-            result.Should().BeTrue();
+            _tokenRepo.Setup(t => t.getToken()).ReturnsAsync((RepositoryToken)null);
+            (await CreateService().GetPushCredential()).Should().BeNull();
+        }
+
+        [Fact]
+        public async Task GetPushCredential_RevokedToken_ReturnsNull_NotAStaleCredential()
+        {
+            // A revoked token handed to git fails inside `git push`; failing
+            // here is what lets the CLI say "reconnect GitHub" instead.
+            _tokenRepo.Setup(t => t.getToken()).ReturnsAsync(Token());
+            ValidationReturns(HttpStatusCode.Unauthorized);
+            (await CreateService().GetPushCredential()).Should().BeNull();
+        }
+
+        [Fact]
+        public async Task GetPushCredential_ValidToken_ReturnsTokenAndLogin()
+        {
+            _tokenRepo.Setup(t => t.getToken()).ReturnsAsync(Token());
+            ValidationReturns(HttpStatusCode.OK);
+
+            var credential = await CreateService().GetPushCredential();
+
+            credential.Should().NotBeNull();
+            credential.Token.Should().Be("tok");
+            credential.Login.Should().Be("octo");
+            credential.Username.Should().Be("x-access-token");
+            credential.ExpiresAt.Should().BeNull("an OAuth-app token has no expiry of its own");
+        }
+
+        // ---- CreateRepository ----
+
+        private void CreateReturns(HttpStatusCode code, GithubRepositoryResponse body = null) =>
+            _http.Setup(h => h.MakeHttpRequest<GithubRepositoryResponse>(It.IsAny<string>(), It.IsAny<string>(), HttpMethod.Post, It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), null))
+                 .ReturnsAsync((body, Resp(code)));
+
+        [Fact]
+        public async Task CreateRepository_NoName_FailsBeforeGithub()
+        {
+            var (repo, error) = await CreateService().CreateRepository(new CreateRepositoryRequest { Name = " " });
+            repo.Should().BeNull();
+            error.Should().Contain("name is required");
+            _http.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task CreateRepository_NoToken_SaysNotConnected()
+        {
+            _tokenRepo.Setup(t => t.getToken()).ReturnsAsync((RepositoryToken)null);
+            var (repo, error) = await CreateService().CreateRepository(new CreateRepositoryRequest { Name = "app" });
+            repo.Should().BeNull();
+            error.Should().Contain("not connected");
+        }
+
+        [Fact]
+        public async Task CreateRepository_Created_ReturnsRepo_PostedToUserRepos()
+        {
+            _tokenRepo.Setup(t => t.getToken()).ReturnsAsync(Token());
+            CreateReturns(HttpStatusCode.Created, new GithubRepositoryResponse { fullName = "octo/app", url = "https://github.com/octo/app" });
+
+            var (repo, error) = await CreateService().CreateRepository(new CreateRepositoryRequest { Name = "app" });
+
+            error.Should().BeNull();
+            repo.fullName.Should().Be("octo/app");
+            _http.Verify(h => h.MakeHttpRequest<GithubRepositoryResponse>(It.IsAny<string>(), It.Is<string>(u => u.EndsWith("/user/repos")), HttpMethod.Post, It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), null), Times.Once);
+        }
+
+        [Fact]
+        public async Task CreateRepository_KnownOrg_PostsToOrgRepos()
+        {
+            _tokenRepo.Setup(t => t.getToken()).ReturnsAsync(Token());
+            CreateReturns(HttpStatusCode.Created, new GithubRepositoryResponse { fullName = "myorg/app" });
+
+            var (repo, _) = await CreateService().CreateRepository(new CreateRepositoryRequest { Name = "app", Organization = "myorg" });
+
+            repo.Should().NotBeNull();
+            _http.Verify(h => h.MakeHttpRequest<GithubRepositoryResponse>(It.IsAny<string>(), It.Is<string>(u => u.EndsWith("/orgs/myorg/repos")), HttpMethod.Post, It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), null), Times.Once);
+        }
+
+        [Fact]
+        public async Task CreateRepository_UnknownOrg_RefusedBeforeGithub()
+        {
+            // GitHub's 404 for "no access" and "doesn't exist" are the same;
+            // refusing here gives the owner a message they can act on.
+            _tokenRepo.Setup(t => t.getToken()).ReturnsAsync(Token());
+            var (repo, error) = await CreateService().CreateRepository(new CreateRepositoryRequest { Name = "app", Organization = "someone-else" });
+            repo.Should().BeNull();
+            error.Should().Contain("someone-else");
+            _http.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task CreateRepository_NameTaken_ExplainsTheCollision()
+        {
+            _tokenRepo.Setup(t => t.getToken()).ReturnsAsync(Token());
+            CreateReturns(HttpStatusCode.UnprocessableEntity);
+            var (repo, error) = await CreateService().CreateRepository(new CreateRepositoryRequest { Name = "app" });
+            repo.Should().BeNull();
+            error.Should().Contain("already exists");
         }
     }
 }

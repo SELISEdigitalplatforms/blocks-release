@@ -293,10 +293,96 @@ public class GithubService : IVersionControlService
         return (false, null);
     }
 
-    public async Task<bool> Clone(string repo)
+    public async Task<GitPushCredentialResponse?> GetPushCredential()
     {
+        var token = await _tokenRepository.getToken();
+        if (token is null || string.IsNullOrWhiteSpace(token.AccessToken))
+        {
+            return null;
+        }
 
-        return true;
+        // Validated on every call, not trusted from storage: a revoked token
+        // handed to a git client fails inside `git push` with a message the
+        // owner can't act on. Failing here instead lets the CLI say
+        // "reconnect GitHub" rather than "authentication failed".
+        if (!await ValidateAccessToken(token))
+        {
+            return null;
+        }
+
+        return new GitPushCredentialResponse
+        {
+            Token = token.AccessToken,
+            Login = token.UserName,
+            ExpiresAt = null,
+        };
     }
 
+    public async Task<(GithubRepositoryResponse? repo, string? error)> CreateRepository(CreateRepositoryRequest request)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.Name))
+        {
+            return (null, "A repository name is required.");
+        }
+
+        var token = await _tokenRepository.getToken();
+        if (token is null)
+        {
+            return (null, "GitHub is not connected for this user.");
+        }
+
+        // An org the token doesn't list is refused here rather than by
+        // GitHub, whose 404 for "no access to this org" is indistinguishable
+        // from "org doesn't exist".
+        string url;
+        if (!string.IsNullOrWhiteSpace(request.Organization))
+        {
+            var known = token.Organizations?.Any(o => string.Equals(o.OrgUserName, request.Organization, StringComparison.OrdinalIgnoreCase)) ?? false;
+            if (!known)
+            {
+                return (null, $"Organisation '{request.Organization}' is not one this GitHub account belongs to.");
+            }
+
+            url = $"{CloudBuildConstants.GITHUB_API_BASE_URI}/orgs/{request.Organization}/repos";
+        }
+        else
+        {
+            url = $"{CloudBuildConstants.GITHUB_API_BASE_URI}/user/repos";
+        }
+
+        var headers = new Dictionary<string, string>
+        {
+            { "Accept", "application/vnd.github.v3+json" },
+            { "User-Agent", "BlocksDevOps" },
+            { "Authorization", $"Bearer {token.AccessToken}" },
+        };
+
+        // auto_init deliberately false: the caller already has the code and
+        // a first commit. A GitHub-made README would give the remote a
+        // history the local one doesn't share, and the very first push
+        // would be rejected as non-fast-forward.
+        var payload = new
+        {
+            name = request.Name,
+            description = request.Description ?? string.Empty,
+            @private = request.Private,
+            auto_init = false,
+        };
+
+        var (repo, response) = await _httpHelperServices.MakeHttpRequest<GithubRepositoryResponse>(
+            CloudBuildConstants.GITHUB_API_BASE_URI, url, HttpMethod.Post, payload, headers, null);
+
+        if (response.StatusCode == HttpStatusCode.Created && repo is not null)
+        {
+            return (repo, null);
+        }
+
+        return response.StatusCode switch
+        {
+            HttpStatusCode.UnprocessableEntity => (null, $"GitHub refused to create '{request.Name}' — a repository with that name probably already exists."),
+            HttpStatusCode.Unauthorized => (null, "GitHub rejected the stored token. Reconnect GitHub and try again."),
+            HttpStatusCode.Forbidden => (null, "The connected GitHub account is not allowed to create repositories here."),
+            _ => (null, $"GitHub returned {(int)response.StatusCode} while creating the repository."),
+        };
+    }
 }

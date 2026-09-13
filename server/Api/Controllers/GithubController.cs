@@ -9,6 +9,7 @@ using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.Shared.Interfaces;
 using Devops.DomainService.VersionControlSystems.Interfaces;
 using Devops.DomainService.VersionControlSystems.Models.Request;
+using Devops.DomainService.VersionControlSystems.Models.Response;
 using Devops.DomainService.VersionControlSystems.Services;
 using Microsoft.AspNetCore.Mvc;
 namespace Api.Controllers;
@@ -106,14 +107,47 @@ public class GithubController: ControllerBase
             });
     }
 
-    [HttpGet("clone")]
-    [ProtectedEndPoint("blocks-release::github::clone")]
-    public async Task<ActionResult> Clone([FromQuery] string repo)
+    /// <summary>
+    /// The calling user's git credential for HTTPS push/fetch — what
+    /// `blocks git push` and Studio's post-run push authenticate with.
+    /// 404 when GitHub isn't connected, so the CLI can distinguish "connect
+    /// GitHub" from a genuine failure. Never logged; the body is the token.
+    /// </summary>
+    [HttpGet("credential")]
+    [ProtectedEndPoint("blocks-release::github::credential")]
+    public async Task<ActionResult> GetCredential()
     {
-        var result = await _githubService.Clone(repo);
-        if (result)
-            return Ok("Successfully cloned repo");
-        return BadRequest("Failed to clone repo");
+        var credential = await _githubService.GetPushCredential();
+        if (credential is null)
+        {
+            return NotFound(new BaseApiResponse
+            {
+                IsSuccess = false,
+                Message = "GitHub is not connected for this user, or the connection is no longer valid.",
+                StatusCode = HttpStatusCode.NotFound,
+            });
+        }
+
+        return Ok(credential);
+    }
+
+    /// <summary>Creates a GitHub repository for a project that has none yet — see <see cref="CreateRepositoryRequest"/>.</summary>
+    [HttpPost("repos")]
+    [ProtectedEndPoint("blocks-release::github::create-repo")]
+    public async Task<ActionResult> CreateRepo([FromBody] CreateRepositoryRequest request)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.Name))
+        {
+            return BadRequest(new BaseApiResponse { IsSuccess = false, Message = "A repository name is required.", StatusCode = HttpStatusCode.BadRequest });
+        }
+
+        var (repo, error) = await _githubService.CreateRepository(request);
+        if (repo is null)
+        {
+            return BadRequest(new BaseApiResponse { IsSuccess = false, Message = error, StatusCode = HttpStatusCode.BadRequest });
+        }
+
+        return Ok(new BaseApiResponse { IsSuccess = true, Data = repo, StatusCode = HttpStatusCode.OK });
     }
 
     [HttpPost("webhook")]

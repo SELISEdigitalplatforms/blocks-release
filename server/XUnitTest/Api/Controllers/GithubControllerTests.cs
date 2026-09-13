@@ -108,20 +108,54 @@ namespace XUnitTest.Api.Controllers
             body.IsSuccess.Should().BeTrue();
         }
 
-        // ---- Clone ----
+        // ---- GetCredential ----
 
         [Fact]
-        public async Task Clone_Success_ReturnsOk()
+        public async Task GetCredential_Connected_ReturnsOkWithCredential()
         {
-            _github.Setup(g => g.Clone("repo")).ReturnsAsync(true);
-            (await CreateController().Clone("repo")).Should().BeOfType<OkObjectResult>();
+            _github.Setup(g => g.GetPushCredential()).ReturnsAsync(new GitPushCredentialResponse { Token = "tok", Login = "octo" });
+            var result = await CreateController().GetCredential();
+            result.Should().BeOfType<OkObjectResult>()
+                  .Which.Value.Should().BeOfType<GitPushCredentialResponse>()
+                  .Which.Token.Should().Be("tok");
         }
 
         [Fact]
-        public async Task Clone_Failure_ReturnsBadRequest()
+        public async Task GetCredential_NotConnected_ReturnsNotFound_SoTheCliCanSayReconnect()
         {
-            _github.Setup(g => g.Clone("repo")).ReturnsAsync(false);
-            (await CreateController().Clone("repo")).Should().BeOfType<BadRequestObjectResult>();
+            _github.Setup(g => g.GetPushCredential()).ReturnsAsync((GitPushCredentialResponse)null);
+            (await CreateController().GetCredential()).Should().BeOfType<NotFoundObjectResult>();
+        }
+
+        // ---- CreateRepo ----
+
+        [Fact]
+        public async Task CreateRepo_NoName_ReturnsBadRequest_WithoutCallingGithub()
+        {
+            (await CreateController().CreateRepo(new CreateRepositoryRequest { Name = "" })).Should().BeOfType<BadRequestObjectResult>();
+            _github.Verify(g => g.CreateRepository(It.IsAny<CreateRepositoryRequest>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task CreateRepo_Created_ReturnsOkWithRepo()
+        {
+            _github.Setup(g => g.CreateRepository(It.IsAny<CreateRepositoryRequest>()))
+                   .ReturnsAsync((new GithubRepositoryResponse { fullName = "octo/app" }, (string)null));
+            var result = await CreateController().CreateRepo(new CreateRepositoryRequest { Name = "app" });
+            var body = result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<BaseApiResponse>().Which;
+            body.IsSuccess.Should().BeTrue();
+            body.Data.Should().BeOfType<GithubRepositoryResponse>().Which.fullName.Should().Be("octo/app");
+        }
+
+        [Fact]
+        public async Task CreateRepo_GithubRefused_ReturnsBadRequestWithTheReason()
+        {
+            _github.Setup(g => g.CreateRepository(It.IsAny<CreateRepositoryRequest>()))
+                   .ReturnsAsync(((GithubRepositoryResponse)null, "already exists"));
+            var result = await CreateController().CreateRepo(new CreateRepositoryRequest { Name = "app" });
+            result.Should().BeOfType<BadRequestObjectResult>()
+                  .Which.Value.Should().BeOfType<BaseApiResponse>()
+                  .Which.Message.Should().Contain("already exists");
         }
 
         // ---- CreateWebhook ----

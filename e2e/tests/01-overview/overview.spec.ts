@@ -3,45 +3,52 @@ import { sidebarNavItem } from "../../support/auth-helpers";
 import { e2eCredentials } from "../../support/env";
 import { openReleaseConsole, openReleaseOverview } from "../../support/release-helpers";
 
-/**
- * Console + Project Overview ("Project Details" / "Core APIs") as a single
- * end-to-end pass through the console → project → deployment nav.
- *
- * One top-level `test` is used (rather than separate tests per section) so the
- * whole file can be invoked as a single test invocation.
- *
- * Uses the shared project from suite.setup.spec.ts (one login per suite).
- * Does not log out: later suite tests reuse this same authenticated session.
- */
 test.describe("Console & Project Overview", () => {
   test("Console, Project Overview, and Deployment nav", async ({ page }) => {
-    // -------------------------------------------------------------------------
-    // Section 1: Console topbar (theme / language / notifications / app switcher /
-    // user menu)
-    // -------------------------------------------------------------------------
     await openReleaseConsole(page);
-    const themeTablist = page.getByRole("tablist").first();
-
-    const autoTab = themeTablist.locator('[aria-controls$="-content-system"]');
-    const lightTab = themeTablist.locator('[aria-controls$="-content-light"]');
-    const darkTab = themeTablist.locator('[aria-controls$="-content-dark"]');
-
-    const activeTab = themeTablist.locator('[role="tab"][data-state="active"]');
+    const themeSwitcher = page.getByRole("button", { name: /Change theme/i });
 
     await test.step("[Positive] theme switcher offers Auto/Light/Dark and has an active theme", async () => {
-      await expect(themeTablist).toBeVisible({ timeout: 30_000 });
-      await expect(autoTab).toBeVisible({ timeout: 30_000 });
-      await expect(lightTab).toBeVisible({ timeout: 30_000 });
-      await expect(darkTab).toBeVisible({ timeout: 30_000 });
-      await expect(activeTab).toHaveCount(1);
+      await expect(themeSwitcher).toBeVisible({ timeout: 30_000 });
+
+      await themeSwitcher.click();
+      const menu = page.getByRole("menu");
+      await expect(menu).toBeVisible({ timeout: 5_000 });
+      await expect(menu.getByRole("menuitemradio", { name: /Auto/ })).toBeVisible();
+      await expect(menu.getByRole("menuitemradio", { name: /Light/ })).toBeVisible();
+      await expect(menu.getByRole("menuitemradio", { name: /Dark/ })).toBeVisible();
+
+      const checked = menu.locator('[role="menuitemradio"][data-state="checked"]');
+      expect(await checked.count()).toBe(1);
+      await page.keyboard.press("Escape");
+      await expect(menu).toBeHidden();
     });
 
-    await test.step("[Positive] switching to Dark applies the dark theme", async () => {
-      await darkTab.click();
-      await expect(darkTab).toHaveAttribute("data-state", "active");
-      await expect(page.locator("html")).toHaveClass(/dark/);
-      await lightTab.click();
-      await expect(lightTab).toHaveAttribute("data-state", "active");
+    await test.step("[Positive] clicking a theme menu item applies light or dark", async () => {
+      const html = page.locator("html");
+      const wasDark = await html.evaluate((el) => el.classList.contains("dark"));
+
+      await themeSwitcher.click();
+      const menu = page.getByRole("menu");
+      await expect(menu).toBeVisible({ timeout: 5_000 });
+
+      await menu.getByRole("menuitemradio", { name: /Dark/ }).click();
+      await expect(html).toHaveClass(/dark/);
+
+      await themeSwitcher.click();
+      await expect(menu).toBeVisible({ timeout: 5_000 });
+      await menu.getByRole("menuitemradio", { name: /Light/ }).click();
+      await expect(html).not.toHaveClass(/dark/);
+
+      await themeSwitcher.click();
+      await expect(menu).toBeVisible({ timeout: 5_000 });
+      if (wasDark) {
+        await menu.getByRole("menuitemradio", { name: /Dark/ }).click();
+        await expect(html).toHaveClass(/dark/);
+      } else {
+        await menu.getByRole("menuitemradio", { name: /Light/ }).click();
+        await expect(html).not.toHaveClass(/dark/);
+      }
     });
 
     await test.step("[Positive] language selector shows EN and lists English/German/French", async () => {
@@ -73,11 +80,6 @@ test.describe("Console & Project Overview", () => {
       await expect(page.getByText("Notifications", { exact: true })).toBeVisible();
       await expect(page.getByRole("button", { name: "Mark all as read" })).toBeVisible();
 
-      // Scope the row lookup to the popover area: the "Notifications" heading
-      // is in the popover header, and rows are clickable divs rendered after
-      // it. The Radix popover's accessible name comes from the trigger button
-      // (not from the "Notifications" text), so use a text-based root instead
-      // of getByRole("dialog", { name: "Notifications" }).
       const popoverRoot = page
         .locator("div")
         .filter({ has: page.getByText("Notifications", { exact: true }) })
@@ -89,7 +91,6 @@ test.describe("Console & Project Overview", () => {
         .first();
       if (await firstRow.isVisible({ timeout: 1_000 }).catch(() => false)) {
         await firstRow.click();
-        // Re-open the popover if the click navigated away.
         const stillOpen = await page
           .getByRole("button", { name: "Mark all as read" })
           .isVisible()
@@ -108,9 +109,6 @@ test.describe("Console & Project Overview", () => {
       await appSwitcher.click();
       await expect(page.getByText("SELISE Blocks", { exact: true })).toBeVisible();
 
-      // Confirm the popover lists at least one app entry. We don't pin
-      // specific app names because the list is rendered from a
-      // tenant-supplied catalog and varies by environment.
       const popoverLinks = page.locator("a, button").filter({
         has: page.getByText(/Release|OS|IAM|Studio|Monitor|Logic|Data|Utilities|Agents/i),
       });
@@ -128,10 +126,6 @@ test.describe("Console & Project Overview", () => {
       await expect(userMenu.getByText("Log out", { exact: true })).toBeVisible();
       await expect(userMenu.getByRole("menuitem", { name: "My Profile" })).toBeVisible();
 
-      // Account metadata rendered as plain text under the initials avatar.
-      // Email is asserted against the configured credential (not hardcoded);
-      // the role and display name are checked for presence and non-emptiness
-      // because the backend's values are tenant-specific.
       const { email } = e2eCredentials();
       await expect(userMenu.getByText(email, { exact: true })).toBeVisible();
       const userNameLine = userMenu.locator("p").filter({ hasText: "User name:" });
@@ -145,25 +139,19 @@ test.describe("Console & Project Overview", () => {
       await page.keyboard.press("Escape");
     });
 
-    // -------------------------------------------------------------------------
-    // Section 2: Console project list (sections rendered below the project
-    // cards).
-    // -------------------------------------------------------------------------
     await test.step("[Positive] Your Blocks Projects section lists at least one project", async () => {
       await expect(page.getByRole("heading", { name: "Your Blocks Projects" })).toBeVisible();
       await expect(page.getByText("Add Project", { exact: true })).toBeVisible();
     });
 
-    await test.step("[Positive] Resources section (Docs/Code/Cloud) is visible", async () => {
+    await test.step("[Positive] Resources section exposes three cards (Read Docs, Install CLI, Bootstrap)", async () => {
       await expect(page.getByText("Resources", { exact: true })).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Docs", exact: true })).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Code", exact: true })).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Cloud", exact: true })).toBeVisible();
+      const resourceCards = page
+        .locator("h1, h2, h3, h4, h5, h6")
+        .filter({ hasText: /(Read Docs|Install CLI|Bootstrap)/ });
+      await expect(resourceCards).toHaveCount(3);
     });
 
-    // -------------------------------------------------------------------------
-    // Section 3: Project Overview → Project Details → Core APIs.
-    // -------------------------------------------------------------------------
     await openReleaseOverview(page);
 
     await test.step("[Positive] Project Details card shows core metadata fields", async () => {
@@ -212,18 +200,11 @@ test.describe("Console & Project Overview", () => {
       const buildGroup = page.getByRole("button", { name: "Build" });
       await expect(buildGroup).toHaveAttribute("aria-expanded", "false");
 
-      // Expand and assert the endpoint list is reachable.
       await buildGroup.click();
       await expect(buildGroup).toHaveAttribute("aria-expanded", "true");
-      // The first endpoint is the bare "/api/Build" call. Assert its URL fragment
-      // is rendered to confirm the group body is visible.
       const buildEndpointText = page.getByText("/api/Build").first();
       await expect(buildEndpointText).toBeVisible({ timeout: 5_000 });
 
-      // Scope the per-endpoint Copy button to the Build row. The whole
-      // Core APIs section has many Copy buttons (X-Blocks-Key, every endpoint
-      // in every group) — we want the one that sits next to the "Build /api/Build"
-      // entry. Walk up from the URL text to find its sibling Copy button.
       await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
       const buildRow = buildEndpointText.locator(
         'xpath=ancestor::*[.//*[@aria-label="Copy" or normalize-space(text())="Copy as cURL"]][1]',
@@ -236,7 +217,6 @@ test.describe("Console & Project Overview", () => {
         expect(text.trim().length).toBeGreaterThan(0);
       }).toPass({ timeout: 5_000 });
 
-      // Collapse again to leave the section in its original state.
       await buildGroup.click();
       await expect(buildGroup).toHaveAttribute("aria-expanded", "false");
     });
@@ -246,9 +226,6 @@ test.describe("Console & Project Overview", () => {
       await expect(page.getByRole("button", { name: /Environment/i })).toBeVisible();
     });
 
-    // -------------------------------------------------------------------------
-    // Section 4: Deployment nav from Project Overview.
-    // -------------------------------------------------------------------------
     await test.step("[Positive] Deployment nav item switches to the Deployment section", async () => {
       await sidebarNavItem(page, "Deployment").click();
       await expect(page.getByRole("heading", { name: "Deployment Overview" })).toBeVisible();

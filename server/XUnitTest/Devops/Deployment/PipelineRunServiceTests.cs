@@ -971,6 +971,33 @@ namespace XUnitTest.Devops.Deployment
             SubmittedExtraArgs().Select(x => x?.ToString()).Should().Contain("VITE_BLOCKS_EXTRA_ARG=NBM");
         }
 
+        [Fact]
+        public async Task CreateNamespaceAsync_AnonymousTenantContext_DoesNotBlockSecretRead()
+        {
+            BlocksContext.SetContext(BlocksContext.Create(
+                "tenant-1", roles: [], userId: null, isAuthenticated: false,
+                requestUri: "webhook", organizationId: "default",
+                expireOn: DateTime.UtcNow.AddMinutes(5), email: null,
+                permissions: [], userName: null, phoneNumber: null,
+                displayName: null, oauthToken: null, originalTenantId: "tenant-1"));
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
+            var repo = NewRepo();
+            repo.SecretStoreItemId = "secret-1";
+            BlocksContext seen = null;
+            _repoSecrets.Setup(r => r.GetValueAsync("repo-1", It.IsAny<CancellationToken>()))
+                .Callback(() => seen = BlocksContext.GetContext())
+                .ReturnsAsync(new RepoSecretValueResponse { RepoId = "repo-1" });
+
+            var (_, _, _, error) = await ServiceWithRepoSecrets()
+                .CreateNamespaceAsync(repo, "tenant-1", "user-1");
+
+            error.Should().BeNull();
+            seen.IsAuthenticated.Should().BeTrue();
+            seen.TenantId.Should().Be("tenant-1");
+            BlocksContext.GetContext().IsAuthenticated.Should().BeFalse();
+        }
+
         /// <summary>
         /// The first-run state. The pointer on the repository is checked before the service, so a
         /// repository without secrets costs no vault call and leaves no audit entry.

@@ -84,7 +84,8 @@ namespace Devops.DomainService.Deployment.Services
                 // Signed webhooks have no HTTP identity. Resolve the repository secret under
                 // this build's tenant, never under an unrelated ambient request context.
                 var context = BlocksContext.GetContext();
-                var value = string.Equals(context?.TenantId, tenantId, StringComparison.OrdinalIgnoreCase)
+                var value = context?.IsAuthenticated == true
+                    && string.Equals(context.TenantId, tenantId, StringComparison.OrdinalIgnoreCase)
                     ? await repoSecrets.GetValueAsync(repo.ItemId)
                     : await BlocksContext.ExecuteInContext(
                         BlocksContext.Create(

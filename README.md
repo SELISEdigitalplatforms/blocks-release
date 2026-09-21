@@ -174,13 +174,15 @@ Copy `client/.env.example` to `client/.env`. Vite loads variables prefixed with 
 | Variable                      | Role                                                                                                                                                                                                                                      |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `BLOCKS_APP_URL`              | Public app origin; surfaced at runtime via `window.__BLOCKS_ENV__` / `import.meta.env` (see `client/app/lib/runtime-env.ts`, `client/index.html`).                                                                                        |
-| `BLOCKS_API_BASE_URL`         | Base URL for API calls; in **`npm run dev`**, when set, enables the **`server.proxy`** rules in `client/vite.config.ts` (paths such as `/api`, `/cloudbuild`, `/idp`, …). Used in `client/app/lib/get-api-path.ts` for composed API URLs. |
+| `BLOCKS_API_BASE_URL`         | External backend target for the **`npm run dev`** proxy in `client/vite.config.ts` (paths such as `/api`, `/cloudbuild`, `/idp`, …); browser API URLs use the current page origin. |
 | `BLOCKS_X_BLOCKS_KEY`         | Injected into the published shell for client/runtime use (placeholder replacement on the server).                                                                                                                                         |
 | `BLOCKS_GOOGLE_SITE_KEY`      | Injected for captcha-related flows.                                                                                                                                                                                                       |
 | `BLOCKS_CONSTRUCT_URL`        | Injected construct/builder URL token.                                                                                                                                                                                                     |
 | `BLOCKS_GITHUB_SSO_CLIENT_ID` | Injected GitHub SSO client id.                                                                                                                                                                                                            |
 
-When the API serves a **built** SPA from `wwwroot`, `server/Api/Program.cs` runs **`DotNetEnv.Env.Load()`** and replaces placeholders such as `__BLOCKS_API_BASE_URL__` in `.html`, `.js`, `.css`, and `.json` under `wwwroot` with non-empty environment values. Match those names to deployment secrets or env files on the host.
+When the API serves a **built** SPA from `wwwroot`, `server/Api/Program.cs` replaces placeholders such as `__BLOCKS_API_BASE_URL__` in `.html`, `.js`, `.css`, and `.json` with non-empty values from the `FrontendRuntime` configuration section. Environment variables named `FrontendRuntime__BLOCKS_*` can override those values at deployment.
+
+In the browser, `BLOCKS_API_BASE_URL` resolves to `window.location.origin` so Release API calls use the host that served the page, including its scheme and port. The configured value remains the Vite proxy target during local development and is available to non-browser callers.
 
 **Server-only (not in `.env.example`)**
 

@@ -4,7 +4,6 @@ import { OIDCPermissionWrapper } from "@blocks-idp/authentication/pages/oidc/per
 import { OIDCSignin } from "@blocks-idp/authentication/pages/oidc/oidc-signin";
 import { authService } from "@blocks-idp/authentication/services/auth.service";
 import { useAuthStore } from "@/store/auth.store";
-import { getRuntimeEnv } from "@/lib/runtime-env";
 import { Loader } from "lucide-react";
 
 export default function OidcIndexPage() {
@@ -24,11 +23,12 @@ export default function OidcIndexPage() {
     authService
       .verifyOidc({ code, state })
       .then((res) => {
-        const isLocalhost = getRuntimeEnv("BLOCKS_API_BASE_URL")?.includes(
-          "localhost",
-        );
+        const isLocalDevelopment =
+          import.meta.env.DEV ||
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1";
 
-        if (isLocalhost && res.access_token && res.refresh_token) {
+        if (isLocalDevelopment && res.access_token && res.refresh_token) {
           setTokens(res.access_token, res.refresh_token);
         }
         setAuthenticated();

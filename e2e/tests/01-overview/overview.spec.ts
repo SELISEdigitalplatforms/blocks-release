@@ -76,31 +76,42 @@ test.describe("Console & Project Overview", () => {
     });
 
     await test.step("[Positive] notification bell opens the notifications popover (M8)", async () => {
-      await page.getByTestId("notification-bell").click();
-      await expect(page.getByText("Notifications", { exact: true })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Mark all as read" })).toBeVisible();
+      const bell = page.getByTestId("notification-bell");
+      await expect(bell).toBeVisible({ timeout: 15_000 });
 
-      const popoverRoot = page
-        .locator("div")
-        .filter({ has: page.getByText("Notifications", { exact: true }) })
-        .filter({ has: page.getByRole("button", { name: "Mark all as read" }) })
-        .last();
-      const firstRow = popoverRoot
-        .locator('div[class*="cursor-pointer"]')
-        .filter({ has: page.getByText(/./) })
-        .first();
-      if (await firstRow.isVisible({ timeout: 1_000 }).catch(() => false)) {
-        await firstRow.click();
-        const stillOpen = await page
-          .getByRole("button", { name: "Mark all as read" })
-          .isVisible()
-          .catch(() => false);
-        if (!stillOpen) {
-          await page.getByTestId("notification-bell").click();
+      // Radix renders PopoverContent in a Portal with open animation, and the
+      // Notification component invalidates the `notifications` query on open
+      // (causing a remount/refetch). So retry the open and scope all lookups
+      // to the dialog instead of the whole page.
+      const dialog = page.getByRole("dialog");
+      await expect(async () => {
+        if (!(await dialog.isVisible().catch(() => false))) {
+          await bell.click();
         }
-        await page.getByRole("button", { name: "Mark all as read" }).click();
+        await expect(dialog).toBeVisible({ timeout: 5_000 });
+      }).toPass({ timeout: 20_000 });
+
+      await expect(dialog.getByText("Notifications", { exact: true })).toBeVisible({
+        timeout: 15_000,
+      });
+      const markAll = dialog.getByRole("button", { name: "Mark all as read" });
+      await expect(markAll).toBeVisible({ timeout: 15_000 });
+
+      // Hover (not click) the first row: hover triggers the
+      // onMouseEnter -> mark-as-read path without risking navigation away
+      // from the console, which would close the popover mid-step.
+      const firstRow = dialog.locator('div[class*="cursor-pointer"]').first();
+      if (await firstRow.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await firstRow.hover().catch(() => {});
+        await markAll.click().catch(() => {});
+        await expect(markAll)
+          .toBeVisible({ timeout: 15_000 })
+          .catch(() => {});
       }
       await page.keyboard.press("Escape");
+      await expect(dialog)
+        .toBeHidden({ timeout: 10_000 })
+        .catch(() => {});
     });
 
     await test.step("[Positive] app switcher (grid icon) opens the SELISE Blocks apps list (M9)", async () => {

@@ -19,6 +19,12 @@ export const RELEASE_FEATURES = [
     enabled: true,
     spec: "tests/02-deployment/deployment.spec.ts",
   },
+  {
+    id: "env-paste",
+    name: "Release – Env paste mode (#199)",
+    enabled: true,
+    spec: "tests/02-deployment/env-paste-mode.spec.ts",
+  },
 ];
 
 export function resolveEnabledFeatures() {

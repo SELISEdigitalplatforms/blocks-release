@@ -103,12 +103,12 @@ const secretsFromValues = (
  * the defaults and discards the previous attempt, which is why there is no reset effect here.
  */
 
-const FIELD_MAPPABLE_REASONS = new Set([
+const FIELD_MAPPABLE_REASONS = new Set<string>([
   REPO_SECRET_ERROR.KeyInvalid,
   REPO_SECRET_ERROR.ValueType,
 ]);
 
-const FORM_LEVEL_REASONS = new Set([
+const FORM_LEVEL_REASONS = new Set<string>([
   REPO_SECRET_ERROR.SecretsRequired,
   REPO_SECRET_ERROR.TooLarge,
   REPO_SECRET_ERROR.VaultFailure,
@@ -206,10 +206,11 @@ const SecretForm = ({
     const parsed = secretsFromValues(mode, form.getValues());
 
     if (!parsed.ok) {
-      if (mode === "json") {
-        form.setError("json", { type: "manual", message: parsed.message });
-      } else if (mode === "env") {
-        form.setError("env", { type: "manual", message: parsed.message });
+      if (mode !== "kv") {
+        form.setError(fieldForMode(mode), {
+          type: "manual",
+          message: parsed.message,
+        });
       }
       return;
     }
@@ -240,10 +241,11 @@ const SecretForm = ({
 
     // The resolver already proved paste modes parse; the guard narrows the type.
     if (!parsed.ok) {
-      if (values.mode === "json") {
-        form.setError("json", { type: "manual", message: parsed.message });
-      } else if (values.mode === "env") {
-        form.setError("env", { type: "manual", message: parsed.message });
+      if (values.mode !== "kv") {
+        form.setError(fieldForMode(values.mode), {
+          type: "manual",
+          message: parsed.message,
+        });
       }
       return;
     }

@@ -321,7 +321,24 @@ describe("SecretFormModal", () => {
 
     expect(await screen.findByText(/Line 1: expected KEY=VALUE/i)).toBeInTheDocument();
     expect(save.mutateAsync).not.toHaveBeenCalled();
+  }
+  it("refuses to leave Env mode while the paste is invalid", async () => {
+    renderModal();
+
+    await userEvent.click(screen.getByRole("radio", { name: /^env$/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /^env/i }), {
+      target: { value: "not-a-valid-line" },
+    });
+    await userEvent.click(screen.getByRole("radio", { name: /key \/ value/i }));
+
+    expect(screen.getByRole("radio", { name: /^env$/i })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByText(/expected KEY=VALUE/i)).toBeInTheDocument();
   });
+
+);
 
   it("routes a server key error onto the env field", async () => {
     mockSave({

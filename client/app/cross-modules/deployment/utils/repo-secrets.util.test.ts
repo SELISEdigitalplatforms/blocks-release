@@ -4,8 +4,10 @@ import {
   findDuplicateKey,
   getServerMessage,
   getServerReason,
+  mapToEnv,
   mapToJson,
   mapToRows,
+  parseSecretEnv,
   parseSecretJson,
   rowsToMap,
   validateSecretKey,
@@ -136,5 +138,93 @@ describe("server error extraction", () => {
   it("returns null for an error with no envelope", () => {
     expect(getServerReason(new Error("boom"))).toBeNull();
     expect(getServerMessage(new Error("boom"))).toBeNull();
+  });
+});
+
+describe("parseSecretEnv", () => {
+  it("parses well-formed .env text (empty values, comments, blanks)", () => {
+    const result = parseSecretEnv(`# comment
+BLOCKS_APP_URL=
+
+BLOCKS_API_BASE_URL=https://api.blocks.cloud
+BLOCKS_X_BLOCKS_KEY=abc123
+`);
+
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        BLOCKS_APP_URL: "",
+        BLOCKS_API_BASE_URL: "https://api.blocks.cloud",
+        BLOCKS_X_BLOCKS_KEY: "abc123",
+      },
+    });
+  });
+
+  it("trims the key but keeps the value literal after the first =", () => {
+    expect(parseSecretEnv("BLOCKS_IDP_BASE_URL =https://iam.seliseblocks.com")).toEqual({
+      ok: true,
+      value: { BLOCKS_IDP_BASE_URL: "https://iam.seliseblocks.com" },
+    });
+  });
+
+  it("splits on the first = only so values may contain =", () => {
+    expect(
+      parseSecretEnv("BLOCKS_CALLBACK_URL=https://app.blocks.cloud/cb?x=1&y=2"),
+    ).toEqual({
+      ok: true,
+      value: { BLOCKS_CALLBACK_URL: "https://app.blocks.cloud/cb?x=1&y=2" },
+    });
+  });
+
+  it("rejects blank input", () => {
+    const empty = parseSecretEnv("");
+    expect(empty.ok).toBe(false);
+    expect(empty.ok === false && empty.message).toBe(
+      "Paste .env-formatted text, e.g. KEY=value.",
+    );
+    expect(parseSecretEnv("   ").ok).toBe(false);
+  });
+
+  it("rejects comments-only input", () => {
+    const result = parseSecretEnv("# only\n\n# comments");
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.message).toBe("Add at least one variable.");
+  });
+
+  it("rejects a line with no =", () => {
+    const result = parseSecretEnv("BLOCKS_APP_URL=https://a.com\nNOT_A_VARIABLE");
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.message).toBe("Line 2: expected KEY=VALUE.");
+  });
+
+  it("rejects an invalid key with validateSecretKey wording", () => {
+    const result = parseSecretEnv("1BLOCKS_KEY=abc");
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.message).toContain('key "1BLOCKS_KEY"');
+    expect(result.ok === false && result.message).toContain(
+      "Start with a letter or underscore",
+    );
+  });
+
+  it("rejects a duplicate key naming both lines", () => {
+    const result = parseSecretEnv("A=1\nA=2");
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.message).toBe(
+      'Line 2: key "A" was already set on line 1.',
+    );
+  });
+
+  it("rejects a set over the vault size limit", () => {
+    const value = "x".repeat(REPO_SECRET_MAX_BYTES);
+    const result = parseSecretEnv(`K=${value}`);
+
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.message).toContain("maximum");
+  });
+});
+
+describe("mapToEnv", () => {
+  it("serializes a map as KEY=value lines in entry order", () => {
+    expect(mapToEnv({ A: "1", B: "" })).toBe("A=1\nB=");
   });
 });

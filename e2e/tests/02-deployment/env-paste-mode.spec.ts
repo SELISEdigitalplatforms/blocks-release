@@ -1,5 +1,9 @@
 import { test, expect } from "../../support/test-base";
-import { openReleaseDeployment } from "../../support/release-helpers";
+import {
+  openReleaseDeployment,
+  connectFirstRepository,
+  hasLinkedRepository,
+} from "../../support/release-helpers";
 
 /**
  * Env paste mode for the Environment Variables dialog (#199).
@@ -21,6 +25,10 @@ const SAMPLE_ENV = [
 
 async function openRepoDetails(page: import("@playwright/test").Page) {
   await openReleaseDeployment(page);
+
+  if (!(await hasLinkedRepository(page))) {
+    await connectFirstRepository(page);
+  }
 
   const repoCard = page.getByRole("button").filter({ hasText: "Deploys for" }).first();
   if (!(await repoCard.isVisible().catch(() => false))) {

@@ -18,6 +18,6 @@ export const SecretJsonEditor = ({ form, disabled }: SecretJsonEditorProps) => (
     name="json"
     label="JSON"
     description="A flat object of text values. Nested objects, arrays and numbers are not accepted."
-    placeholder={'{\n  "API_KEY": "value",\n  "DB_PASSWORD": "value"\n}'}
+    placeholder={'{\n  "FEATURE_FLAG": "enabled",\n  "REGION": "eu"\n}'}
   />
 );

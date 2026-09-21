@@ -18,7 +18,7 @@ export const SecretEnvEditor = ({ form, disabled }: SecretEnvEditorProps) => (
     name="env"
     label="Env"
     description="One KEY=value per line. Blank lines and # comments are ignored. Values are kept exactly as written after the first =."
-    placeholder={"API_KEY=value\nDB_PASSWORD=value"}
+    placeholder={"FEATURE_FLAG=enabled\nREGION=eu"}
     aria-label="Environment variables as env"
   />
 );

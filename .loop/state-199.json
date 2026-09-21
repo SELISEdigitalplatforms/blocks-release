@@ -7,10 +7,10 @@
   "baseSha": "2390d97443d320b42c650c85a3f6c73ccf454441",
   "branch": "inception",
   "itemId": "PVTI_lADOAXWBR84BZkJEzg76QUo",
-  "updatedAt": "2026-09-21T10:29:45Z",
+  "updatedAt": "2026-09-21T10:33:44Z",
   "evidence": {
     "planReviewCycles": 1,
-    "commitSha": "1846306",
+    "commitSha": "88ae3ce",
     "prNumber": 200,
     "approvals": [
       {
@@ -48,7 +48,8 @@
         "CPD duplication on Env/JSON editors via shared secret-paste-field",
         "security hotspots: API_KEY/DB_PASSWORD placeholders scrubbed to FEATURE_FLAG/REGION"
       ],
-      "passingRun": "https://github.com/SELISEdigitalplatforms/blocks-release/actions/runs/35586666190"
+      "passingRun": "https://github.com/SELISEdigitalplatforms/blocks-release/actions/runs/35586666190",
+      "passingJob": "https://github.com/SELISEdigitalplatforms/blocks-release/actions/runs/35589052860/job/106299078529"
     },
     "e2e": {
       "url": "https://dev-release-200.blocksdevelopers.com",
@@ -61,6 +62,7 @@
       "skipped": 0,
       "note": "Env paste feature suite + deployment regression against preview; API stubs used when GitHub OAuth cannot link a repo."
     },
-    "authorTagged": true
+    "authorTagged": true,
+    "boardStatus": "In Review"
   }
 }

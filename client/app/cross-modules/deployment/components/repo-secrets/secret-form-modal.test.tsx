@@ -321,7 +321,8 @@ describe("SecretFormModal", () => {
 
     expect(await screen.findByText(/Line 1: expected KEY=VALUE/i)).toBeInTheDocument();
     expect(save.mutateAsync).not.toHaveBeenCalled();
-  }
+  });
+
   it("refuses to leave Env mode while the paste is invalid", async () => {
     renderModal();
 
@@ -337,8 +338,6 @@ describe("SecretFormModal", () => {
     );
     expect(screen.getByText(/expected KEY=VALUE/i)).toBeInTheDocument();
   });
-
-);
 
   it("routes a server key error onto the env field", async () => {
     mockSave({

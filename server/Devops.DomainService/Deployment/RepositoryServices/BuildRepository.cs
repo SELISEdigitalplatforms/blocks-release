@@ -14,14 +14,12 @@ public class BuildRepository : IBuildRepository
     private readonly IConfiguration _configuration;
     private readonly IDbContextProvider _dbContextProvider;
     private readonly IBlocksSecret _blocksSecret;
-    private readonly IMongoCollection<Build> _buildsCollection;
     public BuildRepository(IDbContextProvider dbContextProvider, ILogger<BuildRepository> logger, IConfiguration configuration, IBlocksSecret blocksSecret)
     {
         _logger = logger;
         _configuration = configuration;
         _dbContextProvider = dbContextProvider;
         _blocksSecret = blocksSecret;
-        _buildsCollection = _dbContextProvider.GetCollection<Build>("Builds");
     }
 
     public async Task<Build?> GetBuild(string buildId)
@@ -140,7 +138,7 @@ public class BuildRepository : IBuildRepository
         try
         {
             var _dbContext = _dbContextProvider.GetDatabase(_configuration["RootTenantId"]);
-            var providersCollection = _dbContextProvider.GetCollection<HostingProvider>("HostingProviders");
+            var providersCollection = _dbContext.GetCollection<HostingProvider>("HostingProviders");
 
             var filter = Builders<HostingProvider>.Filter.Eq(p => p.Status, "active");
 

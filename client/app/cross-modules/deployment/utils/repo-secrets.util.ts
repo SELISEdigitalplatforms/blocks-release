@@ -225,9 +225,10 @@ export const getServerMessage = (error: unknown): string | null => {
   if (!isErrorWithErrors(error)) return null;
 
   for (const [key, value] of Object.entries(error.errors)) {
-    if (key === "reason") continue;
-    if (typeof value === "string") return value;
-    if (Array.isArray(value) && value.length > 0) return value.join(", ");
+    if (key !== "reason") {
+      if (typeof value === "string") return value;
+      if (Array.isArray(value) && value.length > 0) return value.join(", ");
+    }
   }
 
   return null;

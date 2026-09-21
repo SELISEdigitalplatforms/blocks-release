@@ -1,14 +1,6 @@
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui-kits/form/form";
-import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import type { UseFormReturn } from "react-hook-form";
 import type { ISecretFormValues } from "./secret-form-values";
+import { SecretPasteField } from "./secret-paste-field";
 
 type SecretJsonEditorProps = {
   form: UseFormReturn<ISecretFormValues>;
@@ -20,30 +12,12 @@ type SecretJsonEditorProps = {
  * row would be the slower path.
  */
 export const SecretJsonEditor = ({ form, disabled }: SecretJsonEditorProps) => (
-  <FormField
-    control={form.control}
+  <SecretPasteField
+    form={form}
+    disabled={disabled}
     name="json"
-    render={({ field }) => (
-      <FormItem>
-        <FormLabel>
-          JSON <span className="text-destructive">*</span>
-        </FormLabel>
-        <FormControl>
-          <Textarea
-            {...field}
-            rows={12}
-            spellCheck={false}
-            disabled={disabled}
-            className="font-mono text-sm"
-            placeholder={'{\n  "API_KEY": "value",\n  "DB_PASSWORD": "value"\n}'}
-          />
-        </FormControl>
-        <FormDescription>
-          A flat object of text values. Nested objects, arrays and numbers are
-          not accepted.
-        </FormDescription>
-        <FormMessage />
-      </FormItem>
-    )}
+    label="JSON"
+    description="A flat object of text values. Nested objects, arrays and numbers are not accepted."
+    placeholder={'{\n  "API_KEY": "value",\n  "DB_PASSWORD": "value"\n}'}
   />
 );

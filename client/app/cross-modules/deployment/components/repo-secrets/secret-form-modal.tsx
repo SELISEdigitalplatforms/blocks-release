@@ -15,14 +15,17 @@ import { useSaveRepoSecrets } from "@blocks-deployment/hooks/use-repo-secrets";
 import {
   getServerMessage,
   getServerReason,
+  mapToEnv,
   mapToJson,
   mapToRows,
+  parseSecretEnv,
   parseSecretJson,
   rowsToMap,
 } from "@blocks-deployment/utils/repo-secrets.util";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { SecretEnvEditor } from "./secret-env-editor";
 import { SecretJsonEditor } from "./secret-json-editor";
 import { SecretKvEditor } from "./secret-kv-editor";
 import {
@@ -83,6 +86,7 @@ const SecretForm = ({
       mode: "kv",
       rows: initialSecrets ? mapToRows(initialSecrets) : [emptyRow],
       json: initialSecrets ? mapToJson(initialSecrets) : "",
+      env: initialSecrets ? mapToEnv(initialSecrets) : "",
     },
   });
 
@@ -95,43 +99,67 @@ const SecretForm = ({
 
   /**
    * Carries content across a mode switch instead of clearing it — losing typed input is the
-   * worst thing this screen could do. Switching to rows is refused while the JSON does not
+   * worst thing this screen could do. Leaving a paste mode is refused while its text does not
    * parse, because there is nothing to convert.
    */
   const switchMode = (next: SecretEntryMode) => {
     if (next === mode) return;
 
-    if (next === "json") {
-      form.setValue("json", mapToJson(rowsToMap(form.getValues("rows"))));
-      form.setValue("mode", "json");
-      form.clearErrors();
-      return;
+    let secrets: RepoSecretMap;
+
+    if (mode === "env") {
+      const parsed = parseSecretEnv(form.getValues("env"));
+
+      if (!parsed.ok) {
+        form.setError("env", { type: "manual", message: parsed.message });
+        return;
+      }
+
+      secrets = parsed.value;
+    } else if (mode === "json") {
+      const parsed = parseSecretJson(form.getValues("json"));
+
+      if (!parsed.ok) {
+        form.setError("json", { type: "manual", message: parsed.message });
+        return;
+      }
+
+      secrets = parsed.value;
+    } else {
+      // kv — convert rows as-is (same as the previous kv → json path)
+      secrets = rowsToMap(form.getValues("rows"));
     }
 
-    const parsed = parseSecretJson(form.getValues("json"));
-
-    if (!parsed.ok) {
-      form.setError("json", { type: "manual", message: parsed.message });
-      return;
+    if (next === "kv") {
+      const rows = mapToRows(secrets);
+      fieldArray.replace(rows.length > 0 ? rows : [emptyRow]);
+    } else if (next === "json") {
+      form.setValue("json", mapToJson(secrets));
+    } else {
+      form.setValue("env", mapToEnv(secrets));
     }
 
-    fieldArray.replace(mapToRows(parsed.value));
-    form.setValue("mode", "kv");
+    form.setValue("mode", next);
     form.clearErrors();
   };
 
   /** Routes a server reason code back onto the field that caused it (FRONTEND_DESIGN §6). */
   const applyServerError = (error: unknown) => {
     const reason = getServerReason(error);
-    const message = getServerMessage(error) ?? "The environment variables could not be saved.";
+    const message =
+      getServerMessage(error) ?? "The environment variables could not be saved.";
 
     const fieldMappable =
       reason === REPO_SECRET_ERROR.KeyInvalid ||
       reason === REPO_SECRET_ERROR.ValueType;
 
     if (fieldMappable) {
-      if (form.getValues("mode") === "json") {
+      const currentMode = form.getValues("mode");
+
+      if (currentMode === "json") {
         form.setError("json", { type: "server", message });
+      } else if (currentMode === "env") {
+        form.setError("env", { type: "server", message });
       } else {
         form.setError("rows.0.key", { type: "server", message });
       }
@@ -167,13 +195,24 @@ const SecretForm = ({
       }
 
       secrets = parsed.value;
+    } else if (values.mode === "env") {
+      const parsed = parseSecretEnv(values.env);
+
+      if (!parsed.ok) {
+        form.setError("env", { type: "manual", message: parsed.message });
+        return;
+      }
+
+      secrets = parsed.value;
     } else {
       secrets = rowsToMap(values.rows);
     }
 
     try {
       await saveMutation.mutateAsync({ repoId, secrets });
-      showSuccessToast({ description: "Environment variables saved successfully" });
+      showSuccessToast({
+        description: "Environment variables saved successfully",
+      });
       onOpenChange(false);
     } catch (error) {
       // Deliberately leaves the dialog open so the user's input survives the failure.
@@ -222,6 +261,16 @@ const SecretForm = ({
               onClick={() => switchMode("json")}>
               Paste JSON
             </Button>
+            <Button
+              type="button"
+              role="radio"
+              aria-checked={mode === "env"}
+              size="sm"
+              variant={mode === "env" ? "secondary" : "ghost"}
+              disabled={isPending}
+              onClick={() => switchMode("env")}>
+              Env
+            </Button>
           </div>
 
           {formError && (
@@ -238,8 +287,10 @@ const SecretForm = ({
               fieldArray={fieldArray}
               disabled={isPending}
             />
-          ) : (
+          ) : mode === "json" ? (
             <SecretJsonEditor form={form} disabled={isPending} />
+          ) : (
+            <SecretEnvEditor form={form} disabled={isPending} />
           )}
 
           {form.formState.errors.rows?.message && (

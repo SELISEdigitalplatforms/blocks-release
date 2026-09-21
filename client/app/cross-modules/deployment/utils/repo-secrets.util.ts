@@ -98,6 +98,72 @@ export const parseSecretJson = (text: string): ParseResult => {
 };
 
 /**
+ * Parses pasted .env-style text into a validated map.
+ *
+ * Blank lines and #-comment lines are skipped. Keys are trimmed; values are kept exactly as
+ * written after the first "=" (no trim, no quote-stripping). Fail-loud: any bad line rejects
+ * the whole paste.
+ */
+export const parseSecretEnv = (text: string): ParseResult => {
+  if (!text.trim()) {
+    return { ok: false, message: "Paste .env-formatted text, e.g. KEY=value." };
+  }
+
+  const lines = text.split(/\r?\n/);
+  const value: RepoSecretMap = {};
+  const firstLineByKey = new Map<string, number>();
+
+  for (let i = 0; i < lines.length; i++) {
+    const lineNum = i + 1;
+    const line = lines[i];
+
+    if (!line.trim()) continue;
+    if (/^\s*#/.test(line)) continue;
+
+    const eq = line.indexOf("=");
+
+    if (eq === -1) {
+      return { ok: false, message: `Line ${lineNum}: expected KEY=VALUE.` };
+    }
+
+    const key = line.slice(0, eq).trim();
+    const rawValue = line.slice(eq + 1);
+    const keyError = validateSecretKey(key);
+
+    if (keyError) {
+      return {
+        ok: false,
+        message: `Line ${lineNum}, key "${key}": ${keyError}`,
+      };
+    }
+
+    if (firstLineByKey.has(key)) {
+      const first = firstLineByKey.get(key)!;
+
+      return {
+        ok: false,
+        message: `Line ${lineNum}: key "${key}" was already set on line ${first}.`,
+      };
+    }
+
+    firstLineByKey.set(key, lineNum);
+    value[key] = rawValue;
+  }
+
+  if (Object.keys(value).length === 0) {
+    return { ok: false, message: "Add at least one variable." };
+  }
+
+  const tooLarge = exceedsSizeLimit(value);
+
+  if (tooLarge) {
+    return { ok: false, message: tooLarge };
+  }
+
+  return { ok: true, value };
+};
+
+/**
  * Returns a message when the serialized set is over Key Vault's limit, otherwise null.
  * Measured in bytes, like the server, so a multi-byte set is not waved through.
  */
@@ -120,6 +186,11 @@ export const mapToRows = (secrets: RepoSecretMap): ISecretRow[] =>
 
 export const mapToJson = (secrets: RepoSecretMap): string =>
   JSON.stringify(secrets, null, 2);
+
+export const mapToEnv = (secrets: RepoSecretMap): string =>
+  Object.entries(secrets)
+    .map(([key, value]) => `${key}=${value}`)
+    .join("\n");
 
 export const findDuplicateKey = (rows: ISecretRow[]): string | null => {
   const seen = new Set<string>();

@@ -234,6 +234,20 @@ npm --prefix client run test -- --coverage
 
 `scripts/deploy.sh` is the maintainer deploy script for a systemd host: it checks out the latest `inception`, builds the client, publishes the Api and Worker projects, and installs and restarts their systemd services. For container-based deployment, use the root `Dockerfile` (Api + SPA) and `Dockerfile.worker` (Worker) instead.
 
+## Database placement (Genesis 4.2.2)
+
+API and Worker use the published Genesis 4.2.2 package and follow the tenant's persisted `DbConnectionString` and `DBName`. BuildRepository can be constructed without an ambient tenant. Hosting providers are read through configured `RootTenantId`, which must resolve to main. Build/status/event/webhook and teardown operations retain explicit target tenant routing; root tenant discovery, VCS credentials and shared deployment metadata remain centralized.
+
+Regression tests construct the repository without context, resolve hosting providers from root, and perform concurrent build/status/webhook operations with identical IDs in separate disposable databases through Genesis. Start local MongoDB and run:
+
+```powershell
+dotnet test server/XUnitTest/XUnitTest.csproj -c Release
+```
+
+New routing tests default to localhost:27017; `BLOCKS_ROUTING_TEST_MONGO_PORT` selects another local port. Existing integration fixtures still use localhost:27017. No deployed databases are used. Local isolation tests do not prove live pipeline/cluster connectivity.
+
+Deploy both API and Worker before enabling OS split placement. Updating Release does not update generated or independently deployed applications; those consumers need their own compatible Genesis runtime. Existing environment migration is deferred.
+
 ## License
 
 See [LICENSE](LICENSE).

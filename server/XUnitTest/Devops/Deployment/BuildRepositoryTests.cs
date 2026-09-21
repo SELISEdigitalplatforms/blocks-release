@@ -37,6 +37,7 @@ namespace XUnitTest.Devops.Deployment
             _provider.Setup(p => p.GetCollection<HostingProvider>("HostingProviders")).Returns(_providers.Object);
             _provider.Setup(p => p.GetDatabase(It.IsAny<string>())).Returns(_tenantDb.Object);
             _tenantDb.Setup(d => d.GetCollection<Build>("Builds", null)).Returns(_tenantBuilds.Object);
+            _tenantDb.Setup(d => d.GetCollection<HostingProvider>("HostingProviders", null)).Returns(_providers.Object);
 
             _sut = new BuildRepository(
                 _provider.Object,

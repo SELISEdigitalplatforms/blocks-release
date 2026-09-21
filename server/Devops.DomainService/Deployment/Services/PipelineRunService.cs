@@ -143,7 +143,8 @@ namespace Devops.DomainService.Deployment.Services
             }
         }
 
-        public async Task<(string, string, string, string)> CreateNamespaceAsync(Repo repo)
+        public async Task<(string, string, string, string)> CreateNamespaceAsync(
+            Repo repo, string? targetTenantId = null, string? targetUserId = null)
         {
             if (repo == null)
             {
@@ -154,13 +155,16 @@ namespace Devops.DomainService.Deployment.Services
             try
             {
                 var blocksContext = BlocksContext.GetContext();
-                var tenantId = !string.IsNullOrWhiteSpace(blocksContext.TenantId)
-                    ? blocksContext.TenantId
-                    : repo.ProjectId;
+                var tenantId = targetTenantId ?? repo.ProjectId ?? blocksContext?.TenantId;
+                if (string.IsNullOrWhiteSpace(tenantId)
+                    || (!string.IsNullOrWhiteSpace(repo.ProjectId)
+                        && !string.Equals(repo.ProjectId, tenantId, StringComparison.OrdinalIgnoreCase)))
+                    return (null, null, null, "Repository project does not match the target tenant.");
 
-                var blocksUserId = !string.IsNullOrWhiteSpace(blocksContext.UserId)
-                    ? blocksContext.UserId
-                    : repo.CreatedBy;
+                var blocksUserId = targetUserId
+                    ?? (string.Equals(blocksContext?.TenantId, tenantId, StringComparison.OrdinalIgnoreCase)
+                        ? blocksContext?.UserId : null)
+                    ?? repo.CreatedBy;
 
                 var namespaceName = CloudBuildConstants.NAMESPACE_NAME;
                 var yamlPath = CloudBuildConstants.YAML_PATH;

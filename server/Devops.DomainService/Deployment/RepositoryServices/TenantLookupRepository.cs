@@ -34,7 +34,7 @@ public class TenantLookupRepository : ITenantLookupRepository
         catch (MongoException ex)
         {
             _logger.LogError(ex, "Failed to read projects for tenant group {TenantGroupId}.", tenantGroupId);
-            return [];
+            throw;
         }
     }
 
@@ -51,7 +51,7 @@ public class TenantLookupRepository : ITenantLookupRepository
         catch (MongoException ex)
         {
             _logger.LogError(ex, "Failed to read project {ProjectId}.", projectId);
-            return null;
+            throw;
         }
     }
 }

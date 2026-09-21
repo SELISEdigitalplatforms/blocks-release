@@ -41,24 +41,26 @@ namespace XUnitTest.Devops.Deployment
             IsArchived = isArchived
         };
 
-        // Only TenantId and TenantGroupId are read here; the required members are satisfied but never used.
+        // Teardown uses this snapshot after OS has disabled the tenant.
         private static Tenant NewProject(string tenantId, string groupId) => new()
         {
             TenantId = tenantId,
             TenantGroupId = groupId,
-            DbConnectionString = "mongodb://localhost",
+            DBName = tenantId + "-db",
+            DbConnectionString = "mongodb://localhost/?appName=" + tenantId,
             JwtTokenParameters = null!
         };
 
         /// <summary>Arranges one project's repositories and lets every archive write succeed.</summary>
         private void SetupProject(string tenantId, params Repo[] repos)
         {
-            _f.RepoRepo.Setup(r => r.GetProjectRepos(tenantId, It.IsAny<string>()))
-                       .ReturnsAsync((string _, string resourceId) => string.IsNullOrWhiteSpace(resourceId)
+            _f.RepoRepo.Setup(r => r.GetProjectRepos(It.Is<Tenant>(p => p.TenantId == tenantId), It.IsAny<string>()))
+                       .ReturnsAsync((Tenant _, string resourceId) => string.IsNullOrWhiteSpace(resourceId)
                            ? new List<Repo>(repos)
                            : new List<Repo>(repos).FindAll(repo => repo.SourceRepoId == resourceId));
 
-            _f.RepoRepo.Setup(r => r.ArchiveRepo(It.IsAny<string>(), tenantId)).ReturnsAsync(true);
+            _f.RepoRepo.Setup(r => r.ArchiveRepo(It.IsAny<string>(), It.Is<Tenant>(p => p.TenantId == tenantId)))
+                       .ReturnsAsync(true);
         }
 
         /// <summary>As <see cref="SetupProject"/>, plus the group-membership lookup the project path makes.</summary>
@@ -137,8 +139,8 @@ namespace XUnitTest.Devops.Deployment
 
             summary.ReposMatched.Should().Be(1);
             summary.ReposArchived.Should().Be(1);
-            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-2", ProjectId), Times.Once);
-            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-1", ProjectId), Times.Never);
+            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-2", It.Is<Tenant>(p => p.TenantId == ProjectId)), Times.Once);
+            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-1", It.IsAny<Tenant>()), Times.Never);
         }
 
         /// <summary>No project to narrow to, so the resource filter applies in every project of the group.</summary>
@@ -154,9 +156,9 @@ namespace XUnitTest.Devops.Deployment
 
             summary.ProjectsVisited.Should().Be(2);
             summary.ReposArchived.Should().Be(2);
-            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-1", "tenant-a"), Times.Once);
-            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-3", "tenant-b"), Times.Once);
-            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-2", It.IsAny<string>()), Times.Never);
+            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-1", It.Is<Tenant>(p => p.TenantId == "tenant-a")), Times.Once);
+            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-3", It.Is<Tenant>(p => p.TenantId == "tenant-b")), Times.Once);
+            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-2", It.IsAny<Tenant>()), Times.Never);
         }
 
         /// <summary>
@@ -173,8 +175,8 @@ namespace XUnitTest.Devops.Deployment
 
             summary.ProjectsVisited.Should().Be(0);
             summary.ReposMatched.Should().Be(0);
-            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-            _f.RepoRepo.Verify(r => r.ArchiveRepo(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<Tenant>(), It.IsAny<string>()), Times.Never);
+            _f.RepoRepo.Verify(r => r.ArchiveRepo(It.IsAny<string>(), It.IsAny<Tenant>()), Times.Never);
         }
 
         [Fact]
@@ -186,7 +188,7 @@ namespace XUnitTest.Devops.Deployment
                 .TearDownAsync(new ProjectDeleteQueue { ProjectId = ProjectId, ResourceId = "res-1" });
 
             summary.ProjectsVisited.Should().Be(0);
-            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<Tenant>(), It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
@@ -197,7 +199,7 @@ namespace XUnitTest.Devops.Deployment
 
             summary.ProjectsVisited.Should().Be(0);
             summary.ReposMatched.Should().Be(0);
-            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<Tenant>(), It.IsAny<string>()), Times.Never);
         }
 
         [Theory]
@@ -210,7 +212,7 @@ namespace XUnitTest.Devops.Deployment
                 new ProjectDeleteQueue { TenantGroupId = groupId, ProjectId = projectId, ResourceId = resourceId });
 
             summary.ProjectsVisited.Should().Be(0);
-            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<Tenant>(), It.IsAny<string>()), Times.Never);
         }
 
         /// <summary>Whitespace in the group must not count as a group and quietly widen the blast radius.</summary>
@@ -223,7 +225,7 @@ namespace XUnitTest.Devops.Deployment
                 .TearDownAsync(new ProjectDeleteQueue { TenantGroupId = "   ", ProjectId = ProjectId });
 
             summary.ProjectsVisited.Should().Be(0);
-            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<Tenant>(), It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
@@ -244,23 +246,24 @@ namespace XUnitTest.Devops.Deployment
                 new ProjectDeleteQueue { TenantGroupId = GroupId, ProjectId = ProjectId });
 
             summary.ProjectsVisited.Should().Be(0);
-            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<Tenant>(), It.IsAny<string>()), Times.Never);
         }
 
         /// <summary>
-        /// blocks-os soft-deletes, so the record should still be there. If it is not, the caller named
-        /// this project explicitly and the read is tenant-scoped regardless, so it is still acted on.
+        /// Without the root record we cannot determine placement safely.
         /// </summary>
         [Fact]
-        public async Task GroupAndProject_ProjectRecordAlreadyGone_StillActsOnTheProjectId()
+        public async Task GroupAndProject_ProjectRecordAlreadyGone_FailsWithoutGuessingPlacement()
         {
             _f.TenantLookup.Setup(t => t.GetProjectAsync(ProjectId)).ReturnsAsync((Tenant)null);
             SetupProject(ProjectId, NewRepo("repo-1", ProjectId, "res-1"));
 
-            var summary = await _f.DeploymentTeardownService().TearDownAsync(
+            var act = () => _f.DeploymentTeardownService().TearDownAsync(
                 new ProjectDeleteQueue { TenantGroupId = GroupId, ProjectId = ProjectId });
 
-            summary.ReposArchived.Should().Be(1);
+            await act.Should().ThrowAsync<System.InvalidOperationException>()
+                .WithMessage("*root tenant registry*");
+            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<Tenant>(), It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
@@ -272,7 +275,7 @@ namespace XUnitTest.Devops.Deployment
                 .TearDownAsync(new ProjectDeleteQueue { TenantGroupId = GroupId });
 
             summary.ProjectsVisited.Should().Be(0);
-            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _f.RepoRepo.Verify(r => r.GetProjectRepos(It.IsAny<Tenant>(), It.IsAny<string>()), Times.Never);
         }
 
         /// <summary>
@@ -286,8 +289,8 @@ namespace XUnitTest.Devops.Deployment
             var repo = NewRepo("repo-1", ProjectId, "res-1", deployedNamespace: "ns-live", isArchived: true);
             SetupProjectInGroup(ProjectId, repo);
             GivenNamespaceDeleteSucceeds();
-            _f.BuildRepo.Setup(b => b.GetBuilds("repo-1", ProjectId)).ReturnsAsync(new List<Build>());
-            _f.RepoRepo.Setup(r => r.ClearDeployedNamespace("repo-1", ProjectId, It.IsAny<string>())).ReturnsAsync(true);
+            _f.BuildRepo.Setup(b => b.GetBuilds("repo-1", It.Is<Tenant>(p => p.TenantId == ProjectId))).ReturnsAsync(new List<Build>());
+            _f.RepoRepo.Setup(r => r.ClearDeployedNamespace("repo-1", It.Is<Tenant>(p => p.TenantId == ProjectId), It.IsAny<string>())).ReturnsAsync(true);
 
             var summary = await _f.DeploymentTeardownService()
                 .TearDownAsync(new ProjectDeleteQueue { TenantGroupId = GroupId, ProjectId = ProjectId });
@@ -313,14 +316,14 @@ namespace XUnitTest.Devops.Deployment
             var repo = NewRepo("repo-1", ProjectId, "res-1", deployedNamespace: "ns-live");
             SetupProjectInGroup(ProjectId, repo);
             GivenNamespaceDeleteSucceeds();
-            _f.BuildRepo.Setup(b => b.GetBuilds("repo-1", ProjectId)).ReturnsAsync(new List<Build>());
-            _f.RepoRepo.Setup(r => r.ClearDeployedNamespace("repo-1", ProjectId, It.IsAny<string>())).ReturnsAsync(true);
+            _f.BuildRepo.Setup(b => b.GetBuilds("repo-1", It.Is<Tenant>(p => p.TenantId == ProjectId))).ReturnsAsync(new List<Build>());
+            _f.RepoRepo.Setup(r => r.ClearDeployedNamespace("repo-1", It.Is<Tenant>(p => p.TenantId == ProjectId), It.IsAny<string>())).ReturnsAsync(true);
 
             var summary = await _f.DeploymentTeardownService()
                 .TearDownAsync(new ProjectDeleteQueue { TenantGroupId = GroupId, ProjectId = ProjectId });
 
             summary.DeploymentsDeleted.Should().Be(1);
-            _f.BuildRepo.Verify(b => b.GetBuilds("repo-1", ProjectId), Times.Once);
+            _f.BuildRepo.Verify(b => b.GetBuilds("repo-1", It.Is<Tenant>(p => p.TenantId == ProjectId)), Times.Once);
         }
 
         /// <summary>
@@ -339,8 +342,8 @@ namespace XUnitTest.Devops.Deployment
 
             summary.ReposMatched.Should().Be(1);
             summary.ReposArchived.Should().Be(1);
-            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-2", ProjectId), Times.Once);
-            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-1", ProjectId), Times.Never);
+            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-2", It.Is<Tenant>(p => p.TenantId == ProjectId)), Times.Once);
+            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-1", It.IsAny<Tenant>()), Times.Never);
         }
 
         /// <summary>A repository that was never deployed has no namespace to destroy, but is still retired.</summary>
@@ -354,7 +357,7 @@ namespace XUnitTest.Devops.Deployment
 
             summary.DeploymentsDeleted.Should().Be(0);
             summary.ReposArchived.Should().Be(1);
-            _f.RepoRepo.Verify(r => r.ClearDeployedNamespace(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _f.RepoRepo.Verify(r => r.ClearDeployedNamespace(It.IsAny<string>(), It.IsAny<Tenant>(), It.IsAny<string>()), Times.Never);
         }
 
         /// <summary>
@@ -375,7 +378,7 @@ namespace XUnitTest.Devops.Deployment
             summary.DeploymentsDeleted.Should().Be(0);
             summary.ReposArchived.Should().Be(0);
             summary.HasFailures.Should().BeTrue();
-            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-1", ProjectId), Times.Never);
+            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-1", It.IsAny<Tenant>()), Times.Never);
         }
 
         /// <summary>One failing repository must not strand the ones behind it in the same run.</summary>
@@ -393,16 +396,17 @@ namespace XUnitTest.Devops.Deployment
             summary.ReposMatched.Should().Be(2);
             summary.ReposArchived.Should().Be(1);
             summary.Failures.Should().ContainSingle();
-            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-2", ProjectId), Times.Once);
+            _f.RepoRepo.Verify(r => r.ArchiveRepo("repo-2", It.Is<Tenant>(p => p.TenantId == ProjectId)), Times.Once);
         }
 
         [Fact]
         public async Task ArchiveWriteFails_IsRecordedAsAFailure()
         {
             _f.TenantLookup.Setup(t => t.GetProjectAsync(ProjectId)).ReturnsAsync(NewProject(ProjectId, GroupId));
-            _f.RepoRepo.Setup(r => r.GetProjectRepos(ProjectId, It.IsAny<string>()))
+            _f.RepoRepo.Setup(r => r.GetProjectRepos(It.Is<Tenant>(p => p.TenantId == ProjectId), It.IsAny<string>()))
                        .ReturnsAsync(new List<Repo> { NewRepo("repo-1", ProjectId, "res-1") });
-            _f.RepoRepo.Setup(r => r.ArchiveRepo("repo-1", ProjectId)).ReturnsAsync(false);
+            _f.RepoRepo.Setup(r => r.ArchiveRepo("repo-1", It.Is<Tenant>(p => p.TenantId == ProjectId)))
+                       .ReturnsAsync(false);
 
             var summary = await _f.DeploymentTeardownService()
                 .TearDownAsync(new ProjectDeleteQueue { TenantGroupId = GroupId, ProjectId = ProjectId });
@@ -416,9 +420,9 @@ namespace XUnitTest.Devops.Deployment
         public async Task RepoWriteThrows_IsContainedAndTheRunContinues()
         {
             SetupGroup("tenant-a", "tenant-b");
-            _f.RepoRepo.Setup(r => r.GetProjectRepos("tenant-a", It.IsAny<string>()))
+            _f.RepoRepo.Setup(r => r.GetProjectRepos(It.Is<Tenant>(p => p.TenantId == "tenant-a"), It.IsAny<string>()))
                        .ReturnsAsync(new List<Repo> { NewRepo("repo-1", "tenant-a", "res-1") });
-            _f.RepoRepo.Setup(r => r.ArchiveRepo("repo-1", "tenant-a"))
+            _f.RepoRepo.Setup(r => r.ArchiveRepo("repo-1", It.Is<Tenant>(p => p.TenantId == "tenant-a")))
                        .ThrowsAsync(new System.InvalidOperationException("boom"));
             SetupProject("tenant-b", NewRepo("repo-2", "tenant-b", "res-1"));
 

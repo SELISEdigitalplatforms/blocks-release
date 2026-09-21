@@ -810,18 +810,18 @@ namespace XUnitTest.Devops.Deployment
         }
 
         [Fact]
-        public async Task CreateNamespaceAsync_NoAmbientContext_ReturnsErrorMessage()
+        public async Task CreateNamespaceAsync_NoAmbientContext_UsesRepositoryOwner()
         {
             BlocksContext.ClearContext();
-            _tokenRepository.Setup(t => t.getToken(It.IsAny<string>())).ReturnsAsync("gh-token");
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
 
-            // Pins current behaviour: without an ambient context the tenant lookup throws and
-            // the exception message is surfaced instead of a pipeline run name.
             var (name, image, _, error) = await Service().CreateNamespaceAsync(NewRepo());
 
-            name.Should().BeNull();
-            image.Should().BeNull();
-            error.Should().NotBeNullOrEmpty();
+            name.Should().NotBeNullOrEmpty();
+            image.Should().NotBeNullOrEmpty();
+            error.Should().BeNull();
+            _tokenRepository.Verify(t => t.getToken("user-1"), Times.Once);
         }
 
         [Fact]
@@ -882,18 +882,17 @@ namespace XUnitTest.Devops.Deployment
         }
 
         [Fact]
-        public async Task CreateNamespaceAsync_UsesAmbientUserOverRepoCreator()
+        public async Task CreateNamespaceAsync_IgnoresUnrelatedAmbientTenant()
         {
             SetContext();
-            _tokenRepository.Setup(t => t.getToken("user-ctx")).ReturnsAsync("gh-token");
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
             SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
 
             var (_, _, _, error) = await Service().CreateNamespaceAsync(NewRepo());
 
             error.Should().BeNull();
-            // The repo was created by user-1, but the ambient context wins.
-            _tokenRepository.Verify(t => t.getToken("user-ctx"), Times.Once);
-            _tokenRepository.Verify(t => t.getToken("user-1"), Times.Never);
+            _tokenRepository.Verify(t => t.getToken("user-ctx"), Times.Never);
+            _tokenRepository.Verify(t => t.getToken("user-1"), Times.Once);
         }
 
         [Fact]

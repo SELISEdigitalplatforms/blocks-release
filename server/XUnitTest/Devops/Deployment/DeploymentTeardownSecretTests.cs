@@ -45,6 +45,7 @@ namespace XUnitTest.Devops.Deployment
         {
             TenantId = tenantId,
             TenantGroupId = GroupId,
+            DBName = tenantId + "-db",
             DbConnectionString = "mongodb://localhost",
             JwtTokenParameters = null!
         };
@@ -53,9 +54,10 @@ namespace XUnitTest.Devops.Deployment
         {
             _f.TenantLookup.Setup(t => t.GetProjectsByGroupAsync(GroupId))
                            .ReturnsAsync(new List<Tenant> { NewProject(TenantId) });
-            _f.RepoRepo.Setup(r => r.GetProjectRepos(TenantId, It.IsAny<string>()))
+            _f.RepoRepo.Setup(r => r.GetProjectRepos(It.Is<Tenant>(p => p.TenantId == TenantId), It.IsAny<string>()))
                        .ReturnsAsync(new List<Repo>(repos));
-            _f.RepoRepo.Setup(r => r.ArchiveRepo(It.IsAny<string>(), TenantId)).ReturnsAsync(archiveSucceeds);
+            _f.RepoRepo.Setup(r => r.ArchiveRepo(It.IsAny<string>(), It.Is<Tenant>(p => p.TenantId == TenantId)))
+                       .ReturnsAsync(archiveSucceeds);
         }
 
         private Task<DeploymentTeardownSummary> TearDown() =>

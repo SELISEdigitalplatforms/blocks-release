@@ -166,6 +166,9 @@ public class GithubController: ControllerBase
         var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_secret));
         var hash  = hmac.ComputeHash(Encoding.UTF8.GetBytes(body));
         var oursSig = "sha256=" + Convert.ToHexString(hash).ToLowerInvariant();
+        if (!CryptographicOperations.FixedTimeEquals(
+                Encoding.ASCII.GetBytes(oursSig), Encoding.ASCII.GetBytes(theirSig)))
+            return Unauthorized("Invalid webhook signature.");
 
 
         // 2️⃣  Work out which event this is ----------------------------------------

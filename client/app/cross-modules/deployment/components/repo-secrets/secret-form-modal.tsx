@@ -21,10 +21,17 @@ import {
   parseSecretEnv,
   parseSecretJson,
   rowsToMap,
+  type ParseResult,
 } from "@blocks-deployment/utils/repo-secrets.util";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import {
+  useFieldArray,
+  useForm,
+  useWatch,
+  type UseFieldArrayReturn,
+  type UseFormReturn,
+} from "react-hook-form";
 import { SecretEnvEditor } from "./secret-env-editor";
 import { SecretJsonEditor } from "./secret-json-editor";
 import { SecretKvEditor } from "./secret-kv-editor";
@@ -45,6 +52,49 @@ type SecretFormModalProps = {
 type SecretFormProps = Omit<SecretFormModalProps, "open">;
 
 const emptyRow = { key: "", value: "" };
+
+type SecretModeFieldsProps = {
+  mode: SecretEntryMode;
+  form: UseFormReturn<ISecretFormValues>;
+  fieldArray: UseFieldArrayReturn<ISecretFormValues, "rows">;
+  disabled: boolean;
+};
+
+/**
+ * Renders the active entry-mode editor. Kept as early returns rather than nested ternaries
+ * so Sonar (and readers) see one branch at a time.
+ */
+const SecretModeFields = ({
+  mode,
+  form,
+  fieldArray,
+  disabled,
+}: SecretModeFieldsProps) => {
+  if (mode === "kv") {
+    return (
+      <SecretKvEditor form={form} fieldArray={fieldArray} disabled={disabled} />
+    );
+  }
+
+  if (mode === "json") {
+    return <SecretJsonEditor form={form} disabled={disabled} />;
+  }
+
+  return <SecretEnvEditor form={form} disabled={disabled} />;
+};
+
+/**
+ * Reads the current mode's raw input into a map. Shared by mode switches and submit so the
+ * parse / reject path is worded once.
+ */
+const secretsFromValues = (
+  mode: SecretEntryMode,
+  values: Pick<ISecretFormValues, "rows" | "json" | "env">,
+): ParseResult => {
+  if (mode === "env") return parseSecretEnv(values.env);
+  if (mode === "json") return parseSecretJson(values.json);
+  return { ok: true, value: rowsToMap(values.rows) };
+};
 
 /**
  * Creates or replaces a repository's whole secret set.
@@ -105,30 +155,18 @@ const SecretForm = ({
   const switchMode = (next: SecretEntryMode) => {
     if (next === mode) return;
 
-    let secrets: RepoSecretMap;
+    const parsed = secretsFromValues(mode, form.getValues());
 
-    if (mode === "env") {
-      const parsed = parseSecretEnv(form.getValues("env"));
-
-      if (!parsed.ok) {
-        form.setError("env", { type: "manual", message: parsed.message });
-        return;
-      }
-
-      secrets = parsed.value;
-    } else if (mode === "json") {
-      const parsed = parseSecretJson(form.getValues("json"));
-
-      if (!parsed.ok) {
+    if (!parsed.ok) {
+      if (mode === "json") {
         form.setError("json", { type: "manual", message: parsed.message });
-        return;
+      } else if (mode === "env") {
+        form.setError("env", { type: "manual", message: parsed.message });
       }
-
-      secrets = parsed.value;
-    } else {
-      // kv — convert rows as-is (same as the previous kv → json path)
-      secrets = rowsToMap(form.getValues("rows"));
+      return;
     }
+
+    const secrets = parsed.value;
 
     if (next === "kv") {
       const rows = mapToRows(secrets);
@@ -183,30 +221,19 @@ const SecretForm = ({
   const onSubmit = async (values: ISecretFormValues) => {
     setFormError(null);
 
-    let secrets: RepoSecretMap;
+    const parsed = secretsFromValues(values.mode, values);
 
-    if (values.mode === "json") {
-      const parsed = parseSecretJson(values.json);
-
-      // The resolver already proved this parses; the guard is here to narrow the type.
-      if (!parsed.ok) {
+    // The resolver already proved paste modes parse; the guard narrows the type.
+    if (!parsed.ok) {
+      if (values.mode === "json") {
         form.setError("json", { type: "manual", message: parsed.message });
-        return;
-      }
-
-      secrets = parsed.value;
-    } else if (values.mode === "env") {
-      const parsed = parseSecretEnv(values.env);
-
-      if (!parsed.ok) {
+      } else if (values.mode === "env") {
         form.setError("env", { type: "manual", message: parsed.message });
-        return;
       }
-
-      secrets = parsed.value;
-    } else {
-      secrets = rowsToMap(values.rows);
+      return;
     }
+
+    const secrets = parsed.value;
 
     try {
       await saveMutation.mutateAsync({ repoId, secrets });
@@ -281,17 +308,12 @@ const SecretForm = ({
             </div>
           )}
 
-          {mode === "kv" ? (
-            <SecretKvEditor
-              form={form}
-              fieldArray={fieldArray}
-              disabled={isPending}
-            />
-          ) : mode === "json" ? (
-            <SecretJsonEditor form={form} disabled={isPending} />
-          ) : (
-            <SecretEnvEditor form={form} disabled={isPending} />
-          )}
+          <SecretModeFields
+            mode={mode}
+            form={form}
+            fieldArray={fieldArray}
+            disabled={isPending}
+          />
 
           {form.formState.errors.rows?.message && (
             <p className="text-sm text-destructive">

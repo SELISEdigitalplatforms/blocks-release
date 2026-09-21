@@ -116,38 +116,39 @@ export const parseSecretEnv = (text: string): ParseResult => {
   for (let i = 0; i < lines.length; i++) {
     const lineNum = i + 1;
     const line = lines[i];
+    const isBlank = !line.trim();
+    const isComment = /^\s*#/.test(line);
 
-    if (!line.trim()) continue;
-    if (/^\s*#/.test(line)) continue;
+    if (!(isBlank || isComment)) {
+      const eq = line.indexOf("=");
 
-    const eq = line.indexOf("=");
+      if (eq === -1) {
+        return { ok: false, message: `Line ${lineNum}: expected KEY=VALUE.` };
+      }
 
-    if (eq === -1) {
-      return { ok: false, message: `Line ${lineNum}: expected KEY=VALUE.` };
+      const key = line.slice(0, eq).trim();
+      const rawValue = line.slice(eq + 1);
+      const keyError = validateSecretKey(key);
+
+      if (keyError) {
+        return {
+          ok: false,
+          message: `Line ${lineNum}, key "${key}": ${keyError}`,
+        };
+      }
+
+      const firstSeenLine = firstLineByKey.get(key);
+
+      if (firstSeenLine !== undefined) {
+        return {
+          ok: false,
+          message: `Line ${lineNum}: key "${key}" was already set on line ${firstSeenLine}.`,
+        };
+      }
+
+      firstLineByKey.set(key, lineNum);
+      value[key] = rawValue;
     }
-
-    const key = line.slice(0, eq).trim();
-    const rawValue = line.slice(eq + 1);
-    const keyError = validateSecretKey(key);
-
-    if (keyError) {
-      return {
-        ok: false,
-        message: `Line ${lineNum}, key "${key}": ${keyError}`,
-      };
-    }
-
-    if (firstLineByKey.has(key)) {
-      const first = firstLineByKey.get(key)!;
-
-      return {
-        ok: false,
-        message: `Line ${lineNum}: key "${key}" was already set on line ${first}.`,
-      };
-    }
-
-    firstLineByKey.set(key, lineNum);
-    value[key] = rawValue;
   }
 
   if (Object.keys(value).length === 0) {

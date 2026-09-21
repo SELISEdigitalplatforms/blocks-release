@@ -104,7 +104,7 @@ export const secretFormSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["rows", index, "key"],
-        message: result.error.issues[0].message,
+        message: result.error.issues[0]?.message ?? "Invalid key.",
       });
     });
 

@@ -128,14 +128,14 @@ namespace XUnitTest.Devops.Deployment
         }
 
         [Fact]
-        public async Task SaveBuild_SwallowsAWriteFailureAgainstATenantDatabase()
+        public async Task SaveBuild_TenantWriteFailureIsReportedToTheBuildInitiator()
         {
             _tenantBuilds.Setup(c => c.InsertOneAsync(It.IsAny<Build>(), null, It.IsAny<CancellationToken>()))
                          .ThrowsAsync(WriteFailure());
 
             var act = () => _sut.SaveBuild(new Build { ItemId = "build-1" }, "tenant-b");
 
-            await act.Should().NotThrowAsync();
+            await act.Should().ThrowAsync<MongoWriteException>();
         }
 
         [Fact]

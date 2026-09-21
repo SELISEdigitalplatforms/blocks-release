@@ -160,6 +160,27 @@ namespace XUnitTest.Devops.Deployment
         }
 
         [Fact]
+        public async Task SecretDeleteFails_ReplayRetriesTheSecretWithoutRearchiving()
+        {
+            var repo = NewRepo("r1", SecretId);
+            SetupProject(repos: repo);
+            _f.SecretService.SetupSequence(s => s.DeleteAsync(SecretId, It.IsAny<CancellationToken>()))
+                            .ThrowsAsync(new SecretVaultException("vault down", "Delete", SecretId))
+                            .Returns(Task.CompletedTask);
+
+            var first = await TearDown();
+            repo.IsArchived = true; // The archive persisted before the first secret delete failed.
+            var replay = await TearDown();
+
+            first.HasFailures.Should().BeTrue();
+            replay.HasFailures.Should().BeFalse();
+            replay.SecretsDeleted.Should().Be(1);
+            replay.ReposArchived.Should().Be(0);
+            _f.RepoRepo.Verify(r => r.ArchiveRepo("r1", It.IsAny<Tenant>()), Times.Once);
+            _f.SecretService.Verify(s => s.DeleteAsync(SecretId, It.IsAny<CancellationToken>()), Times.Exactly(2));
+        }
+
+        [Fact]
         public async Task SecretDeleteFails_TheRestOfTheRepositoriesAreStillTornDown()
         {
             SetupProject(true, NewRepo("r1", SecretId), NewRepo("r2", "secret-2"), NewRepo("r3"));

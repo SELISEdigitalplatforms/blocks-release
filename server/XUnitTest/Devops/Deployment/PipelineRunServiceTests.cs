@@ -943,6 +943,34 @@ namespace XUnitTest.Devops.Deployment
                 "--build-arg", "VITE_BLOCKS_EXTRA_ARG=NBM");
         }
 
+        [Fact]
+        public async Task CreateNamespaceAsync_WebhookSecretRead_UsesTargetTenantAndRestoresContext()
+        {
+            BlocksContext.ClearContext();
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
+            var repo = NewRepo();
+            repo.SecretStoreItemId = "secret-1";
+            BlocksContext seen = null;
+            _repoSecrets.Setup(r => r.GetValueAsync("repo-1", It.IsAny<CancellationToken>()))
+                .Callback(() => seen = BlocksContext.GetContext())
+                .ReturnsAsync(new RepoSecretValueResponse
+                {
+                    RepoId = "repo-1",
+                    Secrets = new Dictionary<string, string> { ["VITE_BLOCKS_EXTRA_ARG"] = "NBM" }
+                });
+
+            var (_, _, _, error) = await ServiceWithRepoSecrets()
+                .CreateNamespaceAsync(repo, "tenant-1", "user-1");
+
+            error.Should().BeNull();
+            seen.Should().NotBeNull();
+            seen.TenantId.Should().Be("tenant-1");
+            seen.UserId.Should().Be("user-1");
+            BlocksContext.GetContext().Should().BeNull();
+            SubmittedExtraArgs().Select(x => x?.ToString()).Should().Contain("VITE_BLOCKS_EXTRA_ARG=NBM");
+        }
+
         /// <summary>
         /// The first-run state. The pointer on the repository is checked before the service, so a
         /// repository without secrets costs no vault call and leaves no audit entry.

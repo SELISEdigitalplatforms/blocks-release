@@ -68,7 +68,8 @@ namespace Devops.DomainService.Deployment.Services
         /// recoverable; refusing to deploy is not.
         /// </para>
         /// </remarks>
-        private async Task<IReadOnlyDictionary<string, string>> LoadRepoBuildArgsAsync(Repo repo)
+        private async Task<IReadOnlyDictionary<string, string>> LoadRepoBuildArgsAsync(
+            Repo repo, string tenantId, string userId)
         {
             var empty = new Dictionary<string, string>();
 
@@ -80,7 +81,20 @@ namespace Devops.DomainService.Deployment.Services
                 using var scope = _scopeFactory.CreateScope();
                 var repoSecrets = scope.ServiceProvider.GetRequiredService<IRepoSecretService>();
 
-                var value = await repoSecrets.GetValueAsync(repo.ItemId);
+                // Signed webhooks have no HTTP identity. Resolve the repository secret under
+                // this build's tenant, never under an unrelated ambient request context.
+                var context = BlocksContext.GetContext();
+                var value = string.Equals(context?.TenantId, tenantId, StringComparison.OrdinalIgnoreCase)
+                    ? await repoSecrets.GetValueAsync(repo.ItemId)
+                    : await BlocksContext.ExecuteInContext(
+                        BlocksContext.Create(
+                            tenantId, roles: [], userId: userId, isAuthenticated: true,
+                            requestUri: "webhook/repository-build", organizationId: "default",
+                            expireOn: DateTime.UtcNow.AddMinutes(5), email: null,
+                            permissions: [], userName: "blocks-release-webhook", phoneNumber: null,
+                            displayName: "blocks-release-webhook", oauthToken: null,
+                            originalTenantId: tenantId),
+                        () => repoSecrets.GetValueAsync(repo.ItemId));
 
                 return value?.Secrets is { Count: > 0 } secrets
                     ? secrets
@@ -197,7 +211,7 @@ namespace Devops.DomainService.Deployment.Services
                     .setAccessToken(accessToken)
                     .setSonarQubeProjectKey(repo.RepoName)
                     .setCliBuildEnv(repo.Branch)
-                    .setExtraBuildArgs(await LoadRepoBuildArgsAsync(repo));
+                    .setExtraBuildArgs(await LoadRepoBuildArgsAsync(repo, tenantId, blocksUserId));
 
                 var pipelineRunData = pipelineRunSettings.build();
 

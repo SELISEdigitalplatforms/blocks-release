@@ -236,9 +236,13 @@ npm --prefix client run test -- --coverage
 
 ## Database placement (Genesis 4.2.2)
 
-API and Worker use the published Genesis 4.2.2 package and follow the tenant's persisted `DbConnectionString` and `DBName`. BuildRepository can be constructed without an ambient tenant. Hosting providers are read through configured `RootTenantId`, which must resolve to main. Build/status/event/webhook and teardown operations retain explicit target tenant routing; root tenant discovery, VCS credentials and shared deployment metadata remain centralized.
+API and Worker use the published Genesis 4.2.2 package and follow the tenant's persisted `DbConnectionString` and `DBName`. BuildRepository can be constructed without an ambient tenant. Hosting providers are read through configured `RootTenantId`, which must resolve to main. Build/status/event/webhook operations retain explicit target tenant routing; root tenant discovery, VCS credentials and shared deployment metadata remain centralized. Teardown reads every environment in the requested `TenantGroupId` from main's `Tenants` collection and uses each stored connection and database name, including for tenants already disabled by OS.
 
-Regression tests construct the repository without context, resolve hosting providers from root, and perform concurrent build/status/webhook operations with identical IDs in separate disposable databases through Genesis. Start local MongoDB and run:
+The GitHub webhook takes the target tenant from the `x-blocks-key` query parameter, verifies `X-Hub-Signature-256`, and routes repository, webhook, build, and pipeline follow-up work to that target. A repository secret used as a build argument is read under that target's temporary worker context when the webhook has no HTTP user context. Repository pipeline messages also carry the tenant ID; a missing or mismatched build is dead-lettered for replay rather than acknowledged as completed.
+
+Teardown continues through other environments when one fails and reports partial failures. The ProjectDelete consumer throws on an incomplete run. Genesis dead-letters that delivery; it does not automatically retry it. Operators must replay the dead-lettered message after resolving the failure. Replayed cleanup is idempotent for archived repositories, deleted namespaces, and already-deleted secrets.
+
+Regression tests construct the repository without context, resolve hosting providers from root, perform concurrent build/status/webhook operations with identical IDs, and tear down disabled environments with identical repository IDs in separate disposable databases through Genesis. Start local MongoDB and run:
 
 ```powershell
 dotnet test server/XUnitTest/XUnitTest.csproj -c Release

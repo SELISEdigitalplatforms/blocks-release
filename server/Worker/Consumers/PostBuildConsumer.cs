@@ -35,16 +35,19 @@ namespace Worker.Consumers
                 
                 if (task.PipelineType == PipelineTypes.RepoDeployment)
                 {
+                    if (string.IsNullOrWhiteSpace(task.ProjectKey) || string.IsNullOrWhiteSpace(task.PipelineRunName))
+                        throw new InvalidOperationException("Repo deployment message has no target tenant or pipeline run.");
+
                     var dependencyTrackAnalyticsService = scope.ServiceProvider.GetRequiredService<DependencyTrackAnalyticsService>();
                     var buildRepository = scope.ServiceProvider.GetRequiredService<IBuildRepository>();
 
                     var build = await buildRepository.GetBuildByPipelineRunName(task.PipelineRunName, task.ProjectKey);
-                    _logger.LogWarning($"Pipeline run name is null or empty for project {task.ProjectKey}");
                     if (build == null)
                     {
-                        _logger.LogError($"No build found for pipeline {task.PipelineRunName}");
-                        return;
+                        throw new InvalidOperationException($"No build found for pipeline {task.PipelineRunName} in tenant {task.ProjectKey}.");
                     }
+                    if (!string.Equals(build.ProjectId, task.ProjectKey, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException("Build does not belong to the message target tenant.");
 
                     switch (task.PipelineEventType)
                     {
@@ -88,6 +91,8 @@ namespace Worker.Consumers
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Failed to process message from queue for project {task?.ProjectKey}, pipeline {task?.PipelineRunName}");
+                if (task?.PipelineType == PipelineTypes.RepoDeployment)
+                    throw;
             }
         }
     }

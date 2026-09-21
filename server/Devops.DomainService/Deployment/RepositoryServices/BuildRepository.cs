@@ -78,15 +78,7 @@ public class BuildRepository : IBuildRepository
     {
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
         var collection = _dbContext.GetCollection<Build>("Builds");
-        try
-        {
-            await collection.InsertOneAsync(build);
-        }
-        catch (MongoWriteException e)
-        {
-            _logger.LogError($"Failed to save build for {e.Message}");
-        }
-
+        await collection.InsertOneAsync(build);
     }
 
     public async Task<Build?> GetBuildByPipelineRunName(string pipelineRunName, string tenantId)

@@ -102,6 +102,54 @@ const secretsFromValues = (
  * The form lives in a child so it is mounted only while the dialog is open: a fresh mount reseeds
  * the defaults and discards the previous attempt, which is why there is no reset effect here.
  */
+
+const FIELD_MAPPABLE_REASONS = new Set([
+  REPO_SECRET_ERROR.KeyInvalid,
+  REPO_SECRET_ERROR.ValueType,
+]);
+
+const FORM_LEVEL_REASONS = new Set([
+  REPO_SECRET_ERROR.SecretsRequired,
+  REPO_SECRET_ERROR.TooLarge,
+  REPO_SECRET_ERROR.VaultFailure,
+]);
+
+const fieldForMode = (mode: SecretEntryMode): "json" | "env" | "rows.0.key" => {
+  if (mode === "json") return "json";
+  if (mode === "env") return "env";
+  return "rows.0.key";
+};
+
+/**
+ * Routes a server reason code back onto the field (or form banner) that caused it
+ * (FRONTEND_DESIGN §6). Kept outside the component so SecretForm stays under Sonar's
+ * cognitive-complexity budget.
+ */
+const applySaveError = (
+  error: unknown,
+  form: UseFormReturn<ISecretFormValues>,
+  setFormError: (message: string | null) => void,
+): void => {
+  const reason = getServerReason(error);
+  const message =
+    getServerMessage(error) ?? "The environment variables could not be saved.";
+
+  if (reason && FIELD_MAPPABLE_REASONS.has(reason)) {
+    form.setError(fieldForMode(form.getValues("mode")), {
+      type: "server",
+      message,
+    });
+    return;
+  }
+
+  if (reason && FORM_LEVEL_REASONS.has(reason)) {
+    setFormError(message);
+    return;
+  }
+
+  showErrorToast({ errors: error });
+};
+
 export const SecretFormModal = ({
   open,
   onOpenChange,
@@ -181,41 +229,8 @@ const SecretForm = ({
     form.clearErrors();
   };
 
-  /** Routes a server reason code back onto the field that caused it (FRONTEND_DESIGN §6). */
   const applyServerError = (error: unknown) => {
-    const reason = getServerReason(error);
-    const message =
-      getServerMessage(error) ?? "The environment variables could not be saved.";
-
-    const fieldMappable =
-      reason === REPO_SECRET_ERROR.KeyInvalid ||
-      reason === REPO_SECRET_ERROR.ValueType;
-
-    if (fieldMappable) {
-      const currentMode = form.getValues("mode");
-
-      if (currentMode === "json") {
-        form.setError("json", { type: "server", message });
-      } else if (currentMode === "env") {
-        form.setError("env", { type: "server", message });
-      } else {
-        form.setError("rows.0.key", { type: "server", message });
-      }
-
-      return;
-    }
-
-    const formLevel =
-      reason === REPO_SECRET_ERROR.SecretsRequired ||
-      reason === REPO_SECRET_ERROR.TooLarge ||
-      reason === REPO_SECRET_ERROR.VaultFailure;
-
-    if (formLevel) {
-      setFormError(message);
-      return;
-    }
-
-    showErrorToast({ errors: error });
+    applySaveError(error, form, setFormError);
   };
 
   const onSubmit = async (values: ISecretFormValues) => {

@@ -62,90 +62,99 @@ export const secretFormSchema = z
     env: z.string(),
   })
   .superRefine((values, ctx) => {
-    if (values.mode === "json") {
-      const parsed = parseSecretJson(values.json);
-
-      if (!parsed.ok) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["json"],
-          message: parsed.message,
-        });
-      }
-
+    if (values.mode === "json" || values.mode === "env") {
+      refinePasteMode(values, ctx);
       return;
     }
 
-    if (values.mode === "env") {
-      const parsed = parseSecretEnv(values.env);
+    refineKvMode(values, ctx);
+  });
 
-      if (!parsed.ok) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["env"],
-          message: parsed.message,
-        });
-      }
+const refinePasteMode = (
+  values: ISecretFormValues,
+  ctx: z.RefinementCtx,
+): void => {
+  const field = values.mode === "json" ? "json" : "env";
+  const parsed =
+    values.mode === "json"
+      ? parseSecretJson(values.json)
+      : parseSecretEnv(values.env);
 
-      return;
-    }
+  if (parsed.ok) return;
 
-    // Each key is checked against the shared field rules and reported on its own row, so the
-    // wording still cannot drift between the modes.
-    let hasInvalidKey = false;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: [field],
+    message: parsed.message,
+  });
+};
 
-    values.rows.forEach((row, index) => {
-      const result = keyField.safeParse(row.key);
+const refineKvMode = (
+  values: ISecretFormValues,
+  ctx: z.RefinementCtx,
+): void => {
+  let hasInvalidKey = false;
 
-      if (result.success) return;
+  for (let index = 0; index < values.rows.length; index++) {
+    const result = keyField.safeParse(values.rows[index].key);
 
+    if (!result.success) {
       hasInvalidKey = true;
-
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["rows", index, "key"],
         message: result.error.issues[0]?.message ?? "Invalid key.",
       });
+    }
+  }
+
+  if (hasInvalidKey) return;
+
+  if (values.rows.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["rows"],
+      message: "Add at least one variable.",
     });
+    return;
+  }
 
-    // Duplicate and size checks read the keys, so they are only meaningful once every key is
-    // valid; running them on a half-typed set would stack a second error onto the same row.
-    if (hasInvalidKey) return;
+  const duplicate = findDuplicateKey(values.rows);
 
-    if (values.rows.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["rows"],
-        message: "Add at least one variable.",
-      });
+  if (duplicate) {
+    const secondIndex = indexOfDuplicate(values.rows, duplicate);
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["rows", secondIndex, "key"],
+      message: "Each key may appear only once.",
+    });
+    return;
+  }
 
-      return;
+  const tooLarge = exceedsSizeLimit(rowsToMap(values.rows));
+
+  if (tooLarge) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["rows"],
+      message: tooLarge,
+    });
+  }
+};
+
+/** Index of the second row that repeats `key`, or 0 as a safe fallback. */
+const indexOfDuplicate = (
+  rows: ISecretFormValues["rows"],
+  key: string,
+): number => {
+  let seen = false;
+
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].key === key) {
+      if (seen) return i;
+      seen = true;
     }
+  }
 
-    // Reported on the offending row rather than the array, so the user sees which one to fix.
-    const duplicate = findDuplicateKey(values.rows);
-
-    if (duplicate) {
-      const index = values.rows.findIndex((row, i) => {
-        return values.rows.findIndex((r) => r.key === row.key) !== i;
-      });
-
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["rows", index, "key"],
-        message: "Each key may appear only once.",
-      });
-
-      return;
-    }
-
-    const tooLarge = exceedsSizeLimit(rowsToMap(values.rows));
-
-    if (tooLarge) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["rows"],
-        message: tooLarge,
-      });
-    }
-  });
+  return 0;
+};

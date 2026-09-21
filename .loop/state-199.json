@@ -1,0 +1,65 @@
+{
+  "issue": 199,
+  "repo": "blocks-release",
+  "flow": "A",
+  "runId": "20260921T1429-blocks-199",
+  "phase": "QUALITY_GATE",
+  "baseSha": "2390d97443d320b42c650c85a3f6c73ccf454441",
+  "branch": "inception",
+  "itemId": "PVTI_lADOAXWBR84BZkJEzg76QUo",
+  "updatedAt": "2026-09-21T10:29:35Z",
+  "evidence": {
+    "planReviewCycles": 1,
+    "commitSha": "pending-e2e-push",
+    "prNumber": 200,
+    "approvals": [
+      {
+        "id": 5757504150,
+        "author": "asifrafeen",
+        "created": "2026-09-21T08:20:48Z"
+      },
+      {
+        "id": 5757523956,
+        "author": "kazi-lakit",
+        "created": "2026-09-21T08:22:36Z"
+      }
+    ],
+    "codeReviewCycles": 1,
+    "coverage": {
+      "util_stmts": "96.1%",
+      "modal_stmts": "85.7%",
+      "form_values_stmts": "91.4%",
+      "env_editor_stmts": "100%"
+    },
+    "tests": {
+      "files": 2,
+      "passed": 61
+    },
+    "security": {
+      "sca": "baseline 4 HIGH fast-uri pre-existing; lockfile unchanged",
+      "sast": "eslint 0 findings on changed files"
+    },
+    "e2e": {
+      "url": "https://dev-release-200.blocksdevelopers.com",
+      "featureSpec": "e2e/tests/02-deployment/env-paste-mode.spec.ts",
+      "regressionSpec": "e2e/tests/02-deployment/deployment.spec.ts",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "note": "Env paste suite stubs repos-list/repo-details/RepoSecret when GitHub OAuth cannot link a repo; exercises deployed Env paste UI on preview.",
+      "command": "npx playwright test tests/02-deployment/deployment.spec.ts tests/02-deployment/env-paste-mode.spec.ts --project=release"
+    },
+    "authorTagged": true,
+    "sonar": {
+      "client": "PASS",
+      "server": "PASS",
+      "dashboard": "https://code.selise.biz/dashboard?id=blocks-release-client&pullRequest=200",
+      "findingsFixed": [
+        "nested ternary / cognitive complexity in Env paste modal+schema",
+        "CPD on Env/JSON editors \u2192 shared secret-paste-field",
+        "security hotspots: API_KEY/DB_PASSWORD placeholders \u2192 FEATURE_FLAG/REGION"
+      ],
+      "passingJob": "https://github.com/SELISEdigitalplatforms/blocks-release/actions/runs/35586666190/job/106291527004"
+    }
+  }
+}

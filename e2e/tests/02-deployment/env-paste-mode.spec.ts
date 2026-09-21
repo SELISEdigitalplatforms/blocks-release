@@ -1,9 +1,10 @@
-import { test, expect } from "../../support/test-base";
+import { test, expect, type Page } from "../../support/test-base";
 import {
   openReleaseDeployment,
   connectFirstRepository,
   hasLinkedRepository,
 } from "../../support/release-helpers";
+import { readReleaseProject } from "../../support/release-project";
 
 /**
  * Env paste mode for the Environment Variables dialog (#199).
@@ -12,8 +13,13 @@ import {
  * deployment.spec.ts): mode radio, parse/carry across tabs, validation, and
  * a save round-trip when the repo has no secrets yet.
  *
- * Never clicks Deploy. When secrets already exist, validation / mode-switch
- * steps Cancel without Save so pre-existing values are not replaced.
+ * When the shared project has no linked repository (GitHub OAuth is unavailable
+ * for the e2e account), the suite stubs repos-list / repo-details / RepoSecret
+ * on the preview API host so the Release UI under test still exercises Env
+ * paste end-to-end against the deployed client bundle.
+ *
+ * Never clicks Deploy. When secrets already exist on a real repo, validation /
+ * mode-switch steps Cancel without Save so pre-existing values are not replaced.
  */
 
 const SAMPLE_ENV = [
@@ -23,60 +29,256 @@ const SAMPLE_ENV = [
   "E2E_IDP_BASE_URL =https://iam.example.test",
 ].join("\n");
 
-async function openRepoDetails(page: import("@playwright/test").Page) {
+const FAKE_REPO_ID = "e2e-env-paste-repo";
+
+const emptyMeta = (repoId: string) => ({
+  repoId,
+  secretId: null,
+  hasSecrets: false,
+  name: null,
+  description: null,
+  status: null,
+  createdDate: null,
+  createdBy: null,
+  lastUpdatedDate: null,
+  lastUpdatedBy: null,
+  lastRotatedDate: null,
+  lastRotatedBy: null,
+  rotationCount: 0,
+  deletedDate: null,
+  deletedBy: null,
+});
+
+const activeMeta = (repoId: string) => ({
+  ...emptyMeta(repoId),
+  secretId: "secret-e2e-1",
+  hasSecrets: true,
+  name: "env",
+  status: "active",
+  createdDate: "2026-09-21T00:00:00Z",
+  lastUpdatedDate: "2026-09-21T00:00:00Z",
+  rotationCount: 1,
+});
+
+function okEnvelope<T>(data: T) {
+  return {
+    isSuccess: true,
+    statusCode: 200,
+    message: null,
+    errors: null,
+    data,
+  };
+}
+
+async function installEnvPasteApiMocks(page: Page) {
+  let hasSecrets = false;
+  let stored: Record<string, string> = {};
+
+  const fakeRepo = {
+    itemId: FAKE_REPO_ID,
+    repoName: "e2e/env-paste",
+    branch: "main",
+    repoUrl: "https://github.com/e2e/env-paste",
+    defaultDeploymentUrl: "https://env-paste.example.test",
+    customDeploymentUrl: "",
+    deploymentType: "auto",
+    lastDeploymentDate: null,
+    deployedNamespace: null,
+    lastDeploymentStatus: null,
+    deploySettings: {},
+  };
+
+  await page.route("**/build/repos-list**", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        okEnvelope([
+          {
+            sourceRepoId: "src-1",
+            sourceReference: null,
+            blocksUserId: null,
+            projectId: null,
+            projectName: null,
+            repoName: fakeRepo.repoName,
+            repoUrl: fakeRepo.repoUrl,
+            defaultDeploymentUrl: fakeRepo.defaultDeploymentUrl,
+            customDeploymentUrl: null,
+            branch: "main",
+            commit: null,
+            lastDeploymentDate: null,
+            lastDeploymentStatus: null,
+            deployedNamespace: null,
+            deploySettings: {},
+            itemId: FAKE_REPO_ID,
+            createdDate: "2026-09-21T00:00:00Z",
+            lastUpdatedDate: "2026-09-21T00:00:00Z",
+            createdBy: null,
+            language: null,
+            lastUpdatedBy: null,
+            organizationIds: [],
+            tags: [],
+            deploymentType: "auto",
+          },
+        ]),
+      ),
+    });
+  });
+
+  await page.route("**/build/repo-details**", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        okEnvelope({ repo: fakeRepo, build: [], totalCount: 0 }),
+      ),
+    });
+  });
+
+  await page.route("**/RepoSecret/get**", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        okEnvelope(
+          hasSecrets ? activeMeta(FAKE_REPO_ID) : emptyMeta(FAKE_REPO_ID),
+        ),
+      ),
+    });
+  });
+
+  await page.route("**/RepoSecret/value**", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        okEnvelope({
+          repoId: FAKE_REPO_ID,
+          secretId: "secret-e2e-1",
+          secrets: stored,
+        }),
+      ),
+    });
+  });
+
+  await page.route("**/RepoSecret/save**", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    const body = route.request().postDataJSON() as {
+      secrets?: Record<string, string>;
+    };
+    stored = { ...(body?.secrets ?? {}) };
+    hasSecrets = Object.keys(stored).length > 0;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        okEnvelope({
+          repoId: FAKE_REPO_ID,
+          secretId: "secret-e2e-1",
+          keyCount: Object.keys(stored).length,
+          created: true,
+        }),
+      ),
+    });
+  });
+
+  await page.route("**/RepoSecret/delete**", async (route) => {
+    if (route.request().method() !== "DELETE") return route.fallback();
+    hasSecrets = false;
+    stored = {};
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(okEnvelope(null)),
+    });
+  });
+}
+
+async function openRepoDetails(
+  page: Page,
+): Promise<"real" | "mocked" | "none"> {
   await openReleaseDeployment(page);
 
   if (!(await hasLinkedRepository(page))) {
     await connectFirstRepository(page);
   }
 
-  const repoCard = page.getByRole("button").filter({ hasText: "Deploys for" }).first();
-  if (!(await repoCard.isVisible().catch(() => false))) {
-    return false;
+  const repoCard = page
+    .getByRole("button")
+    .filter({ hasText: "Deploys for" })
+    .first();
+  if (await repoCard.isVisible().catch(() => false)) {
+    await repoCard.click();
+    await expect(page).toHaveURL(/\/deployment\/repo\//, { timeout: 30_000 });
+    await expect(
+      page.getByRole("heading", { name: /Repository Details/i }).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    return "real";
   }
 
-  await repoCard.click();
-  await expect(page).toHaveURL(/\/deployment\/repo\//, { timeout: 30_000 });
+  const fixture = readReleaseProject();
+  const itemId = fixture?.itemId;
+  if (!itemId) return "none";
+
+  await installEnvPasteApiMocks(page);
+  const target = new URL(page.url());
+  target.pathname = `/app/${itemId}/deployment/repo/${FAKE_REPO_ID}`;
+  target.search = "tab=secrets";
+  await page.goto(target.toString(), { waitUntil: "domcontentloaded" });
   await expect(
     page.getByRole("heading", { name: /Repository Details/i }).first(),
   ).toBeVisible({ timeout: 30_000 });
-  return true;
+  return "mocked";
 }
 
-async function openEnvironmentVariablesTab(page: import("@playwright/test").Page) {
+async function openEnvironmentVariablesTab(page: Page) {
   const envVarsTab = page.getByRole("tab", { name: "Environment Variables" });
   await expect(envVarsTab).toBeVisible({ timeout: 10_000 });
-  await envVarsTab.click();
+  if (!(await page.url()).includes("tab=secrets")) {
+    await envVarsTab.click();
+  }
   await expect(page).toHaveURL(/[?&]tab=secrets/);
 
-  const skeleton = page.getByTestId("repo-secrets-loading");
+  const skeleton = page
+    .getByTestId("repo-secrets-loading")
+    .or(page.getByTestId("secrets-tab-loading"));
   await expect(skeleton).toBeHidden({ timeout: 30_000 });
 }
 
-async function openSecretsDialog(page: import("@playwright/test").Page) {
+async function openSecretsDialog(page: Page) {
   const addVariables = page.getByRole("button", { name: /^Add variables$/ });
   const editButton = page.getByRole("button", { name: /^Edit$/ });
 
   if (await addVariables.isVisible().catch(() => false)) {
     await addVariables.click();
-    const dialog = page.getByRole("dialog", { name: /Add environment variables/i });
+    const dialog = page.getByRole("dialog", {
+      name: /Add environment variables/i,
+    });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     return { dialog, isEmpty: true as const };
   }
 
   await expect(editButton).toBeVisible({ timeout: 10_000 });
   await editButton.click();
-  const dialog = page.getByRole("dialog", { name: /Edit environment variables/i });
+  const dialog = page.getByRole("dialog", {
+    name: /Edit environment variables/i,
+  });
   await expect(dialog).toBeVisible({ timeout: 30_000 });
   return { dialog, isEmpty: false as const };
 }
 
 test.describe("Env paste mode (#199)", () => {
-  test("Env mode parse, carry, validate, and optional save", async ({ page }) => {
+  test("Env mode parse, carry, validate, and optional save", async ({
+    page,
+  }) => {
     test.setTimeout(180_000);
 
-    const hasRepo = await openRepoDetails(page);
-    test.skip(!hasRepo, "No linked repository on the shared Release project");
+    const mode = await openRepoDetails(page);
+    test.skip(mode === "none", "No project fixture and no linked repository");
 
     await openEnvironmentVariablesTab(page);
     const { dialog, isEmpty } = await openSecretsDialog(page);
@@ -87,11 +289,15 @@ test.describe("Env paste mode (#199)", () => {
     const envTextarea = dialog.getByRole("textbox", {
       name: "Environment variables as env",
     });
-    const saveButton = dialog.getByRole("button", { name: /^Save variables$/ });
+    const saveButton = dialog.getByRole("button", {
+      name: /^Save variables$/,
+    });
     const cancelButton = dialog.getByRole("button", { name: /^Cancel$/ });
 
     await test.step("[Positive] Env radio sits beside Key / value and Paste JSON (H1)", async () => {
-      await expect(dialog.getByRole("radiogroup", { name: "Entry mode" })).toBeVisible();
+      await expect(
+        dialog.getByRole("radiogroup", { name: "Entry mode" }),
+      ).toBeVisible();
       await expect(kvRadio).toBeVisible();
       await expect(jsonRadio).toBeVisible();
       await expect(envRadio).toBeVisible();
@@ -137,7 +343,9 @@ test.describe("Env paste mode (#199)", () => {
       await envRadio.click();
       await envTextarea.fill("E2E_APP_URL=https://a.test\nNOT_A_VARIABLE");
       await saveButton.click();
-      await expect(dialog.getByText("Line 2: expected KEY=VALUE.")).toBeVisible();
+      await expect(
+        dialog.getByText("Line 2: expected KEY=VALUE."),
+      ).toBeVisible();
       await expect(dialog).toBeVisible();
     });
 
@@ -170,7 +378,7 @@ test.describe("Env paste mode (#199)", () => {
       await expect(dialog).toBeVisible();
     });
 
-    if (!isEmpty) {
+    if (!isEmpty && mode === "real") {
       await test.step("[Positive] Cancel leaves existing secrets untouched", async () => {
         await cancelButton.click();
         await expect(dialog).toBeHidden({ timeout: 5_000 });
@@ -216,9 +424,9 @@ test.describe("Env paste mode (#199)", () => {
       });
       await expect(confirm).toBeVisible({ timeout: 10_000 });
       await confirm.getByRole("button", { name: /^Delete$/ }).click();
-      await expect(page.getByText("Environment variables deleted")).toBeVisible({
-        timeout: 30_000,
-      });
+      await expect(
+        page.getByText("Environment variables deleted"),
+      ).toBeVisible({ timeout: 30_000 });
       await expect(
         page.getByRole("button", { name: /^Add variables$/ }),
       ).toBeVisible({ timeout: 30_000 });

@@ -25,15 +25,15 @@ export default function OidcIndexPage() {
       .then((res) => {
         const isLocalDevelopment =
           import.meta.env.DEV ||
-          window.location.hostname === "localhost" ||
-          window.location.hostname === "127.0.0.1";
+          globalThis.window.location.hostname === "localhost" ||
+          globalThis.window.location.hostname === "127.0.0.1";
 
         if (isLocalDevelopment && res.access_token && res.refresh_token) {
           setTokens(res.access_token, res.refresh_token);
         }
         setAuthenticated();
 
-        window.location.href = `${window.location.origin}/console`;
+        globalThis.window.location.href = `${globalThis.window.location.origin}/console`;
       })
       .catch(() => {
         navigate("/oidc/error");

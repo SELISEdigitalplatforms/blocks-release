@@ -77,7 +77,7 @@ export const getRuntimeEnv = (
 ): string => {
   // The Release API is served by the same host as the SPA. Keep the configured
   // value for non-browser consumers (including Vite's development proxy).
-  if (key === "BLOCKS_API_BASE_URL" && typeof globalThis.window !== "undefined") {
+  if (key === "BLOCKS_API_BASE_URL" && globalThis.window !== undefined) {
     const origin = globalThis.window.location.origin;
     return options.ensureTrailingSlash ? ensureTrailingSlash(origin) : origin;
   }

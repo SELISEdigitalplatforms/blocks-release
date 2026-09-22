@@ -11,6 +11,17 @@
             a shared <c>X-Internal-Secret</c> header — never expose to public traffic.
             </summary>
         </member>
+        <member name="M:Api.Controllers.GithubController.GetCredential">
+            <summary>
+            The calling user's git credential for HTTPS push/fetch — what
+            `blocks git push` and Studio's post-run push authenticate with.
+            404 when GitHub isn't connected, so the CLI can distinguish "connect
+            GitHub" from a genuine failure. Never logged; the body is the token.
+            </summary>
+        </member>
+        <member name="M:Api.Controllers.GithubController.CreateRepo(Devops.DomainService.VersionControlSystems.Models.Request.CreateRepositoryRequest)">
+            <summary>Creates a GitHub repository for a project that has none yet — see <see cref="T:Devops.DomainService.VersionControlSystems.Models.Request.CreateRepositoryRequest"/>.</summary>
+        </member>
         <member name="T:Api.Controllers.RepoSecretController">
             <summary>
             Manages the secret key/value set attached to a repository.

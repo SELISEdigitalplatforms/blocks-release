@@ -272,6 +272,14 @@ public class RepoRepository : IRepoRepository
     public async Task<bool> UpdateRepo(Repo repo)
     {
         var collection = _dbContextProvider.GetCollection<Repo>("Repos");
+        return await ReplaceRepoAsync(collection, repo);
+    }
+
+    public Task<bool> UpdateRepo(Repo repo, string tenantId) =>
+        ReplaceRepoAsync(_dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>("Repos"), repo);
+
+    private static async Task<bool> ReplaceRepoAsync(IMongoCollection<Repo> collection, Repo repo)
+    {
         var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repo.ItemId);
         var result = await collection.ReplaceOneAsync(filter, repo, cancellationToken: default);
         return result.MatchedCount == 1;
@@ -286,22 +294,29 @@ public class RepoRepository : IRepoRepository
     {
         try
         {
-            var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-            var collection = _dbContext.GetCollection<Repo>("Repos");
-
-            var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
-            var update = Builders<Repo>.Update
-                .Set(r => r.DeployedNamespace, null)
-                .Set(r => r.LastDeploymentStatus, lastDeploymentStatus);
-
-            var result = await collection.UpdateOneAsync(filter, update);
-            return result.MatchedCount == 1;
+            return await ClearDeployedNamespaceAsync(
+                _dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>("Repos"), repoId, lastDeploymentStatus);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to clear deployed namespace for repo {RepoId}.", repoId);
             return false;
         }
+    }
+
+    public Task<bool> ClearDeployedNamespace(string repoId, Tenant project, string lastDeploymentStatus) =>
+        ClearDeployedNamespaceAsync(ProjectCollection(project), repoId, lastDeploymentStatus);
+
+    private static async Task<bool> ClearDeployedNamespaceAsync(
+        IMongoCollection<Repo> collection, string repoId, string lastDeploymentStatus)
+    {
+        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+        var update = Builders<Repo>.Update
+            .Set(r => r.DeployedNamespace, null)
+            .Set(r => r.LastDeploymentStatus, lastDeploymentStatus);
+
+        var result = await collection.UpdateOneAsync(filter, update);
+        return result.MatchedCount == 1;
     }
 
     /// <summary>
@@ -317,23 +332,21 @@ public class RepoRepository : IRepoRepository
     /// </summary>
     public async Task<List<Repo>> GetProjectRepos(string tenantId, string? resourceId = null)
     {
-        try
-        {
-            var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-            var collection = _dbContext.GetCollection<Repo>("Repos");
+        return await GetProjectReposAsync(
+            _dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>("Repos"), tenantId, resourceId);
+    }
 
-            var filter = Builders<Repo>.Filter.Eq(r => r.ProjectId, tenantId);
+    public Task<List<Repo>> GetProjectRepos(Tenant project, string? resourceId = null) =>
+        GetProjectReposAsync(ProjectCollection(project), project.TenantId, resourceId);
 
-            if (!string.IsNullOrWhiteSpace(resourceId))
-                filter &= Builders<Repo>.Filter.Eq(r => r.SourceRepoId, resourceId);
+    private static Task<List<Repo>> GetProjectReposAsync(
+        IMongoCollection<Repo> collection, string tenantId, string? resourceId)
+    {
+        var filter = Builders<Repo>.Filter.Eq(r => r.ProjectId, tenantId);
+        if (!string.IsNullOrWhiteSpace(resourceId))
+            filter &= Builders<Repo>.Filter.Eq(r => r.SourceRepoId, resourceId);
 
-            return await collection.Find(filter).ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to read repositories for project {ProjectId}.", tenantId);
-            return [];
-        }
+        return collection.Find(filter).ToListAsync();
     }
 
     /// <summary>
@@ -345,22 +358,39 @@ public class RepoRepository : IRepoRepository
     {
         try
         {
-            var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-            var collection = _dbContext.GetCollection<Repo>("Repos");
-
-            var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
-            var update = Builders<Repo>.Update
-                .Set(r => r.IsArchived, true)
-                .Set(r => r.LastUpdatedDate, DateTime.UtcNow);
-
-            var result = await collection.UpdateOneAsync(filter, update);
-            return result.MatchedCount == 1;
+            return await ArchiveRepoAsync(_dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>("Repos"), repoId);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to archive repo {RepoId}.", repoId);
             return false;
         }
+    }
+
+    public Task<bool> ArchiveRepo(string repoId, Tenant project) =>
+        ArchiveRepoAsync(ProjectCollection(project), repoId);
+
+    private static async Task<bool> ArchiveRepoAsync(IMongoCollection<Repo> collection, string repoId)
+    {
+        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+        var update = Builders<Repo>.Update
+            .Set(r => r.IsArchived, true)
+            .Set(r => r.LastUpdatedDate, DateTime.UtcNow);
+
+        var result = await collection.UpdateOneAsync(filter, update);
+        return result.MatchedCount == 1;
+    }
+
+    private IMongoCollection<Repo> ProjectCollection(Tenant project)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        if (string.IsNullOrWhiteSpace(project.TenantId)
+            || string.IsNullOrWhiteSpace(project.DbConnectionString)
+            || string.IsNullOrWhiteSpace(project.DBName))
+            throw new InvalidOperationException("Project tenant has no database placement.");
+
+        return _dbContextProvider.GetDatabase(project.DbConnectionString, project.DBName)
+            .GetCollection<Repo>("Repos");
     }
 
     public async Task<BulkOperationSummary> UpdateRepoDomain(RepoDomainUpdateRequest request)

@@ -15,10 +15,10 @@ describe("get-api-path", () => {
     expect(getApiPath("anything")).toBe("/api");
   });
 
-  it("getApiUrl builds a url from the runtime base url", () => {
+  it("getApiUrl builds a url from the page origin", () => {
     (window as MutableWindow).__BLOCKS_ENV__ = {
       BLOCKS_API_BASE_URL: "https://api.example.com",
     };
-    expect(getApiUrl("svc", "users")).toBe("https://api.example.com/api/users");
+    expect(getApiUrl("svc", "users")).toBe(`${window.location.origin}/api/users`);
   });
 });

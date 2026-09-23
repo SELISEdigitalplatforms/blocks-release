@@ -45,6 +45,7 @@ namespace XUnitTest.Devops.Deployment
         {
             TenantId = tenantId,
             TenantGroupId = GroupId,
+            DBName = tenantId + "-db",
             DbConnectionString = "mongodb://localhost",
             JwtTokenParameters = null!
         };
@@ -53,9 +54,10 @@ namespace XUnitTest.Devops.Deployment
         {
             _f.TenantLookup.Setup(t => t.GetProjectsByGroupAsync(GroupId))
                            .ReturnsAsync(new List<Tenant> { NewProject(TenantId) });
-            _f.RepoRepo.Setup(r => r.GetProjectRepos(TenantId, It.IsAny<string>()))
+            _f.RepoRepo.Setup(r => r.GetProjectRepos(It.Is<Tenant>(p => p.TenantId == TenantId), It.IsAny<string>()))
                        .ReturnsAsync(new List<Repo>(repos));
-            _f.RepoRepo.Setup(r => r.ArchiveRepo(It.IsAny<string>(), TenantId)).ReturnsAsync(archiveSucceeds);
+            _f.RepoRepo.Setup(r => r.ArchiveRepo(It.IsAny<string>(), It.Is<Tenant>(p => p.TenantId == TenantId)))
+                       .ReturnsAsync(archiveSucceeds);
         }
 
         private Task<DeploymentTeardownSummary> TearDown() =>
@@ -155,6 +157,27 @@ namespace XUnitTest.Devops.Deployment
             summary.SecretsDeleted.Should().Be(0);
             summary.Failures.Should().ContainSingle()
                    .Which.Should().Contain("secret delete failed");
+        }
+
+        [Fact]
+        public async Task SecretDeleteFails_ReplayRetriesTheSecretWithoutRearchiving()
+        {
+            var repo = NewRepo("r1", SecretId);
+            SetupProject(repos: repo);
+            _f.SecretService.SetupSequence(s => s.DeleteAsync(SecretId, It.IsAny<CancellationToken>()))
+                            .ThrowsAsync(new SecretVaultException("vault down", "Delete", SecretId))
+                            .Returns(Task.CompletedTask);
+
+            var first = await TearDown();
+            repo.IsArchived = true; // The archive persisted before the first secret delete failed.
+            var replay = await TearDown();
+
+            first.HasFailures.Should().BeTrue();
+            replay.HasFailures.Should().BeFalse();
+            replay.SecretsDeleted.Should().Be(1);
+            replay.ReposArchived.Should().Be(0);
+            _f.RepoRepo.Verify(r => r.ArchiveRepo("r1", It.IsAny<Tenant>()), Times.Once);
+            _f.SecretService.Verify(s => s.DeleteAsync(SecretId, It.IsAny<CancellationToken>()), Times.Exactly(2));
         }
 
         [Fact]

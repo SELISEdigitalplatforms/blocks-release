@@ -251,4 +251,116 @@ describe("SecretFormModal", () => {
     expect(screen.getByRole("button", { name: /saving/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /cancel/i })).toBeDisabled();
   });
+
+  it("shows an Env radio alongside Key / value and Paste JSON", () => {
+    mockSave();
+    renderModal();
+
+    expect(screen.getByRole("radio", { name: /^env$/i })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /key \/ value/i })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /paste json/i })).toBeInTheDocument();
+  });
+
+  it("saves pasted env text on a new set", async () => {
+    const save = mockSave();
+    renderModal();
+
+    await userEvent.click(screen.getByRole("radio", { name: /^env$/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /^env/i }), {
+      target: {
+        value: "BLOCKS_APP_URL=\nBLOCKS_API_BASE_URL=https://api.blocks.cloud",
+      },
+    });
+    await userEvent.click(screen.getByRole("button", { name: /save variables/i }));
+
+    await waitFor(() =>
+      expect(save.mutateAsync).toHaveBeenCalledWith({
+        repoId: REPO_ID,
+        secrets: {
+          BLOCKS_APP_URL: "",
+          BLOCKS_API_BASE_URL: "https://api.blocks.cloud",
+        },
+      }),
+    );
+  });
+
+  it("carries env text into Key / value on a mode switch", async () => {
+    mockSave();
+    renderModal();
+
+    await userEvent.click(screen.getByRole("radio", { name: /^env$/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /^env/i }), {
+      target: { value: "API_KEY=abc" },
+    });
+    await userEvent.click(screen.getByRole("radio", { name: /key \/ value/i }));
+
+    expect(screen.getByDisplayValue("API_KEY")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("abc")).toBeInTheDocument();
+  });
+
+  it("serializes rows into Env on a mode switch", async () => {
+    mockSave();
+    renderModal({ API_KEY: "abc" });
+
+    await userEvent.click(screen.getByRole("radio", { name: /^env$/i }));
+
+    expect(screen.getByRole("textbox", { name: /^env/i })).toHaveValue(
+      "API_KEY=abc",
+    );
+  });
+
+  it("rejects invalid env text without calling the server", async () => {
+    const save = mockSave();
+    renderModal();
+
+    await userEvent.click(screen.getByRole("radio", { name: /^env$/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /^env/i }), {
+      target: { value: "NOT_A_VARIABLE" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: /save variables/i }));
+
+    expect(await screen.findByText(/Line 1: expected KEY=VALUE/i)).toBeInTheDocument();
+    expect(save.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("refuses to leave Env mode while the paste is invalid", async () => {
+    renderModal();
+
+    await userEvent.click(screen.getByRole("radio", { name: /^env$/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /^env/i }), {
+      target: { value: "not-a-valid-line" },
+    });
+    await userEvent.click(screen.getByRole("radio", { name: /key \/ value/i }));
+
+    expect(screen.getByRole("radio", { name: /^env$/i })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByText(/expected KEY=VALUE/i)).toBeInTheDocument();
+  });
+
+  it("routes a server key error onto the env field", async () => {
+    mockSave({
+      mutateAsync: vi.fn().mockRejectedValue({
+        errors: {
+          invalid_request: "Secret key 'DB' is invalid.",
+          reason: "SECRET_KEY_INVALID",
+        },
+      }),
+    });
+    renderModal();
+
+    await userEvent.click(screen.getByRole("radio", { name: /^env$/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /^env/i }), {
+      target: { value: "DB=x" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: /save variables/i }));
+
+    expect(await screen.findByText("Secret key 'DB' is invalid.")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /^env/i })).toHaveValue(
+      "DB=x",
+    );
+    expect(showErrorToast).not.toHaveBeenCalled();
+  });
+
 });

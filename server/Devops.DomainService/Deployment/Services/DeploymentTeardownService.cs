@@ -55,8 +55,8 @@ public class DeploymentTeardownService : IDeploymentTeardownService
         var projectId = Normalize(message?.ProjectId);
         var resourceId = Normalize(message?.ResourceId);
 
-        var projectIds = await ResolveProjectsAsync(tenantGroupId, projectId);
-        if (projectIds.Count == 0)
+        var projects = await ResolveProjectsAsync(tenantGroupId, projectId);
+        if (projects.Count == 0)
         {
             _logger.LogInformation(
                 "Deployment teardown message resolved to no project, nothing to do. group={TenantGroupId} project={ProjectId} resource={ResourceId}",
@@ -64,10 +64,18 @@ public class DeploymentTeardownService : IDeploymentTeardownService
             return summary;
         }
 
-        foreach (var tenantId in projectIds)
+        foreach (var project in projects)
         {
             summary.ProjectsVisited++;
-            await TearDownProjectAsync(tenantId, resourceId, summary);
+            try
+            {
+                await TearDownProjectAsync(project, resourceId, summary);
+            }
+            catch (Exception ex)
+            {
+                summary.Failures.Add($"{project.TenantId}: project teardown failed - {ex.Message}");
+                _logger.LogError(ex, "Failed to read or tear down project {ProjectId}; continuing with its siblings.", project.TenantId);
+            }
         }
 
         _logger.LogInformation(
@@ -84,7 +92,7 @@ public class DeploymentTeardownService : IDeploymentTeardownService
     /// checked to belong to the group. Soft-deleted projects are deliberately still in scope - they are
     /// the whole point of the message.
     /// </summary>
-    private async Task<List<string>> ResolveProjectsAsync(string tenantGroupId, string projectId)
+    private async Task<List<Tenant>> ResolveProjectsAsync(string tenantGroupId, string projectId)
     {
         if (string.IsNullOrEmpty(tenantGroupId))
             return [];
@@ -95,13 +103,9 @@ public class DeploymentTeardownService : IDeploymentTeardownService
 
             if (project is null)
             {
-                // blocks-os soft-deletes, so the record should still be there. If it is not, the caller
-                // named this project explicitly, so act on it rather than dropping the message - the
-                // repository read below is scoped to that tenant either way.
-                _logger.LogWarning(
-                    "Project {ProjectId} not found while checking it belongs to group {TenantGroupId}. Proceeding on the project id as given.",
-                    projectId, tenantGroupId);
-                return [projectId];
+                // The root registry owns placement. Without its record we cannot know
+                // which cluster to clean, and guessing from an ID could delete elsewhere.
+                throw new InvalidOperationException($"Project {projectId} was not found in the root tenant registry.");
             }
 
             if (!string.Equals(project.TenantGroupId, tenantGroupId, StringComparison.OrdinalIgnoreCase))
@@ -112,24 +116,29 @@ public class DeploymentTeardownService : IDeploymentTeardownService
                 return [];
             }
 
-            return [projectId];
+            return [project];
         }
 
         var projects = await _tenantLookupRepository.GetProjectsByGroupAsync(tenantGroupId);
-        return projects.Select(project => project.TenantId)
-                       .Where(tenantId => !string.IsNullOrWhiteSpace(tenantId))
+        return projects.Where(project => !project.IsRootTenant && !string.IsNullOrWhiteSpace(project.TenantId))
                        .ToList();
     }
 
-    private async Task TearDownProjectAsync(string tenantId, string resourceId, DeploymentTeardownSummary summary)
+    private async Task TearDownProjectAsync(Tenant project, string resourceId, DeploymentTeardownSummary summary)
     {
-        var repos = await _repoRepository.GetProjectRepos(tenantId, resourceId);
+        var tenantId = project.TenantId;
+        if (string.IsNullOrWhiteSpace(project.DbConnectionString) || string.IsNullOrWhiteSpace(project.DBName))
+            throw new InvalidOperationException($"Project {tenantId} has no database placement in the root tenant registry.");
+
+        var repos = await _repoRepository.GetProjectRepos(project, resourceId);
 
         // Archived repositories are in scope - blocks-os archives before it publishes - but one that is
-        // both archived and holds no namespace was already settled by an earlier run. Skipping those
-        // keeps a repeated group teardown from rewriting every repository the project ever had.
+        // both archived and holds neither a namespace nor a secret pointer was already settled.
+        // A failed secret cleanup must still be reachable when the dead-lettered message is replayed.
         var actionable = repos
-            .Where(repo => !repo.IsArchived || !string.IsNullOrWhiteSpace(repo.DeployedNamespace))
+            .Where(repo => !repo.IsArchived
+                           || !string.IsNullOrWhiteSpace(repo.DeployedNamespace)
+                           || !string.IsNullOrWhiteSpace(repo.SecretStoreItemId))
             .ToList();
 
         if (actionable.Count == 0)
@@ -143,7 +152,7 @@ public class DeploymentTeardownService : IDeploymentTeardownService
         foreach (var repo in actionable)
         {
             summary.ReposMatched++;
-            await TearDownRepoAsync(repo, tenantId, summary);
+            await TearDownRepoAsync(repo, project, summary);
         }
     }
 
@@ -152,15 +161,22 @@ public class DeploymentTeardownService : IDeploymentTeardownService
     /// A teardown that fails leaves the repository unarchived on purpose: archiving it would hide a
     /// namespace that is still running from every list that could be used to retry.
     /// </summary>
-    private async Task TearDownRepoAsync(Repo repo, string tenantId, DeploymentTeardownSummary summary)
+    private async Task TearDownRepoAsync(Repo repo, Tenant project, DeploymentTeardownSummary summary)
     {
+        var tenantId = project.TenantId;
         try
         {
+            if (repo.IsArchived && string.IsNullOrWhiteSpace(repo.DeployedNamespace))
+            {
+                await DeleteRepoSecretAsync(repo, tenantId, summary);
+                return;
+            }
+
             if (!string.IsNullOrWhiteSpace(repo.DeployedNamespace))
             {
                 // Passes the loaded repo, not its id. Resolving by id would go back through GetRepo,
                 // which filters archived repositories out - and archived is the normal case here.
-                var result = await _buildService.DeleteDeployment(repo, tenantId, repo.CreatedBy);
+                var result = await _buildService.DeleteDeployment(repo, project, repo.CreatedBy);
 
                 if (!result.IsSuccess)
                 {
@@ -175,7 +191,7 @@ public class DeploymentTeardownService : IDeploymentTeardownService
                 summary.DeploymentsDeleted++;
             }
 
-            if (await _repoRepository.ArchiveRepo(repo.ItemId, tenantId))
+            if (await _repoRepository.ArchiveRepo(repo.ItemId, project))
             {
                 summary.ReposArchived++;
 

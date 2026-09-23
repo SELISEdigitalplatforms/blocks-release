@@ -36,6 +36,21 @@ export const validateSecretKey = (key: string): string | null => {
   return null;
 };
 
+/** Shared empty/size checks for both paste parsers (function so callers above are safe). */
+function finalizeSecretMap(value: RepoSecretMap): ParseResult {
+  if (Object.keys(value).length === 0) {
+    return { ok: false, message: "Add at least one variable." };
+  }
+
+  const tooLarge = exceedsSizeLimit(value);
+
+  if (tooLarge) {
+    return { ok: false, message: tooLarge };
+  }
+
+  return { ok: true, value };
+}
+
 /**
  * Parses pasted text into a validated map.
  *
@@ -84,23 +99,79 @@ export const parseSecretJson = (text: string): ParseResult => {
     value[key] = raw;
   }
 
-  if (Object.keys(value).length === 0) {
-    return { ok: false, message: "Add at least one variable." };
+  return finalizeSecretMap(value);
+};
+
+type EnvLineParse =
+  | { kind: "skip" }
+  | { kind: "error"; message: string }
+  | { kind: "entry"; key: string; value: string };
+
+/** Parses one .env line. Blank and comment lines are skipped. */
+const parseEnvLine = (line: string, lineNum: number): EnvLineParse => {
+  if (!line.trim() || /^\s*#/.test(line)) {
+    return { kind: "skip" };
   }
 
-  const tooLarge = exceedsSizeLimit(value);
+  const eq = line.indexOf("=");
 
-  if (tooLarge) {
-    return { ok: false, message: tooLarge };
+  if (eq === -1) {
+    return { kind: "error", message: `Line ${lineNum}: expected KEY=VALUE.` };
   }
 
-  return { ok: true, value };
+  const key = line.slice(0, eq).trim();
+  const keyError = validateSecretKey(key);
+
+  if (keyError) {
+    return {
+      kind: "error",
+      message: `Line ${lineNum}, key "${key}": ${keyError}`,
+    };
+  }
+
+  return { kind: "entry", key, value: line.slice(eq + 1) };
 };
 
 /**
- * Returns a message when the serialized set is over Key Vault's limit, otherwise null.
- * Measured in bytes, like the server, so a multi-byte set is not waved through.
+ * Parses pasted .env-style text into a validated map.
+ *
+ * Blank lines and #-comment lines are skipped. Keys are trimmed; values are kept exactly as
+ * written after the first "=" (no trim, no quote-stripping). Fail-loud: any bad line rejects
+ * the whole paste.
  */
+export const parseSecretEnv = (text: string): ParseResult => {
+  if (!text.trim()) {
+    return { ok: false, message: "Paste .env-formatted text, e.g. KEY=value." };
+  }
+
+  const lines = text.split(/\r?\n/);
+  const value: RepoSecretMap = {};
+  const firstLineByKey = new Map<string, number>();
+
+  for (let i = 0; i < lines.length; i++) {
+    const lineNum = i + 1;
+    const parsed = parseEnvLine(lines[i], lineNum);
+
+    if (parsed.kind === "entry") {
+      const firstSeenLine = firstLineByKey.get(parsed.key);
+
+      if (firstSeenLine !== undefined) {
+        return {
+          ok: false,
+          message: `Line ${lineNum}: key "${parsed.key}" was already set on line ${firstSeenLine}.`,
+        };
+      }
+
+      firstLineByKey.set(parsed.key, lineNum);
+      value[parsed.key] = parsed.value;
+    } else if (parsed.kind === "error") {
+      return { ok: false, message: parsed.message };
+    }
+  }
+
+  return finalizeSecretMap(value);
+};
+
 export const exceedsSizeLimit = (secrets: RepoSecretMap): string | null => {
   const bytes = new TextEncoder().encode(JSON.stringify(secrets)).length;
 
@@ -120,6 +191,11 @@ export const mapToRows = (secrets: RepoSecretMap): ISecretRow[] =>
 
 export const mapToJson = (secrets: RepoSecretMap): string =>
   JSON.stringify(secrets, null, 2);
+
+export const mapToEnv = (secrets: RepoSecretMap): string =>
+  Object.entries(secrets)
+    .map(([key, value]) => `${key}=${value}`)
+    .join("\n");
 
 export const findDuplicateKey = (rows: ISecretRow[]): string | null => {
   const seen = new Set<string>();
@@ -149,13 +225,22 @@ export const getServerReason = (error: unknown): string | null => {
  * The human-facing half of the same envelope — the first non-`reason` entry.
  * Used for the form-level banner, where the server's own wording is better than ours.
  */
+const formatErrorEntry = (value: unknown): string | null => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && value.length > 0) return value.join(", ");
+  return null;
+};
+
 export const getServerMessage = (error: unknown): string | null => {
   if (!isErrorWithErrors(error)) return null;
 
-  for (const [key, value] of Object.entries(error.errors)) {
-    if (key === "reason") continue;
-    if (typeof value === "string") return value;
-    if (Array.isArray(value) && value.length > 0) return value.join(", ");
+  const humanEntries = Object.entries(error.errors).filter(
+    ([key]) => key !== "reason",
+  );
+
+  for (const [, value] of humanEntries) {
+    const formatted = formatErrorEntry(value);
+    if (formatted) return formatted;
   }
 
   return null;

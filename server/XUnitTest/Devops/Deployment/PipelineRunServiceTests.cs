@@ -810,18 +810,18 @@ namespace XUnitTest.Devops.Deployment
         }
 
         [Fact]
-        public async Task CreateNamespaceAsync_NoAmbientContext_ReturnsErrorMessage()
+        public async Task CreateNamespaceAsync_NoAmbientContext_UsesRepositoryOwner()
         {
             BlocksContext.ClearContext();
-            _tokenRepository.Setup(t => t.getToken(It.IsAny<string>())).ReturnsAsync("gh-token");
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
 
-            // Pins current behaviour: without an ambient context the tenant lookup throws and
-            // the exception message is surfaced instead of a pipeline run name.
             var (name, image, _, error) = await Service().CreateNamespaceAsync(NewRepo());
 
-            name.Should().BeNull();
-            image.Should().BeNull();
-            error.Should().NotBeNullOrEmpty();
+            name.Should().NotBeNullOrEmpty();
+            image.Should().NotBeNullOrEmpty();
+            error.Should().BeNull();
+            _tokenRepository.Verify(t => t.getToken("user-1"), Times.Once);
         }
 
         [Fact]
@@ -882,18 +882,17 @@ namespace XUnitTest.Devops.Deployment
         }
 
         [Fact]
-        public async Task CreateNamespaceAsync_UsesAmbientUserOverRepoCreator()
+        public async Task CreateNamespaceAsync_IgnoresUnrelatedAmbientTenant()
         {
             SetContext();
-            _tokenRepository.Setup(t => t.getToken("user-ctx")).ReturnsAsync("gh-token");
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
             SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
 
             var (_, _, _, error) = await Service().CreateNamespaceAsync(NewRepo());
 
             error.Should().BeNull();
-            // The repo was created by user-1, but the ambient context wins.
-            _tokenRepository.Verify(t => t.getToken("user-ctx"), Times.Once);
-            _tokenRepository.Verify(t => t.getToken("user-1"), Times.Never);
+            _tokenRepository.Verify(t => t.getToken("user-ctx"), Times.Never);
+            _tokenRepository.Verify(t => t.getToken("user-1"), Times.Once);
         }
 
         [Fact]
@@ -942,6 +941,61 @@ namespace XUnitTest.Devops.Deployment
             args.Should().Equal(
                 "--build-arg", "ci_build=prod",
                 "--build-arg", "VITE_BLOCKS_EXTRA_ARG=NBM");
+        }
+
+        [Fact]
+        public async Task CreateNamespaceAsync_WebhookSecretRead_UsesTargetTenantAndRestoresContext()
+        {
+            BlocksContext.ClearContext();
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
+            var repo = NewRepo();
+            repo.SecretStoreItemId = "secret-1";
+            BlocksContext seen = null;
+            _repoSecrets.Setup(r => r.GetValueAsync("repo-1", It.IsAny<CancellationToken>()))
+                .Callback(() => seen = BlocksContext.GetContext())
+                .ReturnsAsync(new RepoSecretValueResponse
+                {
+                    RepoId = "repo-1",
+                    Secrets = new Dictionary<string, string> { ["VITE_BLOCKS_EXTRA_ARG"] = "NBM" }
+                });
+
+            var (_, _, _, error) = await ServiceWithRepoSecrets()
+                .CreateNamespaceAsync(repo, "tenant-1", "user-1");
+
+            error.Should().BeNull();
+            seen.Should().NotBeNull();
+            seen.TenantId.Should().Be("tenant-1");
+            seen.UserId.Should().Be("user-1");
+            BlocksContext.GetContext().Should().BeNull();
+            SubmittedExtraArgs().Select(x => x?.ToString()).Should().Contain("VITE_BLOCKS_EXTRA_ARG=NBM");
+        }
+
+        [Fact]
+        public async Task CreateNamespaceAsync_AnonymousTenantContext_DoesNotBlockSecretRead()
+        {
+            BlocksContext.SetContext(BlocksContext.Create(
+                "tenant-1", roles: [], userId: null, isAuthenticated: false,
+                requestUri: "webhook", organizationId: "default",
+                expireOn: DateTime.UtcNow.AddMinutes(5), email: null,
+                permissions: [], userName: null, phoneNumber: null,
+                displayName: null, oauthToken: null, originalTenantId: "tenant-1"));
+            _tokenRepository.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            SetupCreateCustomObject(new Dictionary<string, object> { ["metadata"] = "created" });
+            var repo = NewRepo();
+            repo.SecretStoreItemId = "secret-1";
+            BlocksContext seen = null;
+            _repoSecrets.Setup(r => r.GetValueAsync("repo-1", It.IsAny<CancellationToken>()))
+                .Callback(() => seen = BlocksContext.GetContext())
+                .ReturnsAsync(new RepoSecretValueResponse { RepoId = "repo-1" });
+
+            var (_, _, _, error) = await ServiceWithRepoSecrets()
+                .CreateNamespaceAsync(repo, "tenant-1", "user-1");
+
+            error.Should().BeNull();
+            seen.IsAuthenticated.Should().BeTrue();
+            seen.TenantId.Should().Be("tenant-1");
+            BlocksContext.GetContext().IsAuthenticated.Should().BeFalse();
         }
 
         /// <summary>

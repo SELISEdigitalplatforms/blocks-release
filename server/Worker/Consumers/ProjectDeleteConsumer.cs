@@ -36,11 +36,12 @@ namespace Worker.Consumers
 
                 if (summary.HasFailures)
                 {
-                    // Already logged per repository. Surfaced once more here so the message as a whole is
-                    // searchable, without throwing: a retry would re-run teardown on repos already deleted.
                     _logger.LogWarning(
-                        "Deployment teardown completed with {FailureCount} failure(s): {Failures}",
+                        "Deployment teardown requires replay after {FailureCount} failure(s): {Failures}",
                         summary.Failures.Count, string.Join(" | ", summary.Failures));
+                    // Genesis dead-letters failed deliveries. A completed delivery would lose
+                    // the failed tenant; settled repositories are safe to skip on replay.
+                    throw new InvalidOperationException("Deployment teardown did not complete for every project.");
                 }
             }
             catch (Exception ex)
@@ -48,6 +49,7 @@ namespace Worker.Consumers
                 _logger.LogError(ex,
                     "Failed to process project delete message. group={TenantGroupId} project={ProjectId} resource={ResourceId}",
                     message?.TenantGroupId, message?.ProjectId, message?.ResourceId);
+                throw;
             }
         }
     }

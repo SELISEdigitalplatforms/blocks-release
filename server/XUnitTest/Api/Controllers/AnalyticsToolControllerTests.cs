@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Api.Controllers;
 using Blocks.Genesis;
@@ -78,6 +79,31 @@ namespace XUnitTest.Api.Controllers
         }
 
         [Fact]
+        public async Task ProcessSonarQubeUser_ValidBuild_ReturnsSonarProjectKeyAndBranch()
+        {
+            _tokenRepo.Setup(t => t.GetUserByIdAsync(It.IsAny<string>())).ReturnsAsync(new User { UserName = "bob" });
+            _buildRepo.Setup(b => b.GetBuild("bid")).ReturnsAsync(new Build { RepoName = "org/repo", Branch = "feature/x", ProjectId = "p1" });
+            _sonar.Setup(s => s.ProcessSonarQubeUser("bob", "org/repo", "p1")).ReturnsAsync(true);
+
+            var data = DataOf(await CreateController().ProcessSonarQubeUser("bid"));
+
+            data.GetProperty("projectKey").GetString().Should().Be("org-repo");
+            data.GetProperty("branch").GetString().Should().Be("feature/x");
+        }
+
+        [Fact]
+        public async Task ProcessSonarQubeUser_NullRepoName_ReturnsNullProjectKey()
+        {
+            _tokenRepo.Setup(t => t.GetUserByIdAsync(It.IsAny<string>())).ReturnsAsync(new User { UserName = "bob" });
+            _buildRepo.Setup(b => b.GetBuild("bid")).ReturnsAsync(new Build { RepoName = null, Branch = "dev", ProjectId = "p1" });
+
+            var result = await CreateController().ProcessSonarQubeUser("bid");
+
+            result.Should().BeOfType<OkObjectResult>();
+            DataOf(result).GetProperty("projectKey").ValueKind.Should().Be(JsonValueKind.Null);
+        }
+
+        [Fact]
         public async Task ProcessSonarQubeUser_NullBuild_ReturnsBadRequest()
         {
             _tokenRepo.Setup(t => t.GetUserByIdAsync(It.IsAny<string>())).ReturnsAsync(new User { UserName = "bob" });
@@ -115,6 +141,34 @@ namespace XUnitTest.Api.Controllers
             var result = await CreateController().ProcessDependencyTrackUser("bid");
 
             result.Should().BeOfType<OkObjectResult>();
+            DataOf(result).GetProperty("projectUuid").ValueKind.Should().Be(JsonValueKind.Null);
+        }
+
+        [Fact]
+        public async Task ProcessDependencyTrackUser_WithBuild_ReturnsDependencyTrackProjectUuid()
+        {
+            _tokenRepo.Setup(t => t.GetUserByIdAsync(It.IsAny<string>())).ReturnsAsync(new User { UserName = "bob" });
+            _buildRepo.Setup(b => b.GetBuild("bid")).ReturnsAsync(new Build { RepoName = "org/repo", Branch = "dev", RepoId = "r1", ItemId = "bid", ProjectId = "p1" });
+            // Moq matches the <object> setup for every type argument and the last matching setup wins,
+            // so the typed setups must be registered after it.
+            _http.Setup(h => h.MakeHttpRequest<object>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                 .ReturnsAsync((new object(), Resp(HttpStatusCode.Created)));
+            _http.Setup(h => h.MakeHttpRequest<ScaLookupResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                 .ReturnsAsync((new ScaLookupResponse { uuid = "dt-uuid-1" }, Resp(HttpStatusCode.OK)));
+            _http.Setup(h => h.MakeHttpRequest<DependencyTrackTeamCreateResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                 .ReturnsAsync((null, Resp(HttpStatusCode.Conflict)));
+
+            var result = await CreateController().ProcessDependencyTrackUser("bid");
+
+            result.Should().BeOfType<OkObjectResult>();
+            DataOf(result).GetProperty("projectUuid").GetString().Should().Be("dt-uuid-1");
+        }
+
+        // Data is an anonymous object; round-trip it through JSON the way the client receives it.
+        private static JsonElement DataOf(IActionResult result)
+        {
+            var body = ((OkObjectResult)result).Value.Should().BeOfType<BaseApiResponse>().Subject;
+            return JsonSerializer.SerializeToElement(body.Data);
         }
     }
 }

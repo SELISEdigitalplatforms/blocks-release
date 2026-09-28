@@ -71,13 +71,8 @@ describe("SastTab", () => {
     expect(screen.getByText("Quality Gate")).toBeInTheDocument();
   });
 
-  it("redirects to SonarQube when the button is clicked", async () => {
-    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
-    const refetch = vi.fn().mockResolvedValue({});
-    vi.mocked(useSASTRedirectLink).mockReturnValue({
-      isLoading: false,
-      refetch,
-    } as never);
+  const renderOverview = (refetch: ReturnType<typeof vi.fn>, isLoading = false) => {
+    vi.mocked(useSASTRedirectLink).mockReturnValue({ isLoading, refetch } as never);
     vi.mocked(useGetSASTData).mockReturnValue({
       data: {
         data: {
@@ -92,14 +87,49 @@ describe("SastTab", () => {
       isLoading: false,
       error: null,
     } as never);
-    vi.useFakeTimers();
     renderWithProviders(<SastTab />);
+  };
+
+  const stubTab = () => {
+    const tab = { opener: {}, location: { href: "about:blank" } } as unknown as Window;
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(tab);
+    return { tab, openSpy };
+  };
+
+  it("opens the build's project and branch dashboard in SonarQube", async () => {
+    const { tab, openSpy } = stubTab();
+    const refetch = vi.fn().mockResolvedValue({
+      isError: false,
+      data: { isSuccess: true, data: { projectKey: "org-repo", branch: "feature/x" } },
+    });
+    renderOverview(refetch);
+
     fireEvent.click(screen.getByRole("button", { name: /View in SonarQube/i }));
+
+    expect(openSpy).toHaveBeenCalledWith("about:blank", "_blank");
     expect(refetch).toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1100);
-    expect(openSpy).toHaveBeenCalled();
-    vi.useRealTimers();
+    await vi.waitFor(() =>
+      expect(tab.location.href).toBe(
+        "https://code.selise.biz/dashboard?id=org-repo&branch=feature%2Fx",
+      ),
+    );
     openSpy.mockRestore();
+  });
+
+  it("silently opens the SonarQube home page when the access call fails", async () => {
+    const { tab, openSpy } = stubTab();
+    renderOverview(vi.fn().mockResolvedValue({ isError: true, data: undefined }));
+
+    fireEvent.click(screen.getByRole("button", { name: /View in SonarQube/i }));
+
+    await vi.waitFor(() => expect(tab.location.href).toBe("https://code.selise.biz"));
+    expect(screen.queryByText(/Something went wrong/i)).not.toBeInTheDocument();
+    openSpy.mockRestore();
+  });
+
+  it("disables the SonarQube button while the access call is loading", () => {
+    renderOverview(vi.fn(), true);
+    expect(screen.getByRole("button", { name: /View in SonarQube/i })).toBeDisabled();
   });
 
   it("renders an error state", () => {

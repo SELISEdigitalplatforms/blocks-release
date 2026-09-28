@@ -1,5 +1,9 @@
 import { serviceInstances } from "@/lib/http-client";
 import { CLOUD_BUILD_ENDPOINTS } from "@blocks-deployment/constants/endpoint.constant";
+import type {
+  ISASTRedirectResponse,
+  ISCARedirectResponse,
+} from "@blocks-deployment/utils/observability-links.utils";
 
 class ObservabilityService {
   private readonly httpClient = serviceInstances.deploymentService;
@@ -11,11 +15,11 @@ class ObservabilityService {
     const url = `${CLOUD_BUILD_ENDPOINTS.REPORTS}?buildId=${encodeURIComponent(buildId)}&type=sca-${encodeURIComponent(type)}`;
     return this.httpClient.get(url);
   }
-  async SCARedirect(buildId: string): Promise<string> {
+  async SCARedirect(buildId: string): Promise<ISCARedirectResponse> {
     const url = `${CLOUD_BUILD_ENDPOINTS.PROCESS_DEPENDENCY_TRACK_USER}?buildId=${encodeURIComponent(buildId)}`;
     return this.httpClient.get(url);
   }
-  async SASTRedirect(buildId: string): Promise<string> {
+  async SASTRedirect(buildId: string): Promise<ISASTRedirectResponse> {
     const url = `${CLOUD_BUILD_ENDPOINTS.PROCESS_SONARQUBE_USER}?buildId=${encodeURIComponent(buildId)}`;
     return this.httpClient.get(url);
   }

@@ -358,11 +358,14 @@ export function formatCondition(c: SastGateCondition): {
   const label = CONDITION_LABELS[c.metricKey] ?? c.metricKey;
   const value = formatConditionValue(c.metricKey, c.actualValue);
   const isRating = RATING_KEYS.has(c.metricKey) || c.metricKey.includes("rating");
-  const thresholdDisplay = isRating
-    ? (toRatingLetter(c.errorThreshold) ?? c.errorThreshold)
-    : isPercentMetric(c.metricKey)
-      ? formatPercent(c.errorThreshold)
-      : formatCount(c.errorThreshold);
+  let thresholdDisplay: string;
+  if (isRating) {
+    thresholdDisplay = toRatingLetter(c.errorThreshold) ?? c.errorThreshold;
+  } else if (isPercentMetric(c.metricKey)) {
+    thresholdDisplay = formatPercent(c.errorThreshold);
+  } else {
+    thresholdDisplay = formatCount(c.errorThreshold);
+  }
   let requirement: string;
   if (isRating) {
     requirement =
@@ -380,11 +383,14 @@ export function formatCondition(c: SastGateCondition): {
 
 export function formatRequired(c: SastGateCondition): string {
   const isRating = RATING_KEYS.has(c.metricKey) || c.metricKey.includes("rating");
-  const thresholdDisplay = isRating
-    ? (toRatingLetter(c.errorThreshold) ?? c.errorThreshold)
-    : isPercentMetric(c.metricKey)
-      ? formatPercent(c.errorThreshold)
-      : c.errorThreshold;
+  let thresholdDisplay: string;
+  if (isRating) {
+    thresholdDisplay = toRatingLetter(c.errorThreshold) ?? c.errorThreshold;
+  } else if (isPercentMetric(c.metricKey)) {
+    thresholdDisplay = formatPercent(c.errorThreshold);
+  } else {
+    thresholdDisplay = c.errorThreshold;
+  }
   if (isRating) {
     // GT = worse-than threshold → Required ≥ letter; LT = better-than → Required ≤ letter
     return c.comparator === "GT"

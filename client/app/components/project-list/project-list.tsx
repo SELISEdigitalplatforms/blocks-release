@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { ChevronDown, Loader } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
 import {
@@ -16,14 +16,8 @@ import {
 import { IProject } from "@/cross-modules/identifier/models/project.model";
 import { useProjectStore } from "@/store/project.store";
 
-const redirectPaths: Record<string, string> = {
-  "/app/deployment/repo/*": "/app/deployment",
-};
-
-const wildcardToRegex = (pattern: string) => {
-  const escaped = pattern.replace(/[-/\\^$+?.()|[\]{}]/g, "\\$&");
-  return `^${escaped.replace(/\*/g, "[^/]+")}$`;
-};
+const DEPLOYMENT_REPO_PATH = /^\/app\/deployment\/repo\/[^/]+$/;
+const DEPLOYMENT_REPO_REDIRECT = "/app/deployment";
 
 export function ProjectList() {
   const navigate = useNavigate();
@@ -38,17 +32,6 @@ export function ProjectList() {
   });
   const pendingProjectRef = useRef<IProject | null>(null);
 
-  const redirectRegexMap = useMemo(
-    () =>
-      Object.entries(redirectPaths).reduce<Record<string, string>>(
-        (acc, [pattern, target]) => {
-          acc[wildcardToRegex(pattern)] = target;
-          return acc;
-        },
-        {},
-      ),
-    [],
-  );
 
   useEffect(() => {
     if (pendingProjectRef.current) {
@@ -58,13 +41,9 @@ export function ProjectList() {
   }, [pathname, setSelectedProject]);
 
   const handleProjectSelect = (project: IProject) => {
-    const redirectEntry = Object.entries(redirectRegexMap).find(([regex]) =>
-      new RegExp(regex).test(pathname),
-    );
-
-    if (redirectEntry) {
+    if (DEPLOYMENT_REPO_PATH.test(pathname)) {
       pendingProjectRef.current = project;
-      navigate(redirectEntry[1], { replace: true });
+      navigate(DEPLOYMENT_REPO_REDIRECT, { replace: true });
       return;
     }
 

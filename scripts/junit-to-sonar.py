@@ -17,8 +17,13 @@ report if any path is unknown.
 
 import os
 import sys
-import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape, quoteattr
+
+try:
+    import defusedxml.ElementTree as ET
+except ImportError:
+    sys.stderr.write("defusedxml is required: pip install defusedxml\n")
+    raise SystemExit(2)
 
 
 def duration_ms(node):

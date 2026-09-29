@@ -179,7 +179,8 @@ public class MonitorControllerTests
     [Fact]
     public async Task MissingAuthorizationHeader_ForwardsJwtCookieAsBearerToken()
     {
-        const string jwt = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.signature";
+        // Intentionally not a literal JWT (scanners flag JWT-shaped strings).
+        var jwt = string.Join(".", new[] { "hdr", "payload", "sig-not-a-jwt" });
         var handler = new CapturingHandler(JsonResponse(HttpStatusCode.OK, "{}"));
         var controller = CreateController(handler, new Dictionary<string, string?>
         {

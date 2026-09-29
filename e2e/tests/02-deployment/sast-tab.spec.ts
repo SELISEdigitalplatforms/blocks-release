@@ -116,7 +116,8 @@ async function openSastTab(page: Page, details: Record<string, string> | null) {
   target.pathname = `/app/${itemId}/deployment/repo/${FAKE_REPO_ID}/deployment-logs/${FAKE_BUILD_ID}`;
   target.search = "tab=sast";
   await page.goto(target.toString(), { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("tab", { name: "SAST" })).toBeVisible({
+  // Top-level SAST/SCA/DAST controls are buttons in a nav, not ARIA tabs.
+  await expect(page.getByRole("button", { name: "SAST" })).toBeVisible({
     timeout: 30_000,
   });
 }
@@ -129,8 +130,10 @@ test.describe("SAST tab New Code / Overall Code (#209)", () => {
 
     await test.step("[Positive] New Code selected by default with Example 1 numbers (H3)", async () => {
       await openSastTab(page, sastDetailsHappy);
-      await expect(page.getByText("Overview")).toBeVisible({ timeout: 30_000 });
-      await expect(page.getByText("Passed")).toBeVisible();
+      await expect(page.getByRole("tab", { name: "New Code" })).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText("Quality Gate")).toBeVisible();
+      await expect(page.getByText("Passed").first()).toBeVisible();
       await expect(page.getByRole("tab", { name: "New Code" })).toHaveAttribute(
         "data-state",
         "active",

@@ -186,7 +186,7 @@ public class MonitorControllerTests
         {
             ["BLOCKS_MONITOR_BASE_URL"] = "https://monitor.example"
         });
-        const string cookie = $"idp_session=opaque; dev-release.blocksdevelopers.com={jwt}; rt_dev-release.blocksdevelopers.com=refresh";
+        var cookie = $"idp_session=opaque; dev-release.blocksdevelopers.com={jwt}; rt_dev-release.blocksdevelopers.com=refresh";
 
         await controller.GetMonitorListByRepoId(ProjectKey, RepoId, cookie: cookie);
 

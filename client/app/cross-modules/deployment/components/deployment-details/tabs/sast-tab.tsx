@@ -198,150 +198,156 @@ const SastTab = () => {
       return getSonarQubeDashboardUrl(result.isError ? undefined : result.data);
     });
 
-  return (
-    <div className="min-h-screen w-full space-y-6">
-      {isLoading ? (
-        <>
-          <Card>
-            <div className="px-6 py-4">
-              <div className="flex items-center justify-between">
-                <Skeleton className="mb-2 h-6 w-48" />
-                <Skeleton className="h-8 w-40" />
-              </div>
-              <div className="mt-3 flex items-center gap-6 text-xs text-gray-500">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-4 w-40" />
-              </div>
-            </div>
-            <div className="p-6">
-              <Skeleton className="mb-4 h-8 w-64" />
-              <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-                  <Skeleton key={i} className="h-12 w-full rounded-lg" />
-                ))}
-              </div>
-            </div>
-          </Card>
-        </>
-      ) : !error && details ? (
-        <Card>
-          <CardHeader className="mb-0 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <CardTitle>Overview</CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSASTRedirect}
-                disabled={isSASTLoading}>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                View in SonarQube
-              </Button>
-            </div>
+  let body: React.ReactNode;
+  if (isLoading) {
+    body = (
+      <Card>
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <Skeleton className="mb-2 h-6 w-48" />
+            <Skeleton className="h-8 w-40" />
+          </div>
+          <div className="mt-3 flex items-center gap-6 text-xs text-gray-500">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+        </div>
+        <div className="p-6">
+          <Skeleton className="mb-4 h-8 w-64" />
+          <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+              <Skeleton key={i} className="h-12 w-full rounded-lg" />
+            ))}
+          </div>
+        </div>
+      </Card>
+    );
+  } else if (!error && details) {
+    body = (
+      <Card>
+        <CardHeader className="mb-0 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <CardTitle>Overview</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSASTRedirect}
+              disabled={isSASTLoading}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              View in SonarQube
+            </Button>
+          </div>
 
-            <div className="flex gap-2 text-xs">
-              {overviewData.map((item, index) => (
-                <div key={index}>
-                  <span className="text-low-emphasis">{item.name}</span>
-                  <span
-                    className={
-                      item.name === "Quality Gate"
-                        ? `${getDeploymentLogEventBadgeClassName(qualityGateBadgeStatus(item.value))} ml-2`
-                        : `pl-2`
-                    }>
-                    {item.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Separator orientation="horizontal" className="my-4 w-full" />
-            <Tabs defaultValue="new">
-              <TabsList>
-                <TabsTrigger value="new">New Code</TabsTrigger>
-                <TabsTrigger value="overall">Overall Code</TabsTrigger>
-              </TabsList>
-              <TabsContent value="new" className="mt-4 space-y-3">
-                {periodLabel && (
-                  <p className="text-xs text-medium-emphasis">
-                    New code: {periodLabel}
+          <div className="flex gap-2 text-xs">
+            {overviewData.map((item, index) => (
+              <div key={index}>
+                <span className="text-low-emphasis">{item.name}</span>
+                <span
+                  className={
+                    item.name === "Quality Gate"
+                      ? `${getDeploymentLogEventBadgeClassName(qualityGateBadgeStatus(item.value))} ml-2`
+                      : `pl-2`
+                  }>
+                  {item.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Separator orientation="horizontal" className="my-4 w-full" />
+          <Tabs defaultValue="new">
+            <TabsList>
+              <TabsTrigger value="new">New Code</TabsTrigger>
+              <TabsTrigger value="overall">Overall Code</TabsTrigger>
+            </TabsList>
+            <TabsContent value="new" className="mt-4 space-y-3">
+              {periodLabel && (
+                <p className="text-xs text-medium-emphasis">
+                  New code: {periodLabel}
+                </p>
+              )}
+              {showNewCode ? (
+                <OverviewStats stats={newCodeStats} />
+              ) : (
+                <div className="space-y-1 py-6 text-center">
+                  <p className="text-sm font-medium text-high-emphasis">
+                    No new lines to analyze
                   </p>
-                )}
-                {showNewCode ? (
-                  <OverviewStats stats={newCodeStats} />
-                ) : (
-                  <div className="space-y-1 py-6 text-center">
-                    <p className="text-sm font-medium text-high-emphasis">
-                      No new lines to analyze
-                    </p>
-                    <p className="text-xs text-medium-emphasis">
-                      There is no new code on this branch since the new code
-                      period started.
-                    </p>
-                  </div>
-                )}
-              </TabsContent>
-              <TabsContent value="overall" className="mt-4">
-                <OverviewStats stats={overallStats} />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      ) : !error && !details ? (
-        <Card className="w-full">
-          <CardHeader className="pb-4 text-center">
-            <div className="mb-4 flex justify-center">
-              <div className="relative">
-                <Shield className="h-16 w-16 text-muted-foreground" />
-                <Clock className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-background p-1 text-blue-600" />
-              </div>
+                  <p className="text-xs text-medium-emphasis">
+                    There is no new code on this branch since the new code
+                    period started.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="overall" className="mt-4">
+              <OverviewStats stats={overallStats} />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    );
+  } else if (!error && !details) {
+    body = (
+      <Card className="w-full">
+        <CardHeader className="pb-4 text-center">
+          <div className="mb-4 flex justify-center">
+            <div className="relative">
+              <Shield className="h-16 w-16 text-muted-foreground" />
+              <Clock className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-background p-1 text-blue-600" />
             </div>
-            <CardTitle className="text-2xl">
-              Static Application Security Testing
-            </CardTitle>
-            <CardDescription className="text-lg">
-              Data Processing
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-center">
-            <p className="text-muted-foreground">
-              The SAST data is still being processed. Please check back later.
-            </p>
+          </div>
+          <CardTitle className="text-2xl">
+            Static Application Security Testing
+          </CardTitle>
+          <CardDescription className="text-lg">
+            Data Processing
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 text-center">
+          <p className="text-muted-foreground">
+            The SAST data is still being processed. Please check back later.
+          </p>
 
-            <div className="pt-4">
-              <div className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
-                <Clock className="mr-1 h-3 w-3" />
-                Analysis in progress
-              </div>
+          <div className="pt-4">
+            <div className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
+              <Clock className="mr-1 h-3 w-3" />
+              Analysis in progress
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="w-full">
-          <CardHeader className="pb-4 text-center">
-            <div className="mb-4 flex justify-center">
-              <div className="relative">
-                <Shield className="h-16 w-16 text-muted-foreground" />
-                <AlertTriangle className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-background p-1 text-red-600" />
-              </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  } else {
+    body = (
+      <Card className="w-full">
+        <CardHeader className="pb-4 text-center">
+          <div className="mb-4 flex justify-center">
+            <div className="relative">
+              <Shield className="h-16 w-16 text-muted-foreground" />
+              <AlertTriangle className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-background p-1 text-red-600" />
             </div>
-            <CardTitle className="text-2xl">
-              Static Application Security Testing
-            </CardTitle>
-            <CardDescription className="text-lg">
-              Error Loading Data
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-center">
-            <p className="text-muted-foreground">
-              There was an error loading the SAST data. Please try again later.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+          </div>
+          <CardTitle className="text-2xl">
+            Static Application Security Testing
+          </CardTitle>
+          <CardDescription className="text-lg">
+            Error Loading Data
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 text-center">
+          <p className="text-muted-foreground">
+            There was an error loading the SAST data. Please try again later.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return <div className="min-h-screen w-full space-y-6">{body}</div>;
 };
+
 
 export default SastTab;

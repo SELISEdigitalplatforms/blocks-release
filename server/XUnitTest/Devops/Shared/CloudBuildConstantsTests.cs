@@ -16,6 +16,8 @@ namespace XUnitTest.Devops.Shared
             CloudBuildConstants.PROJECT_DELETE_LISTENER.Should().Be("blocks_release_project_delete_listener");
             CloudBuildConstants.SONARQUBE_PERMISSIONS.Should().Contain("user");
             CloudBuildConstants.SAST_METRIC_KEYS.Should().Contain("bugs");
+            CloudBuildConstants.SAST_METRIC_KEYS.Should().Contain("software_quality_reliability_issues");
+            CloudBuildConstants.SAST_METRIC_KEYS.Should().Contain("sqale_index");
         }
 
         [Fact]

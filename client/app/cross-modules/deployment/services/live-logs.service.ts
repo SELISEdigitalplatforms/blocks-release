@@ -93,7 +93,8 @@ export class LiveLogsService {
         }
       } catch (error) {
         console.error(
-          `Error processing log entry at index ${index}:`,
+          "Error processing log entry at index",
+          index,
           error,
           log,
         );

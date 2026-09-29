@@ -17,48 +17,49 @@ import {
 } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
 import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui-kits/tabs/tabs";
+import {
   getSonarQubeDashboardUrl,
   openResolvedUrlInNewTab,
 } from "@blocks-deployment/utils/observability-links.utils";
+import {
+  getNewCodePeriodLabel,
+  getNewCodeStats,
+  getOverallCodeStats,
+  getQualityGateLabel,
+  hasNewCode,
+  type RatingLetter,
+  type SastDetails,
+  type SastStat,
+} from "@blocks-deployment/utils/sast-metrics.utils";
 
-interface StatItem {
-  title: string;
-  value: string;
-  subtitle?: string;
-  grade: string;
-}
-
-interface OverviewStatsProps {
-  stats: StatItem[];
-  gradeStatusView: (
-    grade: string,
-    title: string,
-    value: string,
-  ) => React.ReactNode;
-  title?: string;
-  description?: string;
-  gridColumns?: string;
-  className?: string;
-}
+const RATING_BADGE_CLASS: Record<RatingLetter, string> = {
+  A: "bg-green-100 text-green-700",
+  B: "bg-lime-100 text-lime-700",
+  C: "bg-yellow-100 text-yellow-700",
+  D: "bg-orange-100 text-orange-700",
+  E: "bg-red-100 text-red-700",
+};
 
 const OverviewStats = ({
   stats,
-  gradeStatusView,
-  title,
-  description,
-  gridColumns = "grid-cols-2 md:grid-cols-3",
-  className = "",
-}: OverviewStatsProps) => {
+  gridColumns = "grid-cols-1 sm:grid-cols-2 md:grid-cols-3",
+}: {
+  stats: SastStat[];
+  gridColumns?: string;
+}) => {
   return (
-    <div className={`w-full space-y-4 ${className}`}>
-      {title && <p className="text-lg font-semibold">{title}</p>}
-      {description && (
-        <p className="text-sm text-medium-emphasis">{description}</p>
-      )}
-
+    <div className="w-full space-y-4">
       <div className={`grid w-full gap-x-10 gap-y-2 ${gridColumns}`}>
-        {stats.map((item, index) => (
-          <div key={index} className="flex h-20 items-start gap-4">
+        {stats.map((item) => (
+          <div
+            key={item.id}
+            data-testid={`sast-stat-${item.id}`}
+            className="flex h-20 items-start gap-4">
             <div className="flex-1">
               <p className="text-sm text-high-emphasis">{item.title}</p>
               <p className="text-lg font-semibold">{item.value}</p>
@@ -66,7 +67,7 @@ const OverviewStats = ({
                 <p className="text-xs text-gray-400">{item.subtitle}</p>
               )}
             </div>
-            {item.grade && gradeStatusView(item.grade, item.title, item.value)}
+            {renderIndicator(item)}
           </div>
         ))}
       </div>
@@ -74,171 +75,81 @@ const OverviewStats = ({
   );
 };
 
-// Moved outside the component
-const getOverviewData = (details: any) => [
-  {
-    name: "Quality Gate",
-    id: "quality_gate",
-    value: details?.alert_status === "OK" ? "Passed" : "Failed",
-  },
-  {
-    name: "Lines of code",
-    id: "linesOfCode",
-    value: details?.ncloc ? Number(details.ncloc).toLocaleString() : "-",
-  },
-  // { name: "Version", id: "version", value: "1.0.0" },
-  // { name: "Last", id: "last", value: "1 day ago" },
-];
+const renderIndicator = (item: SastStat) => {
+  const { indicator } = item;
+  if (indicator.kind === "none") return null;
 
-// Moved outside the component
-const getOverallStats = (details: any): StatItem[] => {
-  if (!details) return [];
-
-  return [
-    {
-      title: "Security",
-      value: details?.software_quality_security_issues ?? "0",
-      subtitle: "Open issues",
-      grade:
-        details?.software_quality_security_rating === "1.0" ? "A" : "alert",
-    },
-    {
-      title: "Reliability",
-      value: details?.software_quality_reliability_issues ?? "0",
-      subtitle: "Open issues",
-      grade:
-        details?.software_quality_reliability_rating === "1.0" ? "A" : "alert",
-    },
-    {
-      title: "Maintainability",
-      value: details?.sqale_rating ?? "0",
-      subtitle: "Open issues",
-      grade: details?.sqale_rating === "1.0" ? "A" : "alert",
-    },
-    {
-      title: "Accepted issues",
-      value: details?.accepted_issues ?? "0",
-      subtitle: "Valid issues that were not fixed",
-      grade: Number(details?.accepted_issues) > 0 ? "alert" : "A",
-    },
-    {
-      title: "Coverage",
-      value: details?.coverage ? `${details.coverage}%` : "0%",
-      subtitle: details?.lines_to_cover
-        ? `On ${Number(details.lines_to_cover).toLocaleString()} lines to cover`
-        : "",
-      grade: "chart",
-    },
-    {
-      title: "Duplications",
-      value: details?.duplicated_lines_density
-        ? `${details.duplicated_lines_density}%`
-        : "0%",
-      subtitle: details?.ncloc
-        ? `On ${Number(details.duplicated_lines).toLocaleString()} lines`
-        : "",
-      grade: "chart-dot",
-    },
-    {
-      title: "Security hotspots",
-      value: details?.security_hotspots ?? "0",
-      subtitle: "",
-      grade: "A",
-    },
-    {
-      title: "Bugs",
-      value: details?.bugs ?? "0",
-      subtitle: "",
-      grade: "A",
-    },
-    {
-      title: "Code smells",
-      value: details?.code_smells ?? "0",
-      subtitle: "",
-      grade: "",
-    },
-    {
-      title: "Technical debt",
-      value: details?.security_hotspots ?? "0",
-      subtitle: "",
-      grade: "",
-    },
-  ];
-};
-
-// Moved outside the component
-const gradeStatusView = (grade: string, title: string, value: string) => {
-  const commonStyle =
-    "flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold";
-
-  if (grade === "chart" || grade === "chart-dot") {
-    const percentage = Math.min(100, Math.max(0, parseFloat(value) || 0));
-    const radius = 28;
-    const circumference = 2 * Math.PI * radius;
-    const strokeDashoffset = circumference - (percentage / 100) * circumference;
-
+  if (indicator.kind === "rating") {
+    if (!indicator.letter) return null;
     return (
       <div className="flex items-center gap-2">
-        <div className="relative h-16 w-16">
-          <svg className="h-full w-full" viewBox="0 0 64 64">
-            <circle
-              cx="32"
-              cy="32"
-              r={radius}
-              fill="transparent"
-              stroke="rgb(229, 229, 229)"
-              strokeWidth="8"
-            />
-            <circle
-              cx="32"
-              cy="32"
-              r={radius}
-              fill="transparent"
-              stroke="rgb(18, 65, 145)"
-              strokeWidth="8"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="butt"
-              transform="rotate(-90 32 32)"
-            />
-          </svg>
-          {grade === "chart-dot" && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="h-4 w-4 rounded-full bg-primary"></span>
-            </div>
-          )}
-        </div>
+        <span
+          data-testid={`sast-rating-${item.id}`}
+          className={`flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold ${RATING_BADGE_CLASS[indicator.letter]}`}>
+          {indicator.letter}
+        </span>
       </div>
     );
   }
 
-  const numericValue = parseFloat(value);
-  if (!isNaN(numericValue)) {
-    if (numericValue < 5) {
-      return (
-        <div className="flex items-center gap-2">
-          <span className={`${commonStyle} bg-green-100 text-green-700`}>
-            A
-          </span>
-        </div>
-      );
-    } else if (numericValue < 20) {
-      return (
-        <div className="flex items-center gap-2">
-          <span className={`${commonStyle} bg-yellow-100 text-yellow-700`}>
-            <AlertTriangle size={20} />
-          </span>
-        </div>
-      );
-    } else {
-      return (
-        <div className="flex items-center gap-2">
-          <span className={`${commonStyle} bg-red-100 text-red-700`}>E</span>
-        </div>
-      );
-    }
-  }
-  return null;
+  const percent = indicator.percent;
+  if (percent === null || percent === undefined) return null;
+  const percentage = Math.min(100, Math.max(0, percent));
+  const radius = 28;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative h-16 w-16">
+        <svg className="h-full w-full" viewBox="0 0 64 64">
+          <circle
+            cx="32"
+            cy="32"
+            r={radius}
+            fill="transparent"
+            stroke="rgb(229, 229, 229)"
+            strokeWidth="8"
+          />
+          <circle
+            cx="32"
+            cy="32"
+            r={radius}
+            fill="transparent"
+            stroke="rgb(18, 65, 145)"
+            strokeWidth="8"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="butt"
+            transform="rotate(-90 32 32)"
+          />
+        </svg>
+        {indicator.kind === "dot" && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="h-4 w-4 rounded-full bg-primary"></span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const getOverviewData = (details: SastDetails) => [
+  {
+    name: "Quality Gate",
+    id: "quality_gate",
+    value: getQualityGateLabel(details),
+  },
+  {
+    name: "Lines of code",
+    id: "linesOfCode",
+    value: details?.ncloc ? Number(details.ncloc).toLocaleString("en-US") : "-",
+  },
+];
+
+const qualityGateBadgeStatus = (label: string) => {
+  if (label === "Not computed") return "Pending";
+  return label;
 };
 
 const SastTab = () => {
@@ -248,25 +159,39 @@ const SastTab = () => {
   const { isLoading: isSASTLoading, refetch: triggerSASTRedirect } =
     useSASTRedirectLink(buildId);
 
-  let details: any = undefined;
-  const sastDataAny = sastData as any;
+  let details: SastDetails | null | undefined = undefined;
+  const envelope = sastData as
+    | { data?: { details?: SastDetails | null } }
+    | undefined
+    | null;
   if (
-    sastDataAny &&
-    typeof sastDataAny === "object" &&
-    "data" in sastDataAny &&
-    sastDataAny.data &&
-    typeof sastDataAny.data === "object" &&
-    "details" in sastDataAny.data
+    envelope &&
+    typeof envelope === "object" &&
+    envelope.data &&
+    typeof envelope.data === "object" &&
+    "details" in envelope.data
   ) {
-    details = sastDataAny.data.details;
+    details = envelope.data.details;
   }
 
-  // Use the external functions
-  const overviewData = useMemo(() => getOverviewData(details), [details]);
-  const overallStats = useMemo(() => getOverallStats(details), [details]);
+  const overviewData = useMemo(
+    () => (details ? getOverviewData(details) : []),
+    [details],
+  );
+  const newCodeStats = useMemo(
+    () => (details ? getNewCodeStats(details) : []),
+    [details],
+  );
+  const overallStats = useMemo(
+    () => (details ? getOverallCodeStats(details) : []),
+    [details],
+  );
+  const periodLabel = useMemo(
+    () => (details ? getNewCodePeriodLabel(details) : null),
+    [details],
+  );
+  const showNewCode = details ? hasNewCode(details) : false;
 
-  // The call grants the user access to the SonarQube project before the tab lands on it. It is a
-  // background step: a failure shows nothing and the tab opens on the portal root instead.
   const handleSASTRedirect = () =>
     openResolvedUrlInNewTab(async () => {
       const result = await triggerSASTRedirect();
@@ -277,7 +202,6 @@ const SastTab = () => {
     <div className="min-h-screen w-full space-y-6">
       {isLoading ? (
         <>
-          {/* Skeleton for SAST Overview */}
           <Card>
             <div className="px-6 py-4">
               <div className="flex items-center justify-between">
@@ -322,7 +246,7 @@ const SastTab = () => {
                   <span
                     className={
                       item.name === "Quality Gate"
-                        ? `${getDeploymentLogEventBadgeClassName(item.value)} ml-2`
+                        ? `${getDeploymentLogEventBadgeClassName(qualityGateBadgeStatus(item.value))} ml-2`
                         : `pl-2`
                     }>
                     {item.value}
@@ -333,12 +257,35 @@ const SastTab = () => {
           </CardHeader>
           <CardContent>
             <Separator orientation="horizontal" className="my-4 w-full" />
-            <OverviewStats
-              stats={overallStats}
-              gradeStatusView={gradeStatusView}
-              title="Overall code"
-              gridColumns="grid-cols-1 sm:grid-cols-2 md:grid-cols-3"
-            />
+            <Tabs defaultValue="new">
+              <TabsList>
+                <TabsTrigger value="new">New Code</TabsTrigger>
+                <TabsTrigger value="overall">Overall Code</TabsTrigger>
+              </TabsList>
+              <TabsContent value="new" className="mt-4 space-y-3">
+                {periodLabel && (
+                  <p className="text-xs text-medium-emphasis">
+                    New code: {periodLabel}
+                  </p>
+                )}
+                {showNewCode ? (
+                  <OverviewStats stats={newCodeStats} />
+                ) : (
+                  <div className="space-y-1 py-6 text-center">
+                    <p className="text-sm font-medium text-high-emphasis">
+                      No new lines to analyze
+                    </p>
+                    <p className="text-xs text-medium-emphasis">
+                      There is no new code on this branch since the new code
+                      period started.
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+              <TabsContent value="overall" className="mt-4">
+                <OverviewStats stats={overallStats} />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       ) : !error && !details ? (

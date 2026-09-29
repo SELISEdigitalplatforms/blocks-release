@@ -1,4 +1,5 @@
 import { fireEvent, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
 import {
@@ -20,6 +21,35 @@ vi.mock("react-router", async (importOriginal) => {
 
 import SastTab from "./sast-tab";
 
+const exampleDetails = {
+  alert_status: "OK",
+  ncloc: "1200",
+  // New Code (Example 1)
+  new_violations: "69",
+  new_coverage: "0.0",
+  new_lines_to_cover: "780",
+  new_duplicated_lines_density: "1.44",
+  new_lines: "5512",
+  new_security_hotspots: "1",
+  new_security_review_rating: "5.0",
+  new_code_period_date: "2026-08-10T09:12:00+0000",
+  new_code_period_mode: "previous_version",
+  // Overall Code (Example 2)
+  software_quality_security_issues: "0",
+  software_quality_security_rating: "1.0",
+  software_quality_reliability_issues: "13",
+  software_quality_reliability_rating: "3.0",
+  software_quality_maintainability_issues: "99",
+  software_quality_maintainability_rating: "1.0",
+  security_hotspots: "5",
+  security_review_rating: "5.0",
+  lines: "9021",
+  duplicated_lines_density: "1.2",
+  software_quality_maintainability_remediation_effort: "2940",
+  coverage: "80",
+  lines_to_cover: "500",
+};
+
 describe("SastTab", () => {
   beforeEach(() => {
     vi.mocked(useSASTRedirectLink).mockReturnValue({
@@ -38,6 +68,19 @@ describe("SastTab", () => {
     expect(container.firstChild).toBeTruthy();
   });
 
+  it("renders the Data Processing card when details are null", () => {
+    vi.mocked(useGetSASTData).mockReturnValue({
+      data: { data: { details: null } },
+      isLoading: false,
+      error: null,
+    } as never);
+    renderWithProviders(<SastTab />);
+    expect(screen.getByText("Data Processing")).toBeInTheDocument();
+    expect(
+      screen.getByText("Static Application Security Testing"),
+    ).toBeInTheDocument();
+  });
+
   it("renders the empty state when there are no details", () => {
     vi.mocked(useGetSASTData).mockReturnValue({
       data: {},
@@ -48,18 +91,45 @@ describe("SastTab", () => {
     expect(container.firstChild).toBeTruthy();
   });
 
-  it("renders the overview when details are present", () => {
+  it("renders New Code by default and Overall Code on click (Examples 1+2)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useGetSASTData).mockReturnValue({
+      data: { data: { details: exampleDetails } },
+      isLoading: false,
+      error: null,
+    } as never);
+    renderWithProviders(<SastTab />);
+
+    expect(screen.getByText("Overview")).toBeInTheDocument();
+    expect(screen.getByText("Quality Gate")).toBeInTheDocument();
+    expect(screen.getByText("Passed")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "New Code" })).toHaveAttribute(
+      "data-state",
+      "active",
+    );
+    expect(screen.getByText(/New code: Since August 10, 2026/)).toBeInTheDocument();
+    expect(screen.getByTestId("sast-stat-new-issues")).toHaveTextContent("69");
+
+    await user.click(screen.getByRole("tab", { name: "Overall Code" }));
+    expect(screen.getByRole("tab", { name: "Overall Code" })).toHaveAttribute(
+      "data-state",
+      "active",
+    );
+    expect(screen.getByTestId("sast-stat-overall-reliability")).toHaveTextContent(
+      "13",
+    );
+    expect(screen.getByTestId("sast-rating-overall-reliability")).toHaveTextContent(
+      "C",
+    );
+  });
+
+  it("shows No new lines to analyze when new_lines is 0", () => {
     vi.mocked(useGetSASTData).mockReturnValue({
       data: {
         data: {
           details: {
-            alert_status: "OK",
-            ncloc: "1200",
-            software_quality_security_issues: "3",
-            software_quality_security_rating: "1.0",
-            coverage: "80",
-            lines_to_cover: "500",
-            duplicated_lines_density: "2",
+            ...exampleDetails,
+            new_lines: "0",
           },
         },
       },
@@ -67,8 +137,18 @@ describe("SastTab", () => {
       error: null,
     } as never);
     renderWithProviders(<SastTab />);
-    expect(screen.getByText("Overview")).toBeInTheDocument();
-    expect(screen.getByText("Quality Gate")).toBeInTheDocument();
+    expect(screen.getByText("No new lines to analyze")).toBeInTheDocument();
+  });
+
+  it("labels Quality Gate Not computed when alert_status is missing", () => {
+    const { alert_status: _, ...rest } = exampleDetails;
+    vi.mocked(useGetSASTData).mockReturnValue({
+      data: { data: { details: rest } },
+      isLoading: false,
+      error: null,
+    } as never);
+    renderWithProviders(<SastTab />);
+    expect(screen.getByText("Not computed")).toBeInTheDocument();
   });
 
   const renderOverview = (refetch: ReturnType<typeof vi.fn>, isLoading = false) => {
@@ -76,12 +156,7 @@ describe("SastTab", () => {
     vi.mocked(useGetSASTData).mockReturnValue({
       data: {
         data: {
-          details: {
-            alert_status: "ERROR",
-            software_quality_security_rating: "3.0",
-            software_quality_reliability_rating: "4.0",
-            sqale_rating: "2.0",
-          },
+          details: exampleDetails,
         },
       },
       isLoading: false,

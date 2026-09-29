@@ -21,8 +21,6 @@ public class SASTStrategy : IStrategy
 
     public async Task<TestReport> getInfo(string repoName, string branchName)
     {
-        //dev-aks
-        //l3-net-ipex-business
         string metricKeys = string.Join(",", CloudBuildConstants.SAST_METRIC_KEYS);
         var sastToolsApiBaseUri = _configuration["SastToolsApiBaseUri"];
         var url = $"{sastToolsApiBaseUri}/measures/component?component={repoName}&branch={branchName}&additionalFields=period&metricKeys={metricKeys}";
@@ -33,20 +31,46 @@ public class SASTStrategy : IStrategy
             };
         var (apiCallResult, _) = await _httpHelperServices.MakeHttpGetRequest<SASTResponse>(url, null, headers);
 
-        //convert response to generic response
         Dictionary<string, string> metrics = new();
         if (apiCallResult?.Component?.Measures != null)
         {
             foreach (var measure in apiCallResult.Component.Measures)
             {
-                metrics[measure.Metric] = measure.Value;
+                var value = measure.Value ?? measure.Period?.value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    continue;
+                }
+                metrics[measure.Metric] = value;
             }
         }
-        var result = new TestReport
+
+        if (apiCallResult?.Period != null)
+        {
+            if (!string.IsNullOrEmpty(apiCallResult.Period.Date))
+            {
+                metrics["new_code_period_date"] = apiCallResult.Period.Date;
+            }
+            if (!string.IsNullOrEmpty(apiCallResult.Period.Mode))
+            {
+                metrics["new_code_period_mode"] = apiCallResult.Period.Mode;
+            }
+        }
+
+        // Null response or no usable keys → Details=null so the client shows Data Processing.
+        if (apiCallResult == null || metrics.Count == 0)
+        {
+            return new TestReport
+            {
+                Type = "SAST",
+                Details = null
+            };
+        }
+
+        return new TestReport
         {
             Type = "SAST",
             Details = metrics
         };
-        return result;
     }
 }

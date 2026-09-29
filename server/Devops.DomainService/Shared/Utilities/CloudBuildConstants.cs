@@ -42,7 +42,16 @@ namespace Devops.DomainService.Shared.Utilities
             "new_duplicated_lines",
             "ncloc",
             "lines",
-            "new_lines"
+            "new_lines",
+            "software_quality_security_issues",
+            "software_quality_reliability_issues",
+            "software_quality_maintainability_issues",
+            "software_quality_maintainability_rating",
+            "software_quality_maintainability_remediation_effort",
+            "sqale_index",
+            "vulnerabilities",
+            "security_review_rating",
+            "new_security_review_rating"
         };
         public static readonly ImmutableDictionary<string, string> BranchToEnvironmentMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {

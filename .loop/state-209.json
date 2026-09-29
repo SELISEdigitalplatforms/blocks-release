@@ -1,0 +1,35 @@
+{
+  "phase": "CODE_REVIEWED",
+  "flow": "A",
+  "runId": "loop-20260929T1050Z-209",
+  "repo": "SELISEdigitalplatforms/blocks-release",
+  "branch": "inception",
+  "issue": 209,
+  "itemId": "PVTI_lADOAXWBR84BZkJEzg9aTbQ",
+  "updatedAt": "2026-09-29T11:05:42Z",
+  "evidence": {
+    "headSha": "9833836d4609a8702651bc1663a32ad68e12d43d",
+    "originDevSha": "89aa84ef4314eeedc4aaea71c10018958d577b56",
+    "synced": true,
+    "context": ".loop/context-209.md",
+    "plan": ".loop/plan-209.md",
+    "planReview": ".loop/plan-review-209.md",
+    "tests": {
+      "dotnetUnitPassed": 732,
+      "dotnetUnitFailedMongoOnly": 4,
+      "sastStrategyTests": 5,
+      "vitestSast": 40,
+      "vitestFull": null,
+      "coverageNewCode": {
+        "lines": 100,
+        "stmts": 96.09,
+        "branches": 92.08,
+        "funcs": 100
+      }
+    },
+    "security": ".loop/security-209.md",
+    "opengrepFindings": 0,
+    "trivyFindings": 0,
+    "codeReview": ".loop/code-review-209.md"
+  }
+}

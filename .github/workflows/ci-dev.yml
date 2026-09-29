@@ -92,15 +92,6 @@ jobs:
           TAG_STRATEGY: ${{ env.TAG_STRATEGY }}
           RUN_SCA_SCAN: ${{ env.RUN_SCA_SCAN }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
-          ENVIRONMENT: ${{ env.ENVIRONMENT }}
-          TAG_STRATEGY: ${{ env.TAG_STRATEGY }}
-          CLUSTER_NAME: ${{ env.CLUSTER_NAME }}
-          RUN_TESTS: ${{ env.RUN_TESTS }}
-          RUN_SONARQUBE: ${{ env.RUN_SONARQUBE }}
-          RUN_SCA_SCAN: ${{ env.RUN_SCA_SCAN }}
-          NEEDS_INITIALIZATION_OUTPUTS_SERVICE_NAME: ${{ needs.initialization.outputs.service_name }}
-          NEEDS_INITIALIZATION_OUTPUTS_LOAD_CUSTOM_VARS_TRUE: ${{ needs.initialization.outputs.load_custom_vars == 'true' }}
-          SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
         run: |
           # From workflow env (environment-specific)
           echo "run_tests=${RUN_TESTS}" >> $GITHUB_OUTPUT
@@ -136,7 +127,6 @@ jobs:
           echo "working_directory=${WORKING_DIRECTORY:-./server}" >> $GITHUB_OUTPUT
 
           # Version based on environment (from versions.env)
-          ENVIRONMENT="${ENVIRONMENT}"
           case "$ENVIRONMENT" in
             "dev")
               VERSION="${DEV_VERSION:-}"
@@ -160,12 +150,12 @@ jobs:
           echo "- **Service**: ${SERVICE_NAME:-'Not set'}" >> $GITHUB_STEP_SUMMARY
           echo "- **Version Suffix**: ${VERSION:-'None'}" >> $GITHUB_STEP_SUMMARY
           echo "- **Type**: ${SERVICE_TYPE:-'Not set'}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment**: ${ENVIRONMENT}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image Tag Strategy**: ${TAG_STRATEGY}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Cluster**: ${CLUSTER_NAME}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Tests Enabled**: ${RUN_TESTS}" >> $GITHUB_STEP_SUMMARY
-          echo "- **SonarQube Enabled**: ${RUN_SONARQUBE}" >> $GITHUB_STEP_SUMMARY
-          echo "- **SCA Scan Enabled**: ${RUN_SCA_SCAN}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ env.ENVIRONMENT }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag Strategy**: ${{ env.TAG_STRATEGY }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cluster**: ${{ env.CLUSTER_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tests Enabled**: ${{ env.RUN_TESTS }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **SonarQube Enabled**: ${{ env.RUN_SONARQUBE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **SCA Scan Enabled**: ${{ env.RUN_SCA_SCAN }}" >> $GITHUB_STEP_SUMMARY
 
   # # Run tests and checks on PRs only (optional)
   # pr-checks:
@@ -173,10 +163,10 @@ jobs:
   #     needs: [initialization]
   #     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/test-dotnet.yml@a9c7946993ffc683744ade542039bcf90242d52c  # main
   #     with:
-  #         SERVICE_NAME: ${NEEDS_INITIALIZATION_OUTPUTS_SERVICE_NAME}
-  #         LOAD_CUSTOM_VARS: ${NEEDS_INITIALIZATION_OUTPUTS_LOAD_CUSTOM_VARS_TRUE}
+  #         SERVICE_NAME: ${{ needs.initialization.outputs.service_name }}
+  #         LOAD_CUSTOM_VARS: ${{ needs.initialization.outputs.load_custom_vars == 'true' }}
   #     secrets:
-  #         SELISE_GITHUB_PAT: ${SELISE_GITHUB_PAT}
+  #         SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
 
   # Run SonarQube analysis on both push and pull_request
   sonarqube_server:

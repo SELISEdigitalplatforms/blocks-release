@@ -1,5 +1,5 @@
 {
-  "phase": "QUALITY_GATE",
+  "phase": "DONE",
   "flow": "A",
   "runId": "loop-20260929T1050Z-210",
   "repo": "SELISEdigitalplatforms/blocks-release",
@@ -7,8 +7,8 @@
   "issue": 210,
   "itemId": "PVTI_lADOAXWBR84BZkJEzg9aTfw",
   "pr": 211,
-  "tipSha": "46689e742c0f18754858bb734837345eea673059",
-  "updatedAt": "2026-09-29T12:30:31Z",
+  "tipSha": "503425cde8e66abf9d189a09d2df732e33d3e038",
+  "updatedAt": "2026-09-29T12:37:24Z",
   "author": "asifrafeen",
   "parentPhase1": 209,
   "evidence": {
@@ -26,6 +26,14 @@
       "sastPhase2": "passed",
       "preview": "https://dev-release-211.blocksdevelopers.com"
     },
-    "zapSummary": ".loop/results-210/zap/summary-final.json"
+    "zapSummary": ".loop/results-210/zap/summary-final.json",
+    "headSha": "503425cde8e66abf9d189a09d2df732e33d3e038",
+    "ci": {
+      "hygiene": "success",
+      "preview": "success",
+      "sonarClient": "success",
+      "sonarServer": "success",
+      "sca": "success"
+    }
   }
 }

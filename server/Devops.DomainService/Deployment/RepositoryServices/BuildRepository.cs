@@ -103,7 +103,7 @@ public class BuildRepository : IBuildRepository
         try
         {
             var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-            var result = await _dbContext.GetCollection<Build>(BuildsCollectionName).UpdateOneAsync(filter, update, options);
+            await _dbContext.GetCollection<Build>(BuildsCollectionName).UpdateOneAsync(filter, update, options);
         }
         catch (MongoWriteException e)
         {

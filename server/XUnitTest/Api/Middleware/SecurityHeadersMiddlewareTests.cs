@@ -23,7 +23,8 @@ public class SecurityHeadersMiddlewareTests
         headers["Strict-Transport-Security"].ToString().Should().Contain("max-age=31536000");
         var csp = headers["Content-Security-Policy"].ToString();
         csp.Should().Contain("default-src 'self'");
-        csp.Should().Contain("style-src 'self' 'unsafe-inline'");
+        csp.Should().Contain("style-src 'self'");
+        csp.Should().NotContain("unsafe-inline");
         csp.Should().Contain("frame-ancestors 'none'");
         headers["Cache-Control"].ToString().Should().Contain("no-store");
     }

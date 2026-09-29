@@ -2,8 +2,7 @@ namespace Api.Middleware;
 
 /// <summary>
 /// Browser security headers (ZAP DAST bar).
-/// style-src includes 'unsafe-inline' for Radix UI — accepted residual risk.
-/// script-src includes 'unsafe-inline' for index.html window.__BLOCKS_ENV__ bootstrap.
+/// Env bootstrap via /runtime-config.js; style/script without unsafe-inline (IAM/OS pattern).
 /// </summary>
 public sealed class SecurityHeadersMiddleware
 {
@@ -51,6 +50,7 @@ public sealed class SecurityHeadersMiddleware
         if (path.StartsWith("/api", StringComparison.OrdinalIgnoreCase)
             || path == "/"
             || path.EndsWith(".html", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith("runtime-config.js", StringComparison.OrdinalIgnoreCase)
             || !Path.HasExtension(path))
         {
             headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0";
@@ -84,8 +84,8 @@ public sealed class SecurityHeadersMiddleware
 
         return
             "default-src 'self'; " +
-            "script-src 'self' 'unsafe-inline'; " +
-            "style-src 'self' 'unsafe-inline'; " +
+            "script-src 'self'; " +
+            "style-src 'self'; " +
             "img-src 'self' data: blob: https://blocksdev.blob.core.windows.net https://az-cdn.selise.biz; " +
             "font-src 'self' data:; " +
             "connect-src 'self' " + connectHosts + "; " +

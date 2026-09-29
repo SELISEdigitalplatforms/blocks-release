@@ -1,0 +1,546 @@
+{
+  "target": "https://dev-release-211.blocksdevelopers.com",
+  "alertCounts": {
+    "Low": 18,
+    "Medium": 21,
+    "Informational": 13
+  },
+  "total": 52,
+  "disabledPassive": [],
+  "disabledActive": [],
+  "scannersDisabled": false,
+  "alertFiltersFalsePositive": [
+    "10015",
+    "10024(zaproxy@example.com)",
+    "10104"
+  ],
+  "contextExcludes": [
+    "/assets/.*",
+    "/swagger.*",
+    "/.well-known/.*"
+  ],
+  "commitSha": "9144d156c642a6a22d4c98e04a068c03e9d9c0c2",
+  "section8a": "no CSP / ContentSecurityPolicy.cs / forbidden shell files; document leftover Low/Info or CSP-only Medium/High as needs human decision",
+  "alerts": [
+    {
+      "risk": "Low",
+      "confidence": "High",
+      "name": "Strict-Transport-Security Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/Icon_Light.svg",
+      "param": "",
+      "cweid": "319",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Low",
+      "confidence": "High",
+      "name": "Strict-Transport-Security Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/robots.txt",
+      "param": "",
+      "cweid": "319",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Low",
+      "confidence": "Medium",
+      "name": "X-Content-Type-Options Header Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com/Icon_Light.svg",
+      "param": "x-content-type-options",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "Medium",
+      "name": "Missing Anti-clickjacking Header",
+      "url": "https://dev-release-211.blocksdevelopers.com/api/health",
+      "param": "x-frame-options",
+      "cweid": "1021",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "Medium",
+      "name": "Missing Anti-clickjacking Header",
+      "url": "https://dev-release-211.blocksdevelopers.com/api/version",
+      "param": "x-frame-options",
+      "cweid": "1021",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "Medium",
+      "name": "Missing Anti-clickjacking Header",
+      "url": "https://dev-release-211.blocksdevelopers.com/",
+      "param": "x-frame-options",
+      "cweid": "1021",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "Medium",
+      "name": "Missing Anti-clickjacking Header",
+      "url": "https://dev-release-211.blocksdevelopers.com/login",
+      "param": "x-frame-options",
+      "cweid": "1021",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "High",
+      "name": "Content Security Policy (CSP) Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/api/version",
+      "param": "",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "Medium",
+      "name": "Missing Anti-clickjacking Header",
+      "url": "https://dev-release-211.blocksdevelopers.com/app",
+      "param": "x-frame-options",
+      "cweid": "1021",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "High",
+      "name": "Content Security Policy (CSP) Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/api/health",
+      "param": "",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "Medium",
+      "name": "Missing Anti-clickjacking Header",
+      "url": "https://dev-release-211.blocksdevelopers.com",
+      "param": "x-frame-options",
+      "cweid": "1021",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "High",
+      "name": "Content Security Policy (CSP) Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/",
+      "param": "",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "High",
+      "name": "Content Security Policy (CSP) Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/login",
+      "param": "",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Informational",
+      "confidence": "Low",
+      "name": "Re-examine Cache-control Directives",
+      "url": "https://dev-release-211.blocksdevelopers.com/app",
+      "param": "cache-control",
+      "cweid": "525",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "High",
+      "name": "Content Security Policy (CSP) Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/app",
+      "param": "",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Informational",
+      "confidence": "Low",
+      "name": "Re-examine Cache-control Directives",
+      "url": "https://dev-release-211.blocksdevelopers.com",
+      "param": "cache-control",
+      "cweid": "525",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "High",
+      "name": "Content Security Policy (CSP) Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com",
+      "param": "",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Informational",
+      "confidence": "Medium",
+      "name": "Modern Web Application",
+      "url": "https://dev-release-211.blocksdevelopers.com/login",
+      "param": "",
+      "cweid": "-1",
+      "pluginid": null,
+      "evidence": "<script type=\"module\" crossorigin src=\"/assets/index-Ca3W2p72.js\"></script>"
+    },
+    {
+      "risk": "Informational",
+      "confidence": "Medium",
+      "name": "Modern Web Application",
+      "url": "https://dev-release-211.blocksdevelopers.com/api/version",
+      "param": "",
+      "cweid": "-1",
+      "pluginid": null,
+      "evidence": "<script type=\"module\" crossorigin src=\"/assets/index-Ca3W2p72.js\"></script>"
+    },
+    {
+      "risk": "Informational",
+      "confidence": "Medium",
+      "name": "Modern Web Application",
+      "url": "https://dev-release-211.blocksdevelopers.com/",
+      "param": "",
+      "cweid": "-1",
+      "pluginid": null,
+      "evidence": "<script type=\"module\" crossorigin src=\"/assets/index-Ca3W2p72.js\"></script>"
+    },
+    {
+      "risk": "Informational",
+      "confidence": "Medium",
+      "name": "Modern Web Application",
+      "url": "https://dev-release-211.blocksdevelopers.com/app",
+      "param": "",
+      "cweid": "-1",
+      "pluginid": null,
+      "evidence": "<script type=\"module\" crossorigin src=\"/assets/index-Ca3W2p72.js\"></script>"
+    },
+    {
+      "risk": "Informational",
+      "confidence": "Medium",
+      "name": "Modern Web Application",
+      "url": "https://dev-release-211.blocksdevelopers.com",
+      "param": "",
+      "cweid": "-1",
+      "pluginid": null,
+      "evidence": "<script type=\"module\" crossorigin src=\"/assets/index-Ca3W2p72.js\"></script>"
+    },
+    {
+      "risk": "Informational",
+      "confidence": "Medium",
+      "name": "Modern Web Application",
+      "url": "https://dev-release-211.blocksdevelopers.com/api/health",
+      "param": "",
+      "cweid": "-1",
+      "pluginid": null,
+      "evidence": "<script type=\"module\" crossorigin src=\"/assets/index-Ca3W2p72.js\"></script>"
+    },
+    {
+      "risk": "Low",
+      "confidence": "High",
+      "name": "Strict-Transport-Security Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/login",
+      "param": "",
+      "cweid": "319",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "High",
+      "name": "Sub Resource Integrity Attribute Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com/login",
+      "param": "",
+      "cweid": "345",
+      "pluginid": null,
+      "evidence": "<link\n      href=\"https://fonts.googleap...[redacted]..."
+    },
+    {
+      "risk": "Low",
+      "confidence": "Medium",
+      "name": "X-Content-Type-Options Header Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com/login",
+      "param": "x-content-type-options",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Low",
+      "confidence": "High",
+      "name": "Strict-Transport-Security Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/app",
+      "param": "",
+      "cweid": "319",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "High",
+      "name": "Sub Resource Integrity Attribute Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com/app",
+      "param": "",
+      "cweid": "345",
+      "pluginid": null,
+      "evidence": "<link\n      href=\"https://fonts.googleap...[redacted]..."
+    },
+    {
+      "risk": "Low",
+      "confidence": "High",
+      "name": "Strict-Transport-Security Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/",
+      "param": "",
+      "cweid": "319",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Low",
+      "confidence": "High",
+      "name": "Strict-Transport-Security Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/api/health",
+      "param": "",
+      "cweid": "319",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Low",
+      "confidence": "High",
+      "name": "Strict-Transport-Security Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com",
+      "param": "",
+      "cweid": "319",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "High",
+      "name": "Sub Resource Integrity Attribute Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com/",
+      "param": "",
+      "cweid": "345",
+      "pluginid": null,
+      "evidence": "<link\n      href=\"https://fonts.googleap...[redacted]..."
+    },
+    {
+      "risk": "Low",
+      "confidence": "High",
+      "name": "Strict-Transport-Security Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/api/version",
+      "param": "",
+      "cweid": "319",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "High",
+      "name": "Sub Resource Integrity Attribute Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com/api/health",
+      "param": "",
+      "cweid": "345",
+      "pluginid": null,
+      "evidence": "<link\n      href=\"https://fonts.googleap...[redacted]..."
+    },
+    {
+      "risk": "Low",
+      "confidence": "Medium",
+      "name": "X-Content-Type-Options Header Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com/app",
+      "param": "x-content-type-options",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "High",
+      "name": "Sub Resource Integrity Attribute Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com",
+      "param": "",
+      "cweid": "345",
+      "pluginid": null,
+      "evidence": "<link\n      href=\"https://fonts.googleap...[redacted]..."
+    },
+    {
+      "risk": "Medium",
+      "confidence": "High",
+      "name": "Sub Resource Integrity Attribute Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com/api/version",
+      "param": "",
+      "cweid": "345",
+      "pluginid": null,
+      "evidence": "<link\n      href=\"https://fonts.googleap...[redacted]..."
+    },
+    {
+      "risk": "Low",
+      "confidence": "Medium",
+      "name": "X-Content-Type-Options Header Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com/api/health",
+      "param": "x-content-type-options",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Low",
+      "confidence": "High",
+      "name": "Strict-Transport-Security Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/sitemap.xml",
+      "param": "",
+      "cweid": "319",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Low",
+      "confidence": "Medium",
+      "name": "X-Content-Type-Options Header Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com/api/version",
+      "param": "x-content-type-options",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Low",
+      "confidence": "Medium",
+      "name": "X-Content-Type-Options Header Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com/",
+      "param": "x-content-type-options",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Low",
+      "confidence": "Medium",
+      "name": "X-Content-Type-Options Header Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com",
+      "param": "x-content-type-options",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "Medium",
+      "name": "Missing Anti-clickjacking Header",
+      "url": "https://dev-release-211.blocksdevelopers.com/api",
+      "param": "x-frame-options",
+      "cweid": "1021",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Informational",
+      "confidence": "Low",
+      "name": "Re-examine Cache-control Directives",
+      "url": "https://dev-release-211.blocksdevelopers.com/api",
+      "param": "cache-control",
+      "cweid": "525",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Informational",
+      "confidence": "Low",
+      "name": "Re-examine Cache-control Directives",
+      "url": "https://dev-release-211.blocksdevelopers.com/api/health",
+      "param": "cache-control",
+      "cweid": "525",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Informational",
+      "confidence": "Low",
+      "name": "Re-examine Cache-control Directives",
+      "url": "https://dev-release-211.blocksdevelopers.com/",
+      "param": "cache-control",
+      "cweid": "525",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "High",
+      "name": "Content Security Policy (CSP) Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/api",
+      "param": "",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Informational",
+      "confidence": "Low",
+      "name": "Re-examine Cache-control Directives",
+      "url": "https://dev-release-211.blocksdevelopers.com/login",
+      "param": "cache-control",
+      "cweid": "525",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Informational",
+      "confidence": "Medium",
+      "name": "Modern Web Application",
+      "url": "https://dev-release-211.blocksdevelopers.com/api",
+      "param": "",
+      "cweid": "-1",
+      "pluginid": null,
+      "evidence": "<script type=\"module\" crossorigin src=\"/assets/index-Ca3W2p72.js\"></script>"
+    },
+    {
+      "risk": "Low",
+      "confidence": "High",
+      "name": "Strict-Transport-Security Header Not Set",
+      "url": "https://dev-release-211.blocksdevelopers.com/api",
+      "param": "",
+      "cweid": "319",
+      "pluginid": null,
+      "evidence": ""
+    },
+    {
+      "risk": "Medium",
+      "confidence": "High",
+      "name": "Sub Resource Integrity Attribute Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com/api",
+      "param": "",
+      "cweid": "345",
+      "pluginid": null,
+      "evidence": "<link\n      href=\"https://fonts.googleap...[redacted]..."
+    },
+    {
+      "risk": "Low",
+      "confidence": "Medium",
+      "name": "X-Content-Type-Options Header Missing",
+      "url": "https://dev-release-211.blocksdevelopers.com/api",
+      "param": "x-content-type-options",
+      "cweid": "693",
+      "pluginid": null,
+      "evidence": ""
+    }
+  ]
+}

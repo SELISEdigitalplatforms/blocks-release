@@ -22,8 +22,12 @@ from xml.sax.saxutils import escape, quoteattr
 try:
     import defusedxml.ElementTree as ET
 except ImportError:
-    # CI runners may lack defusedxml; stdlib parser is fine for trusted local JUnit.
-    import xml.etree.ElementTree as ET
+    import subprocess
+    subprocess.check_call(
+        [sys.executable, "-m", "pip", "install", "--quiet", "defusedxml"],
+        stdout=subprocess.DEVNULL,
+    )
+    import defusedxml.ElementTree as ET
 
 
 def duration_ms(node):

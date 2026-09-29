@@ -193,6 +193,7 @@ jobs:
           # SonarQube ignores raw JUnit for JS/TS, so the client test count only
           # shows up after this conversion. Coverage (lcov) is read directly.
           if [ -s "$COV_DIR/client-junit.xml" ]; then
+            python3 -m pip install --quiet defusedxml
             python3 scripts/junit-to-sonar.py \
               "$COV_DIR/client-junit.xml" "$COV_DIR/client-tests.xml" client
           else

@@ -21,6 +21,46 @@ vi.mock("react-router", async (importOriginal) => {
 
 import SastTab from "./sast-tab";
 
+
+const exampleGate = {
+  status: "ERROR" as const,
+  conditions: [
+    {
+      metricKey: "new_violations",
+      comparator: "GT" as const,
+      errorThreshold: "0",
+      actualValue: "69",
+      status: "ERROR" as const,
+    },
+    {
+      metricKey: "new_security_hotspots_reviewed",
+      comparator: "LT" as const,
+      errorThreshold: "100",
+      actualValue: "0.0",
+      status: "ERROR" as const,
+    },
+    {
+      metricKey: "new_coverage",
+      comparator: "LT" as const,
+      errorThreshold: "5.0",
+      actualValue: "0.0",
+      status: "ERROR" as const,
+    },
+    {
+      metricKey: "new_duplicated_lines_density",
+      comparator: "GT" as const,
+      errorThreshold: "25.0",
+      actualValue: "1.44",
+      status: "OK" as const,
+    },
+  ],
+};
+
+const exampleBreakdown = {
+  newCode: { total: 69, blocker: 0, high: 3, medium: 40, low: 20, info: 6 },
+  overall: { total: 112, blocker: 1, high: 13, medium: 60, low: 30, info: 8 },
+};
+
 const exampleDetails = {
   alert_status: "OK",
   ncloc: "1200",
@@ -217,3 +257,148 @@ describe("SastTab", () => {
     expect(container.firstChild).toBeTruthy();
   });
 });
+
+describe("SastTab Phase 2", () => {
+  beforeEach(() => {
+    vi.mocked(useSASTRedirectLink).mockReturnValue({
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue({}),
+    } as never);
+  });
+
+  it("Example 1 — failed conditions and Failed badges (H3, H4, H6)", () => {
+    vi.mocked(useGetSASTData).mockReturnValue({
+      data: {
+        data: {
+          details: { ...exampleDetails, alert_status: "ERROR" },
+          qualityGate: exampleGate,
+          issueBreakdown: exampleBreakdown,
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as never);
+    renderWithProviders(<SastTab />);
+    expect(screen.getAllByText("Failed").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("3 conditions failed")).toBeInTheDocument();
+    expect(screen.getByText(/is greater than 0/)).toBeInTheDocument();
+    expect(screen.getByTestId("sast-failed-new-issues")).toBeInTheDocument();
+    expect(screen.getByTestId("sast-failed-new-coverage")).toBeInTheDocument();
+    expect(screen.getByTestId("sast-failed-new-hotspots")).toBeInTheDocument();
+    expect(screen.queryByTestId("sast-failed-new-duplications")).not.toBeInTheDocument();
+    expect(screen.getByText("Required = 0")).toBeInTheDocument();
+  });
+
+  it("Example 2 — severity rows on both tabs (H5)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useGetSASTData).mockReturnValue({
+      data: {
+        data: {
+          details: exampleDetails,
+          qualityGate: { status: "OK", conditions: exampleGate.conditions.map((c) => ({ ...c, status: "OK" as const })) },
+          issueBreakdown: exampleBreakdown,
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as never);
+    renderWithProviders(<SastTab />);
+    expect(screen.getByText("Issues by severity")).toBeInTheDocument();
+    expect(screen.getByText("High 3")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Overall Code" }));
+    expect(screen.getByText("High 13")).toBeInTheDocument();
+    expect(screen.getByText("Blocker 1")).toBeInTheDocument();
+  });
+
+  it("Example 3 — All conditions passed (H6)", () => {
+    vi.mocked(useGetSASTData).mockReturnValue({
+      data: {
+        data: {
+          details: exampleDetails,
+          qualityGate: {
+            status: "OK",
+            conditions: exampleGate.conditions.map((c) => ({ ...c, status: "OK" as const })),
+          },
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as never);
+    renderWithProviders(<SastTab />);
+    expect(screen.getByText("Passed")).toBeInTheDocument();
+    expect(screen.getByText("All conditions passed")).toBeInTheDocument();
+    expect(screen.queryByTestId("sast-failed-new-issues")).not.toBeInTheDocument();
+  });
+
+  it("Example 4 — gate null keeps metrics (C1)", () => {
+    vi.mocked(useGetSASTData).mockReturnValue({
+      data: {
+        data: {
+          details: { ...exampleDetails, alert_status: "ERROR" },
+          qualityGate: null,
+          issueBreakdown: exampleBreakdown,
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as never);
+    renderWithProviders(<SastTab />);
+    expect(screen.getByText("Failed")).toBeInTheDocument();
+    expect(screen.queryByText(/conditions failed/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("sast-stat-new-issues")).toHaveTextContent("69");
+    expect(screen.getByText("High 3")).toBeInTheDocument();
+  });
+
+  it("Example 5 — newCode severity null hides only New Code row (C2)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useGetSASTData).mockReturnValue({
+      data: {
+        data: {
+          details: exampleDetails,
+          qualityGate: null,
+          issueBreakdown: { newCode: null, overall: exampleBreakdown.overall },
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as never);
+    renderWithProviders(<SastTab />);
+    expect(screen.queryByText("High 3")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Overall Code" }));
+    expect(screen.getByText("High 13")).toBeInTheDocument();
+  });
+
+  it("Example 6 — NONE status Not computed (C5)", () => {
+    vi.mocked(useGetSASTData).mockReturnValue({
+      data: {
+        data: {
+          details: exampleDetails,
+          qualityGate: { status: "NONE", conditions: [] },
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as never);
+    renderWithProviders(<SastTab />);
+    expect(screen.getByText("Not computed")).toBeInTheDocument();
+    expect(screen.queryByText(/conditions failed/)).not.toBeInTheDocument();
+    expect(screen.queryByText("All conditions passed")).not.toBeInTheDocument();
+  });
+
+  it("Example 8 — measures null shows Data Processing even if gate present (C3)", () => {
+    vi.mocked(useGetSASTData).mockReturnValue({
+      data: {
+        data: {
+          details: null,
+          qualityGate: exampleGate,
+          issueBreakdown: exampleBreakdown,
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as never);
+    renderWithProviders(<SastTab />);
+    expect(screen.getByText("Data Processing")).toBeInTheDocument();
+  });
+});
+

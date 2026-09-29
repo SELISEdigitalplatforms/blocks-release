@@ -240,9 +240,198 @@ export function getNewCodePeriodLabel(d: SastDetails): string | null {
   return `Since ${formatted}`;
 }
 
+
+// --- Phase 2 (#210): quality gate conditions + severity breakdown ---
+
+export interface SastGateCondition {
+  metricKey: string;
+  comparator: "GT" | "LT";
+  errorThreshold: string;
+  actualValue: string | null;
+  status: "OK" | "ERROR";
+}
+export interface SastQualityGate {
+  status: "OK" | "ERROR" | "NONE";
+  conditions: SastGateCondition[];
+}
+export interface SastSeverityCounts {
+  total: number;
+  blocker: number;
+  high: number;
+  medium: number;
+  low: number;
+  info: number;
+}
+export interface SastIssueBreakdown {
+  newCode: SastSeverityCounts | null;
+  overall: SastSeverityCounts | null;
+}
+export type SastScope = "new" | "overall";
+
+const CONDITION_LABELS: Record<string, string> = {
+  new_violations: "Issues",
+  violations: "Issues",
+  new_coverage: "Coverage",
+  coverage: "Coverage",
+  new_duplicated_lines_density: "Duplicated Lines",
+  duplicated_lines_density: "Duplicated Lines",
+  new_security_hotspots_reviewed: "Security Hotspots Reviewed",
+  security_hotspots_reviewed: "Security Hotspots Reviewed",
+  new_software_quality_reliability_rating: "Reliability Rating",
+  new_reliability_rating: "Reliability Rating",
+  software_quality_reliability_rating: "Reliability Rating",
+  reliability_rating: "Reliability Rating",
+  new_software_quality_security_rating: "Security Rating",
+  new_security_rating: "Security Rating",
+  software_quality_security_rating: "Security Rating",
+  security_rating: "Security Rating",
+  new_software_quality_maintainability_rating: "Maintainability Rating",
+  new_maintainability_rating: "Maintainability Rating",
+  software_quality_maintainability_rating: "Maintainability Rating",
+  sqale_rating: "Maintainability Rating",
+  new_security_review_rating: "Security Review Rating",
+  security_review_rating: "Security Review Rating",
+};
+
+const RATING_KEYS = new Set(Object.keys(CONDITION_LABELS).filter((k) => k.includes("rating")));
+
+const STAT_TO_METRICS: Record<string, string[]> = {
+  "new-issues": ["new_violations"],
+  "new-coverage": ["new_coverage"],
+  "new-duplications": ["new_duplicated_lines_density"],
+  "new-hotspots": [
+    "new_security_hotspots_reviewed",
+    "new_security_review_rating",
+  ],
+  "overall-reliability": [
+    "software_quality_reliability_rating",
+    "reliability_rating",
+  ],
+  "overall-security": [
+    "software_quality_security_rating",
+    "security_rating",
+  ],
+  "overall-maintainability": [
+    "software_quality_maintainability_rating",
+    "sqale_rating",
+  ],
+  "overall-coverage": ["coverage"],
+  "overall-duplications": ["duplicated_lines_density"],
+  "overall-hotspots": [
+    "security_hotspots_reviewed",
+    "security_review_rating",
+  ],
+};
+
+function isPercentMetric(key: string): boolean {
+  return (
+    key.includes("coverage") ||
+    key.includes("duplicated") ||
+    key.includes("hotspots_reviewed")
+  );
+}
+
+function formatConditionValue(metricKey: string, raw: string | null | undefined): string {
+  if (raw === undefined || raw === null || raw === "") return MISSING;
+  if (RATING_KEYS.has(metricKey) || metricKey.includes("rating")) {
+    return toRatingLetter(raw) ?? raw;
+  }
+  if (isPercentMetric(metricKey)) return formatPercent(raw);
+  return formatCount(raw);
+}
+
+export function getConditionsForScope(
+  gate: SastQualityGate | null | undefined,
+  scope: SastScope,
+): SastGateCondition[] {
+  if (!gate?.conditions?.length) return [];
+  return gate.conditions.filter((c) =>
+    scope === "new" ? c.metricKey.startsWith("new_") : !c.metricKey.startsWith("new_"),
+  );
+}
+
+export function formatCondition(c: SastGateCondition): {
+  value: string;
+  label: string;
+  requirement: string;
+} {
+  const label = CONDITION_LABELS[c.metricKey] ?? c.metricKey;
+  const value = formatConditionValue(c.metricKey, c.actualValue);
+  const isRating = RATING_KEYS.has(c.metricKey) || c.metricKey.includes("rating");
+  const thresholdDisplay = isRating
+    ? (toRatingLetter(c.errorThreshold) ?? c.errorThreshold)
+    : isPercentMetric(c.metricKey)
+      ? formatPercent(c.errorThreshold)
+      : formatCount(c.errorThreshold);
+  let requirement: string;
+  if (isRating) {
+    requirement =
+      c.comparator === "GT"
+        ? `is worse than ${thresholdDisplay}`
+        : `is better than ${thresholdDisplay}`;
+  } else {
+    requirement =
+      c.comparator === "GT"
+        ? `is greater than ${thresholdDisplay}`
+        : `is less than ${thresholdDisplay}`;
+  }
+  return { value, label, requirement };
+}
+
+export function formatRequired(c: SastGateCondition): string {
+  const isRating = RATING_KEYS.has(c.metricKey) || c.metricKey.includes("rating");
+  const thresholdDisplay = isRating
+    ? (toRatingLetter(c.errorThreshold) ?? c.errorThreshold)
+    : isPercentMetric(c.metricKey)
+      ? formatPercent(c.errorThreshold)
+      : c.errorThreshold;
+  if (isRating) {
+    // GT = worse-than threshold → Required ≥ letter; LT = better-than → Required ≤ letter
+    return c.comparator === "GT"
+      ? `Required ≥ ${thresholdDisplay}`
+      : `Required ≤ ${thresholdDisplay}`;
+  }
+  if (c.comparator === "GT") {
+    const n = Number(c.errorThreshold);
+    if (Number.isFinite(n) && n === 0) return "Required = 0";
+    return `Required ≤ ${thresholdDisplay}`;
+  }
+  return `Required ≥ ${thresholdDisplay}`;
+}
+
+export function getFailedConditionForStat(
+  statId: string,
+  gate: SastQualityGate | null | undefined,
+): SastGateCondition | null {
+  if (!gate?.conditions?.length) return null;
+  const keys = STAT_TO_METRICS[statId];
+  if (!keys) return null;
+  return (
+    gate.conditions.find(
+      (c) => c.status === "ERROR" && keys.includes(c.metricKey),
+    ) ?? null
+  );
+}
+
+export function getSeverityRows(
+  counts: SastSeverityCounts,
+): { key: string; label: string; count: number }[] {
+  return [
+    { key: "blocker", label: "Blocker", count: counts.blocker },
+    { key: "high", label: "High", count: counts.high },
+    { key: "medium", label: "Medium", count: counts.medium },
+    { key: "low", label: "Low", count: counts.low },
+    { key: "info", label: "Info", count: counts.info },
+  ];
+}
+
 export function getQualityGateLabel(
   d: SastDetails,
+  gate?: SastQualityGate | null,
 ): "Passed" | "Failed" | "Not computed" {
+  if (gate?.status === "OK") return "Passed";
+  if (gate?.status === "ERROR") return "Failed";
+  if (gate?.status === "NONE") return "Not computed";
   if (d.alert_status === "OK") return "Passed";
   if (d.alert_status === "ERROR") return "Failed";
   return "Not computed";

@@ -27,13 +27,20 @@ import {
   openResolvedUrlInNewTab,
 } from "@blocks-deployment/utils/observability-links.utils";
 import {
+  formatCondition,
+  formatRequired,
+  getConditionsForScope,
+  getFailedConditionForStat,
   getNewCodePeriodLabel,
   getNewCodeStats,
   getOverallCodeStats,
   getQualityGateLabel,
+  getSeverityRows,
   hasNewCode,
   type RatingLetter,
   type SastDetails,
+  type SastIssueBreakdown,
+  type SastQualityGate,
   type SastStat,
 } from "@blocks-deployment/utils/sast-metrics.utils";
 
@@ -47,29 +54,46 @@ const RATING_BADGE_CLASS: Record<RatingLetter, string> = {
 
 const OverviewStats = ({
   stats,
+  qualityGate,
   gridColumns = "grid-cols-1 sm:grid-cols-2 md:grid-cols-3",
 }: {
   stats: SastStat[];
+  qualityGate?: SastQualityGate | null;
   gridColumns?: string;
 }) => {
   return (
     <div className="w-full space-y-4">
       <div className={`grid w-full gap-x-10 gap-y-2 ${gridColumns}`}>
-        {stats.map((item) => (
-          <div
-            key={item.id}
-            data-testid={`sast-stat-${item.id}`}
-            className="flex h-20 items-start gap-4">
-            <div className="flex-1">
-              <p className="text-sm text-high-emphasis">{item.title}</p>
-              <p className="text-lg font-semibold">{item.value}</p>
-              {item.subtitle && (
-                <p className="text-xs text-gray-400">{item.subtitle}</p>
-              )}
+        {stats.map((item) => {
+          const failed = getFailedConditionForStat(item.id, qualityGate);
+          return (
+            <div
+              key={item.id}
+              data-testid={`sast-stat-${item.id}`}
+              className="flex h-20 items-start gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-high-emphasis">{item.title}</p>
+                  {failed && (
+                    <span
+                      data-testid={`sast-failed-${item.id}`}
+                      className={`${getDeploymentLogEventBadgeClassName("Failed")} text-[10px]`}>
+                      Failed
+                    </span>
+                  )}
+                </div>
+                <p className="text-lg font-semibold">{item.value}</p>
+                {failed && (
+                  <p className="text-xs text-red-600">{formatRequired(failed)}</p>
+                )}
+                {item.subtitle && !failed && (
+                  <p className="text-xs text-gray-400">{item.subtitle}</p>
+                )}
+              </div>
+              {renderIndicator(item)}
             </div>
-            {renderIndicator(item)}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -134,11 +158,11 @@ const renderIndicator = (item: SastStat) => {
   );
 };
 
-const getOverviewData = (details: SastDetails) => [
+const getOverviewData = (details: SastDetails, gate?: SastQualityGate | null) => [
   {
     name: "Quality Gate",
     id: "quality_gate",
-    value: getQualityGateLabel(details),
+    value: getQualityGateLabel(details, gate),
   },
   {
     name: "Lines of code",
@@ -160,6 +184,8 @@ const SastTab = () => {
     useSASTRedirectLink(buildId);
 
   let details: SastDetails | null | undefined = undefined;
+  let qualityGate: SastQualityGate | null = null;
+  let issueBreakdown: SastIssueBreakdown | null = null;
   const envelope = sastData as
     | { data?: { details?: SastDetails | null } }
     | undefined
@@ -172,11 +198,13 @@ const SastTab = () => {
     "details" in envelope.data
   ) {
     details = envelope.data.details;
+    qualityGate = (envelope.data as { qualityGate?: SastQualityGate | null }).qualityGate ?? null;
+    issueBreakdown = (envelope.data as { issueBreakdown?: SastIssueBreakdown | null }).issueBreakdown ?? null;
   }
 
   const overviewData = useMemo(
-    () => (details ? getOverviewData(details) : []),
-    [details],
+    () => (details ? getOverviewData(details, qualityGate) : []),
+    [details, qualityGate],
   );
   const newCodeStats = useMemo(
     () => (details ? getNewCodeStats(details) : []),
@@ -268,8 +296,33 @@ const SastTab = () => {
                   New code: {periodLabel}
                 </p>
               )}
+              {qualityGate && getConditionsForScope(qualityGate, "new").length > 0 && (
+                <div className="space-y-1 rounded-md border border-border p-3 text-xs">
+                  {(() => {
+                    const failed = getConditionsForScope(qualityGate, "new").filter((c) => c.status === "ERROR");
+                    if (failed.length === 0) return <p className="text-green-700">All conditions passed</p>;
+                    return (
+                      <>
+                        <p className="font-medium text-red-700">
+                          {failed.length} condition{failed.length === 1 ? "" : "s"} failed
+                        </p>
+                        <ul className="space-y-1 text-medium-emphasis">
+                          {failed.map((c) => {
+                            const f = formatCondition(c);
+                            return (
+                              <li key={c.metricKey}>
+                                <span className="font-medium text-high-emphasis">{f.value}</span> {f.label} {f.requirement}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
               {showNewCode ? (
-                <OverviewStats stats={newCodeStats} />
+                <OverviewStats stats={newCodeStats} qualityGate={qualityGate} />
               ) : (
                 <div className="space-y-1 py-6 text-center">
                   <p className="text-sm font-medium text-high-emphasis">
@@ -281,9 +334,58 @@ const SastTab = () => {
                   </p>
                 </div>
               )}
+              {issueBreakdown?.newCode && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-high-emphasis">Issues by severity</p>
+                  <div className="flex flex-wrap gap-2">
+                    {getSeverityRows(issueBreakdown.newCode).map((r) => (
+                      <span key={r.key} className="rounded-full bg-muted px-2 py-0.5 text-xs text-medium-emphasis">
+                        {r.label} {r.count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </TabsContent>
-            <TabsContent value="overall" className="mt-4">
-              <OverviewStats stats={overallStats} />
+            <TabsContent value="overall" className="mt-4 space-y-3">
+              {qualityGate && getConditionsForScope(qualityGate, "overall").length > 0 && (
+                <div className="space-y-1 rounded-md border border-border p-3 text-xs">
+                  {(() => {
+                    const failed = getConditionsForScope(qualityGate, "overall").filter((c) => c.status === "ERROR");
+                    if (failed.length === 0) return <p className="text-green-700">All conditions passed</p>;
+                    return (
+                      <>
+                        <p className="font-medium text-red-700">
+                          {failed.length} condition{failed.length === 1 ? "" : "s"} failed
+                        </p>
+                        <ul className="space-y-1 text-medium-emphasis">
+                          {failed.map((c) => {
+                            const f = formatCondition(c);
+                            return (
+                              <li key={c.metricKey}>
+                                <span className="font-medium text-high-emphasis">{f.value}</span> {f.label} {f.requirement}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+              <OverviewStats stats={overallStats} qualityGate={qualityGate} />
+              {issueBreakdown?.overall && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-high-emphasis">Issues by severity</p>
+                  <div className="flex flex-wrap gap-2">
+                    {getSeverityRows(issueBreakdown.overall).map((r) => (
+                      <span key={r.key} className="rounded-full bg-muted px-2 py-0.5 text-xs text-medium-emphasis">
+                        {r.label} {r.count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>

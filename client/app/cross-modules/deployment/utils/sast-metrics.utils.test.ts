@@ -1,15 +1,21 @@
-import { describe, expect, it } from "vitest";
 import {
   MISSING,
+  formatCondition,
   formatCount,
   formatEffort,
   formatPercent,
+  formatRequired,
+  getConditionsForScope,
+  getFailedConditionForStat,
   getNewCodePeriodLabel,
   getNewCodeStats,
   getOverallCodeStats,
   getQualityGateLabel,
+  getSeverityRows,
   hasNewCode,
   toRatingLetter,
+  type SastGateCondition,
+  type SastQualityGate,
 } from "./sast-metrics.utils";
 
 describe("toRatingLetter", () => {
@@ -187,6 +193,15 @@ describe("hasNewCode / getQualityGateLabel / getNewCodePeriodLabel", () => {
     expect(getQualityGateLabel({ alert_status: "OK" })).toBe("Passed");
     expect(getQualityGateLabel({ alert_status: "ERROR" })).toBe("Failed");
     expect(getQualityGateLabel({})).toBe("Not computed");
+    expect(
+      getQualityGateLabel({ alert_status: "ERROR" }, { status: "OK", conditions: [] }),
+    ).toBe("Passed");
+    expect(
+      getQualityGateLabel({ alert_status: "OK" }, { status: "ERROR", conditions: [] }),
+    ).toBe("Failed");
+    expect(
+      getQualityGateLabel({ alert_status: "OK" }, { status: "NONE", conditions: [] }),
+    ).toBe("Not computed");
   });
 
   it("getNewCodePeriodLabel formats en-US long date", () => {
@@ -196,5 +211,148 @@ describe("hasNewCode / getQualityGateLabel / getNewCodePeriodLabel", () => {
       }),
     ).toBe("Since August 10, 2026");
     expect(getNewCodePeriodLabel({})).toBeNull();
+  });
+});
+
+describe("Phase 2 quality gate helpers", () => {
+  const failedGate: SastQualityGate = {
+    status: "ERROR",
+    conditions: [
+      {
+        metricKey: "new_violations",
+        comparator: "GT",
+        errorThreshold: "0",
+        actualValue: "69",
+        status: "ERROR",
+      },
+      {
+        metricKey: "new_security_hotspots_reviewed",
+        comparator: "LT",
+        errorThreshold: "100",
+        actualValue: "0.0",
+        status: "ERROR",
+      },
+      {
+        metricKey: "new_coverage",
+        comparator: "LT",
+        errorThreshold: "5.0",
+        actualValue: "0.0",
+        status: "ERROR",
+      },
+      {
+        metricKey: "new_duplicated_lines_density",
+        comparator: "GT",
+        errorThreshold: "25.0",
+        actualValue: "1.44",
+        status: "OK",
+      },
+      {
+        metricKey: "coverage",
+        comparator: "LT",
+        errorThreshold: "80",
+        actualValue: "70",
+        status: "ERROR",
+      },
+    ],
+  };
+
+  it("getConditionsForScope splits new_ prefix", () => {
+    expect(getConditionsForScope(failedGate, "new").map((c) => c.metricKey)).toEqual([
+      "new_violations",
+      "new_security_hotspots_reviewed",
+      "new_coverage",
+      "new_duplicated_lines_density",
+    ]);
+    expect(getConditionsForScope(failedGate, "overall").map((c) => c.metricKey)).toEqual([
+      "coverage",
+    ]);
+    expect(getConditionsForScope(null, "new")).toEqual([]);
+  });
+
+  it("formatCondition Example 1 + letter + C4", () => {
+    expect(formatCondition(failedGate.conditions[0])).toEqual({
+      value: "69",
+      label: "Issues",
+      requirement: "is greater than 0",
+    });
+    expect(formatCondition(failedGate.conditions[1])).toEqual({
+      value: "0.0%",
+      label: "Security Hotspots Reviewed",
+      requirement: "is less than 100.0%",
+    });
+    expect(formatCondition(failedGate.conditions[2])).toEqual({
+      value: "0.0%",
+      label: "Coverage",
+      requirement: "is less than 5.0%",
+    });
+    const letter: SastGateCondition = {
+      metricKey: "new_software_quality_reliability_rating",
+      comparator: "GT",
+      errorThreshold: "1",
+      actualValue: "3",
+      status: "ERROR",
+    };
+    expect(formatCondition(letter)).toEqual({
+      value: "C",
+      label: "Reliability Rating",
+      requirement: "is worse than A",
+    });
+    const unknown: SastGateCondition = {
+      metricKey: "new_blocker_violations",
+      comparator: "GT",
+      errorThreshold: "0",
+      actualValue: null,
+      status: "ERROR",
+    };
+    expect(formatCondition(unknown)).toEqual({
+      value: MISSING,
+      label: "new_blocker_violations",
+      requirement: "is greater than 0",
+    });
+  });
+
+  it("formatRequired Example 1 + letter", () => {
+    expect(formatRequired(failedGate.conditions[0])).toBe("Required = 0");
+    expect(formatRequired(failedGate.conditions[1])).toBe("Required ≥ 100.0%");
+    expect(formatRequired(failedGate.conditions[2])).toBe("Required ≥ 5.0%");
+    expect(formatRequired(failedGate.conditions[3])).toBe("Required ≤ 25.0%");
+    const letter: SastGateCondition = {
+      metricKey: "new_software_quality_reliability_rating",
+      comparator: "GT",
+      errorThreshold: "1",
+      actualValue: "3",
+      status: "ERROR",
+    };
+    expect(formatRequired(letter)).toBe("Required ≥ A");
+  });
+
+  it("getFailedConditionForStat mapping", () => {
+    expect(getFailedConditionForStat("new-issues", failedGate)?.metricKey).toBe(
+      "new_violations",
+    );
+    expect(getFailedConditionForStat("new-coverage", failedGate)?.metricKey).toBe(
+      "new_coverage",
+    );
+    expect(getFailedConditionForStat("new-hotspots", failedGate)?.metricKey).toBe(
+      "new_security_hotspots_reviewed",
+    );
+    expect(getFailedConditionForStat("new-duplications", failedGate)).toBeNull();
+    expect(getFailedConditionForStat("overall-coverage", failedGate)?.metricKey).toBe(
+      "coverage",
+    );
+    expect(getFailedConditionForStat("new-blocker_violations" as never, failedGate)).toBeNull();
+  });
+
+  it("getSeverityRows order", () => {
+    expect(
+      getSeverityRows({
+        total: 69,
+        blocker: 0,
+        high: 3,
+        medium: 40,
+        low: 20,
+        info: 6,
+      }).map((r) => `${r.label} ${r.count}`),
+    ).toEqual(["Blocker 0", "High 3", "Medium 40", "Low 20", "Info 6"]);
   });
 });

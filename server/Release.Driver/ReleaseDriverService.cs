@@ -2,6 +2,7 @@ using Blocks.Genesis;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Interfaces;
 using Devops.DomainService.Deployment.Models.Request;
+using Devops.DomainService.Deployment.Services;
 using Devops.DomainService.VersionControlSystems.Interfaces;
 using Devops.DomainService.VersionControlSystems.Models.Request;
 using System.Net;
@@ -14,17 +15,20 @@ namespace ReleaseDriver
         private readonly IRepoRepository _repoRepository;
         private readonly IVersionControlService _githubService;
         private readonly IBuildService _buildService;
+        private readonly TestReportService _testReportService;
 
         public ReleaseDriverService(
             IAuthService authService,
             IRepoRepository repoRepository,
             IVersionControlService githubService,
-            IBuildService buildService)
+            IBuildService buildService,
+            TestReportService testReportService)
         {
             _authService = authService;
             _repoRepository = repoRepository;
             _githubService = githubService;
             _buildService = buildService;
+            _testReportService = testReportService;
         }
 
         public async Task<BaseApiResponse> IsAuthorizeAsync()
@@ -68,6 +72,73 @@ namespace ReleaseDriver
             {
                 IsSuccess = false,
                 Message = "Failed to get repos."
+            };
+        }
+
+        public async Task<BaseApiResponse> GetRepoDetailsAsync(
+            string repoId,
+            string? branch = null,
+            int pageNumber = 1,
+            int pageSize = 30)
+        {
+            try
+            {
+                var repo = await _repoRepository.GetRepo(repoId);
+                if (repo is null)
+                {
+                    return new BaseApiResponse
+                    {
+                        Data = new
+                        {
+                            Repo = (Repo?)null,
+                            Build = Array.Empty<Build>(),
+                            TotalCount = 0L
+                        },
+                        IsSuccess = false,
+                        Message = "Repository not found",
+                        StatusCode = HttpStatusCode.BadRequest
+                    };
+                }
+
+                var repoBuildList = await _repoRepository.GetRepoBuildList(
+                    repoId,
+                    branch,
+                    pageNumber,
+                    pageSize);
+
+                var totalCount = await _repoRepository.GetRepoBuildCount(repoId, branch);
+
+                return new BaseApiResponse
+                {
+                    Data = new
+                    {
+                        Repo = repo,
+                        Build = repoBuildList,
+                        TotalCount = totalCount
+                    },
+                    IsSuccess = true,
+                    StatusCode = HttpStatusCode.OK
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseApiResponse
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = HttpStatusCode.BadRequest
+                };
+            }
+        }
+
+        public async Task<BaseApiResponse> GetReportsAsync(string buildId, string type)
+        {
+            var report = await _testReportService.GetReport(buildId, type);
+            return new BaseApiResponse
+            {
+                Data = report,
+                IsSuccess = true,
+                StatusCode = HttpStatusCode.OK
             };
         }
 

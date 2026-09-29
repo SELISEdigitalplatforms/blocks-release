@@ -76,9 +76,6 @@ services.AddSingleton<IDeploymentHubService, DeploymentHubService>();
 
 var app = builder.Build();
 
-// Browser-facing security headers for SPA + API (OWASP ZAP DAST bar).
-app.UseMiddleware<Api.Middleware.SecurityHeadersMiddleware>();
-
 app.MapHub<DeploymentLogHub>("/deploymentHub");
 app.UseDefaultFiles();
 app.UseStaticFiles();

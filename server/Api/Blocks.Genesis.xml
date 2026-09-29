@@ -51,12 +51,6 @@
         <member name="M:Api.Controllers.RepoSecretController.Delete(System.String,System.Threading.CancellationToken)">
             <summary>Soft-deletes. The vault value is retained so restore works.</summary>
         </member>
-        <member name="T:Api.Middleware.SecurityHeadersMiddleware">
-            <summary>
-            Browser security headers (ZAP DAST bar).
-            Env bootstrap via /runtime-config.js; style/script without unsafe-inline (IAM/OS pattern).
-            </summary>
-        </member>
         <member name="T:Program">
             <summary>
             Auto-generated public partial Program class for top-level statement apps.

@@ -2,11 +2,12 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Version>4.0.1</Version>
+    <Version>4.0.3</Version>
     <PackageId>SeliseBlocks.ReleaseDriver.OS</PackageId>
     <Authors>SeliseBlocks</Authors>
     <Company>SeliseBlocks</Company>
     <Description>Blocks Release Driver</Description>
+    <PackageReleaseNotes>Rebuilt against Genesis 4.2.2 for the three-connection database architecture. The bundled Devops.DomainService assembly was last published on 2026-08-13, before tenant placement landed, so it shipped without the routing work: BuildRepository no longer resolves an unused ambient collection in its constructor, GetHostingProviders reads HostingProviders from the root database it already resolved instead of the caller's tenant, and RepoRepository, BuildService, DeploymentTeardownService and PipelineRunService carry the explicit tenant overloads added for multi-database routing. No API removals; the Tenant-taking overloads on IRepoRepository and IBuildRepository are additive.</PackageReleaseNotes>
     <IncludeBuildOutput>true</IncludeBuildOutput>
     <IncludeOutputAssemblies>true</IncludeOutputAssemblies>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

@@ -39,6 +39,28 @@ namespace ReleaseDriver
         Task<BaseApiResponse> GetReposListAsync();
 
         /// <summary>
+        /// Retrieves a repository together with its paged build history.
+        /// </summary>
+        /// <param name="repoId">The identifier of the repository to retrieve.</param>
+        /// <param name="branch">Optional branch filter.</param>
+        /// <param name="pageNumber">The page number to retrieve (defaults to 1).</param>
+        /// <param name="pageSize">The number of builds per page (defaults to 30).</param>
+        /// <returns>A response containing the repository, builds, and total build count.</returns>
+        Task<BaseApiResponse> GetRepoDetailsAsync(
+            string repoId,
+            string? branch = null,
+            int pageNumber = 1,
+            int pageSize = 30);
+
+        /// <summary>
+        /// Retrieves the test or analysis report produced by a build.
+        /// </summary>
+        /// <param name="buildId">The identifier of the build.</param>
+        /// <param name="type">The report type, such as sast, sca-container, sca-libraries, or dast.</param>
+        /// <returns>A response containing the requested report.</returns>
+        Task<BaseApiResponse> GetReportsAsync(string buildId, string type);
+
+        /// <summary>
         /// Retrieves the authenticated GitHub user.
         /// </summary>
         /// <returns>A response containing the GitHub user details.</returns>

@@ -321,46 +321,60 @@ public class BuildService : IBuildService
 
         foreach (var pipelineRunName in inFlightRunNames)
         {
-            // Ask before cancelling. A build record whose status was never advanced to a terminal value
-            // looks in-flight forever, and cancelling it would demand `patch` on pipelineruns for a run
-            // that finished long ago. Reading only needs `get`, which the status polling already uses.
-            var (isRunning, stateError) = await _pipelineRunService.IsPipelineRunRunningAsync(pipelineRunName);
-
-            if (stateError is not null)
-            {
-                // Deleting the namespace without knowing whether a pipeline is live risks it being
-                // recreated by deploy-app, so an unreadable state stops the delete just like a failed cancel.
-                return (cancelled, $"Could not determine whether the build '{pipelineRunName}' is still running: {stateError}. Deployment was not deleted.");
-            }
-
-            if (!isRunning)
-            {
-                // Finished or already reaped. Its recorded status is merely stale, and we cannot tell what it
-                // finished as, so leave it rather than mislabelling a success as cancelled.
-                continue;
-            }
-
-            var (success, alreadyGone, error) = await _pipelineRunService.CancelPipelineRunAsync(pipelineRunName);
-
-            if (!success)
-            {
-                return (cancelled, $"Could not cancel the in-progress build '{pipelineRunName}': {error}. Deployment was not deleted.");
-            }
-
-            if (alreadyGone)
-            {
-                // It finished between the check and the cancel - nothing was running, nothing to relabel.
-                continue;
-            }
-
-            if (project is null)
-                await _buildRepository.UpdateBuildStatus(pipelineRunName, EventStatus.CANCELLED, tenantId);
-            else
-                await _buildRepository.UpdateBuildStatus(pipelineRunName, EventStatus.CANCELLED, project);
-            cancelled.Add(pipelineRunName);
+            var (wasCancelled, failure) = await CancelIfStillRunning(pipelineRunName, tenantId, project);
+            if (failure is not null)
+                return (cancelled, failure);
+            if (wasCancelled)
+                cancelled.Add(pipelineRunName);
         }
 
         return (cancelled, null);
+    }
+
+    /// <summary>
+    /// Cancels one PipelineRun if it is actually still running, and relabels its build as cancelled.
+    /// </summary>
+    /// <returns>Whether it was cancelled, and a failure message that must stop the delete.</returns>
+    private async Task<(bool Cancelled, string Failure)> CancelIfStillRunning(
+        string pipelineRunName, string tenantId, Tenant? project)
+    {
+        // Ask before cancelling. A build record whose status was never advanced to a terminal value
+        // looks in-flight forever, and cancelling it would demand `patch` on pipelineruns for a run
+        // that finished long ago. Reading only needs `get`, which the status polling already uses.
+        var (isRunning, stateError) = await _pipelineRunService.IsPipelineRunRunningAsync(pipelineRunName);
+
+        if (stateError is not null)
+        {
+            // Deleting the namespace without knowing whether a pipeline is live risks it being
+            // recreated by deploy-app, so an unreadable state stops the delete just like a failed cancel.
+            return (false, $"Could not determine whether the build '{pipelineRunName}' is still running: {stateError}. Deployment was not deleted.");
+        }
+
+        if (!isRunning)
+        {
+            // Finished or already reaped. Its recorded status is merely stale, and we cannot tell what it
+            // finished as, so leave it rather than mislabelling a success as cancelled.
+            return (false, null);
+        }
+
+        var (success, alreadyGone, error) = await _pipelineRunService.CancelPipelineRunAsync(pipelineRunName);
+
+        if (!success)
+        {
+            return (false, $"Could not cancel the in-progress build '{pipelineRunName}': {error}. Deployment was not deleted.");
+        }
+
+        if (alreadyGone)
+        {
+            // It finished between the check and the cancel - nothing was running, nothing to relabel.
+            return (false, null);
+        }
+
+        if (project is null)
+            await _buildRepository.UpdateBuildStatus(pipelineRunName, EventStatus.CANCELLED, tenantId);
+        else
+            await _buildRepository.UpdateBuildStatus(pipelineRunName, EventStatus.CANCELLED, project);
+        return (true, null);
     }
 
     public async Task<Build?> SaveBuild(Repo repo, BuildRequest request, string buildImageName, string blocksUserId, string pipelineRunNameGuid)

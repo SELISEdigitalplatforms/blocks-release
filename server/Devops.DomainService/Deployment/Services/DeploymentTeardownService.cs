@@ -133,10 +133,12 @@ public class DeploymentTeardownService : IDeploymentTeardownService
         var repos = await _repoRepository.GetProjectRepos(project, resourceId);
 
         // Archived repositories are in scope - blocks-os archives before it publishes - but one that is
-        // both archived and holds no namespace was already settled by an earlier run. Skipping those
-        // keeps a repeated group teardown from rewriting every repository the project ever had.
+        // both archived and holds neither a namespace nor a secret pointer was already settled.
+        // A failed secret cleanup must still be reachable when the dead-lettered message is replayed.
         var actionable = repos
-            .Where(repo => !repo.IsArchived || !string.IsNullOrWhiteSpace(repo.DeployedNamespace))
+            .Where(repo => !repo.IsArchived
+                           || !string.IsNullOrWhiteSpace(repo.DeployedNamespace)
+                           || !string.IsNullOrWhiteSpace(repo.SecretStoreItemId))
             .ToList();
 
         if (actionable.Count == 0)
@@ -164,6 +166,12 @@ public class DeploymentTeardownService : IDeploymentTeardownService
         var tenantId = project.TenantId;
         try
         {
+            if (repo.IsArchived && string.IsNullOrWhiteSpace(repo.DeployedNamespace))
+            {
+                await DeleteRepoSecretAsync(repo, tenantId, summary);
+                return;
+            }
+
             if (!string.IsNullOrWhiteSpace(repo.DeployedNamespace))
             {
                 // Passes the loaded repo, not its id. Resolving by id would go back through GetRepo,

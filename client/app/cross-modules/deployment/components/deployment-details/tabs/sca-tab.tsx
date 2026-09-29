@@ -40,6 +40,10 @@ import {
 import { useParams } from "react-router";
 import { Button } from "@/components/ui-kits/button/button";
 import { ErrorDisplay } from "@/components/error-display";
+import {
+  getDependencyTrackProjectUrl,
+  openResolvedUrlInNewTab,
+} from "@blocks-deployment/utils/observability-links.utils";
 
 interface Dependency {
   id: string;
@@ -817,18 +821,13 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
     });
   };
 
-  const handleSCARedirect = async () => {
-    try {
-      await triggerSCARedirect();
-
-      const scaLink =
-        process.env.NEXT_PUBLIC_SCA_PORTAL_LINK ||
-        "https://sca.seliseblocks.com";
-      window.open(scaLink, "_blank");
-    } catch (error) {
-      console.error("Failed to redirect to SCA:", error);
-    }
-  };
+  // The call grants the user access to the Dependency-Track project and resolves its UUID. It is a
+  // background step: a failure shows nothing and the tab opens on the portal root instead.
+  const handleSCARedirect = () =>
+    openResolvedUrlInNewTab(async () => {
+      const result = await triggerSCARedirect();
+      return getDependencyTrackProjectUrl(result.isError ? undefined : result.data);
+    });
 
   return (
     <Card>

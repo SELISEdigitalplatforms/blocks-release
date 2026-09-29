@@ -46,10 +46,11 @@ namespace Worker.Consumers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex,
-                    "Failed to process project delete message. group={TenantGroupId} project={ProjectId} resource={ResourceId}",
-                    message?.TenantGroupId, message?.ProjectId, message?.ResourceId);
-                throw;
+                // Rethrown, not logged: Genesis logs the failure with this exception before it
+                // dead-letters the delivery, so the message identifiers travel in the exception.
+                throw new InvalidOperationException(
+                    $"Failed to process project delete message. group={message?.TenantGroupId} project={message?.ProjectId} resource={message?.ResourceId}",
+                    ex);
             }
         }
     }

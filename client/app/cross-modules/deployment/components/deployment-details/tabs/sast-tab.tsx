@@ -16,7 +16,10 @@ import {
   CardContent,
 } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
-import { showErrorToast } from "@/hooks/use-toast";
+import {
+  getSonarQubeDashboardUrl,
+  openResolvedUrlInNewTab,
+} from "@blocks-deployment/utils/observability-links.utils";
 
 interface StatItem {
   title: string;
@@ -262,17 +265,13 @@ const SastTab = () => {
   const overviewData = useMemo(() => getOverviewData(details), [details]);
   const overallStats = useMemo(() => getOverallStats(details), [details]);
 
-  const handleSASTRedirect = () => {
-    const sastLink = "https://code.selise.biz";
-
-    triggerSASTRedirect().catch(() => {
-      showErrorToast({ errors: "Something went wrong" });
+  // The call grants the user access to the SonarQube project before the tab lands on it. It is a
+  // background step: a failure shows nothing and the tab opens on the portal root instead.
+  const handleSASTRedirect = () =>
+    openResolvedUrlInNewTab(async () => {
+      const result = await triggerSASTRedirect();
+      return getSonarQubeDashboardUrl(result.isError ? undefined : result.data);
     });
-
-    setTimeout(() => {
-      window.open(sastLink, "_blank", "noopener,noreferrer");
-    }, 1000);
-  };
 
   return (
     <div className="min-h-screen w-full space-y-6">

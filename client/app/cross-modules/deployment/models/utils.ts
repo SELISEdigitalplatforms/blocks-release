@@ -81,6 +81,7 @@ export interface IChangeRepoSpecs {
   hostingProviderId?: string;
   machineConfigId?: string;
   regionId?: string;
+  viewInBlocksMonitor?: boolean;
 }
 
 export interface IAllProjectsResponse {

@@ -281,6 +281,7 @@ export default function RepoDetails() {
         hostingProviderId: deploymentData.providerId || "",
         regionId: deploymentData.regionId || "",
         machineConfigId: deploymentData.machineConfigId || "",
+        viewInBlocksMonitor: deploymentData.viewInBlocksMonitor ?? false,
       },
       {
         onSuccess: (deployResponse) => {
@@ -301,6 +302,15 @@ export default function RepoDetails() {
             description: "Your deployment has been initiated successfully.",
             variant: "success",
           });
+
+          // The deployment itself went through; only the opted-in monitor could not be created.
+          if (deployResponse?.monitorError) {
+            toast({
+              title: "Blocks Monitor",
+              description: deployResponse.monitorError,
+              variant: "destructive",
+            });
+          }
         },
         onError: (error: CustomError) => {
           setIsDeploying(false);

@@ -28,17 +28,20 @@ public class BuildService : IBuildService
     private readonly IVersionControlService _githubService;
     private readonly IValidator<RepoDomainUpdateRequest> _repoDomainUpdateRequestValidator;
     private readonly IMessageClient _messageClient;
+    private readonly IMonitorProvisioningService _monitorProvisioningService;
 
     public BuildService(
-                        ILogger<BuildService> logger,   
+                        ILogger<BuildService> logger,
                         IBuildRepository buildRepository,
                         IRepoRepository repoRepository,
                         IVersionControlService githubService,
                         PipelineRunService pipelineRunService,
                         IGithubWebhookService githubWebhookService,
                         IValidator<RepoDomainUpdateRequest> repoDomainUpdateRequestValidator,
-                        IMessageClient messageClient)
+                        IMessageClient messageClient,
+                        IMonitorProvisioningService monitorProvisioningService)
     {
+        _monitorProvisioningService = monitorProvisioningService;
         _logger = logger;
         _buildRepository = buildRepository;
         _repoRepository = repoRepository;
@@ -530,7 +533,10 @@ public class BuildService : IBuildService
                     machineConfigId = repo?.DeploySettings?.MachineConfig?.Id ?? request.machineConfigId,
                     deploymentType = repo.DeploymentType
                 };
-                return await Build(buildRequest, repo);
+                var buildResponse = await Build(buildRequest, repo);
+                if (buildResponse.IsSuccess && request.viewInBlocksMonitor)
+                    buildResponse.monitorError = await _monitorProvisioningService.CreateMonitorForRepoAsync(repo);
+                return buildResponse;
             }
             return new BuildResponse
             {

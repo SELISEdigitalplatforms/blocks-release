@@ -30,6 +30,8 @@ export interface DeploymentFormData {
   providerId?: string;
   regionId?: string;
   machineConfigId?: string;
+  /** First deployment only: also add the repository to Blocks Monitor. */
+  viewInBlocksMonitor?: boolean;
 }
 
 export interface IRepository {

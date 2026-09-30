@@ -251,6 +251,50 @@ describe("RepoDetails page", () => {
     );
   });
 
+  it("sends the Blocks Monitor opt-in and reports a monitor failure", async () => {
+    const initialDeploy = vi.fn((_vars, opts) => {
+      opts.onSuccess({
+        buildId: "fresh",
+        monitorError: "Failed to add the repository to Blocks Monitor.",
+      });
+    });
+    vi.mocked(useInitialRepoDeployment).mockReturnValue({
+      mutate: initialDeploy,
+      isPending: false,
+    } as never);
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: repoDetailsEmpty,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
+    const deployButtons = await screen.findAllByRole("button", {
+      name: /Deploy Now/i,
+    });
+    fireEvent.click(deployButtons[deployButtons.length - 1]);
+
+    expect(initialDeploy).toHaveBeenCalledWith(
+      expect.objectContaining({ viewInBlocksMonitor: true }),
+      expect.anything(),
+    );
+    // The deployment still counts as started; the monitor failure is reported on top of it.
+    expect(navigateMock).toHaveBeenCalledWith(
+      expect.stringContaining("deployment-live/fresh"),
+    );
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Blocks Monitor",
+        description: "Failed to add the repository to Blocks Monitor.",
+        variant: "destructive",
+      }),
+    );
+  });
+
   it("renders a custom deployment url and cancels the manual deploy dialog", () => {
     vi.mocked(useGetRepoDetails).mockReturnValue({
       data: {

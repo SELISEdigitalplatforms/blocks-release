@@ -32,56 +32,14 @@ namespace Worker.Consumers
 
                 using var scope = _scopeFactory.CreateScope();
                 var logRetrievalService = scope.ServiceProvider.GetRequiredService<LogRetrievalService>();
-                
+
                 if (task.PipelineType == PipelineTypes.RepoDeployment)
                 {
-                    if (string.IsNullOrWhiteSpace(task.ProjectKey) || string.IsNullOrWhiteSpace(task.PipelineRunName))
-                        throw new InvalidOperationException("Repo deployment message has no target tenant or pipeline run.");
-
-                    var dependencyTrackAnalyticsService = scope.ServiceProvider.GetRequiredService<DependencyTrackAnalyticsService>();
-                    var buildRepository = scope.ServiceProvider.GetRequiredService<IBuildRepository>();
-
-                    var build = await buildRepository.GetBuildByPipelineRunName(task.PipelineRunName, task.ProjectKey);
-                    if (build == null)
-                    {
-                        throw new InvalidOperationException($"No build found for pipeline {task.PipelineRunName} in tenant {task.ProjectKey}.");
-                    }
-                    if (!string.Equals(build.ProjectId, task.ProjectKey, StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidOperationException("Build does not belong to the message target tenant.");
-
-                    switch (task.PipelineEventType)
-                    {
-                        case PipelineEventTypes.RetrieveLog:
-                            await logRetrievalService.CheckPodLogsAsync(build);
-                            break;
-
-                        case PipelineEventTypes.RetrieveDependencyTrackId:
-                            await dependencyTrackAnalyticsService.RetrieveScaProjectUuid(build);
-                            break;
-
-                        case PipelineEventTypes.DeletePipeLine:
-                            await _pipelineRunService.DeletePipelineRunAsync(task.PipelineRunName);
-                            break;
-
-                        default:
-                            _logger.LogWarning($"Unknown build event type {task.PipelineEventType} for project {task.ProjectKey}");
-                            break;
-                    }
+                    await HandleRepoDeployment(task, scope.ServiceProvider, logRetrievalService);
                 }
-                else if(task.PipelineType == PipelineTypes.DataGatewayPipeline)
+                else if (task.PipelineType == PipelineTypes.DataGatewayPipeline)
                 {
-                    switch (task.PipelineEventType)
-                    {
-                        case PipelineEventTypes.RetrieveLog:
-                            await logRetrievalService.CheckDataGatewayLog(task.PipelineRunName, task.ProjectKey);
-                            break;
-                        case PipelineEventTypes.DeletePipeLine:
-                            await _pipelineRunService.DeletePipelineRunAsync(task.PipelineRunName);
-                            break;
-                        default:
-                            _logger.LogWarning($"Unknown build event type {task.PipelineEventType} for project {task.ProjectKey}");
-                            break;
-                    }
+                    await HandleDataGatewayPipeline(task, logRetrievalService);
                 }
                 else
                 {
@@ -93,6 +51,58 @@ namespace Worker.Consumers
                 _logger.LogError(ex, $"Failed to process message from queue for project {task?.ProjectKey}, pipeline {task?.PipelineRunName}");
                 if (task?.PipelineType == PipelineTypes.RepoDeployment)
                     throw;
+            }
+        }
+
+        private async Task HandleRepoDeployment(PostBuildQueue task, IServiceProvider services, LogRetrievalService logRetrievalService)
+        {
+            if (string.IsNullOrWhiteSpace(task.ProjectKey) || string.IsNullOrWhiteSpace(task.PipelineRunName))
+                throw new InvalidOperationException("Repo deployment message has no target tenant or pipeline run.");
+
+            var dependencyTrackAnalyticsService = services.GetRequiredService<DependencyTrackAnalyticsService>();
+            var buildRepository = services.GetRequiredService<IBuildRepository>();
+
+            var build = await buildRepository.GetBuildByPipelineRunName(task.PipelineRunName, task.ProjectKey);
+            if (build == null)
+            {
+                throw new InvalidOperationException($"No build found for pipeline {task.PipelineRunName} in tenant {task.ProjectKey}.");
+            }
+            if (!string.Equals(build.ProjectId, task.ProjectKey, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Build does not belong to the message target tenant.");
+
+            switch (task.PipelineEventType)
+            {
+                case PipelineEventTypes.RetrieveLog:
+                    await logRetrievalService.CheckPodLogsAsync(build);
+                    break;
+
+                case PipelineEventTypes.RetrieveDependencyTrackId:
+                    await dependencyTrackAnalyticsService.RetrieveScaProjectUuid(build);
+                    break;
+
+                case PipelineEventTypes.DeletePipeLine:
+                    await _pipelineRunService.DeletePipelineRunAsync(task.PipelineRunName);
+                    break;
+
+                default:
+                    _logger.LogWarning($"Unknown build event type {task.PipelineEventType} for project {task.ProjectKey}");
+                    break;
+            }
+        }
+
+        private async Task HandleDataGatewayPipeline(PostBuildQueue task, LogRetrievalService logRetrievalService)
+        {
+            switch (task.PipelineEventType)
+            {
+                case PipelineEventTypes.RetrieveLog:
+                    await logRetrievalService.CheckDataGatewayLog(task.PipelineRunName, task.ProjectKey);
+                    break;
+                case PipelineEventTypes.DeletePipeLine:
+                    await _pipelineRunService.DeletePipelineRunAsync(task.PipelineRunName);
+                    break;
+                default:
+                    _logger.LogWarning($"Unknown build event type {task.PipelineEventType} for project {task.ProjectKey}");
+                    break;
             }
         }
     }

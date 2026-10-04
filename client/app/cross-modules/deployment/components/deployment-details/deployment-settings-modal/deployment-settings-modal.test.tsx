@@ -85,6 +85,55 @@ describe("DeploymentSettingsModal", () => {
     expect(onDeploy).toHaveBeenCalled();
   });
 
+  it("opts the first deployment into Blocks Monitor by default", () => {
+    const onDeploy = vi.fn();
+    renderWithProviders(
+      <DeploymentSettingsModal
+        isOpen
+        onClose={vi.fn()}
+        repoId="r1"
+        isDeploymentFlow
+        onDeploy={onDeploy}
+      />,
+    );
+    expect(
+      screen.getByRole("checkbox", { name: "View in Blocks Monitor" }),
+    ).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
+    expect(onDeploy).toHaveBeenCalledWith(
+      expect.objectContaining({ viewInBlocksMonitor: true }),
+    );
+  });
+
+  it("lets the user opt the first deployment out of Blocks Monitor", () => {
+    const onDeploy = vi.fn();
+    renderWithProviders(
+      <DeploymentSettingsModal
+        isOpen
+        onClose={vi.fn()}
+        repoId="r1"
+        isDeploymentFlow
+        onDeploy={onDeploy}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "View in Blocks Monitor" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
+    expect(onDeploy).toHaveBeenCalledWith(
+      expect.objectContaining({ viewInBlocksMonitor: false }),
+    );
+  });
+
+  it("does not offer Blocks Monitor when editing settings", () => {
+    renderWithProviders(
+      <DeploymentSettingsModal isOpen onClose={vi.fn()} repoId="r1" />,
+    );
+    expect(
+      screen.queryByRole("checkbox", { name: "View in Blocks Monitor" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("saves settings and shows a success toast", async () => {
     const onClose = vi.fn();
     renderWithProviders(

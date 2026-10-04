@@ -594,6 +594,20 @@ namespace XUnitTest.Devops.Deployment
         }
 
         [Fact]
+        public async Task RunBuild_DoesNotCreateAMonitorWhenTheBuildFails()
+        {
+            SetContext();
+            _f.RepoRepo.Setup(r => r.GetRepo("repo-1"))
+                .ReturnsAsync(new Repo { ItemId = "repo-1", RepoName = "web", Branch = "main" });
+            _f.Vcs.Setup(v => v.GetRepoBranchByName("web", "main")).ReturnsAsync((false, "Branch not found."));
+
+            var result = await _f.BuildService().RunBuild(new RepoBuildRequest { RepoId = "repo-1", viewInBlocksMonitor = true });
+
+            result.IsSuccess.Should().BeFalse();
+            _f.MonitorProvisioning.Verify(m => m.CreateMonitorForRepoAsync(It.IsAny<Repo>()), Times.Never);
+        }
+
+        [Fact]
         public async Task RunBuild_ProceedsWhenTheBranchExists()
         {
             SetContext();

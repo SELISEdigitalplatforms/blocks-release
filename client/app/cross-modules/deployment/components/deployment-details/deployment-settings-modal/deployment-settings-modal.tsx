@@ -17,6 +17,7 @@ import {
   RadioGroupItem,
 } from "@/components/ui-kits/radio-group/radio-group";
 import { Button } from "@/components/ui-kits/button/button";
+import { Checkbox } from "@/components/ui-kits/checkbox/checkbox";
 import {
   useUpdateRepoSettings,
   useGetRepoDetails,
@@ -74,6 +75,7 @@ const DeploymentSettingsModal = ({
     machineConfigId: "",
   });
   const [isInitialized, setIsInitialized] = useState(false);
+  const [viewInBlocksMonitor, setViewInBlocksMonitor] = useState(true);
 
   /*
   const [preFilledFields, setPreFilledFields] = useState({
@@ -201,7 +203,7 @@ const DeploymentSettingsModal = ({
 
     if (isDeploymentFlow) {
       if (onDeploy && isFormValid()) {
-        onDeploy(deploymentData);
+        onDeploy({ ...deploymentData, viewInBlocksMonitor });
       }
     } else {
       const payload = {
@@ -234,6 +236,7 @@ const DeploymentSettingsModal = ({
       lastDeploymentStatus: "",
     });
     setIsInitialized(false);
+    setViewInBlocksMonitor(true);
     /*
     setPreFilledFields({
       provider: false,
@@ -302,6 +305,23 @@ const DeploymentSettingsModal = ({
               ))}
             </RadioGroup>
           </div>
+
+          {/* Only the first deployment (the deployment flow) offers this; the monitor is
+              created once, right after the build is triggered. */}
+          {isDeploymentFlow && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="view-in-blocks-monitor"
+                checked={viewInBlocksMonitor}
+                onCheckedChange={(checked) =>
+                  setViewInBlocksMonitor(checked === true)
+                }
+              />
+              <label htmlFor="view-in-blocks-monitor" className="text-sm">
+                View in Blocks Monitor
+              </label>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="flex gap-2">

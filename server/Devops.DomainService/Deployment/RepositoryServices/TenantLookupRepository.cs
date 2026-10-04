@@ -1,6 +1,5 @@
 using Blocks.Genesis;
 using Devops.DomainService.Deployment.Interfaces;
-using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
 namespace Devops.DomainService.Deployment.RepositoryServices;
@@ -8,19 +7,18 @@ namespace Devops.DomainService.Deployment.RepositoryServices;
 /// <inheritdoc cref="ITenantLookupRepository"/>
 public class TenantLookupRepository : ITenantLookupRepository
 {
-    private readonly ILogger<TenantLookupRepository> _logger;
     private readonly IMongoCollection<Tenant> _tenantsCollection;
 
     public TenantLookupRepository(
-        ILogger<TenantLookupRepository> logger,
         IDbContextProvider dbContextProvider,
         IBlocksSecret blocksSecret)
     {
-        _logger = logger;
         var rootDb = dbContextProvider.GetDatabase(blocksSecret.DatabaseConnectionString, blocksSecret.RootDatabaseName);
         _tenantsCollection = rootDb.GetCollection<Tenant>("Tenants");
     }
 
+    // Read failures are rethrown with the lookup key rather than logged here: the project delete
+    // consumer and Genesis both log the exception on its way to the dead-letter queue.
     public async Task<List<Tenant>> GetProjectsByGroupAsync(string tenantGroupId)
     {
         if (string.IsNullOrWhiteSpace(tenantGroupId))
@@ -33,8 +31,7 @@ public class TenantLookupRepository : ITenantLookupRepository
         }
         catch (MongoException ex)
         {
-            _logger.LogError(ex, "Failed to read projects for tenant group {TenantGroupId}.", tenantGroupId);
-            throw;
+            throw new InvalidOperationException($"Failed to read projects for tenant group {tenantGroupId}.", ex);
         }
     }
 
@@ -50,8 +47,7 @@ public class TenantLookupRepository : ITenantLookupRepository
         }
         catch (MongoException ex)
         {
-            _logger.LogError(ex, "Failed to read project {ProjectId}.", projectId);
-            throw;
+            throw new InvalidOperationException($"Failed to read project {projectId}.", ex);
         }
     }
 }

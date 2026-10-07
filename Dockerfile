@@ -10,14 +10,13 @@ ARG DOTNET_PUBLISH_PLATFORM=linux/amd64
 # Stage: frontend — Vite build → server/Api/wwwroot (see client/vite.config.ts)
 # -----------------------------------------------------------------------------
 FROM node:22-alpine AS client
-WORKDIR /src
+WORKDIR /src/client
 
-COPY client/package.json client/package-lock.json ./client/
-RUN cd client && npm ci --no-audit --no-fund
+COPY client/package.json client/package-lock.json ./
+RUN npm ci --no-audit --no-fund
 
-COPY client ./client
-RUN mkdir -p server/Api/wwwroot \
-    && cd client \
+COPY client ./
+RUN mkdir -p /src/server/Api/wwwroot \
     && npm run build
 
 # -----------------------------------------------------------------------------
@@ -63,5 +62,10 @@ COPY --from=publish /app/publish .
 RUN chown -R app:app /app
 
 USER app
+
+# Liveness only: Genesis maps /health/live with no dependency checks, so a Mongo/Redis
+# outage does not mark the container unhealthy. wget is BusyBox's, part of the Alpine base.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD wget -q -O /dev/null http://127.0.0.1:5000/health/live || exit 1
 
 ENTRYPOINT ["dotnet", "Api.dll"]

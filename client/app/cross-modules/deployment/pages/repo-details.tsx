@@ -2,7 +2,8 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/project.store";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
 import DeploymentObservability from "@blocks-deployment/components/deployment-details/shared/deployment-observability";
-import { ChartGantt, GitBranch, Logs, Rocket, Settings } from "lucide-react";
+import { GitBranch, Rocket, Settings } from "lucide-react";
+// import { ChartGantt, Logs } from "lucide-react"; // restore with the Tracing/Logs header buttons
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -610,7 +611,8 @@ export default function RepoDetails() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">
-              <Button variant="outline" disabled>
+              {/* Hidden until tracing and logs are available for repositories. */}
+              {/* <Button variant="outline" disabled>
                 <div className="flex h-8 w-8 items-center justify-center">
                   <ChartGantt size={20} />
                 </div>
@@ -621,7 +623,7 @@ export default function RepoDetails() {
                   <Logs size={20} />
                 </div>
                 <span className="hidden sm:inline">Logs</span>
-              </Button>
+              </Button> */}
 
               <Button variant="outline" onClick={handleSettingsClick}>
                 <div className="flex h-8 w-8 items-center justify-center">

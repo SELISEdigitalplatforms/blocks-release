@@ -1,9 +1,7 @@
 import { Button } from "@/components/ui-kits/button/button";
-import { cn } from "@/lib/utils";
-import { formatDate } from "@/utils/date.util";
 import { useParams, useNavigate } from "react-router";
 import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use-github-info";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useEffectEvent, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import LiveDeploymentLogs from "@blocks-deployment/components/deployment-details/live/live-logs-section";
 import DeploymentGeneralInfo from "@blocks-deployment/components/deployment-details/shared/deployment-general-info";
@@ -33,13 +31,17 @@ const LiveLogs = () => {
   } = useGetCardProjectAndBranch(buildIdStr ?? "");
   const cardData = apiResponse?.data as IDeploymentPageData | undefined;
 
+  // `scoped` is a fresh function every render; read it through an effect event so the
+  // redirect below still fires only when the error state (or navigate) changes.
+  const scopedPath = useEffectEvent((sub: string) => scoped(sub));
+
   useEffect(() => {
     if (isError && error && typeof error === "object" && "errors" in error) {
       const httpError = error as IHttpError;
       const errorResponse = httpError.errors;
 
       if (errorResponse.data === null && errorResponse.isSuccess === false) {
-        navigate(scoped("deployment"));
+        navigate(scopedPath("deployment"));
       }
     }
   }, [isError, error, navigate]);

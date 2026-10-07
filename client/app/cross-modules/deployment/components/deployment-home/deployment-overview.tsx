@@ -1,7 +1,3 @@
-import { AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui-kits/button/button";
-import { useNavigate } from "react-router";
-
 import {
   IBuildData,
   IDeploySettings,
@@ -34,8 +30,6 @@ interface DeploymentOverviewProps {
 }
 
 const DeploymentOverview = ({ projects, refetch }: DeploymentOverviewProps) => {
-  const navigate = useNavigate();
-
   return (
     <div className="mx-auto min-h-screen w-full">
       <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">

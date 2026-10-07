@@ -1,7 +1,9 @@
 import { Loader, X } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useEffectEvent, useRef } from "react";
+import type { QueryObserverResult } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
+import type { IBranchMatchResponse } from "@blocks-deployment/models/github-info";
 import { Button } from "@/components/ui-kits/button/button";
 
 type ModalState = "loading" | "error" | "success";
@@ -15,7 +17,7 @@ interface BranchVerificationModalProps {
   onReopenModal: () => void;
   onForceShowSuccess: () => void;
   repo: IRepoResponse;
-  refetch: () => Promise<any>;
+  refetch: () => Promise<QueryObserverResult<IBranchMatchResponse>>;
   isProcessing: boolean;
   skipInitialVerification?: boolean;
 }
@@ -37,47 +39,82 @@ export default function BranchVerificationModal({
   const isCancelledRef = useRef(false);
   const isRetryingRef = useRef(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      if (isRetryingRef.current) {
-        return;
-      }
-
+  // The visible state follows the same open/skip changes as the effect below, but is
+  // reset while rendering so the modal never shows a stale state for a frame. A retry
+  // in flight keeps its own state, just as the effect leaves its check alone.
+  const [syncedProps, setSyncedProps] = useState<{
+    isOpen: boolean;
+    skipInitialVerification: boolean;
+  } | null>(null);
+  if (
+    syncedProps === null ||
+    syncedProps.isOpen !== isOpen ||
+    syncedProps.skipInitialVerification !== skipInitialVerification
+  ) {
+    setSyncedProps({ isOpen, skipInitialVerification });
+    if (!isOpen) {
       setIsRetrying(false);
-      isCancelledRef.current = false;
-
-      if (skipInitialVerification) {
-        setModalState("error");
-      } else {
-        setModalState("loading");
-        handleBranchVerification();
-      }
-    } else {
-      setIsRetrying(false);
-      isRetryingRef.current = false;
+    } else if (!isRetrying) {
+      setModalState(skipInitialVerification ? "error" : "loading");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, skipInitialVerification]);
+  }
 
-  const handleBranchVerification = async () => {
-    try {
-      const result = await refetch();
+  // The result is handled in promise callbacks: a failure anywhere - refetch throwing,
+  // the request failing, or the success path itself - lands in the same handler.
+  const handleBranchVerification = () =>
+    new Promise<Awaited<ReturnType<typeof refetch>>>((resolve) =>
+      resolve(refetch()),
+    )
+      .then((result) => {
+        onApiComplete();
 
-      onApiComplete();
+        setIsRetrying(false);
+        isRetryingRef.current = false;
 
-      setIsRetrying(false);
-      isRetryingRef.current = false;
+        if (isCancelledRef.current) {
+          if (result.error || !result.data?.isSuccess) {
+            setTimeout(() => {
+              onReopenModal();
+            }, 100);
+          }
+          return;
+        }
 
-      if (isCancelledRef.current) {
-        if (result.error || !result.data?.isSuccess) {
+        if (result.error) {
+          setModalState("error");
+          toast({
+            title: "Branch Match Failed",
+            description:
+              "Unable to check branch compatibility. Please try again later.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (result.data?.isSuccess) {
+          setModalState("success");
+          setTimeout(() => {
+            if (!isCancelledRef.current) {
+              onSuccess();
+            }
+          }, 800);
+        } else {
+          setModalState("error");
+        }
+      })
+      .catch(() => {
+        onApiComplete();
+
+        setIsRetrying(false);
+        isRetryingRef.current = false;
+
+        if (isCancelledRef.current) {
           setTimeout(() => {
             onReopenModal();
           }, 100);
+          return;
         }
-        return;
-      }
 
-      if (result.error) {
         setModalState("error");
         toast({
           title: "Branch Match Failed",
@@ -85,41 +122,29 @@ export default function BranchVerificationModal({
             "Unable to check branch compatibility. Please try again later.",
           variant: "destructive",
         });
-        return;
-      }
-
-      if (result.data?.isSuccess) {
-        setModalState("success");
-        setTimeout(() => {
-          if (!isCancelledRef.current) {
-            onSuccess();
-          }
-        }, 800);
-      } else {
-        setModalState("error");
-      }
-    } catch {
-      onApiComplete();
-
-      setIsRetrying(false);
-      isRetryingRef.current = false;
-
-      if (isCancelledRef.current) {
-        setTimeout(() => {
-          onReopenModal();
-        }, 100);
-        return;
-      }
-
-      setModalState("error");
-      toast({
-        title: "Branch Match Failed",
-        description:
-          "Unable to check branch compatibility. Please try again later.",
-        variant: "destructive",
       });
+
+  const startVerification = useEffectEvent(() => {
+    handleBranchVerification();
+  });
+
+  // Opening the modal (or the skip flag changing while it is open) kicks off a branch
+  // check unless a retry is already running one; closing it clears the retry flag.
+  useEffect(() => {
+    if (isOpen) {
+      if (isRetryingRef.current) {
+        return;
+      }
+
+      isCancelledRef.current = false;
+
+      if (!skipInitialVerification) {
+        startVerification();
+      }
+    } else {
+      isRetryingRef.current = false;
     }
-  };
+  }, [isOpen, skipInitialVerification]);
 
   const handleClose = () => {
     if (modalState === "loading") {

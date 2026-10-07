@@ -1,13 +1,31 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAuthStore } from "@/store/auth.store";
 
-export const useAppState = () => {
-  const [isMounted, setIsMounted] = useState(false);
+// One flag per component instance. It stays false through the first render and commit, and
+// flips when React subscribes (a passive effect after that commit), which re-renders the
+// component with `true` - the same one-render delay as setting state in a mount effect.
+const createMountedStore = () => {
+  let mounted = false;
+  return {
+    subscribe: (onChange: () => void) => {
+      if (!mounted) {
+        mounted = true;
+        onChange();
+      }
+      return () => {};
+    },
+    getSnapshot: () => mounted,
+  };
+};
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+export const useAppState = () => {
+  const [mountedStore] = useState(createMountedStore);
+  const isMounted = useSyncExternalStore(
+    mountedStore.subscribe,
+    mountedStore.getSnapshot,
+    mountedStore.getSnapshot,
+  );
 
   return { isMounted };
 };

@@ -21,15 +21,19 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   const [state, setState] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  // Re-sync the local input text when the `value` prop changes.
+  const [prevValue, setPrevValue] = useState(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
     setState(value);
-  }, [value]);
+  }
 
-  const debounced = useRef(
+  // Created once on mount (calls the `onChange` from the first render).
+  const [debounced] = useState(() =>
     debounce((val: string) => {
       onChange(val);
     }, 300),
-  ).current;
+  );
 
   useEffect(() => {
     return () => {

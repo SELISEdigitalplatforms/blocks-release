@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useEffectEvent, useState } from "react";
 import type {
   DeploymentFormData,
   IHttpError,
 } from "@blocks-deployment/models/github-info";
+import type { IDeploySettings } from "@blocks-deployment/models/deployed-logs";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +57,9 @@ const DeploymentSettingsModal = ({
 }: IDeploymentSettingsModalProps) => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
+  // useScopedPath returns a new function every render; read it from an effect event so
+  // the redirect effect below keeps firing only when the error (or navigate) changes.
+  const scopedPath = useEffectEvent((sub: string) => scoped(sub));
 
   const projectEnvironment =
     useProjectStore().selectedProject?.environment || "";
@@ -119,70 +123,75 @@ const DeploymentSettingsModal = ({
         errorResponse.data?.repo === null &&
         errorResponse.isSuccess === false
       ) {
-        navigate(scoped("deployment"));
+        navigate(scopedPath("deployment"));
       }
     }
   }, [isError, error, navigate]);
 
-  useEffect(() => {
-    if (
-      isOpen &&
-      repoDetails?.data?.repo &&
-      !isInitialized &&
-      !isSpecsLoading
-    ) {
-      const repo = repoDetails.data.repo;
-      const preselectedDeploySettings = repo.deploySettings;
-      const deploymentType =
-        repo.deploymentType === "Manual" ? "manual" : "auto";
+  // Prefill the form once per opening, as soon as the repo details and specs have
+  // loaded. Adjusted during render; isInitialized guards against re-applying it, and
+  // handleClose clears it so the next opening prefills again.
+  if (
+    isOpen &&
+    repoDetails?.data?.repo &&
+    !isInitialized &&
+    !isSpecsLoading
+  ) {
+    const repo = repoDetails.data.repo;
+    // The server's deploy settings can also carry the custom domain and last status.
+    const preselectedDeploySettings:
+      | (IDeploySettings &
+          Partial<Pick<DeploymentFormData, "customDomain" | "lastDeploymentStatus">>)
+      | undefined = repo.deploySettings;
+    const deploymentType =
+      repo.deploymentType === "Manual" ? "manual" : "auto";
 
-      // Fixed defaults: Azure, West Europe, First Active Spec
-      const providers = Array.isArray(specsData) ? specsData : [];
-      const azureProvider = providers.find(
-        (p: any) => p.name.toLowerCase() === "azure",
-      );
-      const westEuropeRegion = azureProvider?.region?.find(
-        (r: any) =>
-          r.name.toLowerCase().includes("west") &&
-          r.name.toLowerCase().includes("europe"),
-      );
-      const firstActiveSpec = westEuropeRegion?.machineSpecs?.find(
-        (s: any) => s.status === "active",
-      );
+    // Fixed defaults: Azure, West Europe, First Active Spec
+    const providers = Array.isArray(specsData) ? specsData : [];
+    const azureProvider = providers.find(
+      (p: any) => p.name.toLowerCase() === "azure",
+    );
+    const westEuropeRegion = azureProvider?.region?.find(
+      (r: any) =>
+        r.name.toLowerCase().includes("west") &&
+        r.name.toLowerCase().includes("europe"),
+    );
+    const firstActiveSpec = westEuropeRegion?.machineSpecs?.find(
+      (s: any) => s.status === "active",
+    );
 
-      setDeploymentData({
-        deploymentType,
-        framework: "",
-        provider:
-          azureProvider?.name ||
-          preselectedDeploySettings?.hostingProvider?.name ||
-          "",
-        region:
-          westEuropeRegion?.name ||
-          preselectedDeploySettings?.region?.name ||
-          "",
-        selectedSpec:
-          firstActiveSpec?.id ||
-          preselectedDeploySettings?.machineConfig?.id ||
-          "",
-        providerId:
-          azureProvider?.id ||
-          preselectedDeploySettings?.hostingProvider?.id ||
-          "",
-        regionId:
-          westEuropeRegion?.id || preselectedDeploySettings?.region?.id || "",
-        machineConfigId:
-          firstActiveSpec?.id ||
-          preselectedDeploySettings?.machineConfig?.id ||
-          "",
-        customDomain: preselectedDeploySettings?.customDomain || "",
-        lastDeploymentStatus:
-          preselectedDeploySettings?.lastDeploymentStatus || "",
-      });
+    setDeploymentData({
+      deploymentType,
+      framework: "",
+      provider:
+        azureProvider?.name ||
+        preselectedDeploySettings?.hostingProvider?.name ||
+        "",
+      region:
+        westEuropeRegion?.name ||
+        preselectedDeploySettings?.region?.name ||
+        "",
+      selectedSpec:
+        firstActiveSpec?.id ||
+        preselectedDeploySettings?.machineConfig?.id ||
+        "",
+      providerId:
+        azureProvider?.id ||
+        preselectedDeploySettings?.hostingProvider?.id ||
+        "",
+      regionId:
+        westEuropeRegion?.id || preselectedDeploySettings?.region?.id || "",
+      machineConfigId:
+        firstActiveSpec?.id ||
+        preselectedDeploySettings?.machineConfig?.id ||
+        "",
+      customDomain: preselectedDeploySettings?.customDomain || "",
+      lastDeploymentStatus:
+        preselectedDeploySettings?.lastDeploymentStatus || "",
+    });
 
-      setIsInitialized(true);
-    }
-  }, [isOpen, repoDetails, specsData, isInitialized, isSpecsLoading]);
+    setIsInitialized(true);
+  }
 
   const updateFormData = <K extends keyof DeploymentFormData>(
     field: K,

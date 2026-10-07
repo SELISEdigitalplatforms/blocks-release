@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useState } from "react";
 import { useLocation } from "react-router";
 import useIsMobile from "@/hooks/use-is-mobile";
 
@@ -47,53 +47,79 @@ export function DashboardLayoutProvider({
 }) {
   const isMobile = useIsMobile();
   const { pathname } = useLocation();
-  const isMountedRef = useRef(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(isOpen);
   const [isSidebarSubMenuOpen, setIsSidebarSubMenuOpen] = useState(isSubMenuOpen);
-  const [subMenuId, setSubMenuId] = useState<string | null>(null);
+  const [subMenuId, setSubMenuId] = useState<string | null>(() =>
+    localStorage.getItem("subMenuId"),
+  );
   const [servicesSearchTerm, setServicesSearchTerm] = useState("");
 
-  useEffect(() => {
-    if (persist && !isMountedRef.current) {
-      isMountedRef.current = true;
+  // Sidebar state follows isMobile / persist / pathname changes. These are adjusted
+  // during render (React's "adjusting state when a prop changes" pattern) instead of in
+  // effects: each rule below fires on the same input changes it always has, and the
+  // rules apply in the same order, so later rules win when several fire together.
+  const [hasRestoredPersisted, setHasRestoredPersisted] = useState(false);
+  const [syncedInputs, setSyncedInputs] = useState<{
+    isMobile: boolean;
+    persist: boolean;
+    pathname: string;
+    isSidebarOpen: boolean;
+  } | null>(null);
+
+  // Restore the persisted open state once, the first time persistence is active.
+  const shouldRestorePersisted = persist && !hasRestoredPersisted;
+  // Runs on mount and whenever isMobile or persist changes.
+  const shouldSyncOpenToViewport =
+    syncedInputs === null ||
+    syncedInputs.isMobile !== isMobile ||
+    syncedInputs.persist !== persist;
+  // Runs on mount and whenever pathname or isMobile changes.
+  const shouldSyncSubMenuToRoute =
+    syncedInputs === null ||
+    syncedInputs.pathname !== pathname ||
+    syncedInputs.isMobile !== isMobile;
+  // Runs on mount and whenever isSidebarOpen or isMobile changes.
+  const shouldSyncSubMenuToSidebar =
+    syncedInputs === null ||
+    syncedInputs.isSidebarOpen !== isSidebarOpen ||
+    syncedInputs.isMobile !== isMobile;
+
+  if (
+    shouldRestorePersisted ||
+    shouldSyncOpenToViewport ||
+    shouldSyncSubMenuToRoute ||
+    shouldSyncSubMenuToSidebar
+  ) {
+    setSyncedInputs({ isMobile, persist, pathname, isSidebarOpen });
+
+    if (shouldRestorePersisted) {
+      setHasRestoredPersisted(true);
       if (!isMobile) {
         const stored = localStorage.getItem(storageKey);
         if (stored !== null) {
           setIsSidebarOpen(JSON.parse(stored) as boolean);
-          return;
         }
       } else {
         setIsSidebarOpen(false);
       }
     }
-  }, [isMobile, persist, storageKey]);
 
-  useEffect(() => {
-    if (!persist) {
-      setIsSidebarOpen(!isMobile);
-    } else if (isMobile) {
-      setIsSidebarOpen(false);
+    if (shouldSyncOpenToViewport) {
+      if (!persist) {
+        setIsSidebarOpen(!isMobile);
+      } else if (isMobile) {
+        setIsSidebarOpen(false);
+      }
     }
-  }, [isMobile, persist]);
 
-  useEffect(() => {
-    const menuId = localStorage.getItem("subMenuId");
-    if (menuId !== null) {
-      setSubMenuId(menuId);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isMobile && pathname.startsWith("/services")) {
+    if (shouldSyncSubMenuToRoute && !isMobile && pathname.startsWith("/services")) {
       setIsSidebarSubMenuOpen(true);
     }
-  }, [pathname, isMobile]);
 
-  useEffect(() => {
-    if (isSidebarOpen && !isMobile) {
+    if (shouldSyncSubMenuToSidebar && isSidebarOpen && !isMobile) {
       setIsSidebarSubMenuOpen(false);
     }
-  }, [isSidebarOpen, isMobile]);
+  }
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen((prev) => {

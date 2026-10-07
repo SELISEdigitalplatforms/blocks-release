@@ -31,12 +31,11 @@ const ProviderButtons = ({
 
   const { data: verifyAuth } = useValidateAuthorization();
   const [, setSelectedProvider] = useState<string | null>(null);
-  if (!destination || destination === "") {
-    localStorage.setItem("destination", "/app/deployment/configure");
-    destination = "/app/deployment/configure";
-  } else {
-    localStorage.setItem("destination", destination);
-  }
+  const resolvedDestination =
+    !destination || destination === ""
+      ? "/app/deployment/configure"
+      : destination;
+  localStorage.setItem("destination", resolvedDestination);
   const handleContinue = (providerId: string) => {
     setSelectedProvider(providerId);
 
@@ -46,7 +45,7 @@ const ProviderButtons = ({
           if (onClose) {
             onClose(verifyAuth.isSuccess);
           } else {
-            navigate(destination);
+            navigate(resolvedDestination);
           }
         } else {
           if (!projectKey) {
@@ -64,7 +63,7 @@ const ProviderButtons = ({
           window.addEventListener("storage", reloadListener);
 
           localStorage.setItem("github_auth_project_key", projectKey);
-          localStorage.setItem("github_auth_destination", destination);
+          localStorage.setItem("github_auth_destination", resolvedDestination);
 
           authenticateWithGithub(extraState ? extraState : "");
         }

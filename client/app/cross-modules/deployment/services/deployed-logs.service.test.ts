@@ -5,6 +5,7 @@ import {
   DeploymentEventGroup,
 } from "@blocks-deployment/models/live-logs";
 import { IBuildEvent } from "@blocks-deployment/models/deployed-logs";
+import type { IBuildStep } from "@blocks-deployment/models/live-logs";
 import { MOCK_BUILD_ID } from "../test-utils/__mocks__";
 
 describe("DeployedLogsService", () => {
@@ -101,14 +102,14 @@ describe("DeployedLogsService", () => {
 
   describe("getDefaultExpandedSteps", () => {
     it("should expand error steps", () => {
-      const steps: any[] = [
+      const steps = [
         { id: "s1", status: "error", eventGroup: DeploymentEventGroup.Build },
         {
           id: "s2",
           status: "success",
           eventGroup: DeploymentEventGroup.Deploy,
         },
-      ];
+      ] as IBuildStep[];
 
       const expanded = DeployedLogsService.getDefaultExpandedSteps(steps);
       expect(expanded.has("s1")).toBe(true);
@@ -116,28 +117,28 @@ describe("DeployedLogsService", () => {
     });
 
     it("should expand Clone step if it has logs", () => {
-      const steps: any[] = [
+      const steps = [
         {
           id: "s1",
           status: "success",
           eventGroup: DeploymentEventGroup.Clone,
           logs: ["Cloning..."],
         },
-      ];
+      ] as IBuildStep[];
 
       const expanded = DeployedLogsService.getDefaultExpandedSteps(steps);
       expect(expanded.has("s1")).toBe(true);
     });
 
     it("should not expand Clone step if it has no logs", () => {
-      const steps: any[] = [
+      const steps = [
         {
           id: "s1",
           status: "success",
           eventGroup: DeploymentEventGroup.Clone,
           logs: [],
         },
-      ];
+      ] as IBuildStep[];
 
       const expanded = DeployedLogsService.getDefaultExpandedSteps(steps);
       expect(expanded.has("s1")).toBe(false);
@@ -148,15 +149,15 @@ describe("DeployedLogsService", () => {
 
   describe("shouldShowChevron", () => {
     it("should return true if step has logs", () => {
-      const step: any = { logs: ["log 1"] };
+      const step = { logs: ["log 1"] } as IBuildStep;
       expect(DeployedLogsService.shouldShowChevron(step)).toBe(true);
     });
 
     it("should return false if step has no logs", () => {
-      const step: any = { logs: [] };
+      const step = { logs: [] } as IBuildStep;
       expect(DeployedLogsService.shouldShowChevron(step)).toBe(false);
 
-      const stepNoLogs: any = {};
+      const stepNoLogs = {} as IBuildStep;
       expect(DeployedLogsService.shouldShowChevron(stepNoLogs)).toBe(false);
     });
   });

@@ -92,24 +92,33 @@ export function Notification() {
   const markAsRead = useMarkAsRead();
   const markAllAsRead = useMarkAllAsRead();
 
-  useEffect(() => {
+  // Merge each newly fetched page into the accumulated list. Adjusted during render
+  // whenever the fetched data or the page number changes (including the first render).
+  const [mergedFrom, setMergedFrom] = useState<{
+    data: typeof data;
+    pageNumber: number;
+  } | null>(null);
+  if (
+    mergedFrom === null ||
+    mergedFrom.data !== data ||
+    mergedFrom.pageNumber !== pageNumber
+  ) {
+    setMergedFrom({ data, pageNumber });
     if (data?.notifications) {
-      setNotifications((prev) => {
-        const ids = new Set(prev.map((n) => n.id));
-        const merged = [...prev];
-        data.notifications.forEach((n) => {
-          if (!ids.has(n.id)) merged.push(n);
-        });
-        merged.sort(
-          (a, b) =>
-            new Date(b.createdTime || 0).getTime() -
-            new Date(a.createdTime || 0).getTime(),
-        );
-        return merged;
+      const ids = new Set(notifications.map((n) => n.id));
+      const merged = [...notifications];
+      data.notifications.forEach((n) => {
+        if (!ids.has(n.id)) merged.push(n);
       });
+      merged.sort(
+        (a, b) =>
+          new Date(b.createdTime || 0).getTime() -
+          new Date(a.createdTime || 0).getTime(),
+      );
+      setNotifications(merged);
       setHasMore(pageNumber * 10 < (data?.totalNotificationsCount || 0));
     }
-  }, [data, pageNumber]);
+  }
 
   const listRef = useRef<HTMLDivElement>(null);
   const handleScroll = useCallback(() => {
@@ -121,13 +130,15 @@ export function Notification() {
   }, [isLoading, isFetching, hasMore]);
 
   const [open, setOpen] = useState(false);
-  useEffect(() => {
-    if (open) {
+  // Opening the panel restarts paging from the first page and refetches.
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (nextOpen && !open) {
       setPageNumber(1);
       setHasMore(true);
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     }
-  }, [open, queryClient]);
+  };
 
   function MarkNotificationAsRead(notificationId: string) {
     return () => {
@@ -181,7 +192,7 @@ export function Notification() {
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <div className="relative" data-testid="notification-bell">
           <Bell className="h-5 w-5 cursor-pointer text-muted-foreground transition-colors hover:text-primary" />

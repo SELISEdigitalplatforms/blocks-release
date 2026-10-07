@@ -2,11 +2,10 @@ import { Button } from "@/components/ui-kits/button/button";
 import { Calendar } from "@/components/ui-kits/calendar/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui-kits/popover/popover";
 import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { formatDate } from "@/utils/date.util";
 import useIsMobile from "@/hooks/use-is-mobile";
 import { Separator } from "@/components/ui-kits/separator/separator";
-import { MouseEvent, useEffect, useState } from "react";
+import { MouseEvent, useState } from "react";
 
 type DateRangeType = { from?: Date; to?: Date } | null;
 
@@ -21,11 +20,15 @@ export function DateRange({ label, value, onChange }: DateRangeFilterProps) {
   const [open, setOpen] = useState<boolean>(false);
   const [date, setDate] = useState<DateRangeType>(value);
 
-  useEffect(() => {
+  // While the popover is closed, keep the draft `date` in sync with `value`
+  // whenever `open` or `value` changes.
+  const [prevSync, setPrevSync] = useState({ open, value });
+  if (prevSync.open !== open || prevSync.value !== value) {
+    setPrevSync({ open, value });
     if (!open) {
       setDate(value);
     }
-  }, [open, value]);
+  }
 
   const handleDateSelect = (selectedDateRange: DateRangeType | undefined) => {
     if (!selectedDateRange) return setDate(null);

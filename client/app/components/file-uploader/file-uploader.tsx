@@ -71,7 +71,6 @@ export const FileUploader = forwardRef<
     ref,
   ) => {
     const [isFileTooBig, setIsFileTooBig] = useState(false);
-    const [isLOF, setIsLOF] = useState(false);
     const [activeIndex, setActiveIndex] = useState(-1);
     const {
       accept = {
@@ -81,6 +80,17 @@ export const FileUploader = forwardRef<
       maxSize = 4 * 1024 * 1024,
       multiple = true,
     } = dropzoneOptions;
+
+    // "Limit of files" reached. Recomputed whenever `value` or `maxFiles`
+    // changes; a null `value` keeps the previous result.
+    const [isLOF, setIsLOF] = useState(() => !!value && value.length === maxFiles);
+    const [lofInputs, setLofInputs] = useState({ value, maxFiles });
+    if (lofInputs.value !== value || lofInputs.maxFiles !== maxFiles) {
+      setLofInputs({ value, maxFiles });
+      if (value) {
+        setIsLOF(value.length === maxFiles);
+      }
+    }
 
     const reSelectAll = maxFiles === 1 ? true : reSelect;
     const direction: DirectionOptions = dir === "rtl" ? "rtl" : "ltr";
@@ -99,6 +109,66 @@ export const FileUploader = forwardRef<
         showErrorToast({ errors: "The file size is more than 5MB" });
       }
     }, [isFileTooBig]);
+
+    const onDrop = useCallback(
+      (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
+        const files = acceptedFiles;
+
+        if (!files) {
+          toast.error("file error , probably too big");
+          return;
+        }
+
+        const newValues: File[] = value ? [...value] : [];
+
+        if (reSelectAll) {
+          newValues.splice(0, newValues.length);
+        }
+
+        files.forEach((file) => {
+          if (newValues.length < maxFiles) {
+            newValues.push(file);
+          }
+        });
+
+        onValueChange(newValues);
+
+        if (rejectedFiles.length > 0) {
+          for (let i = 0; i < rejectedFiles.length; i++) {
+            if (rejectedFiles[i].errors[0]?.code === "file-too-large") {
+              showErrorToast({
+                errors: `File is too large. Max size is ${maxSize / 1024 / 1024}MB`
+              });
+              break;
+            }
+            if (rejectedFiles[i].errors[0]?.code === "file-invalid-type") {
+              showErrorToast({
+                errors: "Invalid file type"
+              });
+              break;
+            }
+            if (rejectedFiles[i].errors[0]?.message) {
+              toast.error(rejectedFiles[i].errors[0].message);
+              showErrorToast({
+                errors: rejectedFiles[i].errors[0].message
+              });
+              break;
+            }
+          }
+        }
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [reSelectAll, value],
+    );
+
+    const opts = dropzoneOptions ? dropzoneOptions : { accept, maxFiles, maxSize, multiple };
+
+    const dropzoneState = useDropzone({
+      ...opts,
+      onDrop,
+      // onDropRejected: () => setIsFileTooBig(true),
+      onDropAccepted: () => setIsFileTooBig(false),
+    });
 
     const handleKeyDown = useCallback(
       // eslint-disable-next-line no-undef
@@ -157,75 +227,6 @@ export const FileUploader = forwardRef<
       [value, activeIndex, removeFileFromSet],
     );
 
-    const onDrop = useCallback(
-      (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
-        const files = acceptedFiles;
-
-        if (!files) {
-          toast.error("file error , probably too big");
-          return;
-        }
-
-        const newValues: File[] = value ? [...value] : [];
-
-        if (reSelectAll) {
-          newValues.splice(0, newValues.length);
-        }
-
-        files.forEach((file) => {
-          if (newValues.length < maxFiles) {
-            newValues.push(file);
-          }
-        });
-
-        onValueChange(newValues);
-
-        if (rejectedFiles.length > 0) {
-          for (let i = 0; i < rejectedFiles.length; i++) {
-            if (rejectedFiles[i].errors[0]?.code === "file-too-large") {
-              showErrorToast({
-                errors: `File is too large. Max size is ${maxSize / 1024 / 1024}MB`
-              });
-              break;
-            }
-            if (rejectedFiles[i].errors[0]?.code === "file-invalid-type") {
-              showErrorToast({
-                errors: "Invalid file type"
-              });
-              break;
-            }
-            if (rejectedFiles[i].errors[0]?.message) {
-              toast.error(rejectedFiles[i].errors[0].message);
-              showErrorToast({
-                errors: rejectedFiles[i].errors[0].message
-              });
-              break;
-            }
-          }
-        }
-      },
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      [reSelectAll, value],
-    );
-
-    useEffect(() => {
-      if (!value) return;
-      if (value.length === maxFiles) {
-        setIsLOF(true);
-        return;
-      }
-      setIsLOF(false);
-    }, [value, maxFiles]);
-
-    const opts = dropzoneOptions ? dropzoneOptions : { accept, maxFiles, maxSize, multiple };
-
-    const dropzoneState = useDropzone({
-      ...opts,
-      onDrop,
-      // onDropRejected: () => setIsFileTooBig(true),
-      onDropAccepted: () => setIsFileTooBig(false),
-    });
-
     return (
       <FileUploaderContext.Provider
         value={{
@@ -265,7 +266,6 @@ export const FileUploaderContent = forwardRef<HTMLDivElement, React.HTMLAttribut
     const containerRef = useRef<HTMLDivElement>(null);
 
     return (
-      // eslint-disable-next-line jsx-a11y/aria-props
       <div className={cn("w-full px-1")} ref={containerRef} aria-description="content file holder">
         <div
           {...props}
@@ -324,7 +324,10 @@ FileUploaderItem.displayName = "FileUploaderItem";
 export const FileInput = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, children, ...props }, ref) => {
     const { dropzoneState, isFileTooBig, isLOF } = useFileUpload();
-    const rootProps = isLOF ? {} : dropzoneState.getRootProps();
+    // getInputProps() already returns `ref: inputRef`, so the input is wired
+    // to dropzone's inputRef without passing the ref separately.
+    const { getRootProps, getInputProps, isDragAccept, isDragReject } = dropzoneState;
+    const rootProps = isLOF ? {} : getRootProps();
     return (
       <div
         ref={ref}
@@ -334,9 +337,9 @@ export const FileInput = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
         <div
           className={cn(
             `w-full rounded-lg duration-300 ease-in-out ${
-              dropzoneState.isDragAccept
+              isDragAccept
                 ? "border-green-500"
-                : dropzoneState.isDragReject || isFileTooBig
+                : isDragReject || isFileTooBig
                   ? "border-red-500"
                   : "border-gray-300"
             }`,
@@ -347,9 +350,8 @@ export const FileInput = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
           {children}
         </div>
         <Input
-          ref={dropzoneState.inputRef}
           disabled={isLOF}
-          {...dropzoneState.getInputProps()}
+          {...getInputProps()}
           className={`${isLOF ? "cursor-not-allowed" : ""}`}
         />
       </div>

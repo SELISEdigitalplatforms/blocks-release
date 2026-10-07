@@ -14,6 +14,19 @@ import {
   mergeStepTimeRange,
 } from "@blocks-deployment/utils/deployment-logs.utils";
 
+/**
+ * A log entry as `processHistoricalLogs` reads it: the notification's PascalCase
+ * shape, which persisted build events are re-keyed to. A persisted event can carry
+ * a null build id, and an entry without a message yields no log lines.
+ */
+export type IHistoricalLogEntry = Omit<
+  IDeploymentLogsDenormalizedPayload,
+  "BuildId" | "Message"
+> & {
+  BuildId: string | null;
+  Message?: string;
+};
+
 export class LiveLogsService {
   /**
    * Get step status based on event type
@@ -42,7 +55,7 @@ export class LiveLogsService {
   /**
    * Process historical logs and return formatted build steps
    */
-  static processHistoricalLogs(logs: any[]): IBuildStep[] {
+  static processHistoricalLogs(logs: IHistoricalLogEntry[]): IBuildStep[] {
     if (!logs || logs.length === 0) return [];
 
     const sortedLogs = [...logs].sort((a, b) => {
@@ -60,7 +73,7 @@ export class LiveLogsService {
 
         if (existingStep) {
           if (log.EventType === DeploymentEventType.Log) {
-            const newLogs = this.processLogMessage(log.Message);
+            const newLogs = this.processLogMessage(log.Message ?? "");
             existingStep.logs = [...newLogs];
           } else if (!isTerminalStepStatus(existingStep.status)) {
             existingStep.status = this.getStepStatus(log.EventType);
@@ -69,7 +82,7 @@ export class LiveLogsService {
         } else {
           const initialLogs =
             log.EventType === DeploymentEventType.Log
-              ? this.processLogMessage(log.Message)
+              ? this.processLogMessage(log.Message ?? "")
               : [];
 
           const newStep: IBuildStep = {
@@ -129,9 +142,7 @@ export class LiveLogsService {
    * camelCase `IBuildEvent` the API returns. Normalise once at this boundary so
    * the helpers cannot silently match nothing and report every step as "--".
    */
-  private static toBuildEvents(
-    logs: IDeploymentLogsDenormalizedPayload[],
-  ): IBuildEvent[] {
+  private static toBuildEvents(logs: IHistoricalLogEntry[]): IBuildEvent[] {
     return (logs || []).map((log) => ({
       id: log.Id ?? "",
       buildId: log.BuildId ?? null,

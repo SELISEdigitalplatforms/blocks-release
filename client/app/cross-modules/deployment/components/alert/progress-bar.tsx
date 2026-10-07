@@ -1,8 +1,6 @@
 import { Card } from "@/components/ui-kits/card/card";
 import { IIncidentSummaries } from "@blocks-deployment/models/alerts.model";
 import React, { useState, useMemo } from "react";
-import { cn } from "@/lib/utils";
-import { formatSize } from "@/utils/size.util";
 
 type IProgressBar = {
   incidents: IIncidentSummaries[];

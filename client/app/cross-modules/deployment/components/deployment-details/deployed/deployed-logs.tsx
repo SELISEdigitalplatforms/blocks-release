@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Clock, ChevronDown, ChevronRight } from "lucide-react";
 import { DeployedLogsService } from "@blocks-deployment/services/deployed-logs.service";
 import {
@@ -35,7 +35,22 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
   const [buildSteps, setBuildSteps] = useState<IBuildStep[]>([]);
   const [wholeDeploymentStatus, setWholeDeploymentStatus] = useState<string>();
 
-  useEffect(() => {
+  // Rebuild the steps (and reset expansion to the defaults) whenever the loaded build
+  // data changes, including the first render. Adjusted during render rather than in an
+  // effect; when the inputs carry no events/status the previous values are kept.
+  const [processedInputs, setProcessedInputs] = useState<{
+    isSuccess: typeof isSuccess;
+    cardData: typeof cardData;
+    buildId: typeof buildId;
+  } | null>(null);
+  if (
+    processedInputs === null ||
+    processedInputs.isSuccess !== isSuccess ||
+    processedInputs.cardData !== cardData ||
+    processedInputs.buildId !== buildId
+  ) {
+    setProcessedInputs({ isSuccess, cardData, buildId });
+
     if (isSuccess && cardData?.events) {
       const steps: IBuildStep[] = DeployedLogsService.processEventsToSteps(
         cardData?.events,
@@ -56,7 +71,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
     } else if (cardData?.status === DEPLOYMENT_LOG_EVENT_STATUS.FAILED) {
       setWholeDeploymentStatus("Failed");
     }
-  }, [isSuccess, cardData, buildId]);
+  }
 
   const title: string = "Deployment logs";
 

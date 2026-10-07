@@ -36,15 +36,19 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
   const [state, setState] = useState<ValueType>(value);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  // Re-sync the local state when the `value` prop changes.
+  const [prevValue, setPrevValue] = useState(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
     setState(value);
-  }, [value]);
+  }
 
-  const debounced = useRef(
+  // Created once on mount (calls the `onChange` from the first render).
+  const [debounced] = useState(() =>
     debounce((val: ValueType) => {
       onChange(val);
     }, 300),
-  ).current;
+  );
 
   useEffect(() => {
     return () => {

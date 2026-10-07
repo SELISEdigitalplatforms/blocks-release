@@ -1,12 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useState,
+} from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/ui-kits/button/button";
 import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use-github-info";
 import { toast } from "@/hooks/use-toast";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
 import { ChevronLeft } from "lucide-react";
-import DeploymentGeneralInfo from "@blocks-deployment/components/deployment-details/shared/deployment-general-info";
 import DeploymentLogsTab from "@blocks-deployment/components/deployment-details/tabs/deployment-logs-tab";
 import SASTTab from "@blocks-deployment/components/deployment-details/tabs/sast-tab";
 import SCATab from "@blocks-deployment/components/deployment-details/tabs/sca-tab";
@@ -67,21 +72,25 @@ export interface IDeploymentResponse {
 const DeploymentDetails = () => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
-  const { repoId, buildId } = useParams();
+  const { buildId } = useParams();
   const [searchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
 
-  useEffect(() => {
+  // A ?tab= in the URL selects that tab on arrival and whenever it changes to another tab;
+  // clearing it leaves the current tab alone. Adjusted during render rather than in an effect.
+  const [activeTab, setActiveTab] = useState(tabFromUrl || "deployment-logs");
+  const [syncedTabFromUrl, setSyncedTabFromUrl] = useState(tabFromUrl);
+  if (tabFromUrl !== syncedTabFromUrl) {
+    setSyncedTabFromUrl(tabFromUrl);
     if (tabFromUrl) {
       setActiveTab(tabFromUrl);
     }
-  }, [tabFromUrl]);
+  }
 
   const buildIdStr = useMemo(() => {
     return Array.isArray(buildId) ? buildId[0] : buildId;
   }, [buildId]);
 
-  const [activeTab, setActiveTab] = useState("deployment-logs");
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   const queryResult = useGetCardProjectAndBranch(buildIdStr ?? "");
@@ -96,13 +105,17 @@ const DeploymentDetails = () => {
 
   const cardData = (apiResponse as IDeploymentResponse | undefined)?.data;
 
+  // `scoped` is a fresh function every render; read it through an effect event so the
+  // redirect below still fires only when the error state (or navigate) changes.
+  const scopedPath = useEffectEvent((sub: string) => scoped(sub));
+
   useEffect(() => {
     if (isError && error && typeof error === "object" && "errors" in error) {
       const httpError = error as IHttpError;
       const errorResponse = httpError.errors;
 
       if (errorResponse.data === null && errorResponse.isSuccess === false) {
-        navigate(scoped("deployment"));
+        navigate(scopedPath("deployment"));
       }
     }
   }, [isError, error, navigate]);

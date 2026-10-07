@@ -46,51 +46,67 @@ export function useOIDCContext() {
   };
 }
 
+const OIDC_FLOW_PARAMS_KEY = "oidc-flow-params";
+
+/**
+ * The URL's OIDC params, each falling back to the one stored from earlier in the flow.
+ * Reads only; persisting the result is left to an effect.
+ */
+const readOIDCParams = (): OIDCContextType => {
+  const urlParams = extractOIDCParams(true);
+
+  let stored: OIDCContextType = {};
+  try {
+    const storedStr = localStorage.getItem(OIDC_FLOW_PARAMS_KEY);
+    if (storedStr) {
+      stored = JSON.parse(storedStr);
+    }
+  } catch (e) {
+    console.error("Failed to parse stored params:", e);
+  }
+
+  return {
+    projectKey: urlParams.projectKey || stored.projectKey,
+    userName: urlParams.userName || stored.userName,
+    logoUrl: urlParams.logoUrl || stored.logoUrl,
+    themeColor: urlParams.themeColor || stored.themeColor || "#124091",
+    clientId: urlParams.clientId || stored.clientId,
+    redirectUri: urlParams.redirectUri || stored.redirectUri,
+    state: urlParams.state || stored.state,
+    scope: urlParams.scope || stored.scope,
+    nonce: urlParams.nonce || stored.nonce,
+    isLoading: false,
+  };
+};
+
 function OIDCProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  const [params, setParams] = useState<OIDCContextType>({
-    themeColor: "#124091",
-    isLoading: true,
+  // Read on mount and re-read whenever the pathname or query changes, adjusted during render
+  // rather than in an effect. Each read merges over what the previous one persisted below.
+  const [params, setParams] = useState<OIDCContextType>(readOIDCParams);
+  const [paramsSource, setParamsSource] = useState({
+    pathname: location.pathname,
+    searchParams,
   });
+  if (
+    paramsSource.pathname !== location.pathname ||
+    paramsSource.searchParams !== searchParams
+  ) {
+    setParamsSource({ pathname: location.pathname, searchParams });
+    setParams(readOIDCParams());
+  }
 
   useEffect(() => {
-    const urlParams = extractOIDCParams(true);
-
-    let stored: OIDCContextType = {};
-    try {
-      const storedStr = localStorage.getItem("oidc-flow-params");
-      if (storedStr) {
-        stored = JSON.parse(storedStr);
-      }
-    } catch (e) {
-      console.error("Failed to parse stored params:", e);
-    }
-
-    const mergedParams: OIDCContextType = {
-      projectKey: urlParams.projectKey || stored.projectKey,
-      userName: urlParams.userName || stored.userName,
-      logoUrl: urlParams.logoUrl || stored.logoUrl,
-      themeColor: urlParams.themeColor || stored.themeColor || "#124091",
-      clientId: urlParams.clientId || stored.clientId,
-      redirectUri: urlParams.redirectUri || stored.redirectUri,
-      state: urlParams.state || stored.state,
-      scope: urlParams.scope || stored.scope,
-      nonce: urlParams.nonce || stored.nonce,
-      isLoading: false,
-    };
-
-    const hasAnyParams = Object.values(mergedParams).some(
+    const hasAnyParams = Object.values(params).some(
       (value) => value && value !== "#124091",
     );
 
     if (hasAnyParams) {
-      localStorage.setItem("oidc-flow-params", JSON.stringify(mergedParams));
+      localStorage.setItem(OIDC_FLOW_PARAMS_KEY, JSON.stringify(params));
     }
-
-    setParams(mergedParams);
-  }, [location.pathname, searchParams]);
+  }, [params]);
 
   return <OIDCContext.Provider value={params}>{children}</OIDCContext.Provider>;
 }

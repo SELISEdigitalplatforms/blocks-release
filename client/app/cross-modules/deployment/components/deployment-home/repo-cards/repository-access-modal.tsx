@@ -39,13 +39,16 @@ export function RepositoryAccessModal({
   const [lastFailureAt, setLastFailureAt] = useState<Date | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  useEffect(() => {
+  // Closing the modal clears the retry state (adjusted during render when isOpen changes).
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (!isOpen) {
       setIsRetrying(false);
       setLastFailureAt(null);
       setElapsedSeconds(0);
     }
-  }, [isOpen]);
+  }
 
   useEffect(() => {
     if (!isOpen || !lastFailureAt) return;

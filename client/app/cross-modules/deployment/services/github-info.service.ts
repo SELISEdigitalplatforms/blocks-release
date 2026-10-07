@@ -15,6 +15,34 @@ import {
   IChangeSettings,
   IManualDeploymentPayload,
 } from "@blocks-deployment/models/utils";
+import type { IProjectRepoListEnvWiseResponse } from "@blocks-deployment/components/deployment-home/deployment-overview";
+import type { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
+import type { IPipeline } from "@blocks-deployment/pages/repo-details";
+
+/** Response of `build/run-build` and `build/manual` (the server's `BuildResponse`). */
+export interface IBuildStartResponse {
+  data?: unknown;
+  message: string | null;
+  statusCode: number;
+  errors?: unknown;
+  isSuccess: boolean;
+  buildId: string;
+  /** Set when the build started but the requested Blocks Monitor entry could not be created. */
+  monitorError?: string | null;
+}
+
+/** Response of `build/repo-details`: the repo, one page of its builds and the total build count. */
+export interface IRepoDetailsApiResponse {
+  data: {
+    repo: IRepoResponse;
+    build: IPipeline[];
+    totalCount: number;
+  };
+  message: string | null;
+  statusCode: number;
+  errors: unknown;
+  isSuccess: boolean;
+}
 
 export interface IRepoDetailsParams {
   branch?: string;
@@ -95,17 +123,17 @@ export class GithubInfoService {
 
   async cloneGithubRepo(payload: ICloneRepo) {
     const url = CLOUD_BUILD_ENDPOINTS.BUILD_BUILD;
-    return this.httpClient.post<any>(url, payload);
+    return this.httpClient.post(url, payload);
   }
 
-  async repoInitialDeploy(payload: any) {
+  async repoInitialDeploy(payload: IChangeRepoSpecs) {
     const url = CLOUD_BUILD_ENDPOINTS.RUN_BUILD;
-    return this.httpClient.post<any>(url, payload);
+    return this.httpClient.post<IBuildStartResponse>(url, payload);
   }
 
   async manualDeploy(payload: IManualDeploymentPayload) {
     const url = CLOUD_BUILD_ENDPOINTS.MANUAL;
-    return this.httpClient.post<any>(url, payload);
+    return this.httpClient.post<IBuildStartResponse>(url, payload);
   }
 
   async getSpecs() {
@@ -117,11 +145,11 @@ export class GithubInfoService {
     return this.httpClient.get(CLOUD_BUILD_ENDPOINTS.REPOS);
   }
 
-  async getAllRepoBuilds(): Promise<any> {
+  async getAllRepoBuilds(): Promise<CardRepoAndBranchesResponse[]> {
     return this.httpClient.get(CLOUD_BUILD_ENDPOINTS.REPOS);
   }
 
-  async getAllProjects(): Promise<any> {
+  async getAllProjects(): Promise<IProjectRepoListEnvWiseResponse> {
     return this.httpClient.get(CLOUD_BUILD_ENDPOINTS.REPOS_LIST);
   }
 
@@ -130,7 +158,7 @@ export class GithubInfoService {
   async getRepoDetails(
     repoId: string,
     params?: IRepoDetailsParams,
-  ): Promise<any> {
+  ): Promise<IRepoDetailsApiResponse> {
     let url = `${CLOUD_BUILD_ENDPOINTS.REPO_DETAILS}?RepoId=${encodeURIComponent(repoId)}`;
 
     // Each parameter is appended when DEFINED rather than when truthy: pageSize 0 is a

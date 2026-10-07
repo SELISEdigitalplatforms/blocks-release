@@ -9,7 +9,7 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 import { useAuthStore } from "@/store/auth.store";
 import { useImpersonateStore } from "@/store/impersonate.store";
 import { useProjectStore } from "@/store/project.store";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAppState } from "./public-guard";
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
@@ -20,8 +20,13 @@ export function ProtectedGuard({ children }: { children: React.ReactNode }) {
   const { setUser } = useAuthStore();
   const navigate = useNavigate();
 
+  // Read through an effect event so `isMounted` gates the effect without retriggering it:
+  // the mount-time run is skipped, and the effect fires again only when the user query
+  // (or navigate/setUser) changes - so a still-loading user is never sent to /login.
+  const hasMounted = useEffectEvent(() => isMounted);
+
   useEffect(() => {
-    if (!isMounted) return;
+    if (!hasMounted()) return;
     if (!data || isError) {
       navigate(`/login`, { replace: true });
       return;
@@ -61,7 +66,7 @@ export function ImpersonationTerminator({
   children: React.ReactNode;
 }) {
   const { terminate, isImpersonated } = useImpersonateStore();
-  const { mutateAsync } = useStopImpersonation();
+  const { mutateAsync, isPending } = useStopImpersonation();
   const isTriggering = useRef(false);
 
   useEffect(() => {
@@ -77,7 +82,9 @@ export function ImpersonationTerminator({
       });
   }, [mutateAsync, terminate, isImpersonated, isTriggering]);
 
-  if (isImpersonated || isTriggering.current) return null;
+  // The ref only de-duplicates the request inside the effect; the render reads the
+  // mutation's own pending state, which spans the same request.
+  if (isImpersonated || isPending) return null;
   return <>{children}</>;
 }
 
@@ -126,8 +133,10 @@ export function ImpersonationSynchronizer({
     impersonatedTenantId,
     isTriggering,
   ]);
+  // `isImpersonating` is set and cleared alongside the ref, so while a request is in flight
+  // the spinner above has already returned; the ref is only needed inside the effect.
   if (isImpersonating) return <LoadingSpinner />;
 
-  if (!isImpersonated || isTriggering.current) return null;
+  if (!isImpersonated) return null;
   return <>{children}</>;
 }

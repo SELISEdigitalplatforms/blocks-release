@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { Clock, ChevronDown, ChevronRight } from "lucide-react";
 import {
   DeploymentEventGroup,
@@ -35,9 +35,6 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
   const [isLoadingHistorical, setIsLoadingHistorical] = useState<boolean>(true);
   const [hasLoadedHistorical, setHasLoadedHistorical] =
     useState<boolean>(false);
-  const [connectionStatus, setConnectionStatus] = useState<
-    "connected" | "disconnected" | "connecting"
-  >("disconnected");
   const [completedBuilds, setCompletedBuilds] = useState<Set<string>>(
     new Set(),
   );
@@ -69,27 +66,27 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
     return iconMap;
   }, [notificationSteps, getStatusIcon, successfulSteps]);
 
-  useEffect(() => {
+  // Switching to another build starts over from a clean slate. Adjusted during render
+  // when buildId changes (the state already holds these values on mount).
+  const [prevBuildId, setPrevBuildId] = useState(buildId);
+  if (buildId !== prevBuildId) {
+    setPrevBuildId(buildId);
     if (buildId) {
       setHasIncorrectBuildId(false);
       setNotificationSteps([]);
       setHasLoadedHistorical(false);
       setIsLoadingHistorical(true);
-      setConnectionStatus("disconnected");
       setCompletedBuilds(new Set());
       setFailedBuilds(new Set());
       setSuccessfulSteps(new Set());
     }
-  }, [buildId]);
+  }
 
-  useEffect(() => {
-    // Historical logs come from the build's persisted events (GET /api/build?buildId=),
-    // which the page already fetches and passes in — no separate historical request.
-    // Wait until the events are available; an empty array still counts as "loaded".
-    if (!buildId || hasLoadedHistorical || !historicalEvents) return;
-
-    setIsLoadingHistorical(true);
-
+  // Historical logs come from the build's persisted events (GET /api/build?buildId=),
+  // which the page already fetches and passes in — no separate historical request.
+  // Wait until the events are available; an empty array still counts as "loaded".
+  // Loaded once per build during render; hasLoadedHistorical guards against reloading.
+  if (buildId && !hasLoadedHistorical && historicalEvents) {
     // processHistoricalLogs expects PascalCase keys; the build events are camelCase.
     const mappedLogs = historicalEvents.map((event) => ({
       BuildId: event.buildId,
@@ -112,7 +109,7 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
 
     setHasLoadedHistorical(true);
     setIsLoadingHistorical(false);
-  }, [buildId, hasLoadedHistorical, historicalEvents]);
+  }
 
   const showSuccessToast = (buildId: string) => {
     if (!completedBuilds.has(buildId)) {
@@ -162,7 +159,6 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
       }
 
       setHasIncorrectBuildId(false);
-      setConnectionStatus("connected");
 
       if (deploymentMessage.EventGroup === DeploymentEventGroup.Deploy) {
         if (deploymentMessage.EventType === DeploymentEventType.EventFinished) {
@@ -211,32 +207,6 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
   );
 
   useNotificationListener("BuildLogNotification", handleNotificationData);
-
-  useEffect(() => {
-    let connectionTimer: NodeJS.Timeout;
-
-    if (buildId) {
-      setConnectionStatus("connecting");
-
-      connectionTimer = setTimeout(() => {
-        if (connectionStatus === "connecting") {
-          setConnectionStatus("connected");
-        }
-      }, 3000);
-    }
-
-    return () => {
-      if (connectionTimer) {
-        clearTimeout(connectionTimer);
-      }
-    };
-  }, [buildId]);
-
-  useEffect(() => {
-    if (notificationSteps.length > 0 && connectionStatus !== "connected") {
-      setConnectionStatus("connected");
-    }
-  }, [notificationSteps, connectionStatus]);
 
   const title = "Deployment logs";
   const logSteps = notificationSteps;

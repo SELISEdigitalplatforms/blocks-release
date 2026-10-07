@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { cn } from "@/lib/utils";
 import { formatFullDate } from "@/utils/date.util";
 import { IDeploymentPageData } from "@blocks-deployment/pages/deployment-details";
 import NotificationListener from "./notification-listener";

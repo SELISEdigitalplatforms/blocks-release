@@ -159,7 +159,7 @@ describe("LiveLogsService", () => {
 
   describe("updateStepWithNotification", () => {
     it("should add new step if it doesn't exist", () => {
-      const prevSteps: any[] = [];
+      const prevSteps = [] as IBuildStep[];
       const message = {
         BuildId: MOCK_BUILD_ID,
         EventGroup: DeploymentEventGroup.Clone,
@@ -179,7 +179,7 @@ describe("LiveLogsService", () => {
 
     it("should update existing step logs", () => {
       const stepId = `${MOCK_BUILD_ID}-Build`;
-      const prevSteps: any[] = [{ id: stepId, logs: [], status: "running" }];
+      const prevSteps = [{ id: stepId, logs: [], status: "running" }] as IBuildStep[];
       const message = {
         BuildId: MOCK_BUILD_ID,
         EventGroup: DeploymentEventGroup.Build,
@@ -197,9 +197,9 @@ describe("LiveLogsService", () => {
 
     it("should update existing step status and calculate duration", () => {
       const stepId = `${MOCK_BUILD_ID}-Build`;
-      const prevSteps: any[] = [
+      const prevSteps = [
         { id: stepId, status: "running", startTime: "2023-01-01T00:00:00Z" },
-      ];
+      ] as IBuildStep[];
       const message = {
         BuildId: MOCK_BUILD_ID,
         EventGroup: DeploymentEventGroup.Build,
@@ -218,7 +218,7 @@ describe("LiveLogsService", () => {
 
     it("should update existing step when EventStarted occurs", () => {
       const stepId = `${MOCK_BUILD_ID}-Build`;
-      const prevSteps: any[] = [{ id: stepId, status: "pending" }];
+      const prevSteps = [{ id: stepId, status: "pending" }] as IBuildStep[];
       const message = {
         BuildId: MOCK_BUILD_ID,
         EventGroup: DeploymentEventGroup.Build,
@@ -237,7 +237,7 @@ describe("LiveLogsService", () => {
 
     it("should not update status if already final", () => {
       const stepId = `${MOCK_BUILD_ID}-Build`;
-      const prevSteps: any[] = [{ id: stepId, status: "success" }];
+      const prevSteps = [{ id: stepId, status: "success" }] as IBuildStep[];
       const message = {
         BuildId: MOCK_BUILD_ID,
         EventGroup: DeploymentEventGroup.Build,
@@ -254,7 +254,7 @@ describe("LiveLogsService", () => {
     });
 
     it("should return unchanged step if ID doesn't match", () => {
-      const prevSteps: any[] = [{ id: "other-id", status: "running" }];
+      const prevSteps = [{ id: "other-id", status: "running" }] as IBuildStep[];
       const message = {
         BuildId: MOCK_BUILD_ID,
         EventGroup: DeploymentEventGroup.Build,

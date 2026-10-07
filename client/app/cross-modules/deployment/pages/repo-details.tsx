@@ -4,7 +4,7 @@ import DeploymentSettingsModal from "@blocks-deployment/components/deployment-de
 import DeploymentObservability from "@blocks-deployment/components/deployment-details/shared/deployment-observability";
 import { GitBranch, Rocket, Settings } from "lucide-react";
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
 import { BackIconButton } from "@/components/buttons";
@@ -115,7 +115,6 @@ export default function RepoDetails() {
 
   const [isDeploying, setIsDeploying] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [filteredBuilds, setFilteredBuilds] = useState<IPipeline[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -129,7 +128,12 @@ export default function RepoDetails() {
 
   const { mutate: initialDeploy, isPending: isInitialDeploying } =
     useInitialRepoDeployment();
-  const [forceRefresh, setForceRefresh] = useState(false);
+  // Arriving with ?refresh=true (e.g. back from the live logs) asks for a stale-free read until
+  // the repo details land. Read once on mount; the effect below strips the param from the URL.
+  const [forceRefresh, setForceRefresh] = useState(
+    () =>
+      new URLSearchParams(window.location.search).get("refresh") === "true",
+  );
 
   // The Details tab needs only the newest build; History shows one page of five. Asking
   // for a page instead of the whole history is the point of this endpoint's pagination.
@@ -170,17 +174,22 @@ export default function RepoDetails() {
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     if (searchParams.get("refresh") === "true") {
-      setForceRefresh(true);
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);
     }
   }, []);
 
-  useEffect(() => {
-    if (repoDetails && forceRefresh) {
-      setForceRefresh(false);
-    }
-  }, [repoDetails, forceRefresh]);
+  // The forced refresh lasts only until the repo details are in hand.
+  if (repoDetails && forceRefresh) {
+    setForceRefresh(false);
+  }
+
+  // `scoped` is a fresh function every render; reading it through an effect event keeps it
+  // out of the dependency lists so the effects below fire on exactly the same changes.
+  const scopedPath = useEffectEvent((sub: string) => scoped(sub));
+  const getEnvironmentsPath = useEffectEvent(
+    () => `/app/project/${tenantGroupId}/environments`,
+  );
 
   //repo-details switching
   useEffect(() => {
@@ -192,46 +201,60 @@ export default function RepoDetails() {
         errorResponse.data?.repo === null &&
         errorResponse.isSuccess === false
       ) {
-        navigate(scoped("deployment"));
+        navigate(scopedPath("deployment"));
       }
     }
   }, [isError, error, navigate]);
 
-  useEffect(() => {
-    if (
-      (!repoDetails ||
-        !repoDetails?.data?.build ||
-        !Array.isArray(repoDetails?.data?.build)) &&
-      repoDetails?.isSuccess === false
-    ) {
-      setFilteredBuilds([]);
-      toast({
-        title: "Branch not found",
-        description: `The ${projectEnvironment} branch doesn't exist on this repository. Please create a branch with the name ${projectEnvironment}.`,
-        variant: "default",
-      });
+  const isBranchMissing =
+    (!repoDetails ||
+      !repoDetails?.data?.build ||
+      !Array.isArray(repoDetails?.data?.build)) &&
+    repoDetails?.isSuccess === false;
 
-      const redirectTimer = setTimeout(() => {
-        navigate(`/app/project/${tenantGroupId}/environments`);
-      }, 5000);
-
-      return () => clearTimeout(redirectTimer);
+  // With no repo details yet this is empty; DeploymentObservability and Alert render an empty
+  // list exactly as they render a missing one.
+  const filteredBuilds: IPipeline[] = useMemo(() => {
+    if (isBranchMissing) {
+      return [];
     }
 
-    const filtered = repoDetails?.data?.build
-      .filter((build: IPipeline) => {
-        const matchesBranch = build.branch === repoDetails?.data?.repo.branch;
-        return matchesBranch;
-      })
-      .map(
-        (build: IPipeline): IPipeline => ({
-          ...build,
-          events: [],
-        }),
-      );
+    return (
+      repoDetails?.data?.build
+        .filter((build: IPipeline) => {
+          const matchesBranch =
+            build.branch === repoDetails?.data?.repo.branch;
+          return matchesBranch;
+        })
+        .map(
+          (build: IPipeline): IPipeline => ({
+            ...build,
+            events: [],
+          }),
+        ) ?? []
+    );
+  }, [repoDetails, isBranchMissing]);
 
-    setFilteredBuilds(filtered);
-  }, [repoDetails, projectEnvironment, navigate]);
+  useEffect(() => {
+    if (!isBranchMissing) {
+      return;
+    }
+
+    toast({
+      title: "Branch not found",
+      description: `The ${projectEnvironment} branch doesn't exist on this repository. Please create a branch with the name ${projectEnvironment}.`,
+      variant: "default",
+    });
+
+    // Captured when the toast is shown, as before: the redirect targets the project that was
+    // selected at that moment.
+    const environmentsPath = getEnvironmentsPath();
+    const redirectTimer = setTimeout(() => {
+      navigate(environmentsPath);
+    }, 5000);
+
+    return () => clearTimeout(redirectTimer);
+  }, [repoDetails, projectEnvironment, navigate, isBranchMissing]);
 
   const latestBuild = useMemo(() => {
     // Deliberately the RAW, server-sorted list rather than the branch-filtered one. With
@@ -798,7 +821,7 @@ export default function RepoDetails() {
                               ? formatFullDate(
                                   new Date(
                                     repoDetails?.data?.repo
-                                      ?.lastDeploymentDate,
+                                      ?.lastDeploymentDate as string,
                                   ),
                                 )
                               : "N/A"}

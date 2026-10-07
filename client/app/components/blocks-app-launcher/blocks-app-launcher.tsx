@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { showErrorToast } from "@/hooks/use-toast";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useLocation } from "react-router";
 
 interface BlocksApp {
@@ -322,39 +322,28 @@ function EditIcon() {
   );
 }
 
-// Star icon
-function StarIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      xmlns="http://www.w3.org/2000/svg"
-      className="h-5 w-5"
-      fill={filled ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth={filled ? 0 : 1.5}
-    >
-      <path d="M10 1.5l2.38 6.29h6.63l-5.36 4.12 2.04 6.29-5.69-4.14-5.69 4.14 2.04-6.29-5.36-4.12h6.63z" />
-    </svg>
-  );
+// Full-page navigation to an external URL (kept outside the component so the
+// global `window.location` is not mutated from component scope).
+function redirectTo(url: string) {
+  window.location.href = url;
+}
+
+// Favourites persisted in localStorage, with IAM and Localization as defaults.
+function loadFavouriteKeys(): Set<string> {
+  const stored = localStorage.getItem("blocks-app-favourites");
+  return stored
+    ? new Set<string>(JSON.parse(stored) as string[])
+    : new Set<string>(["iam", "localization"]);
 }
 
 export function BlocksAppLauncher() {
   const [open, setOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [favouriteKeys, setFavouriteKeys] = useState<Set<string>>(new Set());
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [loadingKey, setLoadingKey] = useState<string | null>(null);
-  const location = useLocation();
-
   // Load favourites from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem("blocks-app-favourites");
-    const keys = stored
-      ? new Set<string>(JSON.parse(stored) as string[])
-      : new Set<string>(["iam", "localization"]);
-    setFavouriteKeys(keys);
-    setIsHydrated(true);
-  }, []);
+  const [favouriteKeys, setFavouriteKeys] = useState<Set<string>>(loadFavouriteKeys);
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  // Subscribed for its re-render on route changes; the value itself is unused.
+  useLocation();
 
   const saveFavourites = (keys: Set<string>) => {
     setFavouriteKeys(keys);
@@ -385,7 +374,7 @@ export function BlocksAppLauncher() {
       const data = await response.json();
 
       if (data.redirect_uri) {
-        window.location.href = data.redirect_uri as string;
+        redirectTo(data.redirect_uri as string);
       } else {
         showErrorToast({ errors: "Failed to get authorization URL" });
         setLoadingKey(null);
@@ -396,8 +385,6 @@ export function BlocksAppLauncher() {
       setLoadingKey(null);
     }
   };
-
-  if (!isHydrated) return null;
 
   const favourites = SELISE_APPS.filter((a) => favouriteKeys.has(a.key));
   const moreApps = SELISE_APPS.filter((a) => !favouriteKeys.has(a.key));

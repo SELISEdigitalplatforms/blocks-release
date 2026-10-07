@@ -74,6 +74,45 @@ interface SCASummary {
   components: string;
 }
 
+/** Project metrics from the `sca-libraries` report. */
+interface SCAReportDetails extends Omit<SCASummary, "riskScore"> {
+  inheritedRiskScore: number;
+}
+
+/** One vulnerable component from the `sca-libraries` report. */
+interface SCAVulnerability {
+  name?: string;
+  group?: string;
+  version?: string;
+  latestVersion?: string;
+  id?: string;
+  score?: string;
+  severity: string;
+  epssPercentile: number;
+  epssScore?: number;
+  cweName?: string;
+  description?: string;
+}
+
+interface SCALibraryReport {
+  data?: {
+    details?: SCAReportDetails;
+    vulnerabilities?: SCAVulnerability[];
+  };
+}
+
+const toSCASummary = (details: SCAReportDetails): SCASummary => ({
+  critical: details.critical,
+  high: details.high,
+  medium: details.medium,
+  low: details.low,
+  unassigned: details.unassigned,
+  riskScore: details.inheritedRiskScore,
+  vulnerabilities: details.vulnerabilities,
+  vulnerableComponents: details.vulnerableComponents,
+  components: details.components,
+});
+
 interface SCACardProps {
   title: string;
   summary: SCASummary;
@@ -899,27 +938,15 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
 const SCATab: React.FC = () => {
   const params = useParams();
   const buildId = params?.buildId as string;
-  const {
-    data: scaData,
-    isLoading,
-    error,
-  } = useGetSCALibraryData(buildId) as any;
+  const { data, isLoading, error } = useGetSCALibraryData(buildId);
+  // The service types this report as a string; the endpoint returns the JSON report.
+  const scaData = data as unknown as SCALibraryReport | undefined;
   const scaDetails = scaData?.data?.details;
-  const vulnerabilities = scaData?.data?.vulnerabilities || [];
+  const reportVulnerabilities = scaData?.data?.vulnerabilities;
 
-  const libraryPackageSummary = {
-    critical: scaDetails?.critical,
-    high: scaDetails?.high,
-    medium: scaDetails?.medium,
-    low: scaDetails?.low,
-    unassigned: scaDetails?.unassigned,
-    riskScore: scaDetails?.inheritedRiskScore,
-    vulnerabilities: scaDetails?.vulnerabilities,
-    vulnerableComponents: scaDetails?.vulnerableComponents,
-    components: scaDetails?.components,
-  };
-
-  const transformVulnerabilities = (vulnerabilities: any[]): Dependency[] => {
+  const transformVulnerabilities = (
+    vulnerabilities: SCAVulnerability[],
+  ): Dependency[] => {
     if (!Array.isArray(vulnerabilities) || vulnerabilities.length === 0) {
       return [];
     }
@@ -936,7 +963,7 @@ const SCATab: React.FC = () => {
     };
 
     // Transform vulnerabilities
-    const transformed = vulnerabilities.map((vuln: any, index: number) => ({
+    const transformed = vulnerabilities.map((vuln, index) => ({
       id: (index + 1).toString(),
       component: vuln.name || "Unknown",
       group: vuln.group || "Unknown",
@@ -986,8 +1013,8 @@ const SCATab: React.FC = () => {
 
   // In your component, use the function:
   const libraryPackageDependencies: Dependency[] = useMemo(
-    () => transformVulnerabilities(vulnerabilities),
-    [vulnerabilities],
+    () => transformVulnerabilities(reportVulnerabilities || []),
+    [reportVulnerabilities],
   );
 
   return (
@@ -1026,7 +1053,7 @@ const SCATab: React.FC = () => {
         <>
           <SCACard
             title="Software library package"
-            summary={libraryPackageSummary}
+            summary={toSCASummary(scaDetails)}
             dependencies={libraryPackageDependencies}
           />
         </>

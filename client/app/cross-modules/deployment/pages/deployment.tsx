@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import DeploymentOverview from "@blocks-deployment/components/deployment-home/deployment-overview";
 import { useGetAllProjects } from "@/cross-modules/deployment/hooks/use-github-info";
@@ -12,13 +12,17 @@ const Deployment = () => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const [searchParams] = useSearchParams();
-  const [, setRefreshKey] = useState(0);
   const projectKey = useProjectStore((s) => s.selectedProject?.tenantId) ?? "";
 
+  // `scoped` is a fresh function every render; an effect event reads it without making it a
+  // dependency, so the effect still fires only when the search params (or navigate) change.
+  const scopedPath = useEffectEvent((sub: string) => scoped(sub));
+
+  // Clearing ?refresh from the URL re-renders this page through the router, so no extra
+  // state bump is needed to pick up the refreshed list.
   useEffect(() => {
     if (searchParams.get("refresh")) {
-      navigate(scoped("deployment"), { replace: true });
-      setRefreshKey((prev) => prev + 1);
+      navigate(scopedPath("deployment"), { replace: true });
     }
   }, [searchParams, navigate]);
 

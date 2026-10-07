@@ -3,7 +3,6 @@ import { useProjectStore } from "@/store/project.store";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
 import DeploymentObservability from "@blocks-deployment/components/deployment-details/shared/deployment-observability";
 import { GitBranch, Rocket, Settings } from "lucide-react";
-// import { ChartGantt, Logs } from "lucide-react"; // restore with the Tracing/Logs header buttons
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -593,315 +592,313 @@ export default function RepoDetails() {
   };
 
   return (
-    <>
-      <div className="mx-auto pb-8">
-        <div className="mt-2 space-y-2">
-          <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <BackIconButton
-                onClick={handleGoBack}
-                data-testid="back-button"
-              />
-              <div>
-                <h1 className="text-lg font-semibold sm:text-2xl">
-                  {latestBuild?.repoName.split("/").pop() ||
-                    latestBuild?.repoName}
-                </h1>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 sm:gap-4">
-              {/* Hidden until tracing and logs are available for repositories. */}
-              {/* <Button variant="outline" disabled>
-                <div className="flex h-8 w-8 items-center justify-center">
-                  <ChartGantt size={20} />
-                </div>
-                <span className="hidden sm:inline">Tracing</span>
-              </Button>
-              <Button variant="outline" disabled>
-                <div className="flex h-8 w-8 items-center justify-center">
-                  <Logs size={20} />
-                </div>
-                <span className="hidden sm:inline">Logs</span>
-              </Button> */}
-
-              <Button variant="outline" onClick={handleSettingsClick}>
-                <div className="flex h-8 w-8 items-center justify-center">
-                  <Settings size={20} />
-                </div>
-                <span className="hidden sm:inline">Configure</span>
-              </Button>
+    <div className="mx-auto pb-8">
+      <div className="mt-2 space-y-2">
+        <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <BackIconButton
+              onClick={handleGoBack}
+              data-testid="back-button"
+            />
+            <div>
+              <h1 className="text-lg font-semibold sm:text-2xl">
+                {latestBuild?.repoName.split("/").pop() ||
+                  latestBuild?.repoName}
+              </h1>
             </div>
           </div>
-          <Tabs
-            value={tabId}
-            onValueChange={(value: string) =>
-              tabChangedHandler(value as keyof typeof REPO_DETAILS_PROVIDERS)
-            }>
-            <div className="mb-5 mt-6 flex items-center justify-between rounded text-base">
-              <div className="md:hidden">
-                <Select
-                  value={tabId}
-                  onValueChange={(value: string) =>
-                    tabChangedHandler(
-                      value as keyof typeof REPO_DETAILS_PROVIDERS,
-                    )
-                  }>
-                  <SelectTrigger className="w-52">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="details">Details</SelectItem>
-                    <SelectItem value="history">History</SelectItem>
-                    <SelectItem value="secrets">Environment Variables</SelectItem>
-                  </SelectContent>
-                </Select>
+
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Hidden until tracing and logs are available for repositories. */}
+            {/* <Button variant="outline" disabled>
+              <div className="flex h-8 w-8 items-center justify-center">
+                <ChartGantt size={20} />
               </div>
-              <div className="hidden md:block">
-                <TabsList>
-                  <TabsTrigger value="details" className="w-20">
-                    Details
-                  </TabsTrigger>
-                  <TabsTrigger value="history" className="w-20">
-                    History
-                  </TabsTrigger>
-                  <TabsTrigger value="secrets" className="px-4">
-                    Environment Variables
-                  </TabsTrigger>
-                </TabsList>
+              <span className="hidden sm:inline">Tracing</span>
+            </Button>
+            <Button variant="outline" disabled>
+              <div className="flex h-8 w-8 items-center justify-center">
+                <Logs size={20} />
               </div>
+              <span className="hidden sm:inline">Logs</span>
+            </Button> */}
+
+            <Button variant="outline" onClick={handleSettingsClick}>
+              <div className="flex h-8 w-8 items-center justify-center">
+                <Settings size={20} />
+              </div>
+              <span className="hidden sm:inline">Configure</span>
+            </Button>
+          </div>
+        </div>
+        <Tabs
+          value={tabId}
+          onValueChange={(value: string) =>
+            tabChangedHandler(value as keyof typeof REPO_DETAILS_PROVIDERS)
+          }>
+          <div className="mb-5 mt-6 flex items-center justify-between rounded text-base">
+            <div className="md:hidden">
+              <Select
+                value={tabId}
+                onValueChange={(value: string) =>
+                  tabChangedHandler(
+                    value as keyof typeof REPO_DETAILS_PROVIDERS,
+                  )
+                }>
+                <SelectTrigger className="w-52">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="details">Details</SelectItem>
+                  <SelectItem value="history">History</SelectItem>
+                  <SelectItem value="secrets">Environment Variables</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <TabsContent value="details">
-              <div className="flex flex-col gap-5">
-                <Card>
-                  <CardHeader className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    {" "}
-                    <h3 className="text-lg font-semibold">
-                      Deployment Information
-                    </h3>
-                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            onClick={() => setIsModalOpen(true)}
-                            disabled={isDeploying || isDeleting}
-                            className="w-full shadow-sm sm:w-auto">
-                            <div className="flex items-center justify-center gap-2">
-                              <Rocket size={20} />
-                              <span>
-                                {isDeploying ? "Deploying..." : "Deploy"}
-                              </span>
-                            </div>
-                          </Button>
-                        </DialogTrigger>
-                        <ConfirmationModal
-                          data={confirmationData}
-                          onCancel={handleCancel}
-                          onConfirm={handleManualDeploy}
-                          buttonState={{
-                            confirm: { disable: isDeploying },
-                          }}
-                        />
-                      </Dialog>
-
-                      <DeleteDeploymentButton
-                        hasLiveDeployment={hasLiveDeployment}
-                        repoName={repoDisplayName}
-                        deploymentUrl={deploymentUrl}
-                        isDeleting={isDeleting}
-                        isDisabled={isDeploying}
-                        isModalOpen={isDeleteModalOpen}
-                        onModalOpenChange={setIsDeleteModalOpen}
-                        onConfirm={handleDeleteDeployment}
-                        onCancel={handleDeleteCancel}
+            <div className="hidden md:block">
+              <TabsList>
+                <TabsTrigger value="details" className="w-20">
+                  Details
+                </TabsTrigger>
+                <TabsTrigger value="history" className="w-20">
+                  History
+                </TabsTrigger>
+                <TabsTrigger value="secrets" className="px-4">
+                  Environment Variables
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
+          <TabsContent value="details">
+            <div className="flex flex-col gap-5">
+              <Card>
+                <CardHeader className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  {" "}
+                  <h3 className="text-lg font-semibold">
+                    Deployment Information
+                  </h3>
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsModalOpen(true)}
+                          disabled={isDeploying || isDeleting}
+                          className="w-full shadow-sm sm:w-auto">
+                          <div className="flex items-center justify-center gap-2">
+                            <Rocket size={20} />
+                            <span>
+                              {isDeploying ? "Deploying..." : "Deploy"}
+                            </span>
+                          </div>
+                        </Button>
+                      </DialogTrigger>
+                      <ConfirmationModal
+                        data={confirmationData}
+                        onCancel={handleCancel}
+                        onConfirm={handleManualDeploy}
+                        buttonState={{
+                          confirm: { disable: isDeploying },
+                        }}
                       />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {" "}
-                    <div className="my-2 grid w-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <p className="text-sm text-low-emphasis">Repo URL</p>
-                          <a
-                            href={latestBuild?.repoUrl || "#"}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block truncate text-sm text-primary hover:underline"
-                            onClick={(e) => e.stopPropagation()}>
-                            {latestBuild?.repoUrl || "N/A"}
-                          </a>
-                        </div>
+                    </Dialog>
 
-                        <div className="space-y-2">
+                    <DeleteDeploymentButton
+                      hasLiveDeployment={hasLiveDeployment}
+                      repoName={repoDisplayName}
+                      deploymentUrl={deploymentUrl}
+                      isDeleting={isDeleting}
+                      isDisabled={isDeploying}
+                      isModalOpen={isDeleteModalOpen}
+                      onModalOpenChange={setIsDeleteModalOpen}
+                      onConfirm={handleDeleteDeployment}
+                      onCancel={handleDeleteCancel}
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {" "}
+                  <div className="my-2 grid w-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <p className="text-sm text-low-emphasis">Repo URL</p>
+                        <a
+                          href={latestBuild?.repoUrl || "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block truncate text-sm text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}>
+                          {latestBuild?.repoUrl || "N/A"}
+                        </a>
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-sm text-low-emphasis">
+                          Deploys To
+                        </p>
+                        <DeploymentTargetLink
+                          isLive={hasLiveDeployment}
+                          url={deploymentUrl}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-sm text-low-emphasis">
+                          Custom Deployment URL
+                        </p>
+                        {repoDetails?.data?.repo?.customDeploymentUrl &&
+                        repoDetails?.data?.repo?.customDeploymentUrl !==
+                          "N/A" ? (
+                          <CopyToClipboardButton
+                            textToCopy={
+                              repoDetails?.data?.repo?.customDeploymentUrl
+                            }
+                            isHoverable={false}>
+                            <a
+                              href={
+                                repoDetails?.data?.repo?.customDeploymentUrl
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block truncate text-sm text-primary hover:underline"
+                              onClick={(e) => e.stopPropagation()}>
+                              {repoDetails?.data?.repo?.customDeploymentUrl}
+                            </a>
+                          </CopyToClipboardButton>
+                        ) : (
+                          <span className="block truncate text-sm">
+                            {"N/A"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 md:mb-4 md:gap-6">
+                      <div className="space-y-4">
+                        <div className="space-y-2" data-testid="deployment-status">
                           <p className="text-sm text-low-emphasis">
-                            Deploys To
+                            Deployment Status
                           </p>
-                          <DeploymentTargetLink
-                            isLive={hasLiveDeployment}
-                            url={deploymentUrl}
+                          <DeploymentStatusIndicator
+                            hasLiveDeployment={hasLiveDeployment}
+                            latestBuild={latestBuild}
+                            buildStatus={latestBuild?.status}
+                            repoStatus={
+                              repoDetails?.data?.repo?.lastDeploymentStatus
+                            }
                           />
                         </div>
 
                         <div className="space-y-2">
                           <p className="text-sm text-low-emphasis">
-                            Custom Deployment URL
+                            Latest Deployment Date
                           </p>
-                          {repoDetails?.data?.repo?.customDeploymentUrl &&
-                          repoDetails?.data?.repo?.customDeploymentUrl !==
-                            "N/A" ? (
-                            <CopyToClipboardButton
-                              textToCopy={
-                                repoDetails?.data?.repo?.customDeploymentUrl
-                              }
-                              isHoverable={false}>
-                              <a
-                                href={
-                                  repoDetails?.data?.repo?.customDeploymentUrl
-                                }
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block truncate text-sm text-primary hover:underline"
-                                onClick={(e) => e.stopPropagation()}>
-                                {repoDetails?.data?.repo?.customDeploymentUrl}
-                              </a>
-                            </CopyToClipboardButton>
-                          ) : (
-                            <span className="block truncate text-sm">
-                              {"N/A"}
-                            </span>
-                          )}
+                          <span className="text-sm">
+                            {latestBuild
+                              ? formatFullDate(
+                                  new Date(
+                                    repoDetails?.data?.repo
+                                      ?.lastDeploymentDate,
+                                  ),
+                                )
+                              : "N/A"}
+                          </span>
                         </div>
-                      </div>
 
-                      <div className="grid grid-cols-1 gap-4 md:mb-4 md:gap-6">
-                        <div className="space-y-4">
-                          <div className="space-y-2" data-testid="deployment-status">
-                            <p className="text-sm text-low-emphasis">
-                              Deployment Status
-                            </p>
-                            <DeploymentStatusIndicator
-                              hasLiveDeployment={hasLiveDeployment}
-                              latestBuild={latestBuild}
-                              buildStatus={latestBuild?.status}
-                              repoStatus={
-                                repoDetails?.data?.repo?.lastDeploymentStatus
-                              }
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <p className="text-sm text-low-emphasis">
-                              Latest Deployment Date
-                            </p>
-                            <span className="text-sm">
-                              {latestBuild
-                                ? formatFullDate(
-                                    new Date(
-                                      repoDetails?.data?.repo
-                                        ?.lastDeploymentDate,
-                                    ),
-                                  )
-                                : "N/A"}
-                            </span>
-                          </div>
-
-                          <div className="space-y-2">
-                            <p className="text-sm text-low-emphasis">
-                              Deployment Type
-                            </p>
-                            <span className="text-sm">
-                              {(() => {
-                                const result =
-                                  DEPLOYMENT_OPTIONS_DETAILS.find(
-                                    (option) =>
-                                      option.value.toLowerCase() ===
-                                      repoDetails?.data.repo.deploymentType?.toLowerCase(),
-                                  )?.label || "N/A";
-                                return result;
-                              })()}
-                            </span>
-                          </div>
+                        <div className="space-y-2">
+                          <p className="text-sm text-low-emphasis">
+                            Deployment Type
+                          </p>
+                          <span className="text-sm">
+                            {(() => {
+                              const result =
+                                DEPLOYMENT_OPTIONS_DETAILS.find(
+                                  (option) =>
+                                    option.value.toLowerCase() ===
+                                    repoDetails?.data.repo.deploymentType?.toLowerCase(),
+                                )?.label || "N/A";
+                              return result;
+                            })()}
+                          </span>
                         </div>
                       </div>
                     </div>
-                    <div className="w-full">
-                      <Separator
-                        orientation="horizontal"
-                        className="my-2 w-full"
-                      />
-
-                      <div className="flex w-full flex-col gap-3 pb-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                        <h3 className="text-lg font-semibold">
-                          Deployment History
-                        </h3>
-                      </div>
-                      <DeploymentObservability
-                        builds={filteredBuilds}
-                        viewLatestBuild={true}
-                        dataUpdatedAt={dataUpdatedAt}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-                <Alert
-                  repoId={repoId}
-                  status={latestBuild?.status || ""}
-                  latestBuild={latestBuild}
-                  buildLength={filteredBuilds?.length}
-                />
-              </div>
-            </TabsContent>
-            <TabsContent value="history">
-              <Card>
-                <div className="flex w-full flex-col gap-3 pb-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex flex-col items-start gap-2">
-                    <h3 className="text-lg font-semibold">
-                      Deployment History
-                    </h3>
                   </div>
-                </div>
-                <DeploymentObservability
-                  builds={filteredBuilds}
-                  startIndex={
-                    (historyPageNumber - 1) * HISTORY_BUILD_PAGE_SIZE + 1
-                  }
-                  totalCount={totalBuildCount}
-                  dataUpdatedAt={dataUpdatedAt}
-                />
-                {totalBuildCount > HISTORY_BUILD_PAGE_SIZE && (
-                  <div className="mt-4 flex items-center px-4 pb-4 md:justify-end">
-                    <Pagination
-                      page={historyPageNumber - 1}
-                      pageSize={HISTORY_BUILD_PAGE_SIZE}
-                      onChange={handleHistoryPageChange}
-                      totalCount={totalBuildCount}
+                  <div className="w-full">
+                    <Separator
+                      orientation="horizontal"
+                      className="my-2 w-full"
+                    />
+
+                    <div className="flex w-full flex-col gap-3 pb-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <h3 className="text-lg font-semibold">
+                        Deployment History
+                      </h3>
+                    </div>
+                    <DeploymentObservability
+                      builds={filteredBuilds}
+                      viewLatestBuild={true}
+                      dataUpdatedAt={dataUpdatedAt}
                     />
                   </div>
-                )}
+                </CardContent>
               </Card>
-            </TabsContent>
-            <TabsContent value="secrets">
-              <SecretsTab
+              <Alert
                 repoId={repoId}
-                repoName={repoDetails?.data?.repo.repoName}
+                status={latestBuild?.status || ""}
+                latestBuild={latestBuild}
+                buildLength={filteredBuilds?.length}
               />
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        <DeploymentSettingsModal
-          isOpen={isSettingsModalOpen}
-          onClose={handleCloseModal}
-          repoId={repoId}
-          isDeploymentFlow={isDeploymentSettingsForDeploy}
-          onDeploy={handleDeployFromSettings}
-          isDeploying={isDeploying}
-          pageNumber={buildPageNumber}
-          pageSize={buildPageSize}
-        />
+            </div>
+          </TabsContent>
+          <TabsContent value="history">
+            <Card>
+              <div className="flex w-full flex-col gap-3 pb-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col items-start gap-2">
+                  <h3 className="text-lg font-semibold">
+                    Deployment History
+                  </h3>
+                </div>
+              </div>
+              <DeploymentObservability
+                builds={filteredBuilds}
+                startIndex={
+                  (historyPageNumber - 1) * HISTORY_BUILD_PAGE_SIZE + 1
+                }
+                totalCount={totalBuildCount}
+                dataUpdatedAt={dataUpdatedAt}
+              />
+              {totalBuildCount > HISTORY_BUILD_PAGE_SIZE && (
+                <div className="mt-4 flex items-center px-4 pb-4 md:justify-end">
+                  <Pagination
+                    page={historyPageNumber - 1}
+                    pageSize={HISTORY_BUILD_PAGE_SIZE}
+                    onChange={handleHistoryPageChange}
+                    totalCount={totalBuildCount}
+                  />
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+          <TabsContent value="secrets">
+            <SecretsTab
+              repoId={repoId}
+              repoName={repoDetails?.data?.repo.repoName}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
-    </>
+
+      <DeploymentSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={handleCloseModal}
+        repoId={repoId}
+        isDeploymentFlow={isDeploymentSettingsForDeploy}
+        onDeploy={handleDeployFromSettings}
+        isDeploying={isDeploying}
+        pageNumber={buildPageNumber}
+        pageSize={buildPageSize}
+      />
+    </div>
   );
 }

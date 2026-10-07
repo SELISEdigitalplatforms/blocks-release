@@ -356,3 +356,108 @@ describe("Phase 2 quality gate helpers", () => {
     ).toEqual(["Blocker 0", "High 3", "Medium 40", "Low 20", "Info 6"]);
   });
 });
+
+describe("sast-metrics edge branches", () => {
+  it("formatPercent returns MISSING for non-numeric input", () => {
+    expect(formatPercent("abc")).toBe(MISSING);
+    expect(formatPercent("Infinity")).toBe(MISSING);
+  });
+
+  it("formatEffort returns MISSING for negative or non-numeric minutes", () => {
+    expect(formatEffort("-5")).toBe(MISSING);
+    expect(formatEffort("abc")).toBe(MISSING);
+  });
+
+  it("getNewCodeStats omits subtitles and percent when line counts and percentages are missing", () => {
+    const stats = getNewCodeStats({ new_coverage: "n/a", new_duplicated_lines_density: "" });
+    const coverage = stats.find((s) => s.id === "new-coverage");
+    const dup = stats.find((s) => s.id === "new-duplications");
+
+    expect(coverage?.subtitle).toBeUndefined();
+    expect(coverage?.value).toBe(MISSING);
+    expect(coverage?.indicator).toEqual({ kind: "ring", percent: null });
+    expect(dup?.subtitle).toBeUndefined();
+    expect(dup?.indicator).toEqual({ kind: "dot", percent: null });
+  });
+
+  it("getOverallCodeStats shows lines-to-cover subtitle when provided", () => {
+    const stats = getOverallCodeStats({ coverage: "55.25", lines_to_cover: "12345" });
+    const coverage = stats.find((s) => s.id === "overall-coverage");
+
+    expect(coverage?.subtitle).toBe("On 12,345 lines to cover");
+    expect(coverage?.value).toBe("55.3%");
+    expect(coverage?.indicator).toEqual({ kind: "ring", percent: 55.25 });
+  });
+
+  it("getNewCodePeriodLabel returns null for an unparseable date", () => {
+    expect(getNewCodePeriodLabel({ new_code_period_date: "not-a-date" })).toBeNull();
+  });
+
+  const ratingCondition = (
+    comparator: "GT" | "LT",
+    errorThreshold: string,
+    actualValue: string | null,
+  ): SastGateCondition => ({
+    metricKey: "software_quality_security_rating",
+    comparator,
+    errorThreshold,
+    actualValue,
+    status: "ERROR",
+  });
+
+  it("formatCondition passes through rating values that are not valid letters", () => {
+    expect(formatCondition(ratingCondition("GT", "9", "7"))).toEqual({
+      value: "7",
+      label: "Security Rating",
+      requirement: "is worse than 9",
+    });
+  });
+
+  it("formatCondition describes LT rating thresholds as 'better than'", () => {
+    expect(formatCondition(ratingCondition("LT", "2", "1"))).toEqual({
+      value: "A",
+      label: "Security Rating",
+      requirement: "is better than B",
+    });
+  });
+
+  it("formatCondition treats unknown *rating* metric keys as ratings", () => {
+    const c: SastGateCondition = {
+      metricKey: "custom_rating",
+      comparator: "GT",
+      errorThreshold: "3",
+      actualValue: "4",
+      status: "ERROR",
+    };
+    expect(formatCondition(c)).toEqual({
+      value: "D",
+      label: "custom_rating",
+      requirement: "is worse than C",
+    });
+  });
+
+  it("formatRequired passes through an invalid rating threshold and handles LT", () => {
+    expect(formatRequired(ratingCondition("GT", "9", null))).toBe("Required ≥ 9");
+    expect(formatRequired(ratingCondition("LT", "3", null))).toBe("Required ≤ C");
+  });
+
+  it("formatRequired uses the raw threshold for non-percent count metrics", () => {
+    const c: SastGateCondition = {
+      metricKey: "violations",
+      comparator: "GT",
+      errorThreshold: "12",
+      actualValue: "20",
+      status: "ERROR",
+    };
+    expect(formatRequired(c)).toBe("Required ≤ 12");
+    expect(formatRequired({ ...c, comparator: "LT" })).toBe("Required ≥ 12");
+  });
+
+  it("getFailedConditionForStat returns null for a missing or empty gate", () => {
+    expect(getFailedConditionForStat("new-issues", null)).toBeNull();
+    expect(getFailedConditionForStat("new-issues", undefined)).toBeNull();
+    expect(
+      getFailedConditionForStat("new-issues", { status: "OK", conditions: [] }),
+    ).toBeNull();
+  });
+});

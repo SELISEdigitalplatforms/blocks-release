@@ -15,6 +15,7 @@ import {
   getStepStatus,
   getStepTimeRange,
   getStepTimingTooltip,
+  getStoredStepTimeRange,
   isLiveBuildStatus,
   isTerminalStepStatus,
   mergeStepTimeRange,
@@ -629,5 +630,168 @@ describe("applyStepTimeRange", () => {
     expect(step.timingSource).toBe("none");
     expect(step.startTime).toBeUndefined();
     expect(step.durationMs).toBeUndefined();
+  });
+});
+
+describe("deployment-logs edge branches", () => {
+  const baseStep: IBuildStep = {
+    id: "s",
+    name: "Build",
+    status: "success",
+    eventType: DeploymentEventType.EventFinished,
+    eventGroup: DeploymentEventGroup.Build,
+  };
+
+  it("parseLogLineTimestamp returns null for a well-formed but impossible date", () => {
+    expect(parseLogLineTimestamp("2026-13-45T99:99:99Z boom")).toBeNull();
+  });
+
+  it("range helpers return null for non-array input", () => {
+    expect(getLogTimeRange(null as unknown as string[])).toBeNull();
+    expect(
+      getStepTimeRange(undefined as unknown as IBuildEvent[], DeploymentEventGroup.Build),
+    ).toBeNull();
+    expect(getPipelineTimeRange("steps" as unknown as IBuildStep[])).toBeNull();
+  });
+
+  it("getPipelineTimeRange skips log steps missing a start or end and keeps the latest end", () => {
+    const range = getPipelineTimeRange([
+      { ...baseStep, timingSource: "logs", endTime: "2026-08-04T10:00:05Z" },
+      { ...baseStep, timingSource: "logs", startTime: "2026-08-04T09:00:00Z" },
+      {
+        ...baseStep,
+        timingSource: "logs",
+        startTime: "2026-08-04T10:00:00Z",
+        endTime: "2026-08-04T10:00:30Z",
+      },
+      {
+        ...baseStep,
+        timingSource: "logs",
+        startTime: "2026-08-04T10:00:10Z",
+        endTime: "2026-08-04T10:00:20Z",
+      },
+    ]);
+
+    expect(range).toEqual({
+      startMs: new Date("2026-08-04T10:00:00Z").getTime(),
+      endMs: new Date("2026-08-04T10:00:30Z").getTime(),
+    });
+  });
+
+  it("formatStepDuration shows a placeholder for a zero-width poller range", () => {
+    expect(formatStepDuration({ startMs: 1000, endMs: 1000, source: "events" })).toBe(
+      DURATION_PLACEHOLDER,
+    );
+  });
+
+  it("formatStepDuration shows 0.0s for a zero-width log range", () => {
+    expect(formatStepDuration({ startMs: 1000, endMs: 1000, source: "logs" })).toBe("0.0s");
+  });
+
+  it("formatStepDuration does not prefix a placeholder for a negative range", () => {
+    expect(formatStepDuration({ startMs: 5000, endMs: 1000, source: "events" })).toBe(
+      DURATION_PLACEHOLDER,
+    );
+  });
+
+  describe("getStepTimingTooltip guards", () => {
+    const timed: IBuildStep = {
+      ...baseStep,
+      startTime: "2026-08-04T10:00:00Z",
+      endTime: "2026-08-04T10:00:05Z",
+      duration: "5.0s",
+      timingSource: "logs",
+    };
+
+    it("returns undefined when timing source is none", () => {
+      expect(getStepTimingTooltip({ ...timed, timingSource: "none" })).toBeUndefined();
+    });
+
+    it("returns undefined when the duration is the placeholder", () => {
+      expect(
+        getStepTimingTooltip({ ...timed, duration: DURATION_PLACEHOLDER }),
+      ).toBeUndefined();
+    });
+
+    it("returns undefined when a stored time is unparseable", () => {
+      expect(getStepTimingTooltip({ ...timed, startTime: "garbage" })).toBeUndefined();
+      expect(getStepTimingTooltip({ ...timed, endTime: "garbage" })).toBeUndefined();
+    });
+
+    it("flags poller-derived timings as approximate", () => {
+      const tooltip = getStepTimingTooltip({ ...timed, timingSource: "events" });
+      expect(tooltip).toContain("Took 5.0s");
+      expect(tooltip?.endsWith(
+        "\nApproximate — derived from backend polling, not log timestamps.",
+      )).toBe(true);
+    });
+  });
+
+  describe("getStoredStepTimeRange", () => {
+    it("returns null when the step has no start", () => {
+      expect(getStoredStepTimeRange(baseStep)).toBeNull();
+    });
+
+    it("returns null when the start is unparseable", () => {
+      expect(getStoredStepTimeRange({ ...baseStep, startTime: "nope" })).toBeNull();
+    });
+
+    it("returns null when the end is unparseable", () => {
+      expect(
+        getStoredStepTimeRange({
+          ...baseStep,
+          startTime: "2026-08-04T10:00:00Z",
+          endTime: "nope",
+        }),
+      ).toBeNull();
+    });
+
+    it("treats a started-only step as a zero-width poller range", () => {
+      const startMs = new Date("2026-08-04T10:00:00Z").getTime();
+      expect(
+        getStoredStepTimeRange({ ...baseStep, startTime: "2026-08-04T10:00:00Z" }),
+      ).toEqual({ startMs, endMs: startMs, source: "events" });
+    });
+
+    it.each(["logs", "events"] as const)("keeps a stored %s source", (timingSource) => {
+      expect(
+        getStoredStepTimeRange({
+          ...baseStep,
+          startTime: "2026-08-04T10:00:00Z",
+          endTime: "2026-08-04T10:00:07Z",
+          timingSource,
+        }),
+      ).toEqual({
+        startMs: new Date("2026-08-04T10:00:00Z").getTime(),
+        endMs: new Date("2026-08-04T10:00:07Z").getTime(),
+        source: timingSource,
+      });
+    });
+
+    it("falls back to an events source for a 'none' timing source", () => {
+      expect(
+        getStoredStepTimeRange({
+          ...baseStep,
+          startTime: "2026-08-04T10:00:00Z",
+          endTime: "2026-08-04T10:00:07Z",
+          timingSource: "none",
+        })?.source,
+      ).toBe("events");
+    });
+  });
+
+  it("calculateStepDuration ignores other groups and non-marker events", () => {
+    const events = [
+      event(DeploymentEventGroup.Sast, DeploymentEventType.EventStarted, "2024-01-01T00:00:00Z"),
+      event(DeploymentEventGroup.Build, DeploymentEventType.EventStarted, "2024-01-01T00:00:10Z"),
+      event(DeploymentEventGroup.Build, DeploymentEventType.Log, "2024-01-01T00:05:00Z"),
+      event(DeploymentEventGroup.Build, DeploymentEventType.EventFinished, "2024-01-01T00:00:12Z"),
+      event(DeploymentEventGroup.Sast, DeploymentEventType.EventFinished, "2024-01-01T01:00:00Z"),
+    ];
+    expect(calculateStepDuration(events, DeploymentEventGroup.Build)).toBe("2.0s");
+  });
+
+  it("getBuildDurationLabel returns the placeholder for a non-finite elapsed time", () => {
+    expect(getBuildDurationLabel("Running", Number.NaN)).toBe(DURATION_PLACEHOLDER);
   });
 });

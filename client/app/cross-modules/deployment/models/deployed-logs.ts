@@ -20,6 +20,9 @@ export interface IDeploySettings {
   region: IRegion;
   machineConfig: IMachineSpec;
   deploymentType: string;
+  /** Read by the settings modal to prefill its form; not every response carries them. */
+  customDomain?: string;
+  lastDeploymentStatus?: string;
 }
 
 export interface IMachineSpec {

@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { showErrorToast } from "@/hooks/use-toast";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useLocation } from "react-router";
 
 interface BlocksApp {
@@ -338,23 +338,23 @@ function StarIcon({ filled }: { filled: boolean }) {
   );
 }
 
+/** Leaves the app for the IdP's authorization page. */
+const redirectTo = (url: string) => {
+  window.location.href = url;
+};
+
 export function BlocksAppLauncher() {
   const [open, setOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [favouriteKeys, setFavouriteKeys] = useState<Set<string>>(new Set());
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [loadingKey, setLoadingKey] = useState<string | null>(null);
-  const location = useLocation();
-
-  // Load favourites from localStorage on mount
-  useEffect(() => {
+  // Favourites are restored from localStorage up front, defaulting to IAM and localization.
+  const [favouriteKeys, setFavouriteKeys] = useState<Set<string>>(() => {
     const stored = localStorage.getItem("blocks-app-favourites");
-    const keys = stored
+    return stored
       ? new Set<string>(JSON.parse(stored) as string[])
       : new Set<string>(["iam", "localization"]);
-    setFavouriteKeys(keys);
-    setIsHydrated(true);
-  }, []);
+  });
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  const location = useLocation();
 
   const saveFavourites = (keys: Set<string>) => {
     setFavouriteKeys(keys);
@@ -385,7 +385,7 @@ export function BlocksAppLauncher() {
       const data = await response.json();
 
       if (data.redirect_uri) {
-        window.location.href = data.redirect_uri as string;
+        redirectTo(data.redirect_uri as string);
       } else {
         showErrorToast({ errors: "Failed to get authorization URL" });
         setLoadingKey(null);
@@ -397,7 +397,6 @@ export function BlocksAppLauncher() {
     }
   };
 
-  if (!isHydrated) return null;
 
   const favourites = SELISE_APPS.filter((a) => favouriteKeys.has(a.key));
   const moreApps = SELISE_APPS.filter((a) => !favouriteKeys.has(a.key));

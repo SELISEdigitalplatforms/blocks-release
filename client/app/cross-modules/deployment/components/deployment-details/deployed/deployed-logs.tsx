@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Clock, ChevronDown, ChevronRight } from "lucide-react";
 import { DeployedLogsService } from "@blocks-deployment/services/deployed-logs.service";
 import {
@@ -35,7 +35,21 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
   const [buildSteps, setBuildSteps] = useState<IBuildStep[]>([]);
   const [wholeDeploymentStatus, setWholeDeploymentStatus] = useState<string>();
 
-  useEffect(() => {
+  // Rebuild the steps whenever a new build record arrives. Done while rendering so the
+  // steps for the new record are in place before it is painted.
+  const [syncedFrom, setSyncedFrom] = useState<{
+    isSuccess?: boolean;
+    cardData?: typeof cardData;
+    buildId?: string;
+  } | null>(null);
+  if (
+    !syncedFrom ||
+    syncedFrom.isSuccess !== isSuccess ||
+    syncedFrom.cardData !== cardData ||
+    syncedFrom.buildId !== buildId
+  ) {
+    setSyncedFrom({ isSuccess, cardData, buildId });
+
     if (isSuccess && cardData?.events) {
       const steps: IBuildStep[] = DeployedLogsService.processEventsToSteps(
         cardData?.events,
@@ -56,7 +70,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
     } else if (cardData?.status === DEPLOYMENT_LOG_EVENT_STATUS.FAILED) {
       setWholeDeploymentStatus("Failed");
     }
-  }, [isSuccess, cardData, buildId]);
+  }
 
   const title: string = "Deployment logs";
 

@@ -92,7 +92,15 @@ export function Notification() {
   const markAsRead = useMarkAsRead();
   const markAllAsRead = useMarkAllAsRead();
 
-  useEffect(() => {
+  // Each page that arrives is merged into the list while rendering, so the new rows are
+  // in place before the list is painted.
+  // Starts as "nothing merged" so a page that is already cached on mount is merged too.
+  const [mergedFrom, setMergedFrom] = useState<{
+    data: typeof data | undefined;
+    pageNumber: number;
+  }>({ data: undefined, pageNumber });
+  if (mergedFrom.data !== data || mergedFrom.pageNumber !== pageNumber) {
+    setMergedFrom({ data, pageNumber });
     if (data?.notifications) {
       setNotifications((prev) => {
         const ids = new Set(prev.map((n) => n.id));
@@ -109,7 +117,7 @@ export function Notification() {
       });
       setHasMore(pageNumber * 10 < (data?.totalNotificationsCount || 0));
     }
-  }, [data, pageNumber]);
+  }
 
   const listRef = useRef<HTMLDivElement>(null);
   const handleScroll = useCallback(() => {
@@ -121,13 +129,15 @@ export function Notification() {
   }, [isLoading, isFetching, hasMore]);
 
   const [open, setOpen] = useState(false);
-  useEffect(() => {
-    if (open) {
+  // Opening the panel starts again from the first page with fresh data.
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (nextOpen) {
       setPageNumber(1);
       setHasMore(true);
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     }
-  }, [open, queryClient]);
+  };
 
   function MarkNotificationAsRead(notificationId: string) {
     return () => {
@@ -181,7 +191,7 @@ export function Notification() {
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <div className="relative" data-testid="notification-bell">
           <Bell className="h-5 w-5 cursor-pointer text-muted-foreground transition-colors hover:text-primary" />

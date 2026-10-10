@@ -71,17 +71,21 @@ const DeploymentDetails = () => {
   const [searchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
 
-  useEffect(() => {
-    if (tabFromUrl) {
-      setActiveTab(tabFromUrl);
-    }
-  }, [tabFromUrl]);
-
   const buildIdStr = useMemo(() => {
     return Array.isArray(buildId) ? buildId[0] : buildId;
   }, [buildId]);
 
-  const [activeTab, setActiveTab] = useState("deployment-logs");
+  const [activeTab, setActiveTab] = useState(
+    () => tabFromUrl || "deployment-logs",
+  );
+  // A ?tab= in the URL selects that tab, including when it changes later.
+  const [syncedTabFromUrl, setSyncedTabFromUrl] = useState(tabFromUrl);
+  if (syncedTabFromUrl !== tabFromUrl) {
+    setSyncedTabFromUrl(tabFromUrl);
+    if (tabFromUrl) {
+      setActiveTab(tabFromUrl);
+    }
+  }
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   const queryResult = useGetCardProjectAndBranch(buildIdStr ?? "");

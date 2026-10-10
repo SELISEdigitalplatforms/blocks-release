@@ -85,7 +85,7 @@ describe("Github Info Hooks", () => {
         isSuccess: true,
       };
       vi.mocked(githubInfoService.getGithubRepos).mockResolvedValue(
-        mockResponse as any,
+        mockResponse as never,
       );
 
       const { result } = renderHook(() => useGetGithubRepos(true), {
@@ -112,7 +112,7 @@ describe("Github Info Hooks", () => {
     it("should trigger manual deployment successfully", async () => {
       const payload = { repoId: MOCK_REPO_ID };
       vi.mocked(githubInfoService.manualDeploy).mockResolvedValue(
-        mockSuccessResponse as any,
+        mockSuccessResponse as never,
       );
 
       const { result } = renderHook(() => useManualDeployment(), {
@@ -132,7 +132,7 @@ describe("Github Info Hooks", () => {
     it("should fetch card project and branch successfully", async () => {
       vi.mocked(githubInfoService.getCardRepoAndBranches).mockResolvedValue({
         isSuccess: true,
-      } as any);
+      } as never);
 
       const { result } = renderHook(
         () => useGetCardProjectAndBranch(MOCK_BUILD_ID),
@@ -153,7 +153,7 @@ describe("Github Info Hooks", () => {
   describe("useRevokeAccess", () => {
     it("should revoke access successfully", async () => {
       vi.mocked(githubInfoService.revokeAccess).mockResolvedValue(
-        mockSuccessResponse as any,
+        mockSuccessResponse as never,
       );
 
       const { result } = renderHook(() => useRevokeAccess(), {
@@ -189,7 +189,7 @@ describe("Github Info Hooks", () => {
   describe("useRemoveAuthorization", () => {
     it("should remove authorization successfully", async () => {
       vi.mocked(githubInfoService.removeAuthorization).mockResolvedValue(
-        mockSuccessResponse as any,
+        mockSuccessResponse as never,
       );
 
       const { result } = renderHook(() => useRemoveAuthorization(), {
@@ -209,7 +209,7 @@ describe("Github Info Hooks", () => {
     it("should fetch github branches successfully", async () => {
       const mockBranches = [mockBranch];
       vi.mocked(githubInfoService.getGithubBranches).mockResolvedValue(
-        mockBranches as any,
+        mockBranches as never,
       );
 
       const { result } = renderHook(() => useGithubBranches("repo-name"), {
@@ -229,7 +229,7 @@ describe("Github Info Hooks", () => {
   describe("useRepoAndGitBranchMatch", () => {
     it("should check repo and branch match successfully", async () => {
       vi.mocked(githubInfoService.getRepoAndGitBranchMatch).mockResolvedValue(
-        mockSuccessResponse as any,
+        mockSuccessResponse as never,
       );
 
       const { result } = renderHook(
@@ -256,7 +256,7 @@ describe("Github Info Hooks", () => {
         machineConfigId: "mc-1",
       };
       vi.mocked(githubInfoService.repoInitialDeploy).mockResolvedValue(
-        mockSuccessResponse as any,
+        mockSuccessResponse as never,
       );
 
       const { result } = renderHook(() => useInitialRepoDeployment(), {
@@ -275,7 +275,7 @@ describe("Github Info Hooks", () => {
   describe("useGetSpecs", () => {
     it("should fetch specs successfully", async () => {
       const mockSpecs = { data: [] };
-      vi.mocked(githubInfoService.getSpecs).mockResolvedValue(mockSpecs as any);
+      vi.mocked(githubInfoService.getSpecs).mockResolvedValue(mockSpecs as never);
 
       const { result } = renderHook(() => useGetSpecs(), {
         wrapper: createWrapper(),
@@ -293,7 +293,7 @@ describe("Github Info Hooks", () => {
     it("should fetch all repo builds successfully", async () => {
       const mockBuilds = [mockRepositories];
       vi.mocked(githubInfoService.getAllRepoBuilds).mockResolvedValue(
-        mockBuilds as any,
+        mockBuilds as never,
       );
 
       const { result } = renderHook(
@@ -315,7 +315,7 @@ describe("Github Info Hooks", () => {
     it("should fetch all projects successfully", async () => {
       const mockProjects = [mockRepositories];
       vi.mocked(githubInfoService.getAllProjects).mockResolvedValue(
-        mockProjects as any,
+        mockProjects as never,
       );
 
       const { result } = renderHook(() => useGetAllProjects(), {
@@ -414,7 +414,7 @@ describe("Github Info Hooks", () => {
     it("should fetch repo details successfully", async () => {
       const mockDetails = {};
       vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue(
-        mockDetails as any,
+        mockDetails as never,
       );
 
       const { result } = renderHook(() => useGetRepoDetails(MOCK_REPO_ID), {
@@ -430,7 +430,7 @@ describe("Github Info Hooks", () => {
 
     // H5/H6
     it("forwards branch and paging to the service", async () => {
-      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as any);
+      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as never);
 
       const { result } = renderHook(
         () =>
@@ -453,7 +453,7 @@ describe("Github Info Hooks", () => {
     // H5: paging must produce a distinct cache entry, so a different page size fetches
     // again rather than reading the previous page's data.
     it("caches each page size separately", async () => {
-      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as any);
+      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as never);
       const wrapper = createWrapper();
 
       const one = renderHook(
@@ -476,7 +476,7 @@ describe("Github Info Hooks", () => {
     // asserts the behaviour (a refetch happens) rather than comparing key arrays, since a
     // key that merely looks right can still fail prefix matching.
     it("still refetches when invalidated by the repoId prefix alone", async () => {
-      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as any);
+      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as never);
 
       const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false } },
@@ -507,7 +507,7 @@ describe("Github Info Hooks", () => {
 
     // C1: null and empty are tested independently, because the criterion names both.
     it("makes no request for an empty repoId", async () => {
-      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as any);
+      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as never);
 
       renderHook(() => useGetRepoDetails(""), { wrapper: createWrapper() });
 
@@ -516,7 +516,7 @@ describe("Github Info Hooks", () => {
     });
 
     it("makes no request for a null repoId", async () => {
-      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as any);
+      vi.mocked(githubInfoService.getRepoDetails).mockResolvedValue({} as never);
 
       renderHook(
         () => useGetRepoDetails(null as unknown as string),
@@ -540,7 +540,7 @@ describe("Github Info Hooks", () => {
         repoId: MOCK_REPO_ID,
       };
       vi.mocked(githubInfoService.changeBuildSpecs).mockResolvedValue(
-        mockSuccessResponse as any,
+        mockSuccessResponse as never,
       );
 
       const { result } = renderHook(() => useChangeBuildSpecs(), {
@@ -563,7 +563,7 @@ describe("Github Info Hooks", () => {
         machineConfigId: "mc-1",
       };
       vi.mocked(githubInfoService.updateRepoSettings).mockResolvedValue(
-        mockSuccessResponse as any,
+        mockSuccessResponse as never,
       );
 
       const { result } = renderHook(() => useUpdateRepoSettings({}), {

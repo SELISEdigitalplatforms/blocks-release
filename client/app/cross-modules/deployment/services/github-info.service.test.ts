@@ -234,7 +234,7 @@ describe("GithubInfoService", () => {
 
   describe("getAllRepos", () => {
     it("should call correct endpoint", async () => {
-      const mockResponse: any[] = [];
+      const mockResponse: unknown[] = [];
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
       const result = await githubInfoService.getAllRepos();
@@ -248,7 +248,7 @@ describe("GithubInfoService", () => {
 
   describe("getAllRepoBuilds", () => {
     it("should call correct endpoint", async () => {
-      const mockResponse: any[] = [];
+      const mockResponse: unknown[] = [];
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
       const result = await githubInfoService.getAllRepoBuilds();
@@ -262,7 +262,7 @@ describe("GithubInfoService", () => {
 
   describe("getAllProjects", () => {
     it("should call correct endpoint", async () => {
-      const mockResponse: any[] = [];
+      const mockResponse: unknown[] = [];
       vi.mocked(http.get).mockResolvedValue(mockResponse);
 
       const result = await githubInfoService.getAllProjects();

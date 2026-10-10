@@ -4,6 +4,7 @@ import type {
   ISASTRedirectResponse,
   ISCARedirectResponse,
 } from "@blocks-deployment/utils/observability-links.utils";
+import type { IScaLibraryReportResponse } from "@blocks-deployment/models/sca-report";
 
 class ObservabilityService {
   private readonly httpClient = serviceInstances.deploymentService;
@@ -11,7 +12,7 @@ class ObservabilityService {
     const url = `${CLOUD_BUILD_ENDPOINTS.REPORTS}?buildId=${encodeURIComponent(buildId)}&type=sast`;
     return this.httpClient.get(url);
   }
-  async SCAData(buildId: string, type: string): Promise<string> {
+  async SCAData(buildId: string, type: string): Promise<IScaLibraryReportResponse> {
     const url = `${CLOUD_BUILD_ENDPOINTS.REPORTS}?buildId=${encodeURIComponent(buildId)}&type=sca-${encodeURIComponent(type)}`;
     return this.httpClient.get(url);
   }

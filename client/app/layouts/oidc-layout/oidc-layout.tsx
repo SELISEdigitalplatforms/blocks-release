@@ -6,7 +6,7 @@ import {
   ReactNode,
   useContext,
   useEffect,
-  useState,
+  useMemo,
 } from "react";
 import { Outlet, useLocation, useSearchParams } from "react-router";
 
@@ -50,12 +50,9 @@ function OIDCProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  const [params, setParams] = useState<OIDCContextType>({
-    themeColor: "#124091",
-    isLoading: true,
-  });
-
-  useEffect(() => {
+  // Derived from the URL, falling back to what an earlier step of the flow stored, so the
+  // context is ready on the first render instead of after an effect.
+  const params = useMemo<OIDCContextType>(() => {
     const urlParams = extractOIDCParams(true);
 
     let stored: OIDCContextType = {};
@@ -81,16 +78,22 @@ function OIDCProvider({ children }: { children: ReactNode }) {
       isLoading: false,
     };
 
-    const hasAnyParams = Object.values(mergedParams).some(
+    return mergedParams;
+    // location.pathname and searchParams are what change between steps of the flow; the
+    // values themselves are read from window.location and localStorage.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, searchParams]);
+
+  // Remember the flow's parameters so later steps without them in the URL still have them.
+  useEffect(() => {
+    const hasAnyParams = Object.values(params).some(
       (value) => value && value !== "#124091",
     );
 
     if (hasAnyParams) {
-      localStorage.setItem("oidc-flow-params", JSON.stringify(mergedParams));
+      localStorage.setItem("oidc-flow-params", JSON.stringify(params));
     }
-
-    setParams(mergedParams);
-  }, [location.pathname, searchParams]);
+  }, [params]);
 
   return <OIDCContext.Provider value={params}>{children}</OIDCContext.Provider>;
 }

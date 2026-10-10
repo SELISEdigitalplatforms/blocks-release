@@ -68,11 +68,11 @@ export const RepositorySelectionModal = ({
   const [isLoadingRevoke, setIsLoadingRevoke] = useState(false);
 
   // Custom debounce implementation
-  const debouncedSetSearch = useRef(
+  const [debouncedSetSearch] = useState(() =>
     debounce((value: string) => {
       setDebouncedSearchTerm(value);
     }, 500),
-  ).current;
+  );
 
   useEffect(() => {
     debouncedSetSearch(searchTerm);
@@ -81,12 +81,15 @@ export const RepositorySelectionModal = ({
     };
   }, [searchTerm, debouncedSetSearch]);
 
-  // Reset pagination when debounced search term changes
-  useEffect(() => {
+  // Reset pagination when debounced search term changes. State that follows other state is
+  // adjusted while rendering, in the same order the rules have always been applied.
+  const [pagedSearchTerm, setPagedSearchTerm] = useState(debouncedSearchTerm);
+  if (pagedSearchTerm !== debouncedSearchTerm) {
+    setPagedSearchTerm(debouncedSearchTerm);
     setCurrentPage(0);
     setAllRepositories([]);
     setHasMoreData(true);
-  }, [debouncedSearchTerm]);
+  }
 
   const itemsPerPage = 10;
 
@@ -102,8 +105,22 @@ export const RepositorySelectionModal = ({
     itemsPerPage,
   );
 
-  // Update accumulated repositories when new data arrives
-  useEffect(() => {
+  // Update accumulated repositories when new data arrives (including data that is already
+  // cached when the modal mounts).
+  const [accumulatedFrom, setAccumulatedFrom] = useState<{
+    repositories: typeof repositories;
+    currentPage: number;
+  } | null>(null);
+  if (
+    !accumulatedFrom ||
+    accumulatedFrom.repositories !== repositories ||
+    accumulatedFrom.currentPage !== currentPage
+  ) {
+    setAccumulatedFrom({ repositories, currentPage });
+    accumulateRepositories();
+  }
+
+  function accumulateRepositories() {
     // Early return if no data
     if (!repositories?.data) {
       return;
@@ -148,7 +165,7 @@ export const RepositorySelectionModal = ({
       }
       setHasMoreData(false);
     }
-  }, [repositories, currentPage, itemsPerPage]);
+  }
 
   // Scroll handler for infinite scrolling
   const handleScroll = useCallback(
@@ -183,7 +200,10 @@ export const RepositorySelectionModal = ({
     }
   }, []);
 
-  useEffect(() => {
+  // Opening or closing the modal resets the search and paging; this also runs on mount.
+  const [syncedOpen, setSyncedOpen] = useState<boolean | null>(null);
+  if (syncedOpen !== open) {
+    setSyncedOpen(open);
     if (!open) {
       // On close: clear state
       setIsPopoverOpen(false);
@@ -193,13 +213,17 @@ export const RepositorySelectionModal = ({
       setSearchTerm("");
       setDebouncedSearchTerm("");
     } else {
-      // On open: reset pagination/search state and invalidate cache
+      // On open: reset pagination/search state (the cache is refreshed by the effect below)
       setCurrentPage(0);
       setHasMoreData(true);
       setSearchTerm("");
       setDebouncedSearchTerm("");
+    }
+  }
 
-      // Invalidate cache immediately
+  // Each time the modal opens, fetch the repository list fresh.
+  useEffect(() => {
+    if (open) {
       queryClient.invalidateQueries({ queryKey: ["github-repos"] });
     }
   }, [open, queryClient]);

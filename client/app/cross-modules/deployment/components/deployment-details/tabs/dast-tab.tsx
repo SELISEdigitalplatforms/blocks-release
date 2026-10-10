@@ -84,7 +84,7 @@ const VulnerabilityFilterToolbar = () => {
               page: 0,
             }));
           }}
-          className="w-full rounded-md border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full rounded-md border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
         />
       </div>
     </div>
@@ -127,7 +127,7 @@ const Badge = ({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${getVariantStyles()} ${className}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 ${getVariantStyles()} ${className}`}
     >
       {children}
     </span>

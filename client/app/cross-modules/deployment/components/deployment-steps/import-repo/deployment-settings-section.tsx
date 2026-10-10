@@ -132,14 +132,14 @@ const DeploymentSettingSection = ({
             </label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex w-full items-center justify-between rounded-md border border-blocks-primary-shades-300 bg-background px-3 py-2 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary">
+                <button className="flex w-full items-center justify-between rounded-md border border-blocks-primary-shades-300 bg-background px-3 py-2 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary">
                   <span className="truncate">
                     {deploymentData.provider || "Select a provider"}
                   </span>
-                  <ChevronDown className="ml-2 h-4 w-4 flex-shrink-0 text-gray-400" />
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 text-gray-400" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="min-w-[var(--radix-dropdown-menu-trigger-width)]">
+              <DropdownMenuContent className="min-w-(--radix-dropdown-menu-trigger-width)">
                 {activeProviders.map((provider) => (
                   <DropdownMenuItem
                     key={provider.id}
@@ -155,15 +155,15 @@ const DeploymentSettingSection = ({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="flex w-full items-center justify-between rounded-md border border-blocks-primary-shades-300 bg-background px-3 py-2 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex w-full items-center justify-between rounded-md border border-blocks-primary-shades-300 bg-background px-3 py-2 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={!deploymentData.provider}>
                   <span className="truncate">
                     {deploymentData.region || "Select a region"}
                   </span>
-                  <ChevronDown className="ml-2 h-4 w-4 flex-shrink-0 text-gray-400" />
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 text-gray-400" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="min-w-[var(--radix-dropdown-menu-trigger-width)]">
+              <DropdownMenuContent className="min-w-(--radix-dropdown-menu-trigger-width)">
                 {selectedProviderRegions.map((region) => (
                   <DropdownMenuItem
                     key={region.name}

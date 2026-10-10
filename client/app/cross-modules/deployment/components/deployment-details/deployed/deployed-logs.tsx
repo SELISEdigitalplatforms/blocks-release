@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Clock, ChevronDown, ChevronRight } from "lucide-react";
 import { DeployedLogsService } from "@blocks-deployment/services/deployed-logs.service";
 import {
@@ -35,7 +35,21 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
   const [buildSteps, setBuildSteps] = useState<IBuildStep[]>([]);
   const [wholeDeploymentStatus, setWholeDeploymentStatus] = useState<string>();
 
-  useEffect(() => {
+  // Rebuild the steps whenever a new build record arrives. Done while rendering so the
+  // steps for the new record are in place before it is painted.
+  const [syncedFrom, setSyncedFrom] = useState<{
+    isSuccess?: boolean;
+    cardData?: typeof cardData;
+    buildId?: string;
+  } | null>(null);
+  if (
+    !syncedFrom ||
+    syncedFrom.isSuccess !== isSuccess ||
+    syncedFrom.cardData !== cardData ||
+    syncedFrom.buildId !== buildId
+  ) {
+    setSyncedFrom({ isSuccess, cardData, buildId });
+
     if (isSuccess && cardData?.events) {
       const steps: IBuildStep[] = DeployedLogsService.processEventsToSteps(
         cardData?.events,
@@ -56,7 +70,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
     } else if (cardData?.status === DEPLOYMENT_LOG_EVENT_STATUS.FAILED) {
       setWholeDeploymentStatus("Failed");
     }
-  }, [isSuccess, cardData, buildId]);
+  }
 
   const title: string = "Deployment logs";
 
@@ -124,7 +138,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
   }
 
   return (
-    <div className="border-default mb-6 flex h-auto w-full flex-col items-start justify-center gap-4 self-stretch rounded-sm border bg-background p-6 shadow-sm">
+    <div className="border-default mb-6 flex h-auto w-full flex-col items-start justify-center gap-4 self-stretch rounded-sm border bg-background p-6 shadow-xs">
       <div className="w-full">
         <div>
           {/* Header - Desktop view */}
@@ -212,7 +226,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
                           <div
                             key={logIndex}
                             className="flex bg-secondary font-mono text-xs last:border-b-0">
-                            <div className="min-w-[3rem] select-none bg-secondary px-3 py-1 text-right">
+                            <div className="min-w-12 select-none bg-secondary px-3 py-1 text-right">
                               {String(logIndex + 1).padStart(2, "0")}
                             </div>
                             <div className="flex-1 px-3 py-1">

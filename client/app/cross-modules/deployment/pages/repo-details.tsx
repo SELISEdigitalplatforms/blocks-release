@@ -46,7 +46,8 @@ import { useQueryState } from "nuqs";
 import Alert from "../components/alert/alert";
 
 export interface IRepoDetailsResponse {
-  data: { repo: IRepoResponse; build: IPipeline[] };
+  /** totalCount is the build count across every page, used to size the history pager. */
+  data: { repo: IRepoResponse; build: IPipeline[]; totalCount?: number };
   message: string | null;
   statusCode: number;
   errors: string[] | null;
@@ -115,7 +116,6 @@ export default function RepoDetails() {
 
   const [isDeploying, setIsDeploying] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [filteredBuilds, setFilteredBuilds] = useState<IPipeline[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -129,7 +129,12 @@ export default function RepoDetails() {
 
   const { mutate: initialDeploy, isPending: isInitialDeploying } =
     useInitialRepoDeployment();
-  const [forceRefresh, setForceRefresh] = useState(false);
+  // A "?refresh=true" landing bypasses the cached repo details on the first read. Read once
+  // up front so the very first query already skips the cache; the effect below only tidies
+  // the URL.
+  const [forceRefresh, setForceRefresh] = useState(
+    () => new URLSearchParams(window.location.search).get("refresh") === "true",
+  );
 
   // The Details tab needs only the newest build; History shows one page of five. Asking
   // for a page instead of the whole history is the point of this endpoint's pagination.
@@ -170,17 +175,15 @@ export default function RepoDetails() {
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     if (searchParams.get("refresh") === "true") {
-      setForceRefresh(true);
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);
     }
   }, []);
 
-  useEffect(() => {
-    if (repoDetails && forceRefresh) {
-      setForceRefresh(false);
-    }
-  }, [repoDetails, forceRefresh]);
+  // The forced read is a one-off: once fresh details are in, later reads use the cache again.
+  if (repoDetails && forceRefresh) {
+    setForceRefresh(false);
+  }
 
   //repo-details switching
   useEffect(() => {
@@ -197,14 +200,33 @@ export default function RepoDetails() {
     }
   }, [isError, error, navigate]);
 
+  // The repo's branch has no builds to show when the server reports the lookup failed.
+  const isBranchMissing =
+    (!repoDetails ||
+      !repoDetails?.data?.build ||
+      !Array.isArray(repoDetails?.data?.build)) &&
+    repoDetails?.isSuccess === false;
+
+  const filteredBuilds = useMemo<IPipeline[]>(() => {
+    if (isBranchMissing) return [];
+
+    return (
+      repoDetails?.data?.build
+        .filter((build: IPipeline) => {
+          const matchesBranch = build.branch === repoDetails?.data?.repo.branch;
+          return matchesBranch;
+        })
+        .map(
+          (build: IPipeline): IPipeline => ({
+            ...build,
+            events: [],
+          }),
+        ) ?? []
+    );
+  }, [repoDetails, isBranchMissing]);
+
   useEffect(() => {
-    if (
-      (!repoDetails ||
-        !repoDetails?.data?.build ||
-        !Array.isArray(repoDetails?.data?.build)) &&
-      repoDetails?.isSuccess === false
-    ) {
-      setFilteredBuilds([]);
+    if (isBranchMissing) {
       toast({
         title: "Branch not found",
         description: `The ${projectEnvironment} branch doesn't exist on this repository. Please create a branch with the name ${projectEnvironment}.`,
@@ -217,21 +239,7 @@ export default function RepoDetails() {
 
       return () => clearTimeout(redirectTimer);
     }
-
-    const filtered = repoDetails?.data?.build
-      .filter((build: IPipeline) => {
-        const matchesBranch = build.branch === repoDetails?.data?.repo.branch;
-        return matchesBranch;
-      })
-      .map(
-        (build: IPipeline): IPipeline => ({
-          ...build,
-          events: [],
-        }),
-      );
-
-    setFilteredBuilds(filtered);
-  }, [repoDetails, projectEnvironment, navigate]);
+  }, [repoDetails, isBranchMissing, projectEnvironment, navigate]);
 
   const latestBuild = useMemo(() => {
     // Deliberately the RAW, server-sorted list rather than the branch-filtered one. With
@@ -684,7 +692,7 @@ export default function RepoDetails() {
                           variant="outline"
                           onClick={() => setIsModalOpen(true)}
                           disabled={isDeploying || isDeleting}
-                          className="w-full shadow-sm sm:w-auto">
+                          className="w-full shadow-xs sm:w-auto">
                           <div className="flex items-center justify-center gap-2">
                             <Rocket size={20} />
                             <span>
@@ -798,7 +806,7 @@ export default function RepoDetails() {
                               ? formatFullDate(
                                   new Date(
                                     repoDetails?.data?.repo
-                                      ?.lastDeploymentDate,
+                                      ?.lastDeploymentDate as string,
                                   ),
                                 )
                               : "N/A"}

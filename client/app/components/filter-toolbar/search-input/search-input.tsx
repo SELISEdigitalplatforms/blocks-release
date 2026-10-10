@@ -21,15 +21,19 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   const [state, setState] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  // A new value from the parent replaces whatever is being typed.
+  const [syncedValue, setSyncedValue] = useState(value);
+  if (syncedValue !== value) {
+    setSyncedValue(value);
     setState(value);
-  }, [value]);
+  }
 
-  const debounced = useRef(
+  // Created once; like before, it calls the onChange from the first render.
+  const [debounced] = useState(() =>
     debounce((val: string) => {
       onChange(val);
     }, 300),
-  ).current;
+  );
 
   useEffect(() => {
     return () => {

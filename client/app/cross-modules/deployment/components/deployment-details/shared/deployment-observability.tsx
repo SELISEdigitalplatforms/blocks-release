@@ -230,7 +230,7 @@ const DeploymentObservability = ({
                   {actions.map((action) => (
                     <button
                       key={action}
-                      className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium hover:border-gray-400 hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 sm:px-3 sm:py-2 sm:text-sm"
+                      className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium hover:border-gray-400 hover:bg-secondary focus:outline-hidden focus:ring-2 focus:ring-offset-2 sm:px-3 sm:py-2 sm:text-sm"
                       onClick={(event) =>
                         handleActionClick(
                           action,
@@ -309,7 +309,7 @@ const DeploymentObservability = ({
                 {actions.map((action) => (
                   <button
                     key={action}
-                    className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium hover:border-gray-400 hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 sm:px-3 sm:py-2 sm:text-sm"
+                    className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium hover:border-gray-400 hover:bg-secondary focus:outline-hidden focus:ring-2 focus:ring-offset-2 sm:px-3 sm:py-2 sm:text-sm"
                     onClick={(event) =>
                       handleActionClick(
                         action,

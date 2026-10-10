@@ -67,7 +67,7 @@ export function ProjectList() {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-[--radix-dropdown-menu-trigger-width]">
+        className="w-(--radix-dropdown-menu-trigger-width)">
         <DropdownMenuLabel>Your Projects</DropdownMenuLabel>
         {projects
           .filter((project) => project.itemId !== selectedProject?.itemId)

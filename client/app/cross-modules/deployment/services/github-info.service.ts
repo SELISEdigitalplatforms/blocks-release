@@ -13,8 +13,11 @@ import {
   CardRepoAndBranchesResponse,
   IChangeRepoSpecs,
   IChangeSettings,
+  IDeploymentStartResponse,
   IManualDeploymentPayload,
+  IReposListResponse,
 } from "@blocks-deployment/models/utils";
+import type { IRepoDetailsResponse } from "@blocks-deployment/pages/repo-details";
 
 export interface IRepoDetailsParams {
   branch?: string;
@@ -95,17 +98,17 @@ export class GithubInfoService {
 
   async cloneGithubRepo(payload: ICloneRepo) {
     const url = CLOUD_BUILD_ENDPOINTS.BUILD_BUILD;
-    return this.httpClient.post<any>(url, payload);
+    return this.httpClient.post<unknown>(url, payload);
   }
 
-  async repoInitialDeploy(payload: any) {
+  async repoInitialDeploy(payload: IChangeRepoSpecs) {
     const url = CLOUD_BUILD_ENDPOINTS.RUN_BUILD;
-    return this.httpClient.post<any>(url, payload);
+    return this.httpClient.post<IDeploymentStartResponse>(url, payload);
   }
 
   async manualDeploy(payload: IManualDeploymentPayload) {
     const url = CLOUD_BUILD_ENDPOINTS.MANUAL;
-    return this.httpClient.post<any>(url, payload);
+    return this.httpClient.post<IDeploymentStartResponse>(url, payload);
   }
 
   async getSpecs() {
@@ -117,11 +120,11 @@ export class GithubInfoService {
     return this.httpClient.get(CLOUD_BUILD_ENDPOINTS.REPOS);
   }
 
-  async getAllRepoBuilds(): Promise<any> {
+  async getAllRepoBuilds(): Promise<unknown> {
     return this.httpClient.get(CLOUD_BUILD_ENDPOINTS.REPOS);
   }
 
-  async getAllProjects(): Promise<any> {
+  async getAllProjects(): Promise<IReposListResponse> {
     return this.httpClient.get(CLOUD_BUILD_ENDPOINTS.REPOS_LIST);
   }
 
@@ -130,7 +133,7 @@ export class GithubInfoService {
   async getRepoDetails(
     repoId: string,
     params?: IRepoDetailsParams,
-  ): Promise<any> {
+  ): Promise<IRepoDetailsResponse> {
     let url = `${CLOUD_BUILD_ENDPOINTS.REPO_DETAILS}?RepoId=${encodeURIComponent(repoId)}`;
 
     // Each parameter is appended when DEFINED rather than when truthy: pageSize 0 is a

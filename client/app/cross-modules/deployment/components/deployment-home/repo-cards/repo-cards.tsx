@@ -153,7 +153,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
               )}
             </h3>
             {!isLoading && (
-              <ChevronRight className="ml-2 h-4 w-4 flex-shrink-0 opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100" />
+              <ChevronRight className="ml-2 h-4 w-4 shrink-0 opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100" />
             )}
           </div>
 

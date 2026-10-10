@@ -194,7 +194,7 @@ const DeploymentDetails = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`mx-0.5 rounded-md px-4 py-2 text-sm font-medium transition-all duration-200 ${
                     activeTab === tab.id
-                      ? "bg-background shadow-sm"
+                      ? "bg-background shadow-xs"
                       : "text-medium-emphasis hover:bg-secondary"
                   }`}>
                   {tab.label}

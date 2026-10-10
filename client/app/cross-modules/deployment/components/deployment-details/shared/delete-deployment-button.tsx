@@ -64,7 +64,7 @@ export const DeleteDeploymentButton = ({
           variant="destructive"
           onClick={() => onModalOpenChange(true)}
           disabled={isDeleting || isDisabled}
-          className="w-full shadow-sm sm:w-auto"
+          className="w-full shadow-xs sm:w-auto"
           data-testid="delete-deployment-button">
           <div className="flex items-center justify-center gap-2">
             <Trash2 size={20} />

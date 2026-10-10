@@ -124,7 +124,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
   }
 
   return (
-    <div className="border-default mb-6 flex h-auto w-full flex-col items-start justify-center gap-4 self-stretch rounded-sm border bg-background p-6 shadow-sm">
+    <div className="border-default mb-6 flex h-auto w-full flex-col items-start justify-center gap-4 self-stretch rounded-sm border bg-background p-6 shadow-xs">
       <div className="w-full">
         <div>
           {/* Header - Desktop view */}
@@ -212,7 +212,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
                           <div
                             key={logIndex}
                             className="flex bg-secondary font-mono text-xs last:border-b-0">
-                            <div className="min-w-[3rem] select-none bg-secondary px-3 py-1 text-right">
+                            <div className="min-w-12 select-none bg-secondary px-3 py-1 text-right">
                               {String(logIndex + 1).padStart(2, "0")}
                             </div>
                             <div className="flex-1 px-3 py-1">

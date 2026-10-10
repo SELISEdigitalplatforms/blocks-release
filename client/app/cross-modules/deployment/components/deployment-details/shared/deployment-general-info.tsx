@@ -42,7 +42,7 @@ const DeploymentGeneralInfo = ({
 
   if (isLoading) {
     return (
-      <div className="flex h-auto flex-col items-start justify-center gap-6 self-stretch rounded-lg border border-border bg-background p-6 shadow-sm">
+      <div className="flex h-auto flex-col items-start justify-center gap-6 self-stretch rounded-lg border border-border bg-background p-6 shadow-xs">
         <Skeleton className="h-6 w-48" />
 
         <div className="grid w-full grid-cols-2 gap-6">
@@ -81,7 +81,7 @@ const DeploymentGeneralInfo = ({
 
   if (isError) {
     return (
-      <div className="flex h-auto flex-col items-start justify-center gap-4 self-stretch rounded-lg border border-red-200 bg-red-50 p-6 shadow-sm">
+      <div className="flex h-auto flex-col items-start justify-center gap-4 self-stretch rounded-lg border border-red-200 bg-red-50 p-6 shadow-xs">
         <div className="text-red-600">
           <p className="font-medium">Failed to load deployment information</p>
           <p className="text-sm">Please try refreshing the page</p>
@@ -91,7 +91,7 @@ const DeploymentGeneralInfo = ({
   }
 
   return (
-    <div className="flex h-auto flex-col items-start justify-center gap-4 self-stretch rounded-lg border bg-background p-4 shadow-sm sm:gap-6 sm:p-6">
+    <div className="flex h-auto flex-col items-start justify-center gap-4 self-stretch rounded-lg border bg-background p-4 shadow-xs sm:gap-6 sm:p-6">
       <h1 className="text-lg font-semibold text-high-emphasis">
         General information
       </h1>

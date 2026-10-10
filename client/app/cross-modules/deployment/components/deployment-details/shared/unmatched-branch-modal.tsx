@@ -231,7 +231,7 @@ export default function BranchVerificationModal({
         role="button"
         tabIndex={0}
         aria-label="Close dialog"
-        className="fixed inset-0 bg-black bg-opacity-50"
+        className="fixed inset-0 bg-black/50"
         onClick={handleBackdropClick}
         onKeyDown={(event) => {
           if (event.key !== "Enter" && event.key !== " ") return;

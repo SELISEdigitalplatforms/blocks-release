@@ -361,7 +361,7 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
                             <div
                               key={logIndex}
                               className="flex bg-secondary font-mono text-xs last:border-b-0">
-                              <div className="min-w-[3rem] select-none bg-secondary px-3 py-1 text-right text-medium-emphasis">
+                              <div className="min-w-12 select-none bg-secondary px-3 py-1 text-right text-medium-emphasis">
                                 {String(logIndex + 1).padStart(2, "0")}
                               </div>
                               <div className="flex-1 px-3 py-1">

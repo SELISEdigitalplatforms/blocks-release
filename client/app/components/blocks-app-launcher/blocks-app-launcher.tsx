@@ -273,7 +273,7 @@ function AppTile({ app, onClick, isLoading }: AppTileProps) {
     <button
       onClick={onClick}
       disabled={isLoading}
-      className="group flex flex-col items-center gap-2 rounded-xl p-3 text-center transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+      className="group flex flex-col items-center gap-2 rounded-xl p-3 text-center transition-colors hover:bg-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
     >
       <div className="flex h-12 w-12 items-center justify-center overflow-hidden">
         {app.icon}
@@ -410,7 +410,7 @@ export function BlocksAppLauncher() {
             aria-label="SELISE Blocks apps"
             className={cn(
               "flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors",
-              "hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "hover:bg-accent hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
               open && "bg-accent text-foreground"
             )}
           >
@@ -482,7 +482,7 @@ export function BlocksAppLauncher() {
                 key={app.key}
                 onClick={() => toggleFavourite(app.key)}
                 className={cn(
-                  "group flex flex-col items-center gap-2 rounded-xl border border-transparent bg-muted/40 p-4 shadow-sm transition-all hover:bg-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                  "group flex flex-col items-center gap-2 rounded-xl border border-transparent bg-muted/40 p-4 shadow-xs transition-all hover:bg-accent hover:shadow-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
                   favouriteKeys.has(app.key) && "border-primary bg-primary/10"
                 )}
                 aria-pressed={favouriteKeys.has(app.key)}

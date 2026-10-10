@@ -55,7 +55,7 @@ export const ProjectCard = ({ project, projects }: ProjectCardProps) => {
   const envList = projects.map((p) => p.environment);
 
   return (
-    <Card className="group flex h-[160px] flex-col overflow-hidden rounded-xl border border-border/60 bg-card p-4 shadow-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md">
+    <Card className="group flex h-[160px] flex-col overflow-hidden rounded-xl border border-border/60 bg-card p-4 shadow-xs transition-all duration-200 hover:border-primary/30 hover:shadow-md">
       <div className="relative flex items-start justify-between gap-2">
         <CardTitle className="line-clamp-3 flex-1 break-all pr-2 text-base font-semibold leading-snug">
           {project.name}
@@ -67,7 +67,7 @@ export const ProjectCard = ({ project, projects }: ProjectCardProps) => {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 flex-shrink-0 text-primary transition-colors hover:bg-primary/10"
+                  className="h-8 w-8 shrink-0 text-primary transition-colors hover:bg-primary/10"
                   onClick={onConfigureClick}>
                   <Settings2 size={16} />
                 </Button>

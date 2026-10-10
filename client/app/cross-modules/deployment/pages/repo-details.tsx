@@ -684,7 +684,7 @@ export default function RepoDetails() {
                           variant="outline"
                           onClick={() => setIsModalOpen(true)}
                           disabled={isDeploying || isDeleting}
-                          className="w-full shadow-sm sm:w-auto">
+                          className="w-full shadow-xs sm:w-auto">
                           <div className="flex items-center justify-center gap-2">
                             <Rocket size={20} />
                             <span>

@@ -100,6 +100,23 @@ export interface IPipeline {
 const DETAILS_BUILD_PAGE_SIZE = 1;
 const HISTORY_BUILD_PAGE_SIZE = 5;
 
+// The Details tab needs only the newest build; History shows one page of five. Asking
+// for a page instead of the whole history is the point of this endpoint's pagination.
+function buildPageFor(tabId: string, historyPageNumber: number) {
+  return tabId === "history"
+    ? { pageNumber: historyPageNumber, pageSize: HISTORY_BUILD_PAGE_SIZE }
+    : { pageNumber: 1, pageSize: DETAILS_BUILD_PAGE_SIZE };
+}
+
+// History has nothing to show before the first build, so the tab strip there is Details plus
+// Environment Variables only. A ?tab=history left over from a deployed repository would
+// otherwise select a tab that does not exist and render an empty page.
+function preDeployTabFor(tabId: string) {
+  return tabId === REPO_DETAILS_PROVIDERS.SECRETS
+    ? REPO_DETAILS_PROVIDERS.SECRETS
+    : REPO_DETAILS_PROVIDERS.DETAILS;
+}
+
 /** The selected project's identifiers, each defaulting to "" while no project is selected. */
 function useSelectedProjectInfo() {
   const { selectedProject } = useProjectStore();
@@ -144,13 +161,10 @@ export default function RepoDetails() {
     () => new URLSearchParams(globalThis.location.search).get("refresh") === "true",
   );
 
-  // The Details tab needs only the newest build; History shows one page of five. Asking
-  // for a page instead of the whole history is the point of this endpoint's pagination.
-  const isHistoryTab = tabId === "history";
-  const buildPageSize = isHistoryTab
-    ? HISTORY_BUILD_PAGE_SIZE
-    : DETAILS_BUILD_PAGE_SIZE;
-  const buildPageNumber = isHistoryTab ? historyPageNumber : 1;
+  const { pageNumber: buildPageNumber, pageSize: buildPageSize } = buildPageFor(
+    tabId,
+    historyPageNumber,
+  );
 
   const {
     data: repoDetails,
@@ -500,13 +514,7 @@ export default function RepoDetails() {
     repoDetails?.data?.build.length === 0 &&
     repoDetails?.data?.repo !== null
   ) {
-    // History has nothing to show before the first build, so the tab strip here is Details plus
-    // Environment Variables only. A ?tab=history left over from a deployed repository would
-    // otherwise select a tab that does not exist and render an empty page.
-    const preDeployTab =
-      tabId === REPO_DETAILS_PROVIDERS.SECRETS
-        ? REPO_DETAILS_PROVIDERS.SECRETS
-        : REPO_DETAILS_PROVIDERS.DETAILS;
+    const preDeployTab = preDeployTabFor(tabId);
 
     return (
       <div className="mx-auto pb-8">

@@ -61,9 +61,9 @@ const RepositorySelector = ({
       repo.full_name.toLowerCase().includes(repoSearchTerm.toLowerCase()),
     ) || [];
 
-  const handleSelectRepo = (repoFullName: string, html_url: string) => {
-    onRepoSelect(repoFullName, html_url); // Pass both values
-    setRepoUrl(html_url);
+  const handleSelectRepo = (repoFullName: string, htmlUrl: string) => {
+    onRepoSelect(repoFullName, htmlUrl); // Pass both values
+    setRepoUrl(htmlUrl);
     onBranchSelect(null);
     setRepoSearchTerm("");
   };

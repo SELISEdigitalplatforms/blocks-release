@@ -1,6 +1,4 @@
 import { Button } from "@/components/ui-kits/button/button";
-import { cn } from "@/lib/utils";
-import { formatDate } from "@/utils/date.util";
 import { useParams, useNavigate } from "react-router";
 import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use-github-info";
 import React, { useEffect, useMemo } from "react";
@@ -16,6 +14,8 @@ import { useScopedPath } from "@/hooks/use-scoped-path";
 const LiveLogs = () => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
+  // A string, unlike the function useScopedPath returns, is stable across renders.
+  const deploymentPath = scoped("deployment");
   const { repoId, buildId } = useParams();
   const { selectedProject } = useProjectStore();
 
@@ -39,10 +39,10 @@ const LiveLogs = () => {
       const errorResponse = httpError.errors;
 
       if (errorResponse.data === null && errorResponse.isSuccess === false) {
-        navigate(scoped("deployment"));
+        navigate(deploymentPath);
       }
     }
-  }, [isError, error, navigate]);
+  }, [isError, error, navigate, deploymentPath]);
 
   useEffect(() => {
     if (buildIdStr && buildIdStr.trim() !== "") {

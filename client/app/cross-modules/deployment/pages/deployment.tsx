@@ -11,14 +11,16 @@ import { useScopedPath } from "@/hooks/use-scoped-path";
 const Deployment = () => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
+  // A string, unlike the function useScopedPath returns, is stable across renders.
+  const deploymentPath = scoped("deployment");
   const [searchParams] = useSearchParams();
   const projectKey = useProjectStore((s) => s.selectedProject?.tenantId) ?? "";
 
   useEffect(() => {
     if (searchParams.get("refresh")) {
-      navigate(scoped("deployment"), { replace: true });
+      navigate(deploymentPath, { replace: true });
     }
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, deploymentPath]);
 
   const {
     data: apiProjects,

@@ -28,9 +28,7 @@ import {
 } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useMemo } from "react";
-import { cn } from "@/lib/utils";
 import { useAlertFilterQueryParams } from "./alerts-filter-toolbar";
-import { formatFullDate } from "@/utils/date.util";
 
 type AlertsListProps = {
   data: AlertTree[];
@@ -255,6 +253,9 @@ export function AlertsList({
     ],
     [setSortQueryParams, sortQueryParams, projectKey],
   );
+  // TanStack Table returns fresh functions each render, so the React Compiler skips this
+  // component; the compiler is not enabled here, and no compiler-safe table API exists.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,

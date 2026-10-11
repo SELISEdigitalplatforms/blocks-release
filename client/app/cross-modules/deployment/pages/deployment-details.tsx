@@ -6,7 +6,6 @@ import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use
 import { toast } from "@/hooks/use-toast";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
 import { ChevronLeft } from "lucide-react";
-import DeploymentGeneralInfo from "@blocks-deployment/components/deployment-details/shared/deployment-general-info";
 import DeploymentLogsTab from "@blocks-deployment/components/deployment-details/tabs/deployment-logs-tab";
 import SASTTab from "@blocks-deployment/components/deployment-details/tabs/sast-tab";
 import SCATab from "@blocks-deployment/components/deployment-details/tabs/sca-tab";
@@ -67,7 +66,9 @@ export interface IDeploymentResponse {
 const DeploymentDetails = () => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
-  const { repoId, buildId } = useParams();
+  // A string, unlike the function useScopedPath returns, is stable across renders.
+  const deploymentPath = scoped("deployment");
+  const { buildId } = useParams();
   const [searchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
 
@@ -106,10 +107,10 @@ const DeploymentDetails = () => {
       const errorResponse = httpError.errors;
 
       if (errorResponse.data === null && errorResponse.isSuccess === false) {
-        navigate(scoped("deployment"));
+        navigate(deploymentPath);
       }
     }
-  }, [isError, error, navigate]);
+  }, [isError, error, navigate, deploymentPath]);
 
   useEffect(() => {
     if (buildIdStr && buildIdStr.trim() !== "") {

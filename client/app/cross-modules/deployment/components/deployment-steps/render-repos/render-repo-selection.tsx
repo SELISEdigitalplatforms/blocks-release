@@ -96,7 +96,7 @@ const RepositorySelector = ({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-md border border-blocks-primary-shades-300 bg-background px-3 py-2 text-left focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary">
+                  className="flex w-full items-center justify-between rounded-md border border-blocks-primary-shades-300 bg-background px-3 py-2 text-left focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary">
                   <div className="flex items-center gap-2 truncate">
                     {selectedRepo ? (
                       <>
@@ -112,12 +112,12 @@ const RepositorySelector = ({
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="max-h-[300px] min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto">
+              <DropdownMenuContent className="max-h-[300px] min-w-(--radix-dropdown-menu-trigger-width) overflow-y-auto">
                 <div className="sticky top-0 border-b bg-background p-2">
                   <input
                     type="text"
                     placeholder="Search repository..."
-                    className="border-default focus:ring-default w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                    className="border-default focus:ring-default w-full rounded-md border px-3 py-2 text-sm focus:outline-hidden focus:ring-2"
                     value={repoSearchTerm}
                     onChange={(e) => setRepoSearchTerm(e.target.value)}
                     onClick={(e) => e.stopPropagation()}
@@ -162,7 +162,7 @@ const RepositorySelector = ({
                 <button
                   type="button"
                   disabled={!selectedRepo}
-                  className={`flex w-full items-center justify-between rounded-md border border-blocks-primary-shades-300 px-3 py-2 text-left focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary ${
+                  className={`flex w-full items-center justify-between rounded-md border border-blocks-primary-shades-300 px-3 py-2 text-left focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary ${
                     !selectedRepo
                       ? "cursor-not-allowed opacity-50"
                       : "bg-background"
@@ -184,12 +184,12 @@ const RepositorySelector = ({
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="max-h-[300px] min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto">
+              <DropdownMenuContent className="max-h-[300px] min-w-(--radix-dropdown-menu-trigger-width) overflow-y-auto">
                 <div className="sticky top-0 border-b bg-background p-2">
                   <input
                     type="text"
                     placeholder="Search branch..."
-                    className="focus:ring- w-full rounded-md border border-low-emphasis px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                    className="focus:ring- w-full rounded-md border border-low-emphasis px-3 py-2 text-sm focus:outline-hidden focus:ring-2"
                     value={branchSearchTerm}
                     onChange={(e) => setBranchSearchTerm(e.target.value)}
                     onClick={(e) => e.stopPropagation()}

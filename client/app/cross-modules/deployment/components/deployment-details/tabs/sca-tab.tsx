@@ -40,6 +40,10 @@ import {
 import { useParams } from "react-router";
 import { Button } from "@/components/ui-kits/button/button";
 import { ErrorDisplay } from "@/components/error-display";
+import type {
+  IScaReportDetails,
+  IScaVulnerability,
+} from "@blocks-deployment/models/sca-report";
 import {
   getDependencyTrackProjectUrl,
   openResolvedUrlInNewTab,
@@ -126,7 +130,7 @@ const Badge = ({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${getVariantStyles()} ${className}`}>
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 ${getVariantStyles()} ${className}`}>
       {children}
     </span>
   );
@@ -173,7 +177,7 @@ const DependencyFilterToolbar = ({
             };
           });
         }}
-        className="w-full rounded-md border py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="w-full rounded-md border py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
       />
     </div>
   );
@@ -903,23 +907,25 @@ const SCATab: React.FC = () => {
     data: scaData,
     isLoading,
     error,
-  } = useGetSCALibraryData(buildId) as any;
+  } = useGetSCALibraryData(buildId);
   const scaDetails = scaData?.data?.details;
   const vulnerabilities = scaData?.data?.vulnerabilities || [];
 
-  const libraryPackageSummary = {
-    critical: scaDetails?.critical,
-    high: scaDetails?.high,
-    medium: scaDetails?.medium,
-    low: scaDetails?.low,
-    unassigned: scaDetails?.unassigned,
-    riskScore: scaDetails?.inheritedRiskScore,
-    vulnerabilities: scaDetails?.vulnerabilities,
-    vulnerableComponents: scaDetails?.vulnerableComponents,
-    components: scaDetails?.components,
-  };
+  const toLibraryPackageSummary = (details: IScaReportDetails): SCASummary => ({
+    critical: details.critical,
+    high: details.high,
+    medium: details.medium,
+    low: details.low,
+    unassigned: details.unassigned,
+    riskScore: details.inheritedRiskScore,
+    vulnerabilities: details.vulnerabilities,
+    vulnerableComponents: details.vulnerableComponents,
+    components: details.components,
+  });
 
-  const transformVulnerabilities = (vulnerabilities: any[]): Dependency[] => {
+  const transformVulnerabilities = (
+    vulnerabilities: IScaVulnerability[],
+  ): Dependency[] => {
     if (!Array.isArray(vulnerabilities) || vulnerabilities.length === 0) {
       return [];
     }
@@ -936,16 +942,16 @@ const SCATab: React.FC = () => {
     };
 
     // Transform vulnerabilities
-    const transformed = vulnerabilities.map((vuln: any, index: number) => ({
+    const transformed = vulnerabilities.map((vuln, index) => ({
       id: (index + 1).toString(),
       component: vuln.name || "Unknown",
       group: vuln.group || "Unknown",
       version: vuln.version || "Unknown",
       vulnerability: vuln.id || "Unknown",
-      cvss: vuln.score ? parseFloat(vuln.score) : null,
-      severity: severityMap[vuln.severity] || "Unassigned",
+      cvss: vuln.score ? parseFloat(String(vuln.score)) : null,
+      severity: severityMap[vuln.severity ?? ""] || "Unassigned",
       source: "NVD",
-      epss: vuln.epssPercentile * 100 || 0,
+      epss: Number(vuln.epssPercentile) * 100 || 0,
       cweName: vuln.cweName || "Unknown",
       description: vuln.description || "No description available",
       name: vuln.name || "No name available",
@@ -1026,7 +1032,7 @@ const SCATab: React.FC = () => {
         <>
           <SCACard
             title="Software library package"
-            summary={libraryPackageSummary}
+            summary={toLibraryPackageSummary(scaDetails)}
             dependencies={libraryPackageDependencies}
           />
         </>

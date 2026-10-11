@@ -3,6 +3,8 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "@/hooks/use-toast";
 import { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
 import { Button } from "@/components/ui-kits/button/button";
+import type { QueryObserverResult } from "@tanstack/react-query";
+import type { IBranchMatchResponse } from "@blocks-deployment/models/github-info";
 
 type ModalState = "loading" | "error" | "success";
 
@@ -15,7 +17,7 @@ interface BranchVerificationModalProps {
   onReopenModal: () => void;
   onForceShowSuccess: () => void;
   repo: IRepoResponse;
-  refetch: () => Promise<any>;
+  refetch: () => Promise<QueryObserverResult<IBranchMatchResponse>>;
   isProcessing: boolean;
   skipInitialVerification?: boolean;
 }
@@ -36,28 +38,6 @@ export default function BranchVerificationModal({
   const [isRetrying, setIsRetrying] = useState(false);
   const isCancelledRef = useRef(false);
   const isRetryingRef = useRef(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      if (isRetryingRef.current) {
-        return;
-      }
-
-      setIsRetrying(false);
-      isCancelledRef.current = false;
-
-      if (skipInitialVerification) {
-        setModalState("error");
-      } else {
-        setModalState("loading");
-        handleBranchVerification();
-      }
-    } else {
-      setIsRetrying(false);
-      isRetryingRef.current = false;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, skipInitialVerification]);
 
   const handleBranchVerification = async () => {
     try {
@@ -120,6 +100,46 @@ export default function BranchVerificationModal({
       });
     }
   };
+
+  // Opening shows the right first screen and closing clears the retry flag. Done while
+  // rendering; isRetrying is set and cleared together with isRetryingRef, so it is the
+  // same guard the effect below uses.
+  const [syncedFrom, setSyncedFrom] = useState<{
+    isOpen: boolean;
+    skipInitialVerification: boolean;
+  } | null>(null);
+  if (
+    !syncedFrom ||
+    syncedFrom.isOpen !== isOpen ||
+    syncedFrom.skipInitialVerification !== skipInitialVerification
+  ) {
+    setSyncedFrom({ isOpen, skipInitialVerification });
+    if (isOpen) {
+      if (!isRetrying) {
+        setModalState(skipInitialVerification ? "error" : "loading");
+      }
+    } else {
+      setIsRetrying(false);
+    }
+  }
+
+  useEffect(() => {
+    if (isOpen) {
+      if (isRetryingRef.current) {
+        return;
+      }
+
+      isCancelledRef.current = false;
+
+      if (!skipInitialVerification) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- only sets state after awaiting refetch()
+        handleBranchVerification();
+      }
+    } else {
+      isRetryingRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, skipInitialVerification]);
 
   const handleClose = () => {
     if (modalState === "loading") {
@@ -231,7 +251,7 @@ export default function BranchVerificationModal({
         role="button"
         tabIndex={0}
         aria-label="Close dialog"
-        className="fixed inset-0 bg-black bg-opacity-50"
+        className="fixed inset-0 bg-black/50"
         onClick={handleBackdropClick}
         onKeyDown={(event) => {
           if (event.key !== "Enter" && event.key !== " ") return;

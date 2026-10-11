@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router";
 import { OIDCPermissionWrapper } from "@blocks-idp/authentication/pages/oidc/permission-wrapper";
 import { OIDCSignin } from "@blocks-idp/authentication/pages/oidc/oidc-signin";
@@ -10,7 +10,6 @@ export default function OidcIndexPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { setAuthenticated, setTokens } = useAuthStore();
-  const [_isExchanging, setIsExchanging] = useState(false);
 
   const code = searchParams.get("code");
   const state = searchParams.get("state");
@@ -19,7 +18,6 @@ export default function OidcIndexPage() {
   useEffect(() => {
     if (!code || !state) return;
 
-    setIsExchanging(true);
     authService
       .verifyOidc({ code, state })
       .then((res) => {
@@ -37,8 +35,7 @@ export default function OidcIndexPage() {
       })
       .catch(() => {
         navigate("/oidc/error");
-      })
-      .finally(() => setIsExchanging(false));
+      });
   }, [code, state]);
 
   if (code && state) {

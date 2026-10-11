@@ -78,7 +78,7 @@ export const CopyableSnippet = ({
       {isCopyable && (
         <button
           onClick={handleCopy}
-          className="absolute -top-[28px] right-2 z-10 text-muted-foreground transition hover:text-foreground"
+          className="absolute top-[-28px] right-2 z-10 text-muted-foreground transition hover:text-foreground"
           aria-label="Copy code"
         >
           {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}

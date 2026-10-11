@@ -5,7 +5,10 @@ import { useAuthStore } from "@/store/auth.store";
 export const useAppState = () => {
   const [isMounted, setIsMounted] = useState(false);
 
+  // Deliberately false for the first render and flipped after mount: ProtectedGuard reads it
+  // to skip its first effect pass, before the user query has had a chance to resolve.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional post-mount flag, see above
     setIsMounted(true);
   }, []);
 

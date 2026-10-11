@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import fs from "fs";
 // import { get } from "http";
@@ -40,7 +41,7 @@ export default defineConfig(({ mode }) => {
   getHttpsConfig();
   return {
     envPrefix: ["BLOCKS_"],
-    plugins: [react()],
+    plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./app"),

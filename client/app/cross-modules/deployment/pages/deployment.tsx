@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import DeploymentOverview from "@blocks-deployment/components/deployment-home/deployment-overview";
 import { useGetAllProjects } from "@/cross-modules/deployment/hooks/use-github-info";
@@ -12,13 +12,11 @@ const Deployment = () => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const [searchParams] = useSearchParams();
-  const [, setRefreshKey] = useState(0);
   const projectKey = useProjectStore((s) => s.selectedProject?.tenantId) ?? "";
 
   useEffect(() => {
     if (searchParams.get("refresh")) {
       navigate(scoped("deployment"), { replace: true });
-      setRefreshKey((prev) => prev + 1);
     }
   }, [searchParams, navigate]);
 

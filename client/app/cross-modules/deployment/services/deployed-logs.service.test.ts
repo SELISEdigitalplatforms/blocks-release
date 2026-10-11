@@ -3,6 +3,7 @@ import { DeployedLogsService } from "./deployed-logs.service";
 import {
   DeploymentEventType,
   DeploymentEventGroup,
+  type IBuildStep,
 } from "@blocks-deployment/models/live-logs";
 import { IBuildEvent } from "@blocks-deployment/models/deployed-logs";
 import { MOCK_BUILD_ID } from "../test-utils/__mocks__";
@@ -101,7 +102,7 @@ describe("DeployedLogsService", () => {
 
   describe("getDefaultExpandedSteps", () => {
     it("should expand error steps", () => {
-      const steps: any[] = [
+      const steps: Partial<IBuildStep>[] = [
         { id: "s1", status: "error", eventGroup: DeploymentEventGroup.Build },
         {
           id: "s2",
@@ -110,13 +111,13 @@ describe("DeployedLogsService", () => {
         },
       ];
 
-      const expanded = DeployedLogsService.getDefaultExpandedSteps(steps);
+      const expanded = DeployedLogsService.getDefaultExpandedSteps(steps as IBuildStep[]);
       expect(expanded.has("s1")).toBe(true);
       expect(expanded.has("s2")).toBe(false);
     });
 
     it("should expand Clone step if it has logs", () => {
-      const steps: any[] = [
+      const steps: Partial<IBuildStep>[] = [
         {
           id: "s1",
           status: "success",
@@ -125,12 +126,12 @@ describe("DeployedLogsService", () => {
         },
       ];
 
-      const expanded = DeployedLogsService.getDefaultExpandedSteps(steps);
+      const expanded = DeployedLogsService.getDefaultExpandedSteps(steps as IBuildStep[]);
       expect(expanded.has("s1")).toBe(true);
     });
 
     it("should not expand Clone step if it has no logs", () => {
-      const steps: any[] = [
+      const steps: Partial<IBuildStep>[] = [
         {
           id: "s1",
           status: "success",
@@ -139,7 +140,7 @@ describe("DeployedLogsService", () => {
         },
       ];
 
-      const expanded = DeployedLogsService.getDefaultExpandedSteps(steps);
+      const expanded = DeployedLogsService.getDefaultExpandedSteps(steps as IBuildStep[]);
       expect(expanded.has("s1")).toBe(false);
     });
   });
@@ -148,15 +149,15 @@ describe("DeployedLogsService", () => {
 
   describe("shouldShowChevron", () => {
     it("should return true if step has logs", () => {
-      const step: any = { logs: ["log 1"] };
+      const step = { logs: ["log 1"] } as IBuildStep;
       expect(DeployedLogsService.shouldShowChevron(step)).toBe(true);
     });
 
     it("should return false if step has no logs", () => {
-      const step: any = { logs: [] };
+      const step = { logs: [] } as unknown as IBuildStep;
       expect(DeployedLogsService.shouldShowChevron(step)).toBe(false);
 
-      const stepNoLogs: any = {};
+      const stepNoLogs = {} as IBuildStep;
       expect(DeployedLogsService.shouldShowChevron(stepNoLogs)).toBe(false);
     });
   });

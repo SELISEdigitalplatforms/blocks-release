@@ -340,7 +340,7 @@ function StarIcon({ filled }: { filled: boolean }) {
 
 /** Leaves the app for the IdP's authorization page. */
 const redirectTo = (url: string) => {
-  window.location.href = url;
+  globalThis.location.href = url;
 };
 
 export function BlocksAppLauncher() {

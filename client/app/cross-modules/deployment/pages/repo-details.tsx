@@ -100,6 +100,17 @@ export interface IPipeline {
 const DETAILS_BUILD_PAGE_SIZE = 1;
 const HISTORY_BUILD_PAGE_SIZE = 5;
 
+/** The selected project's identifiers, each defaulting to "" while no project is selected. */
+function useSelectedProjectInfo() {
+  const { selectedProject } = useProjectStore();
+  return {
+    projectKey: selectedProject?.tenantId || "",
+    projectEnvironment: selectedProject?.environment || "",
+    projectName: selectedProject?.name || "",
+    tenantGroupId: selectedProject?.tenantGroupId || "",
+  };
+}
+
 export default function RepoDetails() {
   const navigate = useNavigate();
   const params = useParams();
@@ -108,11 +119,8 @@ export default function RepoDetails() {
   const [tabId, setTabId] = useQueryState("tab", { defaultValue: "details" });
 
   const scoped = useScopedPath();
-  const projectKey = useProjectStore().selectedProject?.tenantId || "";
-  const projectEnvironment =
-    useProjectStore().selectedProject?.environment || "";
-  const projectName = useProjectStore().selectedProject?.name || "";
-  const tenantGroupId = useProjectStore().selectedProject?.tenantGroupId || "";
+  const { projectKey, projectEnvironment, projectName, tenantGroupId } =
+    useSelectedProjectInfo();
 
   const [isDeploying, setIsDeploying] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -133,7 +141,7 @@ export default function RepoDetails() {
   // up front so the very first query already skips the cache; the effect below only tidies
   // the URL.
   const [forceRefresh, setForceRefresh] = useState(
-    () => new URLSearchParams(window.location.search).get("refresh") === "true",
+    () => new URLSearchParams(globalThis.location.search).get("refresh") === "true",
   );
 
   // The Details tab needs only the newest build; History shows one page of five. Asking
@@ -173,10 +181,10 @@ export default function RepoDetails() {
   }
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
+    const searchParams = new URLSearchParams(globalThis.location.search);
     if (searchParams.get("refresh") === "true") {
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, "", newUrl);
+      const newUrl = globalThis.location.pathname;
+      globalThis.history.replaceState({}, "", newUrl);
     }
   }, []);
 

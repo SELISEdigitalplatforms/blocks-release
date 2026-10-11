@@ -14,6 +14,14 @@ import {
   mergeStepTimeRange,
 } from "@blocks-deployment/utils/deployment-logs.utils";
 
+/**
+ * A log entry in the PascalCase notification shape. Historical entries are mapped
+ * from persisted build events, whose buildId can be null, so BuildId is widened here.
+ */
+type HistoricalLogEntry = Omit<IDeploymentLogsDenormalizedPayload, "BuildId"> & {
+  BuildId: string | null;
+};
+
 export class LiveLogsService {
   /**
    * Get step status based on event type
@@ -42,7 +50,7 @@ export class LiveLogsService {
   /**
    * Process historical logs and return formatted build steps
    */
-  static processHistoricalLogs(logs: any[]): IBuildStep[] {
+  static processHistoricalLogs(logs: HistoricalLogEntry[]): IBuildStep[] {
     if (!logs || logs.length === 0) return [];
 
     const sortedLogs = [...logs].sort((a, b) => {
@@ -129,9 +137,7 @@ export class LiveLogsService {
    * camelCase `IBuildEvent` the API returns. Normalise once at this boundary so
    * the helpers cannot silently match nothing and report every step as "--".
    */
-  private static toBuildEvents(
-    logs: IDeploymentLogsDenormalizedPayload[],
-  ): IBuildEvent[] {
+  private static toBuildEvents(logs: HistoricalLogEntry[]): IBuildEvent[] {
     return (logs || []).map((log) => ({
       id: log.Id ?? "",
       buildId: log.BuildId ?? null,

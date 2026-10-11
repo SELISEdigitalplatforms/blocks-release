@@ -30,7 +30,7 @@ export function LogOutButton() {
     <Button
       variant="link"
       size="sm"
-      className="flex h-full w-full justify-start !p-0 text-error hover:no-underline"
+      className="flex h-full w-full justify-start p-0! text-error hover:no-underline"
       disabled={isPending}
       onClick={handleLogout}>
       Logout

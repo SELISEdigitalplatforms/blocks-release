@@ -1,4 +1,5 @@
 import { IProject } from "@blocks-deployment/components/deployment-home/deployment-overview";
+import type { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
 import { IProvider, IRegion } from "./deployment-settings";
 import { DeploymentFormData } from "./github-info";
 import { IDeploymentLogsDenormalizedPayload } from "./live-logs";
@@ -82,6 +83,18 @@ export interface IChangeRepoSpecs {
   machineConfigId?: string;
   regionId?: string;
   viewInBlocksMonitor?: boolean;
+}
+
+/** What the deploy endpoints return once a build has been queued. */
+export interface IDeploymentStartResponse {
+  buildId?: string;
+  /** Set when the deploy went through but the opted-in Blocks Monitor could not be created. */
+  monitorError?: string;
+}
+
+/** repos-list response: the project's repositories. */
+export interface IReposListResponse {
+  data?: IRepoResponse[];
 }
 
 export interface IAllProjectsResponse {

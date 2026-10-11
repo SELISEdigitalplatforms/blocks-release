@@ -56,6 +56,8 @@ const DeploymentSettingsModal = ({
 }: IDeploymentSettingsModalProps) => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
+  // A string, unlike the function useScopedPath returns, is stable across renders.
+  const deploymentPath = scoped("deployment");
 
   const projectEnvironment =
     useProjectStore().selectedProject?.environment || "";
@@ -119,70 +121,70 @@ const DeploymentSettingsModal = ({
         errorResponse.data?.repo === null &&
         errorResponse.isSuccess === false
       ) {
-        navigate(scoped("deployment"));
+        navigate(deploymentPath);
       }
     }
-  }, [isError, error, navigate]);
+  }, [isError, error, navigate, deploymentPath]);
 
-  useEffect(() => {
-    if (
-      isOpen &&
-      repoDetails?.data?.repo &&
-      !isInitialized &&
-      !isSpecsLoading
-    ) {
-      const repo = repoDetails.data.repo;
-      const preselectedDeploySettings = repo.deploySettings;
-      const deploymentType =
-        repo.deploymentType === "Manual" ? "manual" : "auto";
+  // Fill the form once, the first time the modal is open with the repo and specs loaded.
+  // Done while rendering so the form never paints with its empty defaults first.
+  if (
+    isOpen &&
+    repoDetails?.data?.repo &&
+    !isInitialized &&
+    !isSpecsLoading
+  ) {
+    const repo = repoDetails.data.repo;
+    const preselectedDeploySettings = repo.deploySettings;
+    const deploymentType =
+      repo.deploymentType === "Manual" ? "manual" : "auto";
 
-      // Fixed defaults: Azure, West Europe, First Active Spec
-      const providers = Array.isArray(specsData) ? specsData : [];
-      const azureProvider = providers.find(
-        (p: any) => p.name.toLowerCase() === "azure",
-      );
-      const westEuropeRegion = azureProvider?.region?.find(
-        (r: any) =>
-          r.name.toLowerCase().includes("west") &&
-          r.name.toLowerCase().includes("europe"),
-      );
-      const firstActiveSpec = westEuropeRegion?.machineSpecs?.find(
-        (s: any) => s.status === "active",
-      );
+    // Fixed defaults: Azure, West Europe, First Active Spec
+    const providers = Array.isArray(specsData) ? specsData : [];
+    const azureProvider = providers.find(
+      (p: any) => p.name.toLowerCase() === "azure",
+    );
+    const westEuropeRegion = azureProvider?.region?.find(
+      (r: any) =>
+        r.name.toLowerCase().includes("west") &&
+        r.name.toLowerCase().includes("europe"),
+    );
+    const firstActiveSpec = westEuropeRegion?.machineSpecs?.find(
+      (s: any) => s.status === "active",
+    );
 
-      setDeploymentData({
-        deploymentType,
-        framework: "",
-        provider:
-          azureProvider?.name ||
-          preselectedDeploySettings?.hostingProvider?.name ||
-          "",
-        region:
-          westEuropeRegion?.name ||
-          preselectedDeploySettings?.region?.name ||
-          "",
-        selectedSpec:
-          firstActiveSpec?.id ||
-          preselectedDeploySettings?.machineConfig?.id ||
-          "",
-        providerId:
-          azureProvider?.id ||
-          preselectedDeploySettings?.hostingProvider?.id ||
-          "",
-        regionId:
-          westEuropeRegion?.id || preselectedDeploySettings?.region?.id || "",
-        machineConfigId:
-          firstActiveSpec?.id ||
-          preselectedDeploySettings?.machineConfig?.id ||
-          "",
-        customDomain: preselectedDeploySettings?.customDomain || "",
-        lastDeploymentStatus:
-          preselectedDeploySettings?.lastDeploymentStatus || "",
-      });
+    setDeploymentData({
+      deploymentType,
+      framework: "",
+      provider:
+        azureProvider?.name ||
+        preselectedDeploySettings?.hostingProvider?.name ||
+        "",
+      region:
+        westEuropeRegion?.name ||
+        preselectedDeploySettings?.region?.name ||
+        "",
+      selectedSpec:
+        firstActiveSpec?.id ||
+        preselectedDeploySettings?.machineConfig?.id ||
+        "",
+      providerId:
+        azureProvider?.id ||
+        preselectedDeploySettings?.hostingProvider?.id ||
+        "",
+      regionId:
+        westEuropeRegion?.id || preselectedDeploySettings?.region?.id || "",
+      machineConfigId:
+        firstActiveSpec?.id ||
+        preselectedDeploySettings?.machineConfig?.id ||
+        "",
+      customDomain: preselectedDeploySettings?.customDomain || "",
+      lastDeploymentStatus:
+        preselectedDeploySettings?.lastDeploymentStatus || "",
+    });
 
-      setIsInitialized(true);
-    }
-  }, [isOpen, repoDetails, specsData, isInitialized, isSpecsLoading]);
+    setIsInitialized(true);
+  }
 
   const updateFormData = <K extends keyof DeploymentFormData>(
     field: K,

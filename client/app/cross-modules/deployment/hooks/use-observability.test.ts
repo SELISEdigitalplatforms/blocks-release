@@ -39,7 +39,7 @@ describe("Observability Hooks", () => {
   describe("useGetSCALibraryData", () => {
     it("should fetch SCA library data successfully", async () => {
       vi.mocked(observabilityService.SCAData).mockResolvedValue(
-        "sca-library-report",
+        "sca-library-report" as never,
       );
 
       const { result } = renderHook(() => useGetSCALibraryData(MOCK_BUILD_ID), {

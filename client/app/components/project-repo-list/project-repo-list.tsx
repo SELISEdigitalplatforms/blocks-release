@@ -27,7 +27,7 @@ export const ProjectRepoList = ({
 
   if (isLoading || isReposLoading) {
     return (
-      <div className="mt-6 rounded-lg border bg-card px-2 py-2 shadow-sm md:mt-0">
+      <div className="mt-6 rounded-lg border bg-card px-2 py-2 shadow-xs md:mt-0">
         <div className="grid-col-1 grid gap-3 px-2 py-4 md:grid-cols-2 md:gap-4 lg:gap-6">
           {Array.from({ length: 6 }).map((_item, index) => (
             <div key={index}>
@@ -41,7 +41,7 @@ export const ProjectRepoList = ({
   }
 
   return (
-    <Card className="mt-6 border bg-card px-4 py-4 shadow-sm md:mt-0">
+    <Card className="mt-6 border bg-card px-4 py-4 shadow-xs md:mt-0">
       <div className="mt-2 flex items-center justify-between">
         <CardTitle>Repositories</CardTitle>
         <Button

@@ -192,7 +192,8 @@ test.describe("SAST tab New Code / Overall Code (#209)", () => {
     });
 
     await test.step("[Critical] missing alert_status → Not computed (C4)", async () => {
-      const { alert_status: _, ...rest } = sastDetailsHappy;
+      const rest: Record<string, string> = { ...sastDetailsHappy };
+      delete rest.alert_status;
       await openSastTab(page, rest);
       await expect(page.getByText("Not computed")).toBeVisible({
         timeout: 30_000,

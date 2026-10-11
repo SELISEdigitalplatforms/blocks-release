@@ -624,6 +624,41 @@ describe("RepoDetails page", () => {
     expect(screen.getByText("Deployment Information")).toBeInTheDocument();
   });
 
+  it("shows only Configure in the header, without the Tracing and Logs placeholders", () => {
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: {
+        data: { repo: { ...baseRepo }, build: [makeBuild()] },
+        isSuccess: true,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    expect(screen.queryByRole("button", { name: /Tracing/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Logs$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Configure/i })).toBeInTheDocument();
+  });
+
+  it("shows no Tracing or Logs button in the empty deployment state", () => {
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: repoDetailsEmpty,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    expect(screen.getByText("No deployments available")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Tracing/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Logs$/i })).not.toBeInTheDocument();
+  });
+
   it("navigates away when the repo cannot be resolved", () => {
     vi.mocked(useGetRepoDetails).mockReturnValue({
       data: undefined,

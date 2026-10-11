@@ -28,7 +28,7 @@ describe("Alert Hooks", () => {
       const payload = { itemId: MOCK_MONITOR_ID, isActive: false };
       vi.mocked(alertsService.updateSingleMonitor).mockResolvedValue({
         data: { itemId: MOCK_MONITOR_ID },
-      } as any);
+      } as never);
 
       const { result } = renderHook(() => useUpdateSingleMonitor(), {
         wrapper: createWrapper(),
@@ -47,7 +47,7 @@ describe("Alert Hooks", () => {
     it("should call deleteSingleMonitor and invalidate queries on success", async () => {
       vi.mocked(alertsService.deleteSingleMonitor).mockResolvedValue({
         data: null,
-      } as any);
+      } as never);
 
       const { result } = renderHook(() => useDeleteMonitor(), {
         wrapper: createWrapper(),
@@ -68,7 +68,7 @@ describe("Alert Hooks", () => {
     it("should fetch the monitor list for a repo", async () => {
       const mockResponse = { data: [] };
       vi.mocked(alertsService.getMonitorListById).mockResolvedValue(
-        mockResponse as any,
+        mockResponse as never,
       );
 
       const { result } = renderHook(
@@ -101,7 +101,7 @@ describe("Alert Hooks", () => {
       const payload = { itemId: MOCK_MONITOR_ID, isActive: true };
       vi.mocked(alertsService.updateHealth).mockResolvedValue({
         data: { tenantId: TEST_PROJECT_KEY },
-      } as any);
+      } as never);
 
       const { result } = renderHook(() => useUpdateHealth(), {
         wrapper: createWrapper(),
@@ -120,7 +120,7 @@ describe("Alert Hooks", () => {
     it("should call deleteHealth and invalidate queries on success", async () => {
       vi.mocked(alertsService.deleteHealth).mockResolvedValue({
         data: null,
-      } as any);
+      } as never);
 
       const { result } = renderHook(() => useDeleteHealth(), {
         wrapper: createWrapper(),

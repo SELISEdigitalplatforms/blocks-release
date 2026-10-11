@@ -21,7 +21,7 @@ interface ProviderButtonsProps extends IProviderDestination {
 }
 
 const ProviderButtons = ({
-  destination,
+  destination: destinationProp,
   onClose,
   extraState,
   closeOnProviderSelect,
@@ -31,12 +31,11 @@ const ProviderButtons = ({
 
   const { data: verifyAuth } = useValidateAuthorization();
   const [, setSelectedProvider] = useState<string | null>(null);
-  if (!destination || destination === "") {
-    localStorage.setItem("destination", "/app/deployment/configure");
-    destination = "/app/deployment/configure";
-  } else {
-    localStorage.setItem("destination", destination);
-  }
+  const destination =
+    !destinationProp || destinationProp === ""
+      ? "/app/deployment/configure"
+      : destinationProp;
+  localStorage.setItem("destination", destination);
   const handleContinue = (providerId: string) => {
     setSelectedProvider(providerId);
 

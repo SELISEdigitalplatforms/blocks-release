@@ -322,6 +322,9 @@ export const FileInput = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
     const { dropzoneState, isFileTooBig, isLOF } = useFileUpload();
     const { getRootProps, getInputProps, inputRef, isDragAccept, isDragReject } = dropzoneState;
     const rootProps = isLOF ? {} : getRootProps();
+    let borderClass = "border-gray-300";
+    if (isDragAccept) borderClass = "border-green-500";
+    else if (isDragReject || isFileTooBig) borderClass = "border-red-500";
     return (
       <div
         ref={ref}
@@ -329,16 +332,7 @@ export const FileInput = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
         className={`relative w-full ${isLOF ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
       >
         <div
-          className={cn(
-            `w-full rounded-lg duration-300 ease-in-out ${
-              isDragAccept
-                ? "border-green-500"
-                : isDragReject || isFileTooBig
-                  ? "border-red-500"
-                  : "border-gray-300"
-            }`,
-            className,
-          )}
+          className={cn(`w-full rounded-lg duration-300 ease-in-out ${borderClass}`, className)}
           {...rootProps}
         >
           {children}

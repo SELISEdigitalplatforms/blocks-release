@@ -109,8 +109,7 @@ export default function BranchVerificationModal({
     skipInitialVerification: boolean;
   } | null>(null);
   if (
-    !syncedFrom ||
-    syncedFrom.isOpen !== isOpen ||
+    syncedFrom?.isOpen !== isOpen ||
     syncedFrom.skipInitialVerification !== skipInitialVerification
   ) {
     setSyncedFrom({ isOpen, skipInitialVerification });

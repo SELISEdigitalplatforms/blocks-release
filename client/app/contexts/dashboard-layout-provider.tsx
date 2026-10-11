@@ -32,6 +32,74 @@ const defaultContextValue: SidebarContextValue = {
 
 export const SidebarContext = createContext<SidebarContextValue>(defaultContextValue);
 
+/** The persisted desktop choice, or the fallback when nothing has been stored yet. */
+function readStoredOpen(storageKey: string, fallback: boolean): boolean {
+  const stored = localStorage.getItem(storageKey);
+  return stored === null ? fallback : (JSON.parse(stored) as boolean);
+}
+
+// Where the sidebar starts: a persisted desktop choice wins, mobile always starts closed,
+// and without persistence it simply follows the viewport.
+function initialSidebarOpen(
+  persist: boolean,
+  isMobile: boolean,
+  isOpen: boolean,
+  storageKey: string,
+): boolean {
+  if (!persist) return !isMobile;
+  if (isMobile) return false;
+  return readStoredOpen(storageKey, isOpen);
+}
+
+function nextSidebarOpen({
+  current,
+  isMobile,
+  persist,
+  storageKey,
+  readStored,
+  layoutChanged,
+}: {
+  current: boolean;
+  isMobile: boolean;
+  persist: boolean;
+  storageKey: string;
+  readStored: boolean;
+  layoutChanged: boolean;
+}): boolean {
+  let next = current;
+  // The first time persistence is on, the stored choice applies (mobile stays closed).
+  if (readStored) next = !isMobile && readStoredOpen(storageKey, next);
+  // A viewport or persistence change: mobile closes; without persistence the sidebar
+  // follows the viewport, with it a desktop keeps its current state.
+  if (layoutChanged) next = persist ? next && !isMobile : !isMobile;
+  return next;
+}
+
+function nextSubMenuOpen({
+  current,
+  isMobile,
+  pathname,
+  isSidebarOpen,
+  viewportChanged,
+  routeChanged,
+  sidebarChanged,
+}: {
+  current: boolean;
+  isMobile: boolean;
+  pathname: string;
+  isSidebarOpen: boolean;
+  viewportChanged: boolean;
+  routeChanged: boolean;
+  sidebarChanged: boolean;
+}): boolean {
+  // The submenu only reacts on desktop.
+  if (isMobile) return current;
+  let next = current;
+  if ((viewportChanged || routeChanged) && pathname.startsWith("/services")) next = true;
+  if ((viewportChanged || sidebarChanged) && isSidebarOpen) next = false;
+  return next;
+}
+
 export function DashboardLayoutProvider({
   children,
   isOpen,
@@ -47,17 +115,9 @@ export function DashboardLayoutProvider({
 }) {
   const isMobile = useIsMobile();
   const { pathname } = useLocation();
-  // Where the sidebar starts: a persisted desktop choice wins, mobile always starts closed,
-  // and without persistence it simply follows the viewport.
-  const readInitialOpen = (): boolean => {
-    if (persist) {
-      if (isMobile) return false;
-      const stored = localStorage.getItem(storageKey);
-      return stored !== null ? (JSON.parse(stored) as boolean) : isOpen;
-    }
-    return !isMobile;
-  };
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(readInitialOpen);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
+    initialSidebarOpen(persist, isMobile, isOpen, storageKey),
+  );
   // The stored choice is read the first time persistence is on, and only then.
   const [hasReadStoredOpen, setHasReadStoredOpen] = useState(persist);
 
@@ -90,46 +150,30 @@ export function DashboardLayoutProvider({
     prevInputs.isSidebarOpen !== isSidebarOpen
   ) {
     const viewportChanged = prevInputs.isMobile !== isMobile;
-    const persistChanged = prevInputs.persist !== persist;
+    const readStored = persist && !hasReadStoredOpen;
     setPrevInputs({ isMobile, pathname, persist, isSidebarOpen });
+    if (readStored) setHasReadStoredOpen(true);
 
-    let nextOpen = isSidebarOpen;
-    if (persist && !hasReadStoredOpen) {
-      setHasReadStoredOpen(true);
-      if (!isMobile) {
-        const stored = localStorage.getItem(storageKey);
-        if (stored !== null) nextOpen = JSON.parse(stored) as boolean;
-      } else {
-        nextOpen = false;
-      }
-    }
-    if (viewportChanged || persistChanged) {
-      if (!persist) {
-        nextOpen = !isMobile;
-      } else if (isMobile) {
-        nextOpen = false;
-      }
-    }
+    const nextOpen = nextSidebarOpen({
+      current: isSidebarOpen,
+      isMobile,
+      persist,
+      storageKey,
+      readStored,
+      layoutChanged: viewportChanged || prevInputs.persist !== persist,
+    });
     if (nextOpen !== isSidebarOpen) setIsSidebarOpen(nextOpen);
 
-    let nextSubMenuOpen = isSidebarSubMenuOpen;
-    if (
-      (viewportChanged || prevInputs.pathname !== pathname) &&
-      !isMobile &&
-      pathname.startsWith("/services")
-    ) {
-      nextSubMenuOpen = true;
-    }
-    if (
-      (viewportChanged || prevInputs.isSidebarOpen !== isSidebarOpen) &&
-      isSidebarOpen &&
-      !isMobile
-    ) {
-      nextSubMenuOpen = false;
-    }
-    if (nextSubMenuOpen !== isSidebarSubMenuOpen) {
-      setIsSidebarSubMenuOpen(nextSubMenuOpen);
-    }
+    const nextSubMenu = nextSubMenuOpen({
+      current: isSidebarSubMenuOpen,
+      isMobile,
+      pathname,
+      isSidebarOpen,
+      viewportChanged,
+      routeChanged: prevInputs.pathname !== pathname,
+      sidebarChanged: prevInputs.isSidebarOpen !== isSidebarOpen,
+    });
+    if (nextSubMenu !== isSidebarSubMenuOpen) setIsSidebarSubMenuOpen(nextSubMenu);
   }
 
   const toggleSidebar = useCallback(() => {

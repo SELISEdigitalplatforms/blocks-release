@@ -948,7 +948,7 @@ const SCATab: React.FC = () => {
       group: vuln.group || "Unknown",
       version: vuln.version || "Unknown",
       vulnerability: vuln.id || "Unknown",
-      cvss: vuln.score ? parseFloat(String(vuln.score)) : null,
+      cvss: vuln.score ? Number.parseFloat(String(vuln.score)) : null,
       severity: severityMap[vuln.severity ?? ""] || "Unassigned",
       source: "NVD",
       epss: Number(vuln.epssPercentile) * 100 || 0,

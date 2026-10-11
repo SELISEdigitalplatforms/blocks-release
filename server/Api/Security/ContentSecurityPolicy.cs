@@ -68,24 +68,18 @@ public static class ContentSecurityPolicy
                 .Concat(Origins(runtime, WebSocketOriginKeys).Select(ToWebSocketOrigin))
                 .Concat(Split(csp["ExtraConnectSrc"])),
             imgSrc: Split(csp["ExtraImgSrc"]),
-            formAction: Origins(runtime, FormActionOriginKeys).Concat(Split(csp["ExtraFormAction"])),
-            styleSrc: Split(csp["ExtraStyleSrc"]),
-            fontSrc: Split(csp["ExtraFontSrc"]));
+            formAction: Origins(runtime, FormActionOriginKeys).Concat(Split(csp["ExtraFormAction"])));
     }
 
     /// <summary>The policy itself, separated from configuration so it can be asserted directly.</summary>
     public static string BuildPolicy(
         IEnumerable<string?> connectSrc,
         IEnumerable<string?> imgSrc,
-        IEnumerable<string?> formAction,
-        IEnumerable<string?>? styleSrc = null,
-        IEnumerable<string?>? fontSrc = null)
+        IEnumerable<string?> formAction)
     {
         var connect = Normalize(connectSrc);
         var img = Normalize(imgSrc);
         var form = Normalize(formAction);
-        var style = Normalize(styleSrc ?? []);
-        var font = Normalize(fontSrc ?? []);
 
         return string.Join(
             " ",
@@ -96,11 +90,11 @@ public static class ContentSecurityPolicy
             // logo loader), Radix Dialog/Select/ScrollArea, vaul, sonner and cmdk inject <style>
             // elements at runtime; style-src 'self' broke dialogs, dropdowns and toasts, which is
             // why #211 was reverted. script-src stays strict, which is the directive that matters
-            // for injection. The DM Sans stylesheet host comes from Csp:ExtraStyleSrc.
-            $"style-src 'self' 'unsafe-inline'{Suffix(style)};",
+            // for injection.
+            "style-src 'self' 'unsafe-inline';",
 
             $"img-src 'self' data: blob:{Suffix(img)};",
-            $"font-src 'self' data:{Suffix(font)};",
+            "font-src 'self' data:;",
             $"connect-src 'self'{Suffix(connect)};",
             "frame-ancestors 'none';",
             "base-uri 'self';",

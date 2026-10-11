@@ -223,31 +223,17 @@ public class ContentSecurityPolicyTests
     }
 
     [Fact]
-    public void Build_AllowsTheConfiguredFontHosts()
+    public void Build_ShippedAppsettingsKeepsStylesAndFontsFirstParty()
     {
-        // index.html loads DM Sans from Google Fonts; the stylesheet and the font files come
-        // from two different hosts.
-        var policy = ContentSecurityPolicy.Build(Config(new()
-        {
-            ["Csp:ExtraStyleSrc"] = "https://fonts.googleapis.com",
-            ["Csp:ExtraFontSrc"] = "https://fonts.gstatic.com",
-        }));
-
-        Directive(policy, "style-src").Should().Contain("https://fonts.googleapis.com");
-        Directive(policy, "font-src").Should().Contain("https://fonts.gstatic.com");
-        Directive(policy, "style-src").Should().Contain("'unsafe-inline'");
-    }
-
-    [Fact]
-    public void Build_ShippedAppsettingsAllowsGoogleFonts()
-    {
-        // The test output's appsettings.json is the Worker's, so read the API's from source.
+        // The SPA uses the system font stack, like blocks-os and blocks-monitor, so no
+        // stylesheet or font host is allowed. The test output's appsettings.json is the
+        // Worker's, so read the API's from source.
         var appsettings = ApiAppsettingsPath();
         var policy = ContentSecurityPolicy.Build(
             new ConfigurationBuilder().AddJsonFile(appsettings, optional: false).Build());
 
-        Directive(policy, "style-src").Should().Contain("https://fonts.googleapis.com");
-        Directive(policy, "font-src").Should().Contain("https://fonts.gstatic.com");
+        Directive(policy, "style-src").Should().Be(" 'self' 'unsafe-inline'");
+        Directive(policy, "font-src").Should().Be(" 'self' data:");
     }
 
     private static string ApiAppsettingsPath()

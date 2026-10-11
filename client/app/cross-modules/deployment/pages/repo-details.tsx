@@ -136,6 +136,8 @@ export default function RepoDetails() {
   const [tabId, setTabId] = useQueryState("tab", { defaultValue: "details" });
 
   const scoped = useScopedPath();
+  // A string, unlike the function useScopedPath returns, is stable across renders.
+  const deploymentPath = scoped("deployment");
   const { projectKey, projectEnvironment, projectName, tenantGroupId } =
     useSelectedProjectInfo();
 
@@ -217,10 +219,10 @@ export default function RepoDetails() {
         errorResponse.data?.repo === null &&
         errorResponse.isSuccess === false
       ) {
-        navigate(scoped("deployment"));
+        navigate(deploymentPath);
       }
     }
-  }, [isError, error, navigate]);
+  }, [isError, error, navigate, deploymentPath]);
 
   // The repo's branch has no builds to show when the server reports the lookup failed.
   const isBranchMissing =
@@ -261,7 +263,7 @@ export default function RepoDetails() {
 
       return () => clearTimeout(redirectTimer);
     }
-  }, [repoDetails, isBranchMissing, projectEnvironment, navigate]);
+  }, [repoDetails, isBranchMissing, projectEnvironment, navigate, tenantGroupId]);
 
   const latestBuild = useMemo(() => {
     // Deliberately the RAW, server-sorted list rather than the branch-filtered one. With

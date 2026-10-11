@@ -56,6 +56,8 @@ const DeploymentSettingsModal = ({
 }: IDeploymentSettingsModalProps) => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
+  // A string, unlike the function useScopedPath returns, is stable across renders.
+  const deploymentPath = scoped("deployment");
 
   const projectEnvironment =
     useProjectStore().selectedProject?.environment || "";
@@ -119,10 +121,10 @@ const DeploymentSettingsModal = ({
         errorResponse.data?.repo === null &&
         errorResponse.isSuccess === false
       ) {
-        navigate(scoped("deployment"));
+        navigate(deploymentPath);
       }
     }
-  }, [isError, error, navigate]);
+  }, [isError, error, navigate, deploymentPath]);
 
   // Fill the form once, the first time the modal is open with the repo and specs loaded.
   // Done while rendering so the form never paints with its empty defaults first.

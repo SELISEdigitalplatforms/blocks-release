@@ -36,7 +36,7 @@ export default function OidcIndexPage() {
       .catch(() => {
         navigate("/oidc/error");
       });
-  }, [code, state]);
+  }, [code, state, navigate, setAuthenticated, setTokens]);
 
   if (code && state) {
     return (

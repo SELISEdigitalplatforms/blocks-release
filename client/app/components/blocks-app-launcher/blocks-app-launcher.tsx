@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { showErrorToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { useLocation } from "react-router";
 
 interface BlocksApp {
   key: string;
@@ -322,21 +321,6 @@ function EditIcon() {
   );
 }
 
-// Star icon
-function StarIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      xmlns="http://www.w3.org/2000/svg"
-      className="h-5 w-5"
-      fill={filled ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth={filled ? 0 : 1.5}
-    >
-      <path d="M10 1.5l2.38 6.29h6.63l-5.36 4.12 2.04 6.29-5.69-4.14-5.69 4.14 2.04-6.29-5.36-4.12h6.63z" />
-    </svg>
-  );
-}
 
 /** Leaves the app for the IdP's authorization page. */
 const redirectTo = (url: string) => {
@@ -354,7 +338,6 @@ export function BlocksAppLauncher() {
       : new Set<string>(["iam", "localization"]);
   });
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
-  const location = useLocation();
 
   const saveFavourites = (keys: Set<string>) => {
     setFavouriteKeys(keys);

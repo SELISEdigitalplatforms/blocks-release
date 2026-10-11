@@ -41,6 +41,9 @@ describe("Pagination", () => {
 });
 
 const TableHarness = ({ totalCount }: { totalCount?: number }) => {
+  // TanStack Table returns fresh functions each render, so the React Compiler skips this
+  // component; the compiler is not enabled here, and no compiler-safe table API exists.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: [{ id: 1 }, { id: 2 }],
     columns: [{ id: "id", accessorKey: "id" }],

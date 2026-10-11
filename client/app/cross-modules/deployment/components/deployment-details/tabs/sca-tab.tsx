@@ -365,6 +365,9 @@ const DependenciesTable = ({
     });
   }, [dependencies, filterState]);
 
+  // TanStack Table returns fresh functions each render, so the React Compiler skips this
+  // component; the compiler is not enabled here, and no compiler-safe table API exists.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -909,7 +912,8 @@ const SCATab: React.FC = () => {
     error,
   } = useGetSCALibraryData(buildId);
   const scaDetails = scaData?.data?.details;
-  const vulnerabilities = scaData?.data?.vulnerabilities || [];
+  const rawVulnerabilities = scaData?.data?.vulnerabilities;
+  const vulnerabilities = useMemo(() => rawVulnerabilities || [], [rawVulnerabilities]);
 
   const toLibraryPackageSummary = (details: IScaReportDetails): SCASummary => ({
     critical: details.critical,

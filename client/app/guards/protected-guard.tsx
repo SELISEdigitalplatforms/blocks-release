@@ -27,6 +27,9 @@ export function ProtectedGuard({ children }: { children: React.ReactNode }) {
       return;
     }
     setUser(data.data);
+    // isMounted only gates the first pass (see useAppState). Re-running when it flips would
+    // redirect to /login before the user query resolves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, navigate, setUser, isError]);
 
   if (!isMounted || !data) return null;

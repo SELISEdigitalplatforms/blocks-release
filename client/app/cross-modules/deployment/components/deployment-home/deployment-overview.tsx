@@ -1,6 +1,3 @@
-import { AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui-kits/button/button";
-import { useNavigate } from "react-router";
 
 import {
   IBuildData,
@@ -34,7 +31,6 @@ interface DeploymentOverviewProps {
 }
 
 const DeploymentOverview = ({ projects, refetch }: DeploymentOverviewProps) => {
-  const navigate = useNavigate();
 
   return (
     <div className="mx-auto min-h-screen w-full">

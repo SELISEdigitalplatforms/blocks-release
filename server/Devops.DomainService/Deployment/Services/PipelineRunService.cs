@@ -10,6 +10,7 @@ using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.Shared.Services;
 using Devops.DomainService.Shared.Utilities;
 using Devops.DomainService.VersionControlSystems.Interfaces;
+using Devops.DomainService.VersionControlSystems.TokenStore;
 using k8s;
 using k8s.Autorest;
 using Microsoft.Extensions.Configuration;
@@ -185,7 +186,17 @@ namespace Devops.DomainService.Deployment.Services
                 var yamlPath = CloudBuildConstants.YAML_PATH;
                 var guid = Guid.NewGuid().ToString();
 
-                var accessToken = await _tokenRepository.getToken(blocksUserId);
+                string accessToken;
+                try
+                {
+                    accessToken = await _tokenRepository.getToken(blocksUserId);
+                }
+                catch (GithubTokenStoreException)
+                {
+                    // The owner's token is in the vault and the vault cannot be read: no PipelineRun.
+                    return (null, null, null, GithubTokenMessages.Unavailable);
+                }
+
                 if (string.IsNullOrEmpty(accessToken))
                 {
                     Console.WriteLine("\u274c Access token not found.");

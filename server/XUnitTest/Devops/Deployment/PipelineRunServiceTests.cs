@@ -14,6 +14,7 @@ using Devops.DomainService.Deployment.Models.Response;
 using Devops.DomainService.Deployment.Services;
 using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.VersionControlSystems.Interfaces;
+using Devops.DomainService.VersionControlSystems.TokenStore;
 using FluentAssertions;
 using k8s;
 using k8s.Autorest;
@@ -835,6 +836,27 @@ namespace XUnitTest.Devops.Deployment
             name.Should().BeNull();
             image.Should().BeNull();
             error.Should().Be("Access token not found. Please authorize again.");
+        }
+
+        [Fact]
+        public async Task CreateNamespaceTokenStoreFailureCreatesNoPipelineRunAndReportsUnavailable()
+        {
+            // C9: the owner's token is in Key Vault and the vault cannot be read.
+            SetContext(userId: "user-1");
+            _tokenRepository.Setup(t => t.getToken("user-1"))
+                .ThrowsAsync(new GithubTokenStoreException("The GitHub token store is unavailable."));
+
+            var (name, image, deployedNamespace, error) = await Service().CreateNamespaceAsync(NewRepo());
+
+            name.Should().BeNull();
+            image.Should().BeNull();
+            deployedNamespace.Should().BeNull();
+            error.Should().Be("This operation is not possible right now. Please try again later.");
+            _customObjects.Verify(c => c.CreateNamespacedCustomObjectWithHttpMessagesAsync(
+                It.IsAny<object>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]

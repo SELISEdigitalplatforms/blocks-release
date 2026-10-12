@@ -6,6 +6,7 @@ using Devops.DomainService.VersionControlSystems.Entities;
 using Devops.DomainService.VersionControlSystems.Interfaces;
 using System.Net;
 using Devops.DomainService.VersionControlSystems.Models.Response;
+using Devops.DomainService.VersionControlSystems.TokenStore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -94,7 +95,7 @@ public class AuthService : IAuthService
         try
         {
             var result = await _tokenRepository.getToken();
-            if (result is not null)
+            if (result is not null && !string.IsNullOrEmpty(result.AccessToken))
             {
                 var validation = await _versionControlService.ValidateAccessToken(result);
                 if (validation)
@@ -107,16 +108,13 @@ public class AuthService : IAuthService
                 }
             }
 
-            return new BaseApiResponse
-            {
-                IsSuccess = false,
-                Message = "User is not authorized.",
-                StatusCode = HttpStatusCode.BadRequest,
-                Errors = new Dictionary<string, string>
-                {
-                    { "Authorization", "User is not authorized." }
-                }
-            };
+            // No row, no vault value, an empty token, or GitHub rejected it.
+            return Failure(GithubTokenMessages.Reauthenticate, GithubTokenMessages.AuthorizationErrorKey);
+        }
+        catch (GithubTokenStoreException)
+        {
+            // The vault could not be read: say "try again later", never "re-authenticate".
+            return Failure(GithubTokenMessages.Validate, GithubTokenMessages.TokenStoreErrorKey);
         }
         catch
         {
@@ -133,6 +131,17 @@ public class AuthService : IAuthService
         }
     }
 
+    private static BaseApiResponse Failure(string message, string errorKey) =>
+        new()
+        {
+            IsSuccess = false,
+            Message = message,
+            StatusCode = HttpStatusCode.BadRequest,
+            Errors = new Dictionary<string, string>
+            {
+                { errorKey, message }
+            }
+        };
 
     public async Task<BaseApiResponse> DeleteToken()
     {
@@ -250,6 +259,11 @@ public class AuthService : IAuthService
                 StatusCode = HttpStatusCode.BadRequest
             };
         }
+        catch (GithubTokenStoreException)
+        {
+            // Loading the existing row or writing the vault failed: nothing was written.
+            return Failure(GithubTokenMessages.Unavailable, GithubTokenMessages.TokenStoreErrorKey);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while saving GitHub access token.");
@@ -272,29 +286,26 @@ public class AuthService : IAuthService
         try
         {
             var result = await _tokenRepository.getToken();
-            if (result is not null)
+            var revoked = result is not null && !string.IsNullOrEmpty(result.AccessToken)
+                && await _versionControlService.RevokeOauthAccess(result);
+
+            // The stored token is removed whether or not GitHub accepted the revoke.
+            var deleted = await DeleteToken();
+            if (revoked && deleted.IsSuccess)
             {
-                var validation = await _versionControlService.RevokeOauthAccess(result);
-                if (validation)
+                return new BaseApiResponse
                 {
-                    return new BaseApiResponse
-                    {
-                        IsSuccess = true,
-                        StatusCode = HttpStatusCode.OK
-                    };
-                }
+                    IsSuccess = true,
+                    StatusCode = HttpStatusCode.OK
+                };
             }
-            await DeleteToken();
-            return new BaseApiResponse
-            {
-                IsSuccess = false,
-                Message = "Authorization removal failed.",
-                StatusCode = HttpStatusCode.BadRequest,
-                Errors = new Dictionary<string, string>
-                {
-                    { "Authorization", "Authorization removal failed." }
-                }
-            };
+
+            return Failure("Authorization removal failed.", GithubTokenMessages.AuthorizationErrorKey);
+        }
+        catch (GithubTokenStoreException)
+        {
+            // The token could not be read: GitHub is not called and nothing is deleted.
+            return Failure(GithubTokenMessages.Unavailable, GithubTokenMessages.TokenStoreErrorKey);
         }
         catch
         {

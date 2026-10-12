@@ -7,8 +7,8 @@ namespace Devops.DomainService.VersionControlSystems.TokenStore;
 /// Reads, writes and soft-deletes GitHub token values in Azure Key Vault through
 /// <see cref="ISecretValueStore"/>. The store is resolved from the request's provider only when an
 /// operation runs, and only a Key Vault store is accepted. Every failure surfaces as
-/// <see cref="GithubTokenStoreException"/>. Logs carry the user id and secret id only, never a token
-/// or the store's exception message.
+/// <see cref="GithubTokenStoreException"/>. Logs carry the user id and secret id, never a token
+/// or the message of a failed store operation; a failure to construct the store is logged in full.
 /// </summary>
 internal sealed class GithubTokenVault
 {
@@ -100,7 +100,8 @@ internal sealed class GithubTokenVault
         catch (Exception ex)
         {
             // For example Secrets__ValueStore=KeyVault without KeyVault__KeyVaultUrl.
-            _logger.LogError("GitHub token store could not be constructed ({ErrorType}) for {Operation}. Set KeyVault__KeyVaultUrl and Secrets__ValueStore=KeyVault.", ex.GetType().Name, operation);
+            // No token is passed to the store while it is resolved, so this exception cannot carry one.
+            _logger.LogError(ex, "GitHub token store could not be constructed for {Operation}. Set KeyVault__KeyVaultUrl and Secrets__ValueStore=KeyVault.", operation);
             throw new GithubTokenStoreException(GithubTokenStoreException.DefaultMessage) { Operation = operation };
         }
 

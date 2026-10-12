@@ -18,6 +18,8 @@ namespace Devops.DomainService.VersionControlSystems.RepositoryServices;
 public class 
     TokenRepository : ITokenRepository
 {
+    private const string CollectionName = "RepositoryTokens";
+
     private readonly ILogger<TokenRepository> _logger;
     private readonly IDbContextProvider _dbContextProvider;
     private readonly IMongoDatabase _clientDb;
@@ -62,7 +64,7 @@ public class
             return false;
         }
 
-        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>(CollectionName);
 
         // The pointer comes from the user's stored row, never from the caller's object. It is reused
         // so a re-authorization adds a vault version - unless its value is gone (a soft-deleted name
@@ -135,9 +137,10 @@ public class
             _logger.LogWarning($"Upsert operation was not acknowledged for userid {blocksUserId}");
             return false;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            _logger.LogError($"Failed to save token for userid {blocksUserId}");
+            // saveToken writes the row with AccessToken unset, so the write exception cannot carry the token.
+            _logger.LogError(ex, "Failed to save token for userid {BlocksUserId}", blocksUserId);
             return false;
         }
     }
@@ -148,9 +151,9 @@ public class
         {
             await _vault.DeleteAsync(secretId, blocksUserId).ConfigureAwait(false);
         }
-        catch (GithubTokenStoreException)
+        catch (GithubTokenStoreException ex)
         {
-            _logger.LogError("Unreferenced GitHub token secret could not be removed. BlocksUserId {BlocksUserId}, TokenSecretId {TokenSecretId}.", blocksUserId, secretId);
+            _logger.LogError(ex, "Unreferenced GitHub token secret could not be removed. BlocksUserId {BlocksUserId}, TokenSecretId {TokenSecretId}.", blocksUserId, secretId);
         }
     }
 
@@ -178,7 +181,7 @@ public class
             return null!;
         }
 
-        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>(CollectionName);
         var token = await FindByUserAsync(collection, blocksUserId).ConfigureAwait(false);
         if (token == null)
         {
@@ -200,7 +203,7 @@ public class
             return null!;
         }
 
-        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>(CollectionName);
         var token = await FindByUserAsync(collection, blocksUserId).ConfigureAwait(false);
         if (token == null)
         {
@@ -216,13 +219,13 @@ public class
     
     public async Task<List<RepositoryToken>> getTokens()
     {
-        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>(CollectionName);
         return await collection.Find(_ => true).ToListAsync();
     }
     
     public async Task UpdateUsernameAsync(string id, List<UserOrganizations> orgs)
     {
-        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>(CollectionName);
     
         var filter = Builders<RepositoryToken>.Filter.Eq(x => x.ItemId, id);
         var update = Builders<RepositoryToken>.Update.Set(x => x.Organizations, orgs);
@@ -248,7 +251,7 @@ public class
             return false;
         }
 
-        var collection = _clientDb.GetCollection<RepositoryToken>("RepositoryTokens");
+        var collection = _clientDb.GetCollection<RepositoryToken>(CollectionName);
 
         var filter = Builders<RepositoryToken>.Filter.Eq(nameof(RepositoryToken.BlocksUserId), blocksUserId);
 
@@ -264,9 +267,9 @@ public class
             {
                 await _vault.DeleteAsync(deleted.TokenSecretId, blocksUserId).ConfigureAwait(false);
             }
-            catch (GithubTokenStoreException)
+            catch (GithubTokenStoreException ex)
             {
-                _logger.LogError("GitHub token row was deleted but its vault value could not be soft-deleted. BlocksUserId {BlocksUserId}, TokenSecretId {TokenSecretId}.", blocksUserId, deleted.TokenSecretId);
+                _logger.LogError(ex, "GitHub token row was deleted but its vault value could not be soft-deleted. BlocksUserId {BlocksUserId}, TokenSecretId {TokenSecretId}.", blocksUserId, deleted.TokenSecretId);
             }
         }
 

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui-kits/input/input";
 import { Label } from "@/components/ui-kits/label/label";
 import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import type { RepoSecretMap } from "@blocks-deployment/models/repo-secrets.model";
-import { mapToJson } from "@blocks-deployment/utils/repo-secrets.util";
+import { mapToEnv, mapToJson } from "@blocks-deployment/utils/repo-secrets.util";
 import { useState } from "react";
 
 type RevealSecretModalProps = {
@@ -20,7 +20,53 @@ type RevealSecretModalProps = {
   secrets: RepoSecretMap | null;
 };
 
-type RevealMode = "kv" | "json";
+type RevealMode = "env" | "kv" | "json";
+
+type RevealTextViewProps = {
+  label: string;
+  "aria-label": string;
+  text: string;
+  rows: number;
+};
+
+/**
+ * The whole set as one copyable block. Env and JSON differ only in their text and labels, so
+ * they share this rather than repeating the markup.
+ */
+const RevealTextView = ({ label, "aria-label": ariaLabel, text, rows }: RevealTextViewProps) => (
+  <div className="flex flex-col gap-2">
+    <div className="flex items-center justify-between">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <CopyToClipboardButton textToCopy={text}>
+        <span className="text-xs text-muted-foreground">Copy all</span>
+      </CopyToClipboardButton>
+    </div>
+    <Textarea
+      readOnly
+      value={text}
+      rows={rows}
+      aria-label={ariaLabel}
+      className="font-mono text-sm"
+    />
+  </div>
+);
+
+/** Label and text for the two whole-set views; kept outside the body for Sonar's budget. */
+const textViewFor = (
+  mode: "env" | "json",
+  secrets: RepoSecretMap,
+): Omit<RevealTextViewProps, "rows"> =>
+  mode === "env"
+    ? {
+        label: "Env",
+        "aria-label": "Environment variables as env",
+        text: mapToEnv(secrets),
+      }
+    : {
+        label: "JSON",
+        "aria-label": "Environment variables as JSON",
+        text: mapToJson(secrets),
+      };
 
 /**
  * Shows the fetched set in plaintext.
@@ -40,17 +86,16 @@ export const RevealSecretModal = ({
 }: RevealSecretModalProps) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-      {/* Mounted only while open, so the view mode resets to key/value on every reveal. */}
+      {/* Mounted only while open, so the view mode resets to Env on every reveal. */}
       {open && <RevealSecretBody secrets={secrets} />}
     </DialogContent>
   </Dialog>
 );
 
 const RevealSecretBody = ({ secrets }: { secrets: RepoSecretMap | null }) => {
-  const [mode, setMode] = useState<RevealMode>("kv");
+  const [mode, setMode] = useState<RevealMode>("env");
 
   const entries = Object.entries(secrets ?? {});
-  const json = mapToJson(secrets ?? {});
 
   return (
     <>
@@ -67,6 +112,15 @@ const RevealSecretBody = ({ secrets }: { secrets: RepoSecretMap | null }) => {
           role="radiogroup"
           aria-label="View mode"
           className="flex w-fit gap-1 rounded-md border border-input p-1">
+          <Button
+            type="button"
+            role="radio"
+            aria-checked={mode === "env"}
+            size="sm"
+            variant={mode === "env" ? "secondary" : "ghost"}
+            onClick={() => setMode("env")}>
+            Env
+          </Button>
           <Button
             type="button"
             role="radio"
@@ -121,21 +175,10 @@ const RevealSecretBody = ({ secrets }: { secrets: RepoSecretMap | null }) => {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs text-muted-foreground">JSON</Label>
-              <CopyToClipboardButton textToCopy={json}>
-                <span className="text-xs text-muted-foreground">Copy all</span>
-              </CopyToClipboardButton>
-            </div>
-            <Textarea
-              readOnly
-              value={json}
-              rows={Math.min(entries.length * 2 + 4, 16)}
-              aria-label="Environment variables as JSON"
-              className="font-mono text-sm"
-            />
-          </div>
+          <RevealTextView
+            {...textViewFor(mode, secrets ?? {})}
+            rows={Math.min(entries.length * 2 + 4, 16)}
+          />
         )}
       </div>
     </>

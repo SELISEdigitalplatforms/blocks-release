@@ -76,6 +76,11 @@ services.AddSingleton<IDeploymentHubService, DeploymentHubService>();
 
 var app = builder.Build();
 
+// The CSP origins come from configuration (FrontendRuntime + Csp:Extra*), not from a
+// compiled-in host list -- see Api.Security.ContentSecurityPolicy.
+var contentSecurityPolicy = Api.Security.ContentSecurityPolicy.Build(app.Configuration);
+app.UseMiddleware<Api.Middleware.SecurityHeadersMiddleware>(contentSecurityPolicy);
+
 app.MapHub<DeploymentLogHub>("/deploymentHub");
 app.UseDefaultFiles();
 app.UseStaticFiles();

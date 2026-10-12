@@ -390,7 +390,8 @@ test.describe("Env paste mode (#199)", () => {
       await envTextarea.fill(SAMPLE_ENV);
       await saveButton.click();
       await expect(
-        page.getByText("Environment variables saved successfully"),
+        // exact: the toast's live region repeats the text with a "Notification Success" prefix.
+        page.getByText("Environment variables saved successfully", { exact: true }),
       ).toBeVisible({ timeout: 30_000 });
       await expect(dialog).toBeHidden({ timeout: 10_000 });
     });

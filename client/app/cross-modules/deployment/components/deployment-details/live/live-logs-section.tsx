@@ -150,7 +150,6 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
       }
 
       if (buildId && deploymentMessage.BuildId !== buildId) {
-        setExpandedSteps(new Set());
         return;
       }
 

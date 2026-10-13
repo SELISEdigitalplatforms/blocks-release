@@ -162,10 +162,10 @@ describe("RepoSecretsPanel", () => {
     renderPanel();
     await userEvent.click(screen.getByRole("button", { name: /reveal/i }));
 
+    // Reveal opens on the Env view.
     await waitFor(() =>
-      expect(screen.getByDisplayValue("abc123")).toBeInTheDocument(),
+      expect(screen.getByDisplayValue("API_KEY=abc123")).toBeInTheDocument(),
     );
-    expect(screen.getByDisplayValue("API_KEY")).toBeInTheDocument();
     expect(reveal.mutateAsync).toHaveBeenCalledTimes(1);
   });
 

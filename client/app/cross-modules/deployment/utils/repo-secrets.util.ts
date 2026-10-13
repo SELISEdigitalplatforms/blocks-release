@@ -197,6 +197,12 @@ export const mapToEnv = (secrets: RepoSecretMap): string =>
     .map(([key, value]) => `${key}=${value}`)
     .join("\n");
 
+/** A row with neither key nor value, as "Add more" leaves it. Not trimmed: a space is input. */
+export const isBlankRow = (row: ISecretRow): boolean => row.key === "" && row.value === "";
+
+export const dropBlankRows = (rows: ISecretRow[]): ISecretRow[] =>
+  rows.filter((row) => !isBlankRow(row));
+
 export const findDuplicateKey = (rows: ISecretRow[]): string | null => {
   const seen = new Set<string>();
 

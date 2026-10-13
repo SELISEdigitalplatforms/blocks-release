@@ -15,13 +15,10 @@ import { useSaveRepoSecrets } from "@blocks-deployment/hooks/use-repo-secrets";
 import {
   getServerMessage,
   getServerReason,
+  isBlankRow,
   mapToEnv,
   mapToJson,
   mapToRows,
-  parseSecretEnv,
-  parseSecretJson,
-  rowsToMap,
-  type ParseResult,
 } from "@blocks-deployment/utils/repo-secrets.util";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
@@ -29,6 +26,7 @@ import {
   useFieldArray,
   useForm,
   useWatch,
+  type FieldErrors,
   type UseFieldArrayReturn,
   type UseFormReturn,
 } from "react-hook-form";
@@ -36,6 +34,7 @@ import { SecretEnvEditor } from "./secret-env-editor";
 import { SecretJsonEditor } from "./secret-json-editor";
 import { SecretKvEditor } from "./secret-kv-editor";
 import {
+  activeTabResult,
   secretFormSchema,
   type ISecretFormValues,
   type SecretEntryMode,
@@ -84,17 +83,61 @@ const SecretModeFields = ({
 };
 
 /**
- * Reads the current mode's raw input into a map. Shared by mode switches and submit so the
- * parse / reject path is worded once.
+ * Writes a parsed set into the target tab on a switch. Only called with a valid (so non-empty)
+ * set; the blank-row fallback keeps the key/value editor from ever rendering zero rows.
  */
-const secretsFromValues = (
-  mode: SecretEntryMode,
-  values: Pick<ISecretFormValues, "rows" | "json" | "env">,
-): ParseResult => {
-  if (mode === "env") return parseSecretEnv(values.env);
-  if (mode === "json") return parseSecretJson(values.json);
-  return { ok: true, value: rowsToMap(values.rows) };
+const carryInto = (
+  next: SecretEntryMode,
+  secrets: RepoSecretMap,
+  form: UseFormReturn<ISecretFormValues>,
+  fieldArray: UseFieldArrayReturn<ISecretFormValues, "rows">,
+): void => {
+  if (next === "kv") {
+    const rows = mapToRows(secrets);
+    fieldArray.replace(rows.length > 0 ? rows : [emptyRow]);
+    return;
+  }
+
+  form.setValue(next, next === "json" ? mapToJson(secrets) : mapToEnv(secrets));
 };
+
+/**
+ * Shows the active tab's messages only once the user has edited it, so a fresh tab never opens
+ * on an error. Save enablement does not depend on this; it always follows the parse result.
+ */
+const syncErrors = (
+  form: UseFormReturn<ISecretFormValues>,
+  editedModes: ReadonlySet<SecretEntryMode>,
+): void => {
+  if (editedModes.has(form.getValues("mode"))) {
+    void form.trigger();
+  } else {
+    form.clearErrors();
+  }
+};
+
+/**
+ * A whole-list rule ("Add at least one variable.", the size limit). The zod resolver nests it
+ * under `rows.root` once row inputs are mounted, so read both places.
+ */
+const rowsLevelMessage = (errors: FieldErrors<ISecretFormValues>): string | undefined =>
+  errors.rows?.root?.message ?? errors.rows?.message;
+
+/** Adding or removing a row counts as editing the key/value tab, the same as typing does. */
+const withEditTracking = (
+  fieldArray: UseFieldArrayReturn<ISecretFormValues, "rows">,
+  onEdit: () => void,
+): UseFieldArrayReturn<ISecretFormValues, "rows"> => ({
+  ...fieldArray,
+  append: (value, options) => {
+    fieldArray.append(value, options);
+    onEdit();
+  },
+  remove: (index) => {
+    fieldArray.remove(index);
+    onEdit();
+  },
+});
 
 /**
  * Creates or replaces a repository's whole secret set.
@@ -114,10 +157,15 @@ const FORM_LEVEL_REASONS = new Set<string>([
   REPO_SECRET_ERROR.VaultFailure,
 ]);
 
-const fieldForMode = (mode: SecretEntryMode): "json" | "env" | "rows.0.key" => {
-  if (mode === "json") return "json";
-  if (mode === "env") return "env";
-  return "rows.0.key";
+/**
+ * The field a server key/value error belongs on. In key/value mode that is the first row that was
+ * actually sent: blank rows are dropped from the payload, so row 0 may not be part of it.
+ */
+const fieldForMode = (values: ISecretFormValues): "json" | "env" | `rows.${number}.key` => {
+  if (values.mode === "json") return "json";
+  if (values.mode === "env") return "env";
+  const firstSent = values.rows.findIndex((row) => !isBlankRow(row));
+  return `rows.${Math.max(firstSent, 0)}.key`;
 };
 
 /**
@@ -135,7 +183,7 @@ const applySaveError = (
     getServerMessage(error) ?? "The environment variables could not be saved.";
 
   if (reason && FIELD_MAPPABLE_REASONS.has(reason)) {
-    form.setError(fieldForMode(form.getValues("mode")), {
+    form.setError(fieldForMode(form.getValues()), {
       type: "server",
       message,
     });
@@ -181,7 +229,7 @@ const SecretForm = ({
   const form = useForm<ISecretFormValues>({
     resolver: zodResolver(secretFormSchema),
     defaultValues: {
-      mode: "kv",
+      mode: "env",
       rows: initialSecrets ? mapToRows(initialSecrets) : [emptyRow],
       json: initialSecrets ? mapToJson(initialSecrets) : "",
       env: initialSecrets ? mapToEnv(initialSecrets) : "",
@@ -193,42 +241,42 @@ const SecretForm = ({
   // useWatch rather than form.watch: watch() returns a fresh function each render, which the
   // React Compiler cannot memoize and so opts the whole component out of compilation.
   const mode = useWatch({ control: form.control, name: "mode" });
+  const [rows, json, env] = useWatch({
+    control: form.control,
+    name: ["rows", "json", "env"],
+  });
   const isPending = saveMutation.isPending;
+  const canSave = activeTabResult({ mode, rows, json, env }).ok && !isPending;
+
+  // Tabs the user has typed into (or added / removed rows in) since the dialog opened.
+  const [editedModes, setEditedModes] = useState<ReadonlySet<SecretEntryMode>>(() => new Set());
+
+  const markEdited = () => {
+    const active = form.getValues("mode");
+    // Errors are synced against the updated set straight away rather than after the re-render.
+    const next = editedModes.has(active) ? editedModes : new Set(editedModes).add(active);
+
+    if (next !== editedModes) setEditedModes(next);
+    syncErrors(form, next);
+  };
 
   /**
-   * Carries content across a mode switch instead of clearing it — losing typed input is the
-   * worst thing this screen could do. Leaving a paste mode is refused while its text does not
-   * parse, because there is nothing to convert.
+   * Never refuses a switch — trapping the user on a tab was worse than any conversion. A valid
+   * tab carries its set across; an invalid one converts nothing, so each tab keeps its own text
+   * and no typed input is lost.
    */
   const switchMode = (next: SecretEntryMode) => {
     if (next === mode) return;
 
-    const parsed = secretsFromValues(mode, form.getValues());
+    const parsed = activeTabResult(form.getValues());
 
-    if (!parsed.ok) {
-      if (mode !== "kv") {
-        form.setError(fieldForMode(mode), {
-          type: "manual",
-          message: parsed.message,
-        });
-      }
-      return;
-    }
-
-    const secrets = parsed.value;
-
-    if (next === "kv") {
-      const rows = mapToRows(secrets);
-      fieldArray.replace(rows.length > 0 ? rows : [emptyRow]);
-    } else if (next === "json") {
-      form.setValue("json", mapToJson(secrets));
-    } else {
-      form.setValue("env", mapToEnv(secrets));
-    }
+    if (parsed.ok) carryInto(next, parsed.value, form, fieldArray);
 
     form.setValue("mode", next);
-    form.clearErrors();
+    syncErrors(form, editedModes);
   };
+
+  const rowsMessage = rowsLevelMessage(form.formState.errors);
 
   const applyServerError = (error: unknown) => {
     applySaveError(error, form, setFormError);
@@ -237,18 +285,10 @@ const SecretForm = ({
   const onSubmit = async (values: ISecretFormValues) => {
     setFormError(null);
 
-    const parsed = secretsFromValues(values.mode, values);
+    const parsed = activeTabResult(values);
 
-    // The resolver already proved paste modes parse; the guard narrows the type.
-    if (!parsed.ok) {
-      if (values.mode !== "kv") {
-        form.setError(fieldForMode(values.mode), {
-          type: "manual",
-          message: parsed.message,
-        });
-      }
-      return;
-    }
+    // The resolver already proved the active tab parses; the guard narrows the type.
+    if (!parsed.ok) return;
 
     const secrets = parsed.value;
 
@@ -280,11 +320,23 @@ const SecretForm = ({
         <form
           noValidate
           onSubmit={form.handleSubmit(onSubmit)}
+          // Only the active tab's inputs are mounted, so any change event here is an edit of it.
+          onChange={markEdited}
           className="flex flex-col gap-5">
           <div
             role="radiogroup"
             aria-label="Entry mode"
             className="flex w-fit gap-1 rounded-md border border-input p-1">
+            <Button
+              type="button"
+              role="radio"
+              aria-checked={mode === "env"}
+              size="sm"
+              variant={mode === "env" ? "secondary" : "ghost"}
+              disabled={isPending}
+              onClick={() => switchMode("env")}>
+              Env
+            </Button>
             <Button
               type="button"
               role="radio"
@@ -305,16 +357,6 @@ const SecretForm = ({
               onClick={() => switchMode("json")}>
               Paste JSON
             </Button>
-            <Button
-              type="button"
-              role="radio"
-              aria-checked={mode === "env"}
-              size="sm"
-              variant={mode === "env" ? "secondary" : "ghost"}
-              disabled={isPending}
-              onClick={() => switchMode("env")}>
-              Env
-            </Button>
           </div>
 
           {formError && (
@@ -328,14 +370,12 @@ const SecretForm = ({
           <SecretModeFields
             mode={mode}
             form={form}
-            fieldArray={fieldArray}
+            fieldArray={withEditTracking(fieldArray, markEdited)}
             disabled={isPending}
           />
 
-          {form.formState.errors.rows?.message && (
-            <p className="text-sm text-destructive">
-              {form.formState.errors.rows.message}
-            </p>
+          {mode === "kv" && rowsMessage && (
+            <p className="text-sm text-destructive">{rowsMessage}</p>
           )}
 
           <DialogFooter>
@@ -346,7 +386,7 @@ const SecretForm = ({
               onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={!canSave}>
               {isPending ? "Saving…" : "Save variables"}
             </Button>
           </DialogFooter>

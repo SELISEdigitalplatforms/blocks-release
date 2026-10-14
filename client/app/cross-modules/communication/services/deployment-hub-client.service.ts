@@ -9,8 +9,6 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 const HUB_PATH = "/deploymentHub";
 
 let connection: HubConnection | null = null;
-let currentUserId: string | null = null;
-let startPromise: Promise<void> | null = null;
 
 const hubBaseUrl = (): string => {
   const fromEnv = getRuntimeEnv("BLOCKS_API_BASE_URL").trim().replace(/\/$/, "");
@@ -18,7 +16,7 @@ const hubBaseUrl = (): string => {
   return typeof window !== "undefined" ? window.location.origin : "";
 };
 
-const buildConnection = (userId: string): HubConnection => {
+const _buildConnection = (userId: string): HubConnection => {
   const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
   const url = `${hubBaseUrl()}${HUB_PATH}?x-blocks-key=${encodeURIComponent(
     blocksKey,
@@ -44,7 +42,7 @@ export const connectDeploymentHub = async (
 ): Promise<HubConnection | null> => {
   // Paused: build-log notifications now arrive via the central blocks-logic
   // NotificationHub. To re-enable the local hub, restore the connect logic
-  // (build, start, reuse-or-rebuild) using buildConnection().
+  // (build, start, reuse-or-rebuild) using _buildConnection().
   console.error(
     "[DeploymentHub] connect skipped - central NotificationHub is the active source.",
   );
@@ -61,7 +59,5 @@ export const disconnectDeploymentHub = async (): Promise<void> => {
     console.error("[DeploymentHub] Error stopping connection:", err);
   } finally {
     connection = null;
-    currentUserId = null;
-    startPromise = null;
   }
 };

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Api.Controllers;
@@ -206,12 +207,25 @@ namespace XUnitTest.Api.Controllers
         }
 
         [Fact]
-        public async Task Webhook_WithSignature_ReturnsOk()
+        public async Task Webhook_WithValidSignature_UsesQueryTenant()
         {
+            const string body = "{\"ref\":\"main\"}";
             _buildService.Setup(b => b.HandleWebhookEventAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                          .ReturnsAsync(new BuildResponse());
-            var controller = CreateControllerWithHttp("{\"ref\":\"main\"}", "sha256=deadbeef", "push");
+            var signature = "sha256=" + Convert.ToHexString(
+                HMACSHA256.HashData(Encoding.UTF8.GetBytes("wh-secret"), Encoding.UTF8.GetBytes(body)))
+                .ToLowerInvariant();
+            var controller = CreateControllerWithHttp(body, signature, "push");
             (await controller.Webhook("tenant")).Should().BeOfType<OkObjectResult>();
+            _buildService.Verify(b => b.HandleWebhookEventAsync("push", body, "tenant"), Times.Once);
+        }
+
+        [Fact]
+        public async Task Webhook_WithInvalidSignature_DoesNotStartBuild()
+        {
+            var controller = CreateControllerWithHttp("{}", "sha256=deadbeef", "push");
+            (await controller.Webhook("tenant")).Should().BeOfType<UnauthorizedObjectResult>();
+            _buildService.Verify(b => b.HandleWebhookEventAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         }
     }
 }

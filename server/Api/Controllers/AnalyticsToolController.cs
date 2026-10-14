@@ -40,14 +40,17 @@ namespace Api.Controllers
             var projectId = BlocksContext.GetContext()?.TenantId;
             var userName = user?.UserName;
             var build = await _buildRepository.GetBuild(buildId);
+            string projectUuid = null;
             if (build is not null)
             {
-                var uuidRetrievedResult = await _scaAnalyticsService.RetrieveScaProjectUuid(build);
+                projectUuid = await _scaAnalyticsService.RetrieveScaProjectUuid(build);
             }
             bool userCreationResult = await _dependencyTrackAuthService.ProcessDependencyTrackOidcUser(userName, projectId);
-            return Ok(new BaseResponse()
+            // The client deep-links to {portal}/projects/{projectUuid}; null sends it to the portal root.
+            return Ok(new BaseApiResponse()
             {
-                IsSuccess = userCreationResult
+                IsSuccess = userCreationResult,
+                Data = new { projectUuid }
             });
         }
 
@@ -68,9 +71,16 @@ namespace Api.Controllers
                 });
             }
             bool result = await _sonarQubeAuthService.ProcessSonarQubeUser(userName, build.RepoName, build.ProjectId);
-            return Ok(new BaseResponse()
+            // Same key and branch the pipeline scans under and the SAST report reads from, so the
+            // client can deep-link to {portal}/dashboard?id={projectKey}&branch={branch}.
+            return Ok(new BaseApiResponse()
             {
-                IsSuccess = result
+                IsSuccess = result,
+                Data = new
+                {
+                    projectKey = build.RepoName?.Replace("/", "-"),
+                    branch = build.Branch
+                }
             });
         }
     }

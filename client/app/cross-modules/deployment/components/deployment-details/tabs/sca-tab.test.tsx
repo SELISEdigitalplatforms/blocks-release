@@ -163,13 +163,8 @@ describe("SCATab", () => {
     });
   });
 
-  it("redirects to Dependency Track when the button is clicked", async () => {
-    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
-    const refetch = vi.fn().mockResolvedValue({ data: {} });
-    vi.mocked(useSCARedirectLink).mockReturnValue({
-      isLoading: false,
-      refetch,
-    } as never);
+  const renderLibraries = (refetch: ReturnType<typeof vi.fn>, isLoading = false) => {
+    vi.mocked(useSCARedirectLink).mockReturnValue({ isLoading, refetch } as never);
     vi.mocked(useGetSCALibraryData).mockReturnValue({
       data: {
         data: {
@@ -181,12 +176,59 @@ describe("SCATab", () => {
       error: null,
     } as never);
     renderWithProviders(<SCATab />);
-    fireEvent.click(
-      screen.getByRole("button", { name: /Dependency Track/i }),
+  };
+
+  const stubTab = () => {
+    const tab = { opener: {}, location: { href: "about:blank" } } as unknown as Window;
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(tab);
+    return { tab, openSpy };
+  };
+
+  it("opens the build's project in Dependency Track", async () => {
+    const { tab, openSpy } = stubTab();
+    const refetch = vi.fn().mockResolvedValue({
+      isError: false,
+      data: { isSuccess: true, data: { projectUuid: "5f1c2a9e-0b7d-4e44-9b1e-2d3c4f5a6b7c" } },
+    });
+    renderLibraries(refetch);
+
+    fireEvent.click(screen.getByRole("button", { name: /Dependency Track/i }));
+
+    expect(openSpy).toHaveBeenCalledWith("about:blank", "_blank");
+    await vi.waitFor(() =>
+      expect(tab.location.href).toBe(
+        "https://sca.seliseblocks.com/projects/5f1c2a9e-0b7d-4e44-9b1e-2d3c4f5a6b7c",
+      ),
     );
-    await vi.waitFor(() => expect(refetch).toHaveBeenCalled());
-    expect(openSpy).toHaveBeenCalled();
+    expect(refetch).toHaveBeenCalled();
     openSpy.mockRestore();
+  });
+
+  it("silently opens the Dependency Track home page when no project is found", async () => {
+    const { tab, openSpy } = stubTab();
+    renderLibraries(
+      vi.fn().mockResolvedValue({ isError: false, data: { data: { projectUuid: null } } }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Dependency Track/i }));
+
+    await vi.waitFor(() => expect(tab.location.href).toBe("https://sca.seliseblocks.com"));
+    openSpy.mockRestore();
+  });
+
+  it("silently opens the Dependency Track home page when the access call fails", async () => {
+    const { tab, openSpy } = stubTab();
+    renderLibraries(vi.fn().mockResolvedValue({ isError: true, data: undefined }));
+
+    fireEvent.click(screen.getByRole("button", { name: /Dependency Track/i }));
+
+    await vi.waitFor(() => expect(tab.location.href).toBe("https://sca.seliseblocks.com"));
+    openSpy.mockRestore();
+  });
+
+  it("disables the Dependency Track button while the access call is loading", () => {
+    renderLibraries(vi.fn(), true);
+    expect(screen.getByRole("button", { name: /Dependency Track/i })).toBeDisabled();
   });
 
   it("opens the vulnerability details dialog and filters dependencies", () => {

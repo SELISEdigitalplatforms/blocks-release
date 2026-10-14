@@ -4,7 +4,6 @@ import { useNavigate } from "react-router";
 import { getDeploymentLogEventBadgeClassName } from "@blocks-deployment/utils/deployment-logs.utils";
 import { IDeploySettings } from "@blocks-deployment/models/deployed-logs";
 import { ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { formatFullDate } from "@/utils/date.util";
 import { useScopedPath } from "@/hooks/use-scoped-path";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
@@ -153,7 +152,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
               )}
             </h3>
             {!isLoading && (
-              <ChevronRight className="ml-2 h-4 w-4 flex-shrink-0 opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100" />
+              <ChevronRight className="ml-2 h-4 w-4 shrink-0 opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100" />
             )}
           </div>
 

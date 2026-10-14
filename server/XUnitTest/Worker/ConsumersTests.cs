@@ -68,11 +68,11 @@ namespace XUnitTest.Worker
         // ---- PostBuildConsumer ----
 
         [Fact]
-        public async Task PostBuildConsumer_BuildNotFound_LogsErrorAndStops()
+        public async Task PostBuildConsumer_BuildNotFound_DeadLettersForReplay()
         {
             _f.BuildRepo.Setup(b => b.GetBuildByPipelineRunName("run-1", "tenant-1")).ReturnsAsync((Build)null);
 
-            await PostBuildConsumer().Consume(new PostBuildQueue
+            var act = () => PostBuildConsumer().Consume(new PostBuildQueue
             {
                 ProjectKey = "tenant-1",
                 PipelineRunName = "run-1",
@@ -80,7 +80,8 @@ namespace XUnitTest.Worker
                 PipelineEventType = PipelineEventTypes.DeletePipeLine
             });
 
-            VerifyLogged(LogLevel.Error, "No build found for pipeline run-1", Times.Once());
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*No build found for pipeline run-1*");
         }
 
         [Fact]
@@ -113,7 +114,7 @@ namespace XUnitTest.Worker
         {
             _f.BuildRepo
                 .Setup(b => b.GetBuildByPipelineRunName("run-1", "tenant-1"))
-                .ReturnsAsync(new Build { ItemId = "build-1" });
+                .ReturnsAsync(new Build { ItemId = "build-1", ProjectId = "tenant-1" });
 
             var act = async () => await PostBuildConsumer().Consume(new PostBuildQueue
             {
@@ -131,7 +132,7 @@ namespace XUnitTest.Worker
         {
             _f.BuildRepo
                 .Setup(b => b.GetBuildByPipelineRunName("run-1", "tenant-1"))
-                .ReturnsAsync(new Build { ItemId = "build-1" });
+                .ReturnsAsync(new Build { ItemId = "build-1", ProjectId = "tenant-1" });
 
             await PostBuildConsumer().Consume(new PostBuildQueue
             {
@@ -187,7 +188,7 @@ namespace XUnitTest.Worker
         }
 
         [Fact]
-        public async Task PostBuildConsumer_RepositoryThrows_LogsErrorAndSwallows()
+        public async Task PostBuildConsumer_RepositoryThrows_DeadLettersForReplay()
         {
             _f.BuildRepo
                 .Setup(b => b.GetBuildByPipelineRunName("run-1", "tenant-1"))
@@ -201,8 +202,26 @@ namespace XUnitTest.Worker
                 PipelineEventType = PipelineEventTypes.DeletePipeLine
             });
 
-            await act.Should().NotThrowAsync();
+            await act.Should().ThrowAsync<InvalidOperationException>();
             VerifyLogged(LogLevel.Error, "Failed to process message from queue", Times.Once());
+        }
+
+        [Fact]
+        public async Task PostBuildConsumer_MismatchedBuildTarget_DoesNotRunFollowup()
+        {
+            _f.BuildRepo.Setup(b => b.GetBuildByPipelineRunName("run-1", "tenant-1"))
+                .ReturnsAsync(new Build { ItemId = "build-1", ProjectId = "tenant-2" });
+
+            var act = () => PostBuildConsumer().Consume(new PostBuildQueue
+            {
+                ProjectKey = "tenant-1",
+                PipelineRunName = "run-1",
+                PipelineType = PipelineTypes.RepoDeployment,
+                PipelineEventType = PipelineEventTypes.DeletePipeLine
+            });
+
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*does not belong to the message target tenant*");
         }
 
         [Fact]

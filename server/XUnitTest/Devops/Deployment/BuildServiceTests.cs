@@ -446,7 +446,7 @@ namespace XUnitTest.Devops.Deployment
         {
             SetContext();
             _f.RepoRepo.Setup(r => r.GetRepoByBranch("tenant-b", It.IsAny<string>(), "main"))
-                .ReturnsAsync(new Repo { ItemId = "repo-1", RepoName = "web", Branch = "main", DeploymentType = "Auto" });
+                .ReturnsAsync(new Repo { ItemId = "repo-1", ProjectId = "tenant-b", RepoName = "web", Branch = "main", DeploymentType = "Auto" });
             _f.BuildRepo.Setup(b => b.SaveWebhook(It.IsAny<RepositoryWebhook>(), It.IsAny<string>()))
                 .ReturnsAsync(true);
 
@@ -514,7 +514,7 @@ namespace XUnitTest.Devops.Deployment
             SetContext();
 
             var result = await _f.BuildService()
-                .Build(new BuildRequest { branch = "main" }, new Repo { ItemId = "r", RepoName = "web" });
+                .Build(new BuildRequest { branch = "main" }, new Repo { ItemId = "r", ProjectId = "tenant-b", RepoName = "web" });
 
             result.IsSuccess.Should().BeFalse();
             result.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -591,6 +591,20 @@ namespace XUnitTest.Devops.Deployment
             result.IsSuccess.Should().BeFalse();
             result.StatusCode.Should().Be(HttpStatusCode.BadRequest);
             result.Message.Should().Be("Failed to initiate build. Branch not found.");
+        }
+
+        [Fact]
+        public async Task RunBuild_DoesNotCreateAMonitorWhenTheBuildFails()
+        {
+            SetContext();
+            _f.RepoRepo.Setup(r => r.GetRepo("repo-1"))
+                .ReturnsAsync(new Repo { ItemId = "repo-1", RepoName = "web", Branch = "main" });
+            _f.Vcs.Setup(v => v.GetRepoBranchByName("web", "main")).ReturnsAsync((false, "Branch not found."));
+
+            var result = await _f.BuildService().RunBuild(new RepoBuildRequest { RepoId = "repo-1", viewInBlocksMonitor = true });
+
+            result.IsSuccess.Should().BeFalse();
+            _f.MonitorProvisioning.Verify(m => m.CreateMonitorForRepoAsync(It.IsAny<Repo>()), Times.Never);
         }
 
         [Fact]

@@ -22,11 +22,15 @@ describe("http-client", () => {
 
   it("wires the base url and blocks key resolvers", async () => {
     const mod = await import("./http-client");
+    window.__BLOCKS_ENV__ = {
+      ...window.__BLOCKS_ENV__,
+      BLOCKS_API_BASE_URL: "https://shared-api.example.test",
+    };
     const dep = mod.serviceInstances.deploymentService as unknown as {
       baseURL: () => string;
       blocksKey: () => string;
     };
-    expect(typeof dep.baseURL()).toBe("string");
+    expect(dep.baseURL()).toBe(window.location.origin);
     expect(typeof dep.blocksKey()).toBe("string");
   });
 });

@@ -1,0 +1,39 @@
+{
+  "phase": "DONE",
+  "flow": "A",
+  "runId": "loop-20260929T1050Z-210",
+  "repo": "SELISEdigitalplatforms/blocks-release",
+  "branch": "inception",
+  "issue": 210,
+  "itemId": "PVTI_lADOAXWBR84BZkJEzg9aTfw",
+  "pr": 211,
+  "tipSha": "503425cde8e66abf9d189a09d2df732e33d3e038",
+  "updatedAt": "2026-09-29T12:37:24Z",
+  "author": "asifrafeen",
+  "parentPhase1": 209,
+  "evidence": {
+    "opengrep": 0,
+    "trivy": 0,
+    "zap": 0,
+    "sonarClient": "OK",
+    "sonarServer": "OK",
+    "sca": "OK",
+    "preview": "https://dev-release-211.blocksdevelopers.com",
+    "coverageSASTStrategy": "100%",
+    "e2e": {
+      "deploymentRegression": "passed",
+      "sastPhase1": "passed",
+      "sastPhase2": "passed",
+      "preview": "https://dev-release-211.blocksdevelopers.com"
+    },
+    "zapSummary": ".loop/results-210/zap/summary-final.json",
+    "headSha": "503425cde8e66abf9d189a09d2df732e33d3e038",
+    "ci": {
+      "hygiene": "success",
+      "preview": "success",
+      "sonarClient": "success",
+      "sonarServer": "success",
+      "sca": "success"
+    }
+  }
+}

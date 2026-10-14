@@ -10,23 +10,23 @@ namespace Devops.DomainService.Deployment.RepositoryServices;
 
 public class BuildRepository : IBuildRepository
 {
+    private const string BuildsCollectionName = "Builds";
+
     private readonly ILogger<BuildRepository> _logger;
     private readonly IConfiguration _configuration;
     private readonly IDbContextProvider _dbContextProvider;
     private readonly IBlocksSecret _blocksSecret;
-    private readonly IMongoCollection<Build> _buildsCollection;
     public BuildRepository(IDbContextProvider dbContextProvider, ILogger<BuildRepository> logger, IConfiguration configuration, IBlocksSecret blocksSecret)
     {
         _logger = logger;
         _configuration = configuration;
         _dbContextProvider = dbContextProvider;
         _blocksSecret = blocksSecret;
-        _buildsCollection = _dbContextProvider.GetCollection<Build>("Builds");
     }
 
     public async Task<Build?> GetBuild(string buildId)
     {
-        var buildCollection = _dbContextProvider.GetCollection<Build>("Builds");
+        var buildCollection = _dbContextProvider.GetCollection<Build>(BuildsCollectionName);
         var filter = Builders<Build>.Filter.Eq(b => b.ItemId, buildId);
         var build = buildCollection.Find(filter).FirstOrDefault();
         return build;
@@ -35,7 +35,7 @@ public class BuildRepository : IBuildRepository
     public async Task<Build?> GetBuild(string buildId, string tenantId)
     {
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-        var buildCollection = _dbContext.GetCollection<Build>("Builds");
+        var buildCollection = _dbContext.GetCollection<Build>(BuildsCollectionName);
         var filter = Builders<Build>.Filter.Eq(b => b.ItemId, buildId);
         var build = buildCollection.Find(filter).FirstOrDefault();
         return build;
@@ -49,7 +49,15 @@ public class BuildRepository : IBuildRepository
     /// </summary>
     public async Task<List<Build>?> GetBuilds(string repoId, string tenantId)
     {
-        var collection = _dbContextProvider.GetCollection<Build>(tenantId, "Builds");
+        var collection = _dbContextProvider.GetCollection<Build>(tenantId, BuildsCollectionName);
+        return await GetBuildsAsync(collection, repoId);
+    }
+
+    public Task<List<Build>?> GetBuilds(string repoId, Tenant project) =>
+        GetBuildsAsync(ProjectBuilds(project), repoId);
+
+    private static async Task<List<Build>?> GetBuildsAsync(IMongoCollection<Build> collection, string repoId)
+    {
         var filter = Builders<Build>.Filter.Eq(b => b.RepoId, repoId);
         var builds = await collection.Find(filter).ToListAsync();
         return builds;
@@ -57,7 +65,7 @@ public class BuildRepository : IBuildRepository
 
     public async Task SaveBuild(Build build)
     {
-        var collection = _dbContextProvider.GetCollection<Build>("Builds");
+        var collection = _dbContextProvider.GetCollection<Build>(BuildsCollectionName);
         try
         {
             await collection.InsertOneAsync(build);
@@ -71,23 +79,15 @@ public class BuildRepository : IBuildRepository
     public async Task SaveBuild(Build build, string tenantId)
     {
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-        var collection = _dbContext.GetCollection<Build>("Builds");
-        try
-        {
-            await collection.InsertOneAsync(build);
-        }
-        catch (MongoWriteException e)
-        {
-            _logger.LogError($"Failed to save build for {e.Message}");
-        }
-
+        var collection = _dbContext.GetCollection<Build>(BuildsCollectionName);
+        await collection.InsertOneAsync(build);
     }
 
     public async Task<Build?> GetBuildByPipelineRunName(string pipelineRunName, string tenantId)
     {
         var filter = Builders<Build>.Filter.Eq(build => build.PipelineRunName, pipelineRunName);
         var _dbCollection = _dbContextProvider.GetDatabase(tenantId);
-        return await _dbCollection.GetCollection<Build>("Builds").Find(filter).FirstOrDefaultAsync();
+        return await _dbCollection.GetCollection<Build>(BuildsCollectionName).Find(filter).FirstOrDefaultAsync();
     }
 
     public async Task UpdateBuildEvents(string pipelineRunName, List<BuildEventResponse> buildEventResponses, string eventGroup, string eventStatus, string tenantId)
@@ -103,7 +103,7 @@ public class BuildRepository : IBuildRepository
         try
         {
             var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-            var result = await _dbContext.GetCollection<Build>("Builds").UpdateOneAsync(filter, update, options);
+            await _dbContext.GetCollection<Build>(BuildsCollectionName).UpdateOneAsync(filter, update, options);
         }
         catch (MongoWriteException e)
         {
@@ -113,21 +113,41 @@ public class BuildRepository : IBuildRepository
 
     public async Task UpdateBuildStatus(string pipelineRunName, string eventStatus, string tenantId)
     {
+        try
+        {
+            await UpdateBuildStatusAsync(
+                _dbContextProvider.GetDatabase(tenantId).GetCollection<Build>(BuildsCollectionName), pipelineRunName, eventStatus);
+        }
+        catch (MongoWriteException ex)
+        {
+            _logger.LogError(ex, "Failed to update build status for pipeline {PipelineRunName}.", pipelineRunName);
+        }
+    }
+
+    public Task UpdateBuildStatus(string pipelineRunName, string eventStatus, Tenant project) =>
+        UpdateBuildStatusAsync(ProjectBuilds(project), pipelineRunName, eventStatus);
+
+    private static async Task UpdateBuildStatusAsync(
+        IMongoCollection<Build> collection, string pipelineRunName, string eventStatus)
+    {
         var filter = Builders<Build>.Filter.Eq(b => b.PipelineRunName, pipelineRunName);
         var update = Builders<Build>.Update.Set(b => b.Status, eventStatus)
                                            .Set(b => b.LastUpdatedDate, DateTime.UtcNow);
 
         var options = new UpdateOptions { IsUpsert = false };
+        await collection.UpdateOneAsync(filter, update, options);
+    }
 
-        try
-        {
-            var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-            var result = await _dbContext.GetCollection<Build>("Builds").UpdateOneAsync(filter, update, options);
-        }
-        catch (MongoWriteException e)
-        {
-            _logger.LogError($"MongoWriteException: {e.Message}");
-        }
+    private IMongoCollection<Build> ProjectBuilds(Tenant project)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        if (string.IsNullOrWhiteSpace(project.TenantId)
+            || string.IsNullOrWhiteSpace(project.DbConnectionString)
+            || string.IsNullOrWhiteSpace(project.DBName))
+            throw new InvalidOperationException("Project tenant has no database placement.");
+
+        return _dbContextProvider.GetDatabase(project.DbConnectionString, project.DBName)
+            .GetCollection<Build>(BuildsCollectionName);
     }
 
     public Task<Build?> UpdateBuild(Build pod)
@@ -140,7 +160,7 @@ public class BuildRepository : IBuildRepository
         try
         {
             var _dbContext = _dbContextProvider.GetDatabase(_configuration["RootTenantId"]);
-            var providersCollection = _dbContextProvider.GetCollection<HostingProvider>("HostingProviders");
+            var providersCollection = _dbContext.GetCollection<HostingProvider>("HostingProviders");
 
             var filter = Builders<HostingProvider>.Filter.Eq(p => p.Status, "active");
 
@@ -163,7 +183,7 @@ public class BuildRepository : IBuildRepository
     public async Task<bool> UpdateBuildDependencyTrackProjectId(string buildId, string dependencyTrackProjectId, string tenantId)
     {
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-        var collection = _dbContext.GetCollection<Build>("Builds");
+        var collection = _dbContext.GetCollection<Build>(BuildsCollectionName);
         var filter = Builders<Build>.Filter.Eq(b => b.ItemId, buildId);
         var update = Builders<Build>.Update.Set(b => b.DependencyTrackProjectId, dependencyTrackProjectId);
 

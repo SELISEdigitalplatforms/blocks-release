@@ -1,0 +1,74 @@
+{
+  "phase": "QUALITY_GATE",
+  "flow": "A",
+  "runId": "loop-20260929T1050Z-209",
+  "repo": "SELISEdigitalplatforms/blocks-release",
+  "branch": "inception",
+  "issue": 209,
+  "itemId": "PVTI_lADOAXWBR84BZkJEzg9aTbQ",
+  "updatedAt": "2026-09-29T11:25:36Z",
+  "evidence": {
+    "headSha": "293984eab8b0da16b0e475042915dbc58304a081",
+    "originDevSha": "89aa84ef4314eeedc4aaea71c10018958d577b56",
+    "synced": true,
+    "context": ".loop/context-209.md",
+    "plan": ".loop/plan-209.md",
+    "planReview": ".loop/plan-review-209.md",
+    "tests": {
+      "dotnetUnitPassed": 732,
+      "dotnetUnitFailedMongoOnly": 4,
+      "sastStrategyTests": 5,
+      "vitestSast": 40,
+      "vitestFull": null,
+      "coverageNewCode": {
+        "lines": 100,
+        "stmts": 96.09,
+        "branches": 92.08,
+        "funcs": 100
+      }
+    },
+    "security": ".loop/security-209.md",
+    "opengrepFindings": 0,
+    "trivyFindings": 0,
+    "codeReview": ".loop/code-review-209.md",
+    "pr": {
+      "number": 211,
+      "url": "https://github.com/SELISEdigitalplatforms/blocks-release/pull/211",
+      "sha": "293984eab8b0da16b0e475042915dbc58304a081",
+      "isDraft": true,
+      "previewUrl": "https://dev-release-211.blocksdevelopers.com",
+      "deployPreview": "SUCCESS"
+    },
+    "commits": [
+      "2e14b4d",
+      "0097c6a",
+      "10e24b3",
+      "293984e"
+    ],
+    "ciAtTip": {
+      "deploy-preview": "SUCCESS",
+      "sonarqube_server": "FAILURE",
+      "sonarqube_client": "FAILURE",
+      "SAST SonarQube": "FAILURE",
+      "SCA Trivy SBOM Dependency-Track": "FAILURE",
+      "sca_server": "SUCCESS",
+      "sca_client": "SUCCESS",
+      "CodeQL": "SUCCESS",
+      "Pipeline result": "FAILURE"
+    },
+    "nextPhase": "E2E_PREVIEW"
+  },
+  "e2e": {
+    "status": "green",
+    "preview": "https://dev-release-211.blocksdevelopers.com",
+    "specs": [
+      "sast-tab",
+      "deployment"
+    ],
+    "at": "2026-09-29T11:25:00Z"
+  },
+  "notes": "\nE2E_PREVIEW green; fixing Sonar S3358 + CS0133 + SCA SPEC_VERSION",
+  "pr": 211,
+  "prUrl": "https://github.com/SELISEdigitalplatforms/blocks-release/pull/211",
+  "tipSha": "pending-push"
+}

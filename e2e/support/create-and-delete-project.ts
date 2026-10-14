@@ -8,24 +8,37 @@ const ENV_BUTTON =
 const isVisibleNow = async (locator: { isVisible: (opts: { timeout: number }) => Promise<boolean> }) =>
   locator.isVisible({ timeout: 500 }).catch(() => false)
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
 /** Match e2e-created names: `Test Project 123` and `${PROJECT_NAME} 123`. */
-function orphanProjectPatterns(): RegExp[] {
+function orphanProjectPrefixes(): string[] {
   const prefixes = new Set(["Test Project"])
   const configured = process.env.PROJECT_NAME?.trim()
   if (configured) prefixes.add(configured)
-  return [...prefixes].map((prefix) => new RegExp(`${escapeRegExp(prefix)} \\d+`, "g"))
+  return [...prefixes]
+}
+
+function collectPrefixedNumberedNames(bodyText: string, prefix: string): string[] {
+  const found: string[] = []
+  const needle = `${prefix} `
+  let idx = 0
+  while (idx < bodyText.length) {
+    const at = bodyText.indexOf(needle, idx)
+    if (at < 0) break
+    let end = at + needle.length
+    while (end < bodyText.length && bodyText.charCodeAt(end) >= 48 && bodyText.charCodeAt(end) <= 57) {
+      end += 1
+    }
+    if (end > at + needle.length) found.push(bodyText.slice(at, end))
+    idx = Math.max(end, at + 1)
+  }
+  return found
 }
 
 async function listOrphanProjectNames(page: Page): Promise<string[]> {
   const bodyText = await page.locator("body").innerText().catch(() => "")
   const names = new Set<string>()
-  for (const pattern of orphanProjectPatterns()) {
-    for (const match of bodyText.matchAll(pattern)) {
-      names.add(match[0])
+  for (const prefix of orphanProjectPrefixes()) {
+    for (const match of collectPrefixedNumberedNames(bodyText, prefix)) {
+      names.add(match)
     }
   }
   return [...names]
@@ -431,7 +444,7 @@ export async function deleteCreatedProject(
       }
       return deleted
     } catch (error) {
-      console.warn(`[e2e] Failed to delete project "${projectName}" on OS:`, error)
+      console.warn("[e2e] Failed to delete project on OS:", projectName, error)
       return false
     }
   })

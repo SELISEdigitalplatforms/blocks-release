@@ -174,13 +174,15 @@ Copy `client/.env.example` to `client/.env`. Vite loads variables prefixed with 
 | Variable                      | Role                                                                                                                                                                                                                                      |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `BLOCKS_APP_URL`              | Public app origin; surfaced at runtime via `window.__BLOCKS_ENV__` / `import.meta.env` (see `client/app/lib/runtime-env.ts`, `client/index.html`).                                                                                        |
-| `BLOCKS_API_BASE_URL`         | Base URL for API calls; in **`npm run dev`**, when set, enables the **`server.proxy`** rules in `client/vite.config.ts` (paths such as `/api`, `/cloudbuild`, `/idp`, …). Used in `client/app/lib/get-api-path.ts` for composed API URLs. |
+| `BLOCKS_API_BASE_URL`         | External backend target for the **`npm run dev`** proxy in `client/vite.config.ts` (paths such as `/api`, `/cloudbuild`, `/idp`, …); browser API URLs use the current page origin. |
 | `BLOCKS_X_BLOCKS_KEY`         | Injected into the published shell for client/runtime use (placeholder replacement on the server).                                                                                                                                         |
 | `BLOCKS_GOOGLE_SITE_KEY`      | Injected for captcha-related flows.                                                                                                                                                                                                       |
 | `BLOCKS_CONSTRUCT_URL`        | Injected construct/builder URL token.                                                                                                                                                                                                     |
 | `BLOCKS_GITHUB_SSO_CLIENT_ID` | Injected GitHub SSO client id.                                                                                                                                                                                                            |
 
-When the API serves a **built** SPA from `wwwroot`, `server/Api/Program.cs` runs **`DotNetEnv.Env.Load()`** and replaces placeholders such as `__BLOCKS_API_BASE_URL__` in `.html`, `.js`, `.css`, and `.json` under `wwwroot` with non-empty environment values. Match those names to deployment secrets or env files on the host.
+When the API serves a **built** SPA from `wwwroot`, `server/Api/Program.cs` replaces placeholders such as `__BLOCKS_API_BASE_URL__` in `.html`, `.js`, `.css`, and `.json` with non-empty values from the `FrontendRuntime` configuration section. Environment variables named `FrontendRuntime__BLOCKS_*` can override those values at deployment.
+
+In the browser, `BLOCKS_API_BASE_URL` resolves to `window.location.origin` so Release API calls use the host that served the page, including its scheme and port. The configured value remains the Vite proxy target during local development and is available to non-browser callers.
 
 **Server-only (not in `.env.example`)**
 
@@ -233,6 +235,24 @@ npm --prefix client run test -- --coverage
 ## Deployment
 
 `scripts/deploy.sh` is the maintainer deploy script for a systemd host: it checks out the latest `inception`, builds the client, publishes the Api and Worker projects, and installs and restarts their systemd services. For container-based deployment, use the root `Dockerfile` (Api + SPA) and `Dockerfile.worker` (Worker) instead.
+
+## Database placement (Genesis 4.2.2)
+
+API and Worker use the published Genesis 4.2.2 package and follow the tenant's persisted `DbConnectionString` and `DBName`. BuildRepository can be constructed without an ambient tenant. Hosting providers are read through configured `RootTenantId`, which must resolve to main. Build/status/event/webhook operations retain explicit target tenant routing; root tenant discovery, VCS credentials and shared deployment metadata remain centralized. Teardown reads every environment in the requested `TenantGroupId` from main's `Tenants` collection and uses each stored connection and database name, including for tenants already disabled by OS.
+
+The GitHub webhook takes the target tenant from the `x-blocks-key` query parameter, verifies `X-Hub-Signature-256`, and routes repository, webhook, build, and pipeline follow-up work to that target. A repository secret used as a build argument is read under that target's temporary worker context when the webhook has no HTTP user context. Repository pipeline messages also carry the tenant ID; a missing or mismatched build is dead-lettered for replay rather than acknowledged as completed.
+
+Teardown continues through other environments when one fails and reports partial failures. The ProjectDelete consumer throws on an incomplete run. Genesis dead-letters that delivery; it does not automatically retry it. Operators must replay the dead-lettered message after resolving the failure. Replayed cleanup is idempotent for archived repositories, deleted namespaces, and already-deleted secrets.
+
+Regression tests construct the repository without context, resolve hosting providers from root, perform concurrent build/status/webhook operations with identical IDs, and tear down disabled environments with identical repository IDs in separate disposable databases through Genesis. Start local MongoDB and run:
+
+```powershell
+dotnet test server/XUnitTest/XUnitTest.csproj -c Release
+```
+
+New routing tests default to localhost:27017; `BLOCKS_ROUTING_TEST_MONGO_PORT` selects another local port. Existing integration fixtures still use localhost:27017. No deployed databases are used. Local isolation tests do not prove live pipeline/cluster connectivity.
+
+Deploy both API and Worker before enabling OS split placement. Updating Release does not update generated or independently deployed applications; those consumers need their own compatible Genesis runtime. Existing environment migration is deferred.
 
 ## License
 

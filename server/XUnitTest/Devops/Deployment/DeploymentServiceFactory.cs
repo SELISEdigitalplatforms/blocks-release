@@ -36,6 +36,7 @@ namespace XUnitTest.Devops.Deployment
         public Mock<ICloudBuildSecret> Secret { get; } = new();
         public Mock<ITokenRepository> TokenRepo { get; } = new();
         public Mock<IMessageClient> MessageClient { get; } = new();
+        public Mock<IMonitorProvisioningService> MonitorProvisioning { get; } = new();
         public Mock<INotificationService> Notification { get; } = new();
         public Mock<IDataGatewayDeploymentRepository> DataGatewayRepo { get; } = new();
         public Mock<ITenantLookupRepository> TenantLookup { get; } = new();
@@ -93,7 +94,7 @@ namespace XUnitTest.Devops.Deployment
             new(new Mock<ILogger<BuildService>>().Object,
                 BuildRepo.Object, RepoRepo.Object, Vcs.Object,
                 PipelineRunService(), Webhook.Object,
-                DomainValidator.Object, MessageClient.Object);
+                DomainValidator.Object, MessageClient.Object, MonitorProvisioning.Object);
 
         public Mock<ISecretService> SecretService { get; } = new();
 

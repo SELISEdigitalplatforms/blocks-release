@@ -52,7 +52,7 @@ const stripPortFromUrl = (url: string) => {
     parsedUrl.port = "";
     return parsedUrl.toString();
   } catch (error) {
-    console.error(`Failed to parse URL: ${url}`, error);
+    console.error("Failed to parse URL:", url, error);
     return url;
   }
 };
@@ -75,6 +75,13 @@ export const getRuntimeEnv = (
   key: RuntimeKey,
   options: GetRuntimeEnvOptions = {},
 ): string => {
+  // The Release API is served by the same host as the SPA. Keep the configured
+  // value for non-browser consumers (including Vite's development proxy).
+  if (key === "BLOCKS_API_BASE_URL" && globalThis.window !== undefined) {
+    const origin = globalThis.window.location.origin;
+    return options.ensureTrailingSlash ? ensureTrailingSlash(origin) : origin;
+  }
+
   let value = "";
   const runtimeEnv =
     typeof window !== "undefined"

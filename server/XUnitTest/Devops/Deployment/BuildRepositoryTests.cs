@@ -37,6 +37,7 @@ namespace XUnitTest.Devops.Deployment
             _provider.Setup(p => p.GetCollection<HostingProvider>("HostingProviders")).Returns(_providers.Object);
             _provider.Setup(p => p.GetDatabase(It.IsAny<string>())).Returns(_tenantDb.Object);
             _tenantDb.Setup(d => d.GetCollection<Build>("Builds", null)).Returns(_tenantBuilds.Object);
+            _tenantDb.Setup(d => d.GetCollection<HostingProvider>("HostingProviders", null)).Returns(_providers.Object);
 
             _sut = new BuildRepository(
                 _provider.Object,
@@ -127,14 +128,14 @@ namespace XUnitTest.Devops.Deployment
         }
 
         [Fact]
-        public async Task SaveBuild_SwallowsAWriteFailureAgainstATenantDatabase()
+        public async Task SaveBuild_TenantWriteFailureIsReportedToTheBuildInitiator()
         {
             _tenantBuilds.Setup(c => c.InsertOneAsync(It.IsAny<Build>(), null, It.IsAny<CancellationToken>()))
                          .ThrowsAsync(WriteFailure());
 
             var act = () => _sut.SaveBuild(new Build { ItemId = "build-1" }, "tenant-b");
 
-            await act.Should().NotThrowAsync();
+            await act.Should().ThrowAsync<MongoWriteException>();
         }
 
         [Fact]

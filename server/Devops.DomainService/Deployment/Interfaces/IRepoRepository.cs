@@ -1,3 +1,4 @@
+using Blocks.Genesis;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Models.Dtos;
 using Devops.DomainService.Deployment.Models.Request;
@@ -27,9 +28,13 @@ public interface IRepoRepository
     public Task<bool> UpdateRepo(RepoUpdateRequest repo);
     public Task<bool> UpdateRepo(RepoUpdateRequest repo,string tenantId);
     public Task<bool> UpdateRepo(Repo repo);
+    public Task<bool> UpdateRepo(Repo repo, string tenantId);
     public Task<bool> ClearDeployedNamespace(string repoId, string tenantId, string lastDeploymentStatus);
+    public Task<bool> ClearDeployedNamespace(string repoId, Tenant project, string lastDeploymentStatus);
     public Task<List<Repo>> GetProjectRepos(string tenantId, string? resourceId = null);
+    public Task<List<Repo>> GetProjectRepos(Tenant project, string? resourceId = null);
     public Task<bool> ArchiveRepo(string repoId, string tenantId);
+    public Task<bool> ArchiveRepo(string repoId, Tenant project);
     public Task<IReadOnlyList<RepoWithBuildsResponse>> GetReposWithBuildsAsync(string projectId);
     public Task<DeploySettings> GetDeploySettings(string hostingProviderId, string regionId, string machineConfigId);
     public Task<BulkOperationSummary> UpdateRepoDomain(RepoDomainUpdateRequest repowithdomain);

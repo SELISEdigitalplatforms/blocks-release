@@ -6,7 +6,6 @@ import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use
 import { toast } from "@/hooks/use-toast";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
 import { ChevronLeft } from "lucide-react";
-import DeploymentGeneralInfo from "@blocks-deployment/components/deployment-details/shared/deployment-general-info";
 import DeploymentLogsTab from "@blocks-deployment/components/deployment-details/tabs/deployment-logs-tab";
 import SASTTab from "@blocks-deployment/components/deployment-details/tabs/sast-tab";
 import SCATab from "@blocks-deployment/components/deployment-details/tabs/sca-tab";
@@ -67,21 +66,27 @@ export interface IDeploymentResponse {
 const DeploymentDetails = () => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
-  const { repoId, buildId } = useParams();
+  // A string, unlike the function useScopedPath returns, is stable across renders.
+  const deploymentPath = scoped("deployment");
+  const { buildId } = useParams();
   const [searchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
-
-  useEffect(() => {
-    if (tabFromUrl) {
-      setActiveTab(tabFromUrl);
-    }
-  }, [tabFromUrl]);
 
   const buildIdStr = useMemo(() => {
     return Array.isArray(buildId) ? buildId[0] : buildId;
   }, [buildId]);
 
-  const [activeTab, setActiveTab] = useState("deployment-logs");
+  const [activeTab, setActiveTab] = useState(
+    () => tabFromUrl || "deployment-logs",
+  );
+  // A ?tab= in the URL selects that tab, including when it changes later.
+  const [syncedTabFromUrl, setSyncedTabFromUrl] = useState(tabFromUrl);
+  if (syncedTabFromUrl !== tabFromUrl) {
+    setSyncedTabFromUrl(tabFromUrl);
+    if (tabFromUrl) {
+      setActiveTab(tabFromUrl);
+    }
+  }
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   const queryResult = useGetCardProjectAndBranch(buildIdStr ?? "");
@@ -102,10 +107,10 @@ const DeploymentDetails = () => {
       const errorResponse = httpError.errors;
 
       if (errorResponse.data === null && errorResponse.isSuccess === false) {
-        navigate(scoped("deployment"));
+        navigate(deploymentPath);
       }
     }
-  }, [isError, error, navigate]);
+  }, [isError, error, navigate, deploymentPath]);
 
   useEffect(() => {
     if (buildIdStr && buildIdStr.trim() !== "") {
@@ -194,7 +199,7 @@ const DeploymentDetails = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`mx-0.5 rounded-md px-4 py-2 text-sm font-medium transition-all duration-200 ${
                     activeTab === tab.id
-                      ? "bg-background shadow-sm"
+                      ? "bg-background shadow-xs"
                       : "text-medium-emphasis hover:bg-secondary"
                   }`}>
                   {tab.label}

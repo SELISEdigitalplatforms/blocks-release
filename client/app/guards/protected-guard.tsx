@@ -27,6 +27,9 @@ export function ProtectedGuard({ children }: { children: React.ReactNode }) {
       return;
     }
     setUser(data.data);
+    // isMounted only gates the first pass (see useAppState). Re-running when it flips would
+    // redirect to /login before the user query resolves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, navigate, setUser, isError]);
 
   if (!isMounted || !data) return null;
@@ -77,7 +80,9 @@ export function ImpersonationTerminator({
       });
   }, [mutateAsync, terminate, isImpersonated, isTriggering]);
 
-  if (isImpersonated || isTriggering.current) return null;
+  // While the stop request is in flight the session is still impersonated, so this also
+  // covers the triggering window; the ref only guards against starting a second request.
+  if (isImpersonated) return null;
   return <>{children}</>;
 }
 
@@ -128,6 +133,8 @@ export function ImpersonationSynchronizer({
   ]);
   if (isImpersonating) return <LoadingSpinner />;
 
-  if (!isImpersonated || isTriggering.current) return null;
+  // isImpersonating mirrors the in-flight request (set and cleared alongside the ref), so the
+  // spinner above already covers it; the ref only guards against a second request.
+  if (!isImpersonated) return null;
   return <>{children}</>;
 }

@@ -210,7 +210,9 @@ public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
         if (dependencyTrackProject.RepoProjects == null)
             dependencyTrackProject.RepoProjects = new List<RepoProject>();
 
-        bool exists = dependencyTrackProject.RepoProjects.Any(rp => rp.RepoId == build.RepoId);
+        // Dependency-Track keeps one project per repo + branch (name + version), so each one needs
+        // its own entry - matching on RepoId alone left every branch after the first unmapped to the team.
+        bool exists = dependencyTrackProject.RepoProjects.Any(rp => rp.RepoId == build.RepoId && rp.ProjectUuid == apiCallResult.uuid);
 
         if (!exists)
         {

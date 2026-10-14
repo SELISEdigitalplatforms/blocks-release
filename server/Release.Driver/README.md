@@ -44,6 +44,8 @@ public class MyService
 | `RemoveAuthorizationAsync()` | Revokes the current user's OAuth access from the provider |
 | `DeleteAuthorizationAsync()` | Deletes the stored access token for the current user |
 | `GetReposListAsync()` | Retrieves the repository list; archived repositories are excluded |
+| `GetRepoDetailsAsync(repoId, branch, pageNumber, pageSize)` | Retrieves a repository with its paged build history |
+| `GetReportsAsync(buildId, type)` | Retrieves test and analysis reports produced by a build |
 | `GetUserAsync()` | Retrieves the authenticated GitHub user |
 | `SearchRepositoriesAsync(search, pageNumber, pageSize)` | Searches the authenticated user's GitHub repositories |
 | `GetBranchesAsync(repo)` | Retrieves the branches for the specified GitHub repository |

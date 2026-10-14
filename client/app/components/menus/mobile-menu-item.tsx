@@ -67,7 +67,7 @@ export function MobileMenuItem({
       <div
         className={cn(
           "flex h-10 items-center justify-between px-4 py-1.5 text-base text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
-          isActiveMenu && "!text-primary",
+          isActiveMenu && "text-primary!",
         )}>
         <Link
           to={menu.path}
@@ -98,7 +98,7 @@ export function MobileMenuItem({
         <div
           className={cn(
             "flex h-10 items-center justify-between px-4 py-1.5 text-base text-[hsl(var(--low-emphasis))] hover:text-[hsl(var(--high-emphasis))]",
-            isActiveMenu && "!text-primary",
+            isActiveMenu && "text-primary!",
           )}>
           <div className="flex items-center gap-3">
             {menu.icon ? <menu.icon className="h-5 w-5" /> : null}
@@ -113,7 +113,7 @@ export function MobileMenuItem({
         hideClose>
         <SheetHeader className="flex-row items-center justify-between px-4 py-3">
           <SheetTitle>{menu.name}</SheetTitle>
-          <SheetClose className="!mt-0">
+          <SheetClose className="mt-0!">
             <X className="h-4 w-4" />
           </SheetClose>
         </SheetHeader>

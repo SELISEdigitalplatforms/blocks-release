@@ -32,7 +32,7 @@ export const ProjectCliSnippet = () => {
   };
   const { data, isLoading } = useGetProject({ projectId: itemId });
 
-  const cliSetupCommand = "npm install -g @seliseblocks/cli";
+  const cliSetupCommand = "npm install -g @seliseblocks/cli-os";
   const blocksMicroservicesUrl = getProjectBlocksApiUrl(data?.data);
   const projectSetupCommand =
     `blocks new web ${data?.data?.name?.replaceAll(" ", "_").toLowerCase()} --x-blocks-key ${data?.data?.tenantId} --app-domain ${data?.data?.applications?.[0]?.domain ?? ""} --project-slug ${data?.data?.tenantSlug || ""} --blocks-api-url ${blocksMicroservicesUrl}`.trim();

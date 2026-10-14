@@ -28,17 +28,20 @@ public class BuildService : IBuildService
     private readonly IVersionControlService _githubService;
     private readonly IValidator<RepoDomainUpdateRequest> _repoDomainUpdateRequestValidator;
     private readonly IMessageClient _messageClient;
+    private readonly IMonitorProvisioningService _monitorProvisioningService;
 
     public BuildService(
-                        ILogger<BuildService> logger,   
+                        ILogger<BuildService> logger,
                         IBuildRepository buildRepository,
                         IRepoRepository repoRepository,
                         IVersionControlService githubService,
                         PipelineRunService pipelineRunService,
                         IGithubWebhookService githubWebhookService,
                         IValidator<RepoDomainUpdateRequest> repoDomainUpdateRequestValidator,
-                        IMessageClient messageClient)
+                        IMessageClient messageClient,
+                        IMonitorProvisioningService monitorProvisioningService)
     {
+        _monitorProvisioningService = monitorProvisioningService;
         _logger = logger;
         _buildRepository = buildRepository;
         _repoRepository = repoRepository;
@@ -49,16 +52,30 @@ public class BuildService : IBuildService
         _messageClient = messageClient;
     }
 
-    public async Task<BuildResponse> Build(BuildRequest request, Repo? repo = null)
+    public Task<BuildResponse> Build(BuildRequest request, Repo? repo = null) =>
+        Build(request, repo, repo?.ProjectId ?? BlocksContext.GetContext()?.TenantId);
+
+    private async Task<BuildResponse> Build(BuildRequest request, Repo? repo, string? targetTenantId)
     {
         _logger.LogInformation("Build(): Starting build process for repo.");
 
         try
         {
+            if (repo is null)
+                throw new InvalidOperationException("Repository not found.");
+            if (string.IsNullOrWhiteSpace(targetTenantId)
+                || (!string.IsNullOrWhiteSpace(repo.ProjectId)
+                    && !string.Equals(repo.ProjectId, targetTenantId, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException("The repository does not belong to the requested project tenant.");
+
             var blocksContext = BlocksContext.GetContext();
-            var tenantId = string.IsNullOrWhiteSpace(blocksContext.TenantId) ? repo.ProjectId : blocksContext.TenantId;
-            var blocksUserId = string.IsNullOrWhiteSpace(blocksContext.UserId) ? repo.CreatedBy : blocksContext.UserId;
-            var (pipelineRunNameGuid, buildImageName, paramNamespace, errorMessage) = await _pipelineRunService.CreateNamespaceAsync(repo);
+            var tenantId = targetTenantId;
+            var blocksUserId = string.Equals(blocksContext?.TenantId, tenantId, StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(blocksContext?.UserId)
+                    ? blocksContext.UserId
+                    : repo.CreatedBy;
+            var (pipelineRunNameGuid, buildImageName, paramNamespace, errorMessage) =
+                await _pipelineRunService.CreateNamespaceAsync(repo, tenantId, blocksUserId);
          
             if (pipelineRunNameGuid == null || buildImageName == null) 
             {
@@ -70,8 +87,8 @@ public class BuildService : IBuildService
                     StatusCode = HttpStatusCode.BadRequest
                 };
             }
-            var webhook = await _githubWebhookService.CreateWebhook(repo);
-            var repoUpdate = await this.RepositoryUpdateForBuild(repo, request, webhook, paramNamespace);
+            var webhook = await _githubWebhookService.CreateWebhook(repo, tenantId, blocksUserId);
+            var repoUpdate = await this.RepositoryUpdateForBuild(repo, request, webhook, tenantId, paramNamespace);
 
             if (!repoUpdate)
             {
@@ -82,7 +99,7 @@ public class BuildService : IBuildService
                     paramNamespace, repo.ItemId);
             }
 
-            Build build = await SaveBuild(repo, request, buildImageName, blocksUserId, pipelineRunNameGuid);
+            Build build = await SaveBuild(repo, request, buildImageName, blocksUserId, pipelineRunNameGuid, tenantId);
 
 
             try
@@ -173,6 +190,14 @@ public class BuildService : IBuildService
     /// so a repository archived upstream could never have its namespace destroyed.
     /// </summary>
     public async Task<BaseApiResponse> DeleteDeployment(Repo repo, string? tenantId, string? blocksUserId = null)
+        => await DeleteDeploymentCore(repo, tenantId, null, blocksUserId);
+
+    // Deletion follows the persisted placement even after blocks-os disables the tenant.
+    public Task<BaseApiResponse> DeleteDeployment(Repo repo, Tenant project, string? blocksUserId = null)
+        => DeleteDeploymentCore(repo, project.TenantId, project, blocksUserId);
+
+    private async Task<BaseApiResponse> DeleteDeploymentCore(
+        Repo repo, string? tenantId, Tenant? project, string? blocksUserId)
     {
         ArgumentNullException.ThrowIfNull(repo);
 
@@ -204,7 +229,7 @@ public class BuildService : IBuildService
 
         // Cancel first. A namespace deleted underneath a running pipeline gets recreated by its deploy-app
         // step, leaving a live deployment the product believes is gone and can no longer reach.
-        var (cancelledBuilds, cancelFailure) = await CancelInFlightBuilds(repoId, tenantId);
+        var (cancelledBuilds, cancelFailure) = await CancelInFlightBuilds(repoId, tenantId, project);
         if (cancelFailure is not null)
         {
             return new BaseApiResponse
@@ -229,7 +254,9 @@ public class BuildService : IBuildService
             };
         }
 
-        var cleared = await _repoRepository.ClearDeployedNamespace(repoId, tenantId, EventStatus.DELETED);
+        var cleared = project is null
+            ? await _repoRepository.ClearDeployedNamespace(repoId, tenantId, EventStatus.DELETED)
+            : await _repoRepository.ClearDeployedNamespace(repoId, project, EventStatus.DELETED);
         if (!cleared)
         {
             _logger.LogError(
@@ -276,13 +303,16 @@ public class BuildService : IBuildService
     /// Cancels every build of this repo that has not reached a terminal status.
     /// </summary>
     /// <returns>The PipelineRuns actually cancelled, and a failure message if any cancellation was rejected.</returns>
-    private async Task<(List<string> Cancelled, string Failure)> CancelInFlightBuilds(string repoId, string tenantId)
+    private async Task<(List<string> Cancelled, string Failure)> CancelInFlightBuilds(
+        string repoId, string tenantId, Tenant? project)
     {
         var cancelled = new List<string>();
 
         // Tenant-explicit: in the worker there is no ambient tenant to fall back on, and guessing one
         // would read a different project's builds, find nothing in flight, and skip the cancel entirely.
-        var builds = await _buildRepository.GetBuilds(repoId, tenantId);
+        var builds = project is null
+            ? await _buildRepository.GetBuilds(repoId, tenantId)
+            : await _buildRepository.GetBuilds(repoId, project);
         if (builds is null || builds.Count == 0)
             return (cancelled, null);
 
@@ -294,46 +324,68 @@ public class BuildService : IBuildService
 
         foreach (var pipelineRunName in inFlightRunNames)
         {
-            // Ask before cancelling. A build record whose status was never advanced to a terminal value
-            // looks in-flight forever, and cancelling it would demand `patch` on pipelineruns for a run
-            // that finished long ago. Reading only needs `get`, which the status polling already uses.
-            var (isRunning, stateError) = await _pipelineRunService.IsPipelineRunRunningAsync(pipelineRunName);
-
-            if (stateError is not null)
-            {
-                // Deleting the namespace without knowing whether a pipeline is live risks it being
-                // recreated by deploy-app, so an unreadable state stops the delete just like a failed cancel.
-                return (cancelled, $"Could not determine whether the build '{pipelineRunName}' is still running: {stateError}. Deployment was not deleted.");
-            }
-
-            if (!isRunning)
-            {
-                // Finished or already reaped. Its recorded status is merely stale, and we cannot tell what it
-                // finished as, so leave it rather than mislabelling a success as cancelled.
-                continue;
-            }
-
-            var (success, alreadyGone, error) = await _pipelineRunService.CancelPipelineRunAsync(pipelineRunName);
-
-            if (!success)
-            {
-                return (cancelled, $"Could not cancel the in-progress build '{pipelineRunName}': {error}. Deployment was not deleted.");
-            }
-
-            if (alreadyGone)
-            {
-                // It finished between the check and the cancel - nothing was running, nothing to relabel.
-                continue;
-            }
-
-            await _buildRepository.UpdateBuildStatus(pipelineRunName, EventStatus.CANCELLED, tenantId);
-            cancelled.Add(pipelineRunName);
+            var (wasCancelled, failure) = await CancelIfStillRunning(pipelineRunName, tenantId, project);
+            if (failure is not null)
+                return (cancelled, failure);
+            if (wasCancelled)
+                cancelled.Add(pipelineRunName);
         }
 
         return (cancelled, null);
     }
 
+    /// <summary>
+    /// Cancels one PipelineRun if it is actually still running, and relabels its build as cancelled.
+    /// </summary>
+    /// <returns>Whether it was cancelled, and a failure message that must stop the delete.</returns>
+    private async Task<(bool Cancelled, string Failure)> CancelIfStillRunning(
+        string pipelineRunName, string tenantId, Tenant? project)
+    {
+        // Ask before cancelling. A build record whose status was never advanced to a terminal value
+        // looks in-flight forever, and cancelling it would demand `patch` on pipelineruns for a run
+        // that finished long ago. Reading only needs `get`, which the status polling already uses.
+        var (isRunning, stateError) = await _pipelineRunService.IsPipelineRunRunningAsync(pipelineRunName);
+
+        if (stateError is not null)
+        {
+            // Deleting the namespace without knowing whether a pipeline is live risks it being
+            // recreated by deploy-app, so an unreadable state stops the delete just like a failed cancel.
+            return (false, $"Could not determine whether the build '{pipelineRunName}' is still running: {stateError}. Deployment was not deleted.");
+        }
+
+        if (!isRunning)
+        {
+            // Finished or already reaped. Its recorded status is merely stale, and we cannot tell what it
+            // finished as, so leave it rather than mislabelling a success as cancelled.
+            return (false, null);
+        }
+
+        var (success, alreadyGone, error) = await _pipelineRunService.CancelPipelineRunAsync(pipelineRunName);
+
+        if (!success)
+        {
+            return (false, $"Could not cancel the in-progress build '{pipelineRunName}': {error}. Deployment was not deleted.");
+        }
+
+        if (alreadyGone)
+        {
+            // It finished between the check and the cancel - nothing was running, nothing to relabel.
+            return (false, null);
+        }
+
+        if (project is null)
+            await _buildRepository.UpdateBuildStatus(pipelineRunName, EventStatus.CANCELLED, tenantId);
+        else
+            await _buildRepository.UpdateBuildStatus(pipelineRunName, EventStatus.CANCELLED, project);
+        return (true, null);
+    }
+
     public async Task<Build?> SaveBuild(Repo repo, BuildRequest request, string buildImageName, string blocksUserId, string pipelineRunNameGuid)
+        => await SaveBuild(repo, request, buildImageName, blocksUserId, pipelineRunNameGuid, null);
+
+    private async Task<Build?> SaveBuild(
+        Repo repo, BuildRequest request, string buildImageName, string blocksUserId, string pipelineRunNameGuid,
+        string? tenantId)
     {
         var build = new Build
         {
@@ -353,7 +405,10 @@ public class BuildService : IBuildService
             ProjectId = repo.ProjectId,
             ProjectName = repo.ProjectName
         };
-        await _buildRepository.SaveBuild(build);
+        if (string.IsNullOrWhiteSpace(tenantId))
+            await _buildRepository.SaveBuild(build);
+        else
+            await _buildRepository.SaveBuild(build, tenantId);
 
         return build;
     }
@@ -478,7 +533,10 @@ public class BuildService : IBuildService
                     machineConfigId = repo?.DeploySettings?.MachineConfig?.Id ?? request.machineConfigId,
                     deploymentType = repo.DeploymentType
                 };
-                return await Build(buildRequest, repo);
+                var buildResponse = await Build(buildRequest, repo);
+                if (buildResponse.IsSuccess && request.viewInBlocksMonitor)
+                    buildResponse.monitorError = await _monitorProvisioningService.CreateMonitorForRepoAsync(repo);
+                return buildResponse;
             }
             return new BuildResponse
             {
@@ -599,7 +657,8 @@ public class BuildService : IBuildService
         return result;
     }
 
-    private async Task<bool> RepositoryUpdateForBuild(Repo repo, BuildRequest request, GithubWebhook webhook, string paramNamespace = null)
+    private async Task<bool> RepositoryUpdateForBuild(
+        Repo repo, BuildRequest request, GithubWebhook webhook, string tenantId, string paramNamespace = null)
     {
         DeploySettings deploySettings = null;
 
@@ -624,7 +683,7 @@ public class BuildService : IBuildService
         {
             repo.GithubWebhook = webhook;
         }
-        return await _repoRepository.UpdateRepo(repo);
+        return await _repoRepository.UpdateRepo(repo, tenantId);
     }
 
     public async Task<BuildResponse> HandleWebhookEventAsync(string eventType, string rawJson, string tenantId)
@@ -640,6 +699,8 @@ public class BuildService : IBuildService
                 Repo repo = await _repoRepository.GetRepoByBranch(tenantId, pushEvent.repository.fullName, branch);
                 if (repo is not null && repo.DeploymentType == RepoDeploymentType.Auto)
                 {
+                    if (!string.Equals(repo.ProjectId, tenantId, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException("Webhook target does not match the repository project.");
                     BuildRequest buildRequest = new BuildRequest()
                     {
                         repoName = repo.RepoName,
@@ -654,7 +715,7 @@ public class BuildService : IBuildService
                     };
                     _logger.LogInformation($"{pushEvent.commits?.Count ?? 0} commit(s) pushed to {pushEvent.Ref} in {pushEvent.repository.fullName} by {pushEvent.pusher.name}");
                     await SaveWbhook(rawJson, repo, tenantId);
-                    return await Build(buildRequest, repo);
+                    return await Build(buildRequest, repo, tenantId);
                 }
                 break;
 

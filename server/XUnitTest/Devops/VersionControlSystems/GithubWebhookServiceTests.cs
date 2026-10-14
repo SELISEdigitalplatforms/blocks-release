@@ -12,6 +12,7 @@ using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.Shared.Interfaces;
 using Devops.DomainService.VersionControlSystems.Entities;
 using Devops.DomainService.VersionControlSystems.Interfaces;
+using Devops.DomainService.VersionControlSystems.Models.Dtos;
 using Devops.DomainService.VersionControlSystems.Services;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
@@ -88,6 +89,29 @@ namespace XUnitTest.Devops.VersionControlSystems
 
             result.Should().NotBeNull();
             result.Id.Should().Be(42);
+        }
+
+        [Fact]
+        public async Task CreateWebhook_ExplicitTarget_IgnoresAnUnrelatedAmbientTenant()
+        {
+            GithubWebhookRequest sent = null;
+            _tokenRepo.Setup(t => t.getToken("repo-owner")).ReturnsAsync("owner-token");
+            _http.Setup(h => h.MakeHttpRequest<GithubWebhookSuccessResponse, GithubWebhookErrorResponse>(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(),
+                    It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                .Callback<string, string, HttpMethod, object, Dictionary<string, string>, string>(
+                    (_, _, _, request, _, _) => sent = (GithubWebhookRequest)request)
+                .ReturnsAsync((new GithubWebhookSuccessResponse { id = 9 }, null, Resp(HttpStatusCode.Created)));
+
+            var result = await CreateService().CreateWebhook(Repo(), "dev-tenant", "repo-owner");
+
+            result.Id.Should().Be(9);
+            sent.Config.Url.Should().Be("https://hook/dev-tenant");
+            _tokenRepo.Verify(t => t.getToken("repo-owner"), Times.Once);
+            _tokenRepo.Verify(t => t.getToken(), Times.Never);
+            _http.Verify(h => h.MakeHttpRequest<GithubWebhookSuccessResponse, GithubWebhookErrorResponse>(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(),
+                It.IsAny<Dictionary<string, string>>(), "owner-token"), Times.Once);
         }
 
         [Fact]

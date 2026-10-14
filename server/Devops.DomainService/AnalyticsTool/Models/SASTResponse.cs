@@ -6,6 +6,9 @@ public class SASTResponse
 {
     [JsonPropertyName("component")]
     public Component Component { get; set; }
+
+    [JsonPropertyName("period")]
+    public NewCodePeriod Period { get; set; }
 }
 
 public class Component
@@ -46,4 +49,20 @@ public class Period
     public bool? bestValue { get; set; }
     public string mode { get; set; }
     public DateTime date { get; set; }
+}
+
+/// <summary>
+/// Top-level new-code period from SonarQube measures/component (additionalFields=period).
+/// Date is kept as the exact string SonarQube sent (ISO-8601).
+/// </summary>
+public class NewCodePeriod
+{
+    [JsonPropertyName("mode")]
+    public string Mode { get; set; }
+
+    [JsonPropertyName("date")]
+    public string Date { get; set; }
+
+    [JsonPropertyName("parameter")]
+    public string Parameter { get; set; }
 }

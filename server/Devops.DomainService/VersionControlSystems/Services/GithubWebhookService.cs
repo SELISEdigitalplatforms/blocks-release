@@ -42,18 +42,26 @@ public class GithubWebhookService : IGithubWebhookService
         _cloudBuildSecret = cloudBuildSecret;
     }
 
-    public async Task<GithubWebhook> CreateWebhook(Repo? repo)
+    public Task<GithubWebhook> CreateWebhook(Repo? repo) =>
+        CreateWebhookCore(repo, BlocksContext.GetContext()?.TenantId,
+            async () => (await _tokenRepository.getToken())?.AccessToken);
+
+    public Task<GithubWebhook> CreateWebhook(Repo? repo, string tenantId, string userId) =>
+        CreateWebhookCore(repo, tenantId, () => _tokenRepository.getToken(userId));
+
+    private async Task<GithubWebhook> CreateWebhookCore(
+        Repo? repo, string? tenantId, Func<Task<string?>> resolveToken)
     {
         try
         {
             if (repo is null) return null;
-            var token = await _tokenRepository.getToken();
-            if (token == null)
+            if (string.IsNullOrWhiteSpace(tenantId)) return null;
+            var accessToken = await resolveToken();
+            if (string.IsNullOrWhiteSpace(accessToken))
             {
                 _logger.LogWarning($"Failed to create webhook for repo {repo.RepoUrl}. Token not found");
                 return null;
             }
-            var blocksTenantId = BlocksContext.GetContext().TenantId;
             var webhookRequest = new GithubWebhookRequest
             {
                 Name = "web",
@@ -61,7 +69,7 @@ public class GithubWebhookService : IGithubWebhookService
                 Events = new List<string> { "push" },
                 Config = new WebhookConfig
                 {
-                    Url = $"{_configuration["GithubWebhookUrl"]}{blocksTenantId}",
+                    Url = $"{_configuration["GithubWebhookUrl"]}{tenantId}",
                     ContentType = "json",
                     InsecureSsl = "0",
                     Secret = _cloudBuildSecret.GithubWebhookSecret
@@ -75,7 +83,7 @@ public class GithubWebhookService : IGithubWebhookService
                     { "Accept", "application/vnd.github.v3+json" },
                     { "User-Agent", "BlocksDevOps"},            
                 };
-            var (data, error, response) = await _httpHelperServices.MakeHttpRequest<GithubWebhookSuccessResponse, GithubWebhookErrorResponse>( CloudBuildConstants.GITHUB_API_BASE_URI, url, HttpMethod.Post, webhookRequest, headers, token.AccessToken);
+            var (data, error, response) = await _httpHelperServices.MakeHttpRequest<GithubWebhookSuccessResponse, GithubWebhookErrorResponse>( CloudBuildConstants.GITHUB_API_BASE_URI, url, HttpMethod.Post, webhookRequest, headers, accessToken);
 
             if( response.StatusCode == HttpStatusCode.Created)
             {

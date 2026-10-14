@@ -18,15 +18,15 @@ const DocCard = ({ label, imageUri, description, url }: DocCardProps) => {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5">
+      className="group flex flex-col overflow-hidden rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--card))] shadow-xs transition-all duration-300 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5">
       <div className="relative flex items-center justify-center overflow-hidden bg-[hsl(var(--surface-app))] px-8 py-10">
-        <div className="absolute inset-0 bg-[radial-gradient(hsl(var(--border-default))_1px,transparent_1px)] [background-size:18px_18px] opacity-60" />
+        <div className="absolute inset-0 bg-[radial-gradient(hsl(var(--border-default))_1px,transparent_1px)] bg-size-[18px_18px] opacity-60" />
         <img
           src={imageUri}
           width={148}
           height={148}
           alt={label}
-          className="relative object-contain drop-shadow-sm transition-transform duration-500 group-hover:scale-105"
+          className="relative object-contain drop-shadow-xs transition-transform duration-500 group-hover:scale-105"
         />
       </div>
       <div className="flex flex-1 flex-col gap-2 p-5">

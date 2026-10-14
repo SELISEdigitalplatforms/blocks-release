@@ -60,7 +60,7 @@ export const ColorSwatch: React.FC<ColorSwatchProps> = ({
         <input
           type="text"
           className={cn(
-            "box-border h-6 w-24 rounded-sm bg-transparent px-2 text-sm uppercase outline-none",
+            "box-border h-6 w-24 rounded-sm bg-transparent px-2 text-sm uppercase outline-hidden",
           )}
           value={value.toUpperCase()}
           onChange={handleTextInputChange}

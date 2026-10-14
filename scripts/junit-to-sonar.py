@@ -17,8 +17,17 @@ report if any path is unknown.
 
 import os
 import sys
-import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape, quoteattr
+
+try:
+    import defusedxml.ElementTree as ET
+except ImportError:
+    import subprocess
+    subprocess.check_call(
+        [sys.executable, "-m", "pip", "install", "--quiet", "defusedxml"],
+        stdout=subprocess.DEVNULL,
+    )
+    import defusedxml.ElementTree as ET
 
 
 def duration_ms(node):

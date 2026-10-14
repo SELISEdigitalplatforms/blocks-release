@@ -11,20 +11,37 @@ const setRuntimeEnv = (value: Record<string, string> | undefined) => {
 
 describe("getRuntimeEnv", () => {
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.unstubAllEnvs();
     setRuntimeEnv({ BLOCKS_LOGIC_BASE_URL: "https://dev-logic.blocksdevelopers.com" });
   });
 
-  it("reads a value from window.__BLOCKS_ENV__", () => {
-    setRuntimeEnv({ BLOCKS_API_BASE_URL: "https://api.example.com" });
-    expect(getRuntimeEnv("BLOCKS_API_BASE_URL")).toBe("https://api.example.com");
+  it("uses the preview page origin over the runtime secret and build-time value", () => {
+    vi.stubGlobal("window", {
+      location: { origin: "https://preview-release.example.test:8443" },
+      __BLOCKS_ENV__: { BLOCKS_API_BASE_URL: "https://shared-api.example.test" },
+    });
+    vi.stubEnv("BLOCKS_API_BASE_URL", "https://build-api.example.test");
+
+    expect(getRuntimeEnv("BLOCKS_API_BASE_URL")).toBe(
+      "https://preview-release.example.test:8443",
+    );
+    expect(getRuntimeEnv("BLOCKS_API_BASE_URL", { stripPort: true })).toBe(
+      "https://preview-release.example.test:8443",
+    );
   });
 
-  it("falls back to import.meta.env when the runtime value is a placeholder", () => {
+  it("uses the page origin when the runtime value is a placeholder", () => {
     setRuntimeEnv({ BLOCKS_API_BASE_URL: "__BLOCKS_API_BASE_URL__" });
     vi.stubEnv("BLOCKS_API_BASE_URL", "https://fallback.example.com");
+    expect(getRuntimeEnv("BLOCKS_API_BASE_URL")).toBe(window.location.origin);
+  });
+
+  it("preserves the configured URL for server-side callers", () => {
+    vi.stubGlobal("window", undefined);
+    vi.stubEnv("BLOCKS_API_BASE_URL", "https://backend.example.test");
     expect(getRuntimeEnv("BLOCKS_API_BASE_URL")).toBe(
-      "https://fallback.example.com",
+      "https://backend.example.test",
     );
   });
 
@@ -48,11 +65,10 @@ describe("getRuntimeEnv", () => {
     ).toBe("https://app.example.com/");
   });
 
-  it("does not strip the port on localhost", () => {
+  it("keeps the page origin when asked to strip the API port", () => {
     setRuntimeEnv({ BLOCKS_API_BASE_URL: "https://localhost:5000" });
-    // In the jsdom test env import.meta.env.DEV is true, so port is preserved.
     expect(getRuntimeEnv("BLOCKS_API_BASE_URL", { stripPort: true })).toBe(
-      "https://localhost:5000",
+      window.location.origin,
     );
   });
 });

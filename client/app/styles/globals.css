@@ -3,7 +3,7 @@
 @plugin "tailwindcss-animate";
 
 @source "../../index.html";
-@source "../../node_modules/@seliseblocks/genesis-os/dist/**/*.{js,jsx,ts,tsx}";
+@source "../../node_modules/@seliseblocks/app-kit/dist/**/*.{js,jsx,ts,tsx}";
 /* Carried over from the v3 blocklist: never emit this arbitrary-property candidate. */
 @source not inline("[-:=]");
 
@@ -348,14 +348,14 @@
 
   /* App code was renamed to the v4 scale (shadow-sm -> shadow-xs, backdrop-blur-sm ->
      backdrop-blur-xs) and does not use shadow-sm or blur-sm any more. The prebuilt
-     @seliseblocks/genesis-os components still ship the v3 names, so these two keep their
+     @seliseblocks/app-kit components still ship the v3 names, so these two keep their
      v3 values for them. */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --blur-sm: 4px;
 
   /* v3 font-size utilities set an absolute line-height (text-xs -> 1rem). v4 uses a ratio of
      the font size, which changes the line box wherever a component overrides the font size
-     but keeps the text-* class (genesis-os badges, card titles). Pin the v3 values. */
+     but keeps the text-* class (app-kit badges, card titles). Pin the v3 values. */
   --text-xs--line-height: 1rem;
   --text-sm--line-height: 1.25rem;
   --text-base--line-height: 1.5rem;

@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using Blocks.Genesis.Entities.Release;
+using System.Net;
 using Blocks.Genesis;
 using Microsoft.Extensions.Logging;
 

@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using System;
 using System.Collections.Generic;
 using Devops.DomainService.AnalyticsTool.Models;

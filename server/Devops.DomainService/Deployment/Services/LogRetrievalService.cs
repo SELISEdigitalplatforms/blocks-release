@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using Blocks.Genesis.Entities.Release;
+using System.Diagnostics;
 using System.Text;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Models.Response;

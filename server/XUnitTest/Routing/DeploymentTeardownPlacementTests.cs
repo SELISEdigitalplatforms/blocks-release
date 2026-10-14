@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using Blocks.Genesis;
 using Blocks.Secrets;
 using Devops.DomainService.Deployment.Entities;

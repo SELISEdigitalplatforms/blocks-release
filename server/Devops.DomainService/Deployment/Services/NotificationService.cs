@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using Blocks.Genesis;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json;

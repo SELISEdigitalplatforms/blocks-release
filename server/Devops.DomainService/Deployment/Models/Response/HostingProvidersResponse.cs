@@ -1,4 +1,5 @@
-﻿using Devops.DomainService.Deployment.Entities;
+﻿using Blocks.Genesis.Entities.Release;
+using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Shared.Entities;
 
 namespace Devops.DomainService.Deployment.Models.Response

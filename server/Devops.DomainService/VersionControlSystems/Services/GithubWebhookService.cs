@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using Microsoft.Extensions.Configuration;
 using Blocks.Genesis;
 using Devops.DomainService.Deployment.Entities;

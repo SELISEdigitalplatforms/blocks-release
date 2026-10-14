@@ -55,18 +55,9 @@ namespace Devops.DomainService.AnalyticsTool.Services.Sca
                 return null;
             }
 
-            DependencyTrackProjects result;
-            try
-            {
-                result = await _keyValueStore.GetAsync<DependencyTrackProjects>(KeyPrefix + projectId);
-            }
-            catch (Exception kvEx)
-            {
-                // A null here would make the caller create a new team and overwrite the only KV row.
-                // Log and rethrow so the call fails and nothing is written (CL-release-03).
-                _logger?.LogError(kvEx, "Failed to read DependencyTrack project from key value store: {Message}", kvEx.Message);
-                throw;
-            }
+            // A KV read error is not caught here: a null would make the caller create a new team and overwrite
+            // the only KV row, so the error goes up and nothing is written (CL-release-03).
+            var result = await _keyValueStore.GetAsync<DependencyTrackProjects>(KeyPrefix + projectId);
 
             try
             {

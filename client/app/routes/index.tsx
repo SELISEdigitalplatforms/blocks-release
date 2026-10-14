@@ -5,28 +5,19 @@ import {
   ProtectedGuard,
   LoginPage,
   CallbackPage,
-  ConsoleLayout,
+  ImpersonationChecker,
+  ImpersonationTerminator,
   ConsolePage,
-  DashboardRoute,
   DashboardOverview,
-  // ProjectOverviewRoute / DashboardRoute are URL-addressable route elements:
-  // they hydrate the selected project from the URL param (:tenantGroupId / :itemId),
-  // validate it (redirecting to /app/console when invalid), inject the id into the
-  // navigation-menu paths, and render ProjectOverviewLayout / DashboardLayout
-  // (which self-wrap the impersonation guards) with an <Outlet /> for children.
 } from "@seliseblocks/app-kit";
 import { ProfilePage } from "@seliseblocks/app-kit";
 import DeploymentPage from "./deployment/deployment";
 import DeploymentRepoDetailsPage from "./deployment/deployment-repo-details";
 import DeploymentLogsPage from "./deployment/deployment-logs";
 import DeploymentLivePage from "./deployment/deployment-live";
-import { navigationMenus } from "@/constants/navigation-menus.constant";
 import { DeploymentLayout } from "@/layouts/deployment-layout";
-
-const redirectPaths: Record<string, string> = {
-  "/app/release/monitor/*": "/app/release",
-  "/app/release/monitor/incidents/*": "/app/release",
-};
+import { AppShell } from "@/layouts/app-shell";
+import { ReleaseDashboardRoute } from "@/layouts/release-dashboard-route";
 
 export const routes = [
   {
@@ -70,12 +61,16 @@ export const routes = [
           // Bare /app → console.
           { index: true, element: <Navigate to="/app/console" replace /> },
 
-          // Console: ConsoleLayout self-wraps ImpersonationChecker + ImpersonationTerminator.
+          // Returning to the console terminates the environment session before rendering.
           {
             element: (
-              <ConsoleLayout>
-                <Outlet />
-              </ConsoleLayout>
+              <ImpersonationChecker>
+                <ImpersonationTerminator>
+                  <AppShell>
+                    <Outlet />
+                  </AppShell>
+                </ImpersonationTerminator>
+              </ImpersonationChecker>
             ),
             children: [
               { path: "console", element: <ConsolePage /> },
@@ -85,12 +80,7 @@ export const routes = [
           // Impersonated project scope: /app/:itemId/*
           {
             path: ":itemId",
-            element: (
-              <DashboardRoute
-                redirectPaths={redirectPaths}
-                navigationMenus={navigationMenus}
-              />
-            ),
+            element: <ReleaseDashboardRoute />,
             children: [
               {
                 index: true,

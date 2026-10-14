@@ -20,6 +20,13 @@
 }
 
 @theme {
+  --color-sidebar: hsl(var(--background));
+  --color-sidebar-foreground: hsl(var(--foreground));
+  --color-sidebar-border: hsl(var(--border));
+  --color-sidebar-accent: hsl(var(--accent));
+  --color-sidebar-accent-foreground: hsl(var(--accent-foreground));
+  --color-sidebar-ring: hsl(var(--ring));
+  --color-surface-warm: hsl(var(--muted));
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
@@ -628,4 +635,12 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* app-kit 0.1 uses Tailwind 3's w-[--sidebar-width] syntax. Tailwind 4 needs var(). */
+.release-shell [data-side="left"] > div {
+  width: var(--sidebar-width);
+}
+[data-sidebar="sidebar"][data-mobile="true"] {
+  width: var(--sidebar-width);
 }

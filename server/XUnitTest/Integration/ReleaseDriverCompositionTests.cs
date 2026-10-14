@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using System;
 using System.Linq;
 using System.Net;
@@ -87,6 +88,8 @@ namespace XUnitTest.Integration
             services.AddSingleton(Mock.Of<ICryptoService>());
             services.AddSingleton(Mock.Of<IHttpClientFactory>());
             services.AddSingleton(Mock.Of<IHttpService>());
+            // Genesis ConfigureServices registers the key-value store in every host (DependencyTrackRepositoryService needs it).
+            services.AddSingleton(Mock.Of<IKeyValueStore>());
 
             Environment.SetEnvironmentVariable(ValueStoreVariable, valueStore);
 

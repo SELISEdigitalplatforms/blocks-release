@@ -45,7 +45,7 @@ namespace XUnitTest.Devops.AnalyticsTool
         private DependencyTrackAuthService CreateService()
         {
             var repoService = new DependencyTrackRepositoryService(
-                _dbProvider.Object, new Mock<ILogger<DependencyTrackRepositoryService>>().Object);
+                _dbProvider.Object, new Mock<IKeyValueStore>().Object, new Mock<ILogger<DependencyTrackRepositoryService>>().Object);
             return new DependencyTrackAuthService(
                 new Mock<ILogger<DependencyTrackAuthService>>().Object,
                 _http.Object, _config, repoService, _secret.Object);

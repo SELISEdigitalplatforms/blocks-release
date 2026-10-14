@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using Blocks.Genesis.Entities.Release;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using Blocks.Genesis;

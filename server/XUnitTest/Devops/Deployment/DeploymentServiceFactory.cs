@@ -74,7 +74,7 @@ namespace XUnitTest.Devops.Deployment
 
         public DependencyTrackAnalyticsService ScaAnalyticsService()
         {
-            var repoService = new DependencyTrackRepositoryService(DbProvider.Object, new Mock<ILogger<DependencyTrackRepositoryService>>().Object);
+            var repoService = new DependencyTrackRepositoryService(DbProvider.Object, new Mock<IKeyValueStore>().Object, new Mock<ILogger<DependencyTrackRepositoryService>>().Object);
             return new DependencyTrackAnalyticsService(
                 new Mock<ILogger<DependencyTrackAnalyticsService>>().Object,
                 Http.Object, BuildRepo.Object, RepoRepo.Object, repoService, Secret.Object, Config);

@@ -43,6 +43,7 @@ public sealed class MongoIntegrationFixture : IDisposable
 
         Database = Client.GetDatabase(DatabaseName);
         DbContextProvider = new SingleDatabaseContextProvider(Database);
+        KeyValueStore = new MongoKeyValueStore(DbContextProvider, new Moq.Mock<IBlocksSecret>().Object);
     }
 
     public string DatabaseName { get; }
@@ -57,6 +58,9 @@ public sealed class MongoIntegrationFixture : IDisposable
     /// repositories filter on the TenantId field inside each collection.
     /// </summary>
     public IDbContextProvider DbContextProvider { get; }
+
+    /// <summary>The real Genesis key-value store on the throwaway database (KeyValueStores collection).</summary>
+    public IKeyValueStore KeyValueStore { get; }
 
     public IMongoCollection<T> Collection<T>(string name) =>
         Database.GetCollection<T>(name);

@@ -1,4 +1,5 @@
-﻿using Blocks.Genesis;
+﻿using Blocks.Genesis.Entities.Release;
+using Blocks.Genesis;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using FluentValidation;

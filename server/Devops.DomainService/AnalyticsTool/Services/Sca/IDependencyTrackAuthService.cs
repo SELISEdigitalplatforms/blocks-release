@@ -1,4 +1,4 @@
-using Devops.DomainService.TestingTools.Entity;
+using Blocks.Genesis.Entities.Release;
 using Devops.DomainService.TestingTools.Models;
 
 namespace Devops.DomainService.AnalyticsTool.Services.Sca;

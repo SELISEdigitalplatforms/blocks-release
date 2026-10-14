@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using System.Net;
 using Blocks.Genesis;
 using Devops.DomainService.DataGatewayDeployment.Services;

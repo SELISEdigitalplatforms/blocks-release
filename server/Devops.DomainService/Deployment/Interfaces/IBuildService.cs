@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Models.Request;
 using Devops.DomainService.Deployment.Models.Response;

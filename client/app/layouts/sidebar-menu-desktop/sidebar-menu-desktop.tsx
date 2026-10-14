@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui-kits/separator/separator";
 import { navigationMenus } from "@/constants/navigation-menus.constant";
 import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import { useFilteredMenus } from "@/hooks/use-filtered-menus";
-import { useAppSettingsStore } from "@seliseblocks/genesis-os/store";
+import { useAppSettingsStore } from "@seliseblocks/app-kit/store";
 import { cn } from "@/lib/utils";
 import { PanelLeft } from "lucide-react";
 import { Fragment, useContext } from "react";

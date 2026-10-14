@@ -1,5 +1,5 @@
 /**
- * Test double for `@seliseblocks/genesis-os/observability`.
+ * Test double for `@seliseblocks/app-kit/observability`.
  *
  * The real module constructs a Rollbar client, which installs window handlers and telemetry
  * instrumentation at import time. Nothing under test asserts on reporting, so the stub keeps the

@@ -14,8 +14,8 @@ import {
   // validate it (redirecting to /app/console when invalid), inject the id into the
   // navigation-menu paths, and render ProjectOverviewLayout / DashboardLayout
   // (which self-wrap the impersonation guards) with an <Outlet /> for children.
-} from "@seliseblocks/genesis-os";
-import { ProfilePage } from "@seliseblocks/genesis-os";
+} from "@seliseblocks/app-kit";
+import { ProfilePage } from "@seliseblocks/app-kit";
 import DeploymentPage from "./deployment/deployment";
 import DeploymentRepoDetailsPage from "./deployment/deployment-repo-details";
 import DeploymentLogsPage from "./deployment/deployment-logs";

@@ -99,7 +99,7 @@
         <member name="M:Api.Security.ContentSecurityPolicy.Build(Microsoft.Extensions.Configuration.IConfiguration)">
             <summary>The policy for the environment this host is configured for.</summary>
         </member>
-        <member name="M:Api.Security.ContentSecurityPolicy.BuildPolicy(System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String})">
+        <member name="M:Api.Security.ContentSecurityPolicy.BuildPolicy(System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String})">
             <summary>The policy itself, separated from configuration so it can be asserted directly.</summary>
         </member>
         <member name="M:Api.Security.ContentSecurityPolicy.Normalize(System.Collections.Generic.IEnumerable{System.String})">

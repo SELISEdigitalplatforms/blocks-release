@@ -636,11 +636,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-/* app-kit 0.1 uses Tailwind 3's w-[--sidebar-width] syntax. Tailwind 4 needs var(). */
-.release-shell [data-side="left"] > div {
-  width: var(--sidebar-width);
-}
-[data-sidebar="sidebar"][data-mobile="true"] {
-  width: var(--sidebar-width);
-}

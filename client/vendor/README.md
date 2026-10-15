@@ -4,10 +4,27 @@
 `AppSidebar`, and `WorkspaceSwitcher`, built from
 [Blocks Console commit f6e016ba](https://github.com/SELISEdigitalplatforms/blocks-console/commit/f6e016ba).
 
-This archive is checked in because version `0.1.1` is not yet available from npm.
-The relative file dependency lets clean checkouts and Docker builds install the
-same tested package. Docker copies the archive before running `npm ci`.
+Release applies `app-kit-console-ui.patch` to that source commit before building
+this archive. It brings Console's breadcrumb top bar, overview hero, metadata,
+Bootstrap dialog, and Domains/Repositories tables into the shared package.
+Release's Core APIs components and Swagger hook remain unchanged. The package
+build targets browsers so Bootstrap's Markdown dependencies use browser entry
+points.
 
-Once `0.1.1` is published, replace the file dependency by running
-`npm install @seliseblocks/app-kit@^0.1.1` from `client/`, and remove the archive
-and its Docker `COPY` instruction.
+The relative dependency lets local development and Docker install the same
+package without publishing to npm. Docker copies the archive before `npm ci`.
+
+To rebuild, check out the linked Console commit in a separate directory, run
+`npm ci` in its `client/`, and apply this patch from the Console repository root:
+
+```sh
+git apply --directory=client/vendor/app-kit /path/to/blocks-release/client/vendor/app-kit-console-ui.patch
+cd client/vendor/app-kit
+../../node_modules/.bin/tsup
+npm pack --ignore-scripts
+```
+
+Copy the resulting archive here and refresh its lockfile integrity before
+running `npm ci` in Release's `client/`. During iteration, build locally and
+copy `dist/` into Release's installed app-kit; pack only the final artifact.
+No npm publication is required.

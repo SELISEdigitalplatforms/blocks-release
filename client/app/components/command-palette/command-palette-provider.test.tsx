@@ -8,6 +8,7 @@ import {
   type IProject,
 } from "@seliseblocks/app-kit";
 import { CommandPaletteProvider, useCommandPalette } from "./command-palette-provider";
+import { ConsoleRoute } from "@/pages/console/console-route";
 
 const h = vi.hoisted(() => ({
   props: null as CommandPaletteProps | null,
@@ -21,6 +22,9 @@ vi.mock("@seliseblocks/app-kit", async (importOriginal) => {
   const original = await importOriginal<Record<string, unknown>>();
   return {
     ...original,
+    ConsolePage: ({ onOpenCommands }: { onOpenCommands?: () => void }) => (
+      <input aria-label="Search projects" type="search" onFocus={onOpenCommands} />
+    ),
     useFilteredMenus: (menus: unknown) => menus,
     useCommandLayer: () => "dashboard",
     useGetProjects: (options: unknown) => {
@@ -85,6 +89,18 @@ beforeEach(() => {
 });
 
 describe("Release command palette integration", () => {
+  it("opens from the console project search field", () => {
+    render(
+      <MemoryRouter initialEntries={["/app/console"]}>
+        <CommandPaletteProvider>
+          <ConsoleRoute />
+        </CommandPaletteProvider>
+      </MemoryRouter>,
+    );
+    fireEvent.focus(screen.getByRole("searchbox", { name: "Search projects" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
   it("opens and toggles with both Cmd+K and Ctrl+K", () => {
     setup();
     fireEvent.keyDown(window, { key: "k", metaKey: true });

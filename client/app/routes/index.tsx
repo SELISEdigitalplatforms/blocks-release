@@ -7,7 +7,6 @@ import {
   CallbackPage,
   ImpersonationChecker,
   ImpersonationTerminator,
-  ConsolePage,
   DashboardOverview,
 } from "@seliseblocks/app-kit";
 import { ProfilePage } from "@seliseblocks/app-kit";
@@ -18,6 +17,7 @@ import DeploymentLivePage from "./deployment/deployment-live";
 import { DeploymentLayout } from "@/layouts/deployment-layout";
 import { AppShell } from "@/layouts/app-shell";
 import { ReleaseDashboardRoute } from "@/layouts/release-dashboard-route";
+import { ConsoleRoute } from "@/pages/console/console-route";
 
 export const routes = [
   {
@@ -73,7 +73,7 @@ export const routes = [
               </ImpersonationChecker>
             ),
             children: [
-              { path: "console", element: <ConsolePage /> },
+              { path: "console", element: <ConsoleRoute /> },
               { path: "profile", element: <ProfilePage /> },
             ],
           },

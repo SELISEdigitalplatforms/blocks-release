@@ -26,7 +26,15 @@
   --color-sidebar-accent: hsl(var(--accent));
   --color-sidebar-accent-foreground: hsl(var(--accent-foreground));
   --color-sidebar-ring: hsl(var(--ring));
-  --color-surface-warm: hsl(var(--muted));
+  --color-surface-warm: hsl(var(--surface-warm));
+  --color-forest-soft: hsl(var(--forest-soft));
+  --color-sunset-soft: hsl(var(--sunset-soft));
+  --color-forest-ink: hsl(var(--success-ink));
+  --color-warn-ink: hsl(var(--warn-ink));
+  --shadow-surface-ring: 0 0 0 1px hsl(var(--border));
+  --shadow-raised: 0 4px 20px hsl(var(--shadow-ink) / 0.08), 0 0 0 1px hsl(var(--border));
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
@@ -372,9 +380,9 @@
   --text-3xl--line-height: 2.25rem;
   --text-4xl--line-height: 2.5rem;
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-lg: 1rem;
+  --radius-md: 0.75rem;
+  --radius-sm: 0.5rem;
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
@@ -438,39 +446,44 @@
   background: linear-gradient(135deg, #0066b2 0%, #00b2ff 100%);
 }
 
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 100 1000;
+  font-display: swap;
+  src: url("/fonts/dm-sans-variable.ttf") format("truetype");
+}
+
 @layer base {
   :root {
-    /* Also read by the font-sans utility and the base font. The tail is Tailwind's default
-       sans stack, which v3 appended through the JS config. */
-    --font-sans:
-      system-ui, -apple-system, "Segoe UI", Roboto, sans-serif, ui-sans-serif, system-ui,
-      sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Use the same locally hosted typeface as Console. */
+    --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
+    --background: 214 38% 97%;
+    --foreground: 219 34% 17%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 219 34% 17%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 219 34% 17%;
     --primary: 206 100% 35%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 213 32% 95%;
+    --secondary-foreground: 219 34% 17%;
+    --muted: 213 32% 95%;
+    --muted-foreground: 215 16% 44%;
+    --accent: 213 32% 95%;
+    --accent-foreground: 219 34% 17%;
+    --destructive: 0 100% 65%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 28% 90%;
+    --input: 214 28% 90%;
+    --ring: 206 100% 35%;
     --radius: 0.5rem;
 
-    --high-emphasis: 0 0% 15%;
-    --medium-emphasis: 0 0% 33%;
-    --low-emphasis: 0 0% 62%;
-    --border-default: 0 0% 85%;
-    --border-medium-emphasis: 0 0% 48%;
+    --high-emphasis: 219 34% 17%;
+    --medium-emphasis: 216 25% 30%;
+    --low-emphasis: 215 16% 58%;
+    --border-default: 214 25% 84%;
+    --border-medium-emphasis: 215 16% 44%;
 
     --blocks-primary-25: 217 37% 93%;
     --blocks-primary-50: 208 16% 79%;
@@ -508,12 +521,12 @@
     --chart-orange: 30 92% 57%;
     --chart-brown-gray: 345 7% 68%;
 
-    --surface-app: 220 33% 96%;
+    --surface-app: 214 38% 97%;
     --error: 0 100% 60%;
     --success: 146 79% 44%;
-    --neutral-50: 0 0% 96%;
-    --neutral-200: 0 0% 85%;
-    --neutral-300: 0 0% 77%;
+    --neutral-50: 213 32% 95%;
+    --neutral-200: 214 25% 84%;
+    --neutral-300: 214 20% 74%;
     --warning-50: 52 100% 97%;
     --warning-100: 51 100% 90%;
     --warning-200: 49 100% 82%;
@@ -534,34 +547,40 @@
     --avatar-text-high-emphasis: #262626;
     --base-error: #ff3333;
     --loader-color: #262626;
+    --surface-warm: 213 32% 95%;
+    --sunset-soft: 27 92% 90%;
+    --forest-soft: 150 26% 88%;
+    --success-ink: 154 25% 35%;
+    --warn-ink: 32 60% 35%;
+    --shadow-ink: 219 34% 17%;
   }
 
   :root[class~="dark"] {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 202 100% 43%;
-    --primary-foreground: 0 0% 96%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --background: 218 42% 9%;
+    --foreground: 210 40% 96%;
+    --card: 217 35% 13%;
+    --card-foreground: 210 40% 96%;
+    --popover: 217 35% 13%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 204 86% 58%;
+    --primary-foreground: 218 42% 9%;
+    --secondary: 215 32% 18%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 215 32% 18%;
+    --muted-foreground: 215 17% 67%;
+    --accent: 215 32% 18%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 100% 65%;
+    --destructive-foreground: 218 42% 9%;
+    --border: 214 27% 24%;
+    --input: 214 27% 24%;
+    --ring: 204 86% 62%;
 
-    --high-emphasis: 0 0% 96%;
-    --medium-emphasis: 0 0% 85%;
-    --low-emphasis: 0 0% 62%;
-    --border-default: 0 0% 85%;
-    --border-medium-emphasis: 0 0% 48%;
+    --high-emphasis: 210 40% 96%;
+    --medium-emphasis: 213 24% 85%;
+    --low-emphasis: 215 15% 57%;
+    --border-default: 214 23% 31%;
+    --border-medium-emphasis: 215 17% 67%;
 
     --blocks-primary-25: 219 74% 5%;
     --blocks-primary-50: 224 38% 11%;
@@ -599,12 +618,12 @@
     --chart-orange: 30 92% 57%;
     --chart-brown-gray: 345 7% 68%;
 
-    --surface-app: 216 73% 3%;
+    --surface-app: 218 42% 9%;
     --error: 0 100% 60%;
     --success: 146 79% 44%;
-    --neutral-50: 0 0% 96%;
-    --neutral-200: 0 0% 33%;
-    --neutral-300: 0 0% 77%;
+    --neutral-50: 215 32% 18%;
+    --neutral-200: 214 23% 31%;
+    --neutral-300: 214 18% 40%;
     --warning-50: 38 39% 12%;
     --warning-100: 42 52% 17%;
     --warning-200: 44 54% 22%;
@@ -624,6 +643,12 @@
     --avatar-text-high-emphasis: #262626;
     --base-error: #ff3333;
     --loader-color: #fff;
+    --surface-warm: 215 32% 18%;
+    --sunset-soft: 27 25% 22%;
+    --forest-soft: 150 25% 22%;
+    --success-ink: 154 30% 68%;
+    --warn-ink: 32 60% 70%;
+    --shadow-ink: 0 0% 0%;
   }
 }
 
@@ -635,4 +660,20 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.dashboard-overview-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: conic-gradient(
+    from 90deg,
+    hsl(var(--primary) / 0.08) 0deg 90deg,
+    hsl(var(--surface-warm) / 0.5) 90deg 180deg,
+    hsl(var(--primary) / 0.08) 180deg 270deg,
+    hsl(var(--surface-warm) / 0.5) 270deg 360deg
+  );
+  background-size: 64px 64px;
+  mask-image: linear-gradient(100deg, transparent, #000 65%);
 }

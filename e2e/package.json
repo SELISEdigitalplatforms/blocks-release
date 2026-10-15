@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "description": "Playwright end-to-end tests for Blocks Release",
   "scripts": {
+    "test:console-ui": "node check-console-ui.mjs",
     "test": "playwright test",
     "test:features": "node run-e2e.mjs",
     "test:ui": "playwright test --ui",

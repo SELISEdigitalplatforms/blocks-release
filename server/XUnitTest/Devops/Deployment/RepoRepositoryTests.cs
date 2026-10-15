@@ -42,7 +42,8 @@ namespace XUnitTest.Devops.Deployment
                 _provider.Object,
                 new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string>()).Build(),
                 new Mock<ILogger<RepoRepository>>().Object,
-                new Mock<IBlocksSecret>().Object);
+                new Mock<IBlocksSecret>().Object,
+                new XUnitTest.TestDoubles.PassThroughReleaseDataAccess());
         }
 
         public void Dispose()

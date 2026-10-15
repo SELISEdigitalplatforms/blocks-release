@@ -29,7 +29,7 @@ namespace XUnitTest.Integration
         }
 
         private BuildRepository CreateRepo() =>
-            new(_fixture.DbContextProvider, new Mock<ILogger<BuildRepository>>().Object, _config, new Mock<IBlocksSecret>().Object);
+            new(_fixture.DbContextProvider, new Mock<ILogger<BuildRepository>>().Object, _config, new Mock<IBlocksSecret>().Object, new XUnitTest.TestDoubles.PassThroughReleaseDataAccess());
 
         private static Build NewBuild() => new()
         {

@@ -15,7 +15,7 @@ public class BuildPlacementTests : IDisposable
     private readonly TenantPlacementFixture _fixture = new();
     private static IConfiguration Configuration => new ConfigurationBuilder()
         .AddInMemoryCollection(new Dictionary<string, string?> { ["RootTenantId"] = "root" }).Build();
-    private BuildRepository Repository => new(_fixture.Provider, NullLogger<BuildRepository>.Instance, Configuration, _fixture.Secret);
+    private BuildRepository Repository => new(_fixture.Provider, NullLogger<BuildRepository>.Instance, Configuration, _fixture.Secret, new XUnitTest.TestDoubles.PassThroughReleaseDataAccess());
     public void Dispose() => _fixture.Dispose();
 
     [Fact]
@@ -23,7 +23,7 @@ public class BuildPlacementTests : IDisposable
     {
         BlocksContext.ClearContext();
         var provider = new Mock<IDbContextProvider>(MockBehavior.Strict);
-        _ = new BuildRepository(provider.Object, NullLogger<BuildRepository>.Instance, Configuration, _fixture.Secret);
+        _ = new BuildRepository(provider.Object, NullLogger<BuildRepository>.Instance, Configuration, _fixture.Secret, new XUnitTest.TestDoubles.PassThroughReleaseDataAccess());
         provider.VerifyNoOtherCalls();
     }
 

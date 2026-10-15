@@ -46,7 +46,8 @@ namespace XUnitTest.Devops.Deployment
                 new ConfigurationBuilder()
                     .AddInMemoryCollection(new Dictionary<string, string> { ["RootTenantId"] = "root" })
                     .Build(),
-                new Mock<IBlocksSecret>().Object);
+                new Mock<IBlocksSecret>().Object,
+                new XUnitTest.TestDoubles.PassThroughReleaseDataAccess());
         }
 
         /// <summary>

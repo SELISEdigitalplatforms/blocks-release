@@ -31,6 +31,12 @@ export const TABLE_HEAD_ROW_CLASS = "border-border-default hover:bg-transparent"
 export const TABLE_HEAD_CLASS =
   "h-10 px-5 text-xs font-semibold uppercase tracking-wide text-high-emphasis md:px-5";
 
+/**
+ * A header cell holding the shared SortHeader. Its label span carries its own bold, muted
+ * style, so the console's small uppercase label is applied to the span from the cell.
+ */
+export const TABLE_SORT_HEAD_CLASS = `${TABLE_HEAD_CLASS} [&_span]:text-xs [&_span]:font-semibold [&_span]:uppercase [&_span]:tracking-wide [&_span]:text-high-emphasis`;
+
 /** Body rows and cells: roomy cells over faint separators, warm hover tint. */
 export const TABLE_ROW_CLASS = "border-border/50 hover:bg-surface-warm/40";
 export const TABLE_CELL_CLASS = "px-5 py-4 md:px-5 md:py-4";

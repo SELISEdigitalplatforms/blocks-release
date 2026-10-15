@@ -204,31 +204,33 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({ buildId, histor
 
   if (!buildId || (isLoadingHistorical && logSteps.length === 0 && !hasLoadedHistorical)) {
     return (
-      <div className="mx-auto w-full rounded-lg border border-border bg-background">
-        <div className="p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-high-emphasis">{title}</h2>
+      <section aria-label={title} className="mb-6 w-full min-w-0 space-y-2">
+        <h2 className="text-[13px] font-bold uppercase tracking-[0.06em] text-high-emphasis">
+          {title}
+        </h2>
+        <div className="w-full rounded-sm bg-card px-5 py-8 text-center text-muted-foreground shadow-surface-ring">
+          <div className="mb-3 flex justify-center">
+            <LogoLoader size={32} label="Loading deployment logs" />
           </div>
-          <div className="py-8 text-center text-gray-500">
-            <div className="mb-3 flex justify-center">
-              <LogoLoader size={32} label="Loading deployment logs" />
-            </div>
-            <p>{!buildId ? "Waiting for build ID..." : "Loading deployment logs..."}</p>
-          </div>
+          <p>{!buildId ? "Waiting for build ID..." : "Loading deployment logs..."}</p>
         </div>
-      </div>
+      </section>
     );
   }
 
+  const isEmpty = logSteps.length === 0;
+
+  // Same section as the finished-build view: header above, one card of step rows.
   return (
-    <div className="mx-auto mb-6 w-full rounded-lg border border-border bg-background">
-      <div className="p-6">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-high-emphasis">{title}</h2>
-        </div>
-
-        {logSteps.length === 0 && isLoadingHistorical && !hasLoadedHistorical && (
-          <div className="py-8 text-center text-gray-500">
+    <section aria-label={title} className="mb-6 w-full min-w-0 space-y-2">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <h2 className="text-[13px] font-bold uppercase tracking-[0.06em] text-high-emphasis">
+          {title}
+        </h2>
+      </header>
+      <div className="w-full overflow-hidden rounded-sm bg-card shadow-surface-ring">
+        {isEmpty && (
+          <div className="px-5 py-8 text-center text-muted-foreground">
             <div className="mb-3 flex justify-center">
               <LogoLoader size={32} label="Loading deployment logs" />
             </div>
@@ -236,87 +238,77 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({ buildId, histor
           </div>
         )}
 
-        {logSteps.length === 0 && (!isLoadingHistorical || hasLoadedHistorical) && (
-          <div className="py-8 text-center text-gray-500">
-            <div className="mb-3 flex justify-center">
-              <LogoLoader size={32} label="Loading deployment logs" />
-            </div>
-            <p>Loading deployment logs...</p>
-          </div>
-        )}
-
-        {logSteps.length > 0 && (
-          <div className="border-default space-y-0 overflow-hidden rounded-md border">
-            {logSteps.map((step, stepIndex) => (
+        {logSteps.map((step, stepIndex) => (
+          <div
+            key={step.id}
+            className={`${stepIndex !== logSteps.length - 1 ? "border-default border-b" : ""}`}
+          >
+            <div
+              role="button"
+              tabIndex={0}
+              className={`flex items-center justify-between bg-card px-5 py-3 transition-colors ${
+                shouldShowChevron(step) ? "cursor-pointer hover:bg-primary/[0.04]" : ""
+              }`}
+              onClick={() => shouldShowChevron(step) && toggleExpanded(step.id)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                if (shouldShowChevron(step)) {
+                  toggleExpanded(step.id);
+                }
+              }}
+            >
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
+                  {shouldShowChevron(step) &&
+                    (expandedSteps.has(step.id) ? (
+                      <ChevronDown className="h-4 w-4 text-medium-emphasis" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-medium-emphasis" />
+                    ))}
+                  {memoizedStatusIcons.get(step.id) || getStatusIcon(step.status)}
+                </div>
+                <span className="text-sm font-medium">{step.name}</span>
+              </div>
+              {/* Always rendered: a step with no resolvable timing shows the
+                  placeholder rather than silently dropping the column. */}
               <div
-                key={step.id}
-                className={`${stepIndex !== logSteps.length - 1 ? "border-default border-b" : ""}`}
+                className="font-mono text-xs text-low-emphasis"
+                title={getStepTimingTooltip(step)}
               >
-                <div
-                  role="button"
-                  tabIndex={0}
-                  className={`flex items-center justify-between bg-background p-3 transition-colors ${
-                    shouldShowChevron(step) ? "cursor-pointer hover:bg-secondary" : ""
-                  }`}
-                  onClick={() => shouldShowChevron(step) && toggleExpanded(step.id)}
-                  onKeyDown={(event) => {
-                    if (event.key !== "Enter" && event.key !== " ") return;
-                    event.preventDefault();
-                    if (shouldShowChevron(step)) {
-                      toggleExpanded(step.id);
-                    }
-                  }}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center space-x-2">
-                      {shouldShowChevron(step) &&
-                        (expandedSteps.has(step.id) ? (
-                          <ChevronDown className="h-4 w-4 text-medium-emphasis" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4 text-medium-emphasis" />
-                        ))}
-                      {memoizedStatusIcons.get(step.id) || getStatusIcon(step.status)}
-                    </div>
-                    <span className="text-sm font-medium">{step.name}</span>
-                  </div>
-                  {/* Always rendered: a step with no resolvable timing shows the
-                      placeholder rather than silently dropping the column. */}
-                  <div
-                    className="font-mono text-xs text-low-emphasis"
-                    title={getStepTimingTooltip(step)}
-                  >
-                    {step.duration ?? DURATION_PLACEHOLDER}
+                {step.duration ?? DURATION_PLACEHOLDER}
+              </div>
+            </div>
+
+            {expandedSteps.has(step.id) && step.logs && step.logs.length > 0 && (
+              <div className="bg-card px-5 pb-4">
+                <div className="overflow-hidden rounded-sm bg-log-surface ring-1 ring-log-border">
+                  <StepTimingBar
+                    step={step}
+                    className="border-log-border bg-log-gutter text-log-muted"
+                  />
+                  <div className="overflow-x-auto py-1.5">
+                    {step.logs.map((log, logIndex) => (
+                      <div
+                        key={logIndex}
+                        className="flex font-mono text-xs leading-5 text-log-text hover:bg-white/[0.04]"
+                      >
+                        <div className="min-w-[3rem] shrink-0 select-none px-3 text-right text-log-muted">
+                          {String(logIndex + 1).padStart(2, "0")}
+                        </div>
+                        <div className="flex-1 whitespace-pre-wrap break-all px-3 [&_span]:text-log-muted">
+                          <LogLineText line={log} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-
-                {expandedSteps.has(step.id) && step.logs && step.logs.length > 0 && (
-                  <div className="bg-secondary">
-                    <StepTimingBar step={step} />
-                    <div className="overflow-x-auto">
-                      <div className="p-0">
-                        {step.logs.map((log, logIndex) => (
-                          <div
-                            key={logIndex}
-                            className="flex bg-secondary font-mono text-xs last:border-b-0"
-                          >
-                            <div className="min-w-12 select-none bg-secondary px-3 py-1 text-right text-medium-emphasis">
-                              {String(logIndex + 1).padStart(2, "0")}
-                            </div>
-                            <div className="flex-1 px-3 py-1">
-                              <LogLineText line={log} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
-            ))}
+            )}
           </div>
-        )}
+        ))}
       </div>
-    </div>
+    </section>
   );
 };
 

@@ -60,7 +60,16 @@
   --color-medium-emphasis: hsl(var(--medium-emphasis));
   --color-low-emphasis: hsl(var(--low-emphasis));
   --color-border-soft: hsl(var(--border-soft));
+  --color-lavender-soft: hsl(var(--lavender-soft));
+  --color-lavender-ink: hsl(var(--lavender-ink));
+  --color-rose-soft: hsl(var(--rose-soft));
+  --color-rose-ink: hsl(var(--rose-ink));
   --color-border-default: hsl(var(--border-default));
+  --color-log-surface: hsl(var(--log-surface));
+  --color-log-gutter: hsl(var(--log-gutter));
+  --color-log-border: hsl(var(--log-border));
+  --color-log-text: hsl(var(--log-text));
+  --color-log-muted: hsl(var(--log-muted));
   --color-border-medium-emphasis: hsl(var(--border-medium-emphasis));
   --color-blocks-primary-25: hsl(var(--blocks-primary-25));
   --color-blocks-primary-50: hsl(var(--blocks-primary-50));
@@ -478,6 +487,10 @@
     --destructive-foreground: 0 0% 100%;
     --border: 214 28% 90%;
     --border-soft: 214 30% 94%;
+    --lavender-soft: 267 30% 93%;
+    --lavender-ink: 268 30% 45%;
+    --rose-soft: 357 68% 94%;
+    --rose-ink: 340 45% 45%;
     --input: 214 28% 90%;
     --ring: 206 100% 35%;
     --radius: 0.5rem;
@@ -557,6 +570,13 @@
     --warn-ink: 32 60% 35%;
     --danger-ink: 12 45% 43%;
     --shadow-ink: 219 34% 17%;
+    /* Build log panel. A terminal-dark surface in both themes, so log output never
+       blends into the page or card behind it. */
+    --log-surface: 220 35% 12%;
+    --log-gutter: 220 32% 15%;
+    --log-border: 220 25% 22%;
+    --log-text: 214 32% 88%;
+    --log-muted: 216 15% 62%;
   }
 
   :root[class~="dark"] {
@@ -578,6 +598,10 @@
     --destructive-foreground: 218 42% 9%;
     --border: 214 27% 24%;
     --border-soft: 216 28% 20%;
+    --lavender-soft: 267 25% 22%;
+    --lavender-ink: 268 40% 78%;
+    --rose-soft: 357 25% 22%;
+    --rose-ink: 340 55% 76%;
     --input: 214 27% 24%;
     --ring: 204 86% 62%;
 
@@ -655,6 +679,11 @@
     --warn-ink: 32 60% 70%;
     --danger-ink: 12 55% 70%;
     --shadow-ink: 0 0% 0%;
+    --log-surface: 222 47% 6%;
+    --log-gutter: 220 40% 9%;
+    --log-border: 217 30% 20%;
+    --log-text: 214 32% 86%;
+    --log-muted: 216 15% 58%;
   }
 }
 

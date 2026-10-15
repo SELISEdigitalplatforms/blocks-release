@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronRight, Rocket } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import DeploymentSteps, { BuildStageIcon } from "./deployment-steps";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui-kits/button/button";
 import { useNavigate } from "react-router";
@@ -97,16 +98,6 @@ const BuildDuration = ({ build, status, dataUpdatedAt }: BuildDurationProps) => 
   return <>{getBuildDurationLabel(status, elapsedMs)}</>;
 };
 
-/**
- * The build's leading tile, in the deploy stage's colours. Builds here carry no step events,
- * so the tile always names the deploy stage.
- */
-const BuildIcon = () => (
-  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] bg-forest-soft text-forest-ink">
-    <Rocket className="h-3.5 w-3.5" aria-hidden="true" />
-  </span>
-);
-
 const DeploymentObservability = ({
   builds,
   viewLatestBuild = false,
@@ -191,7 +182,7 @@ const DeploymentObservability = ({
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="flex min-w-0 flex-1 items-start gap-2.5">
-                <BuildIcon />
+                <BuildStageIcon buildId={build.itemId} events={build.events} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-start gap-1">
                     <span className="text-sm font-medium leading-6 text-high-emphasis">
@@ -205,6 +196,11 @@ const DeploymentObservability = ({
                   <p className="break-all font-mono text-[11px] text-muted-foreground">
                     ID: {build.itemId}
                   </p>
+                  {build.events?.length > 0 && (
+                    <div className="mt-3 max-w-lg">
+                      <DeploymentSteps buildId={build.itemId} events={build.events} />
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex shrink-0 items-center justify-between gap-3 pl-[2.125rem] sm:pl-0">

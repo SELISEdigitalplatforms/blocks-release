@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/project.store";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
+import DeploymentActivity from "@blocks-deployment/components/deployment-details/shared/deployment-activity";
 import DeploymentObservability from "@blocks-deployment/components/deployment-details/shared/deployment-observability";
 import { ArrowUpRight, GitBranch, Rocket, Settings } from "lucide-react";
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
@@ -239,7 +240,7 @@ export default function RepoDetails() {
         })
         .map((build: IPipeline): IPipeline => ({
           ...build,
-          events: [],
+          events: build.events ?? [],
         })) ?? []
     );
   }, [repoDetails, isBranchMissing]);
@@ -746,10 +747,17 @@ export default function RepoDetails() {
                       View all history <span aria-hidden="true">↗</span>
                     </button>
                   </div>
-                  <DeploymentObservability
-                    builds={filteredBuilds}
-                    viewLatestBuild
-                    dataUpdatedAt={dataUpdatedAt}
+                  <div className="mb-6">
+                    <DeploymentObservability
+                      builds={filteredBuilds}
+                      viewLatestBuild
+                      dataUpdatedAt={dataUpdatedAt}
+                    />
+                  </div>
+                  <DeploymentActivity
+                    key={`${projectKey}-${repoId}-${branch}`}
+                    repoId={repoId}
+                    branch={branch}
                   />
                 </section>
               </div>
@@ -758,6 +766,12 @@ export default function RepoDetails() {
 
           <TabsContent value="history">
             <section aria-label="Deployment history" className="min-w-0 space-y-6">
+              <DeploymentActivity
+                key={`${projectKey}-${repoId}-${branch}`}
+                repoId={repoId}
+                branch={branch}
+                defaultView="3d"
+              />
               <DeploymentObservability
                 builds={filteredBuilds}
                 startIndex={(historyPageNumber - 1) * HISTORY_BUILD_PAGE_SIZE + 1}

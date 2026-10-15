@@ -130,112 +130,100 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
   }
 
   return (
-    <div className="border-default mb-6 flex h-auto w-full flex-col items-start justify-center gap-4 self-stretch rounded-sm border bg-background p-6 shadow-xs">
-      <div className="w-full">
-        <div>
-          {/* Header - Desktop view */}
-          <div className="mb-6 hidden md:flex md:items-center md:justify-between">
-            <h2 className="text-lg font-semibold">{title}</h2>
-            <div className="flex items-center gap-2">
-              {getStatusIcon(wholeDeploymentStatus ?? "")}
-              <p className="text-sm text-gray-600">
-                {wholeDeploymentStatus} at {cardData?.eventName}
-                {pipelineDuration ? ` · ${pipelineDuration}` : ""}
-              </p>
-            </div>
-          </div>
-
-          {/* Header - Mobile view */}
-          <div className="mb-6 md:hidden">
-            <h2 className="mb-3 text-lg font-semibold">{title}</h2>
-            <div className="flex items-center gap-2">
-              {getStatusIcon(wholeDeploymentStatus ?? "")}
-              <p className="text-sm text-gray-600">
-                {wholeDeploymentStatus} at {cardData?.eventName}
-                {pipelineDuration ? ` · ${pipelineDuration}` : ""}
-              </p>
-            </div>
-          </div>
+    <section aria-label={title} className="mb-6 w-full min-w-0 space-y-2">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <h2 className="text-[13px] font-bold uppercase tracking-[0.06em] text-high-emphasis">
+          {title}
+        </h2>
+        <div className="flex items-center gap-2">
+          {getStatusIcon(wholeDeploymentStatus ?? "")}
+          <p className="text-[13px] text-muted-foreground">
+            {wholeDeploymentStatus} at {cardData?.eventName}
+            {pipelineDuration ? ` · ${pipelineDuration}` : ""}
+          </p>
         </div>
-
-        <div className="border-default w-full space-y-0 overflow-hidden rounded-md border">
-          {buildSteps.map((step: IBuildStep, stepIndex: number) => (
+      </header>
+      {/* The step list is the card itself - no padded wrapper around a bordered box. */}
+      <div className="w-full overflow-hidden rounded-sm bg-card shadow-surface-ring">
+        {buildSteps.map((step: IBuildStep, stepIndex: number) => (
+          <div
+            key={step.id}
+            className={`${stepIndex !== buildSteps.length - 1 ? "border-default border-b" : ""}`}
+          >
+            {/* Step Header */}
             <div
-              key={step.id}
-              className={`${stepIndex !== buildSteps.length - 1 ? "border-default border-b" : ""}`}
-            >
-              {/* Step Header */}
-              <div
-                role="button"
-                tabIndex={0}
-                className={`flex items-center justify-between bg-background p-3 transition-colors ${
-                  DeployedLogsService.shouldShowChevron(step)
-                    ? "cursor-pointer hover:bg-secondary"
-                    : ""
-                }`}
-                onClick={() =>
-                  DeployedLogsService.shouldShowChevron(step) && toggleExpanded(step.id)
+              role="button"
+              tabIndex={0}
+              className={`flex items-center justify-between bg-card px-5 py-3 transition-colors ${
+                DeployedLogsService.shouldShowChevron(step)
+                  ? "cursor-pointer hover:bg-primary/[0.04]"
+                  : ""
+              }`}
+              onClick={() => DeployedLogsService.shouldShowChevron(step) && toggleExpanded(step.id)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                if (DeployedLogsService.shouldShowChevron(step)) {
+                  toggleExpanded(step.id);
                 }
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter" && event.key !== " ") return;
-                  event.preventDefault();
-                  if (DeployedLogsService.shouldShowChevron(step)) {
-                    toggleExpanded(step.id);
-                  }
-                }}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2">
-                    {DeployedLogsService.shouldShowChevron(step) &&
-                      (expandedSteps.has(step.id) ? (
-                        <ChevronDown className="h-4 w-4 text-medium-emphasis" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-medium-emphasis" />
-                      ))}
-                    {getStatusIcon(step.status)}
-                  </div>
-                  <span className="text-sm font-medium">
-                    {step.name === "Sast" || step.name === "Sca"
-                      ? step.name.toUpperCase()
-                      : step.name}
-                  </span>
+              }}
+            >
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
+                  {DeployedLogsService.shouldShowChevron(step) &&
+                    (expandedSteps.has(step.id) ? (
+                      <ChevronDown className="h-4 w-4 text-medium-emphasis" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-medium-emphasis" />
+                    ))}
+                  {getStatusIcon(step.status)}
                 </div>
-                <div
-                  className="font-mono text-xs text-low-emphasis"
-                  title={getStepTimingTooltip(step)}
-                >
-                  {step.duration}
+                <span className="text-sm font-medium">
+                  {step.name === "Sast" || step.name === "Sca"
+                    ? step.name.toUpperCase()
+                    : step.name}
+                </span>
+              </div>
+              <div
+                className="font-mono text-xs text-low-emphasis"
+                title={getStepTimingTooltip(step)}
+              >
+                {step.duration}
+              </div>
+            </div>
+
+            {/* Step Logs */}
+            {expandedSteps.has(step.id) && step.logs && step.logs.length > 0 && (
+              <div className="bg-card px-5 pb-4">
+                {/* An inset terminal panel: its own dark surface, so the output reads as
+                    output and never melts into the card or page behind it. */}
+                <div className="overflow-hidden rounded-sm bg-log-surface ring-1 ring-log-border">
+                  <StepTimingBar
+                    step={step}
+                    className="border-log-border bg-log-gutter text-log-muted"
+                  />
+                  <div className="overflow-x-auto py-1.5">
+                    {step.logs.map((log: string, logIndex: number) => (
+                      <div
+                        key={logIndex}
+                        className="flex font-mono text-xs leading-5 text-log-text hover:bg-white/[0.04]"
+                      >
+                        <div className="min-w-[3rem] shrink-0 select-none px-3 text-right text-log-muted">
+                          {String(logIndex + 1).padStart(2, "0")}
+                        </div>
+                        <div className="flex-1 whitespace-pre-wrap break-all px-3 [&_span]:text-log-muted">
+                          <LogLineText line={log} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-
-              {/* Step Logs */}
-              {expandedSteps.has(step.id) && step.logs && step.logs.length > 0 && (
-                <div className="bg-gray-100">
-                  <StepTimingBar step={step} />
-                  <div className="overflow-x-auto">
-                    <div className="p-0">
-                      {step.logs.map((log: string, logIndex: number) => (
-                        <div
-                          key={logIndex}
-                          className="flex bg-secondary font-mono text-xs last:border-b-0"
-                        >
-                          <div className="min-w-12 select-none bg-secondary px-3 py-1 text-right">
-                            {String(logIndex + 1).padStart(2, "0")}
-                          </div>
-                          <div className="flex-1 px-3 py-1">
-                            <LogLineText line={log} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+            )}
+          </div>
+        ))}
       </div>
-    </div>
+    </section>
   );
 };
 

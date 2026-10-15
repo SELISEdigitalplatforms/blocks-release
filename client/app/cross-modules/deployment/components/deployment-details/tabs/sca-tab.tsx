@@ -1,5 +1,6 @@
+import { SearchField } from "@blocks-deployment/components/deployment-details/shared/search-field";
 import React, { useState, useMemo } from "react";
-import { Search, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import {
   ColumnDef,
@@ -44,7 +45,7 @@ import {
   OUTLINE_BUTTON_CLASS,
   SURFACE_CARD_CLASS,
   TABLE_CELL_CLASS,
-  TABLE_HEAD_CLASS,
+  TABLE_SORT_HEAD_CLASS,
   TABLE_HEAD_ROW_CLASS,
 } from "@blocks-deployment/components/deployment-details/shared/surface-styles";
 
@@ -144,35 +145,47 @@ const DependencyFilterToolbar = ({
   setFilterState: React.Dispatch<React.SetStateAction<FilterState>>;
 }) => {
   return (
-    <div className="relative my-5 max-w-sm">
-      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-low-emphasis" />
-      <input
-        type="text"
-        placeholder="Search dependencies..."
+    <div className="my-5">
+      <SearchField
         value={
           filterState.selectedFilter === "component"
             ? filterState.component
             : filterState.vulnerability
         }
-        onChange={(e) => {
-          const value = e.target.value;
-          setFilterState((prev) => {
-            // If we're starting a new search, save current page
-            const currentSearchTerm =
-              prev.selectedFilter === "component" ? prev.component : prev.vulnerability;
-            const isStartingSearch = !currentSearchTerm && value;
-            const isClearingSearch = currentSearchTerm && !value;
+        label="Search dependencies"
+        className="w-full max-w-sm"
+        paddingTarget="input"
+      >
+        <div className="relative max-w-sm">
+          <input
+            type="text"
+            placeholder="Search dependencies..."
+            value={
+              filterState.selectedFilter === "component"
+                ? filterState.component
+                : filterState.vulnerability
+            }
+            onChange={(e) => {
+              const value = e.target.value;
+              setFilterState((prev) => {
+                // If we're starting a new search, save current page
+                const currentSearchTerm =
+                  prev.selectedFilter === "component" ? prev.component : prev.vulnerability;
+                const isStartingSearch = !currentSearchTerm && value;
+                const isClearingSearch = currentSearchTerm && !value;
 
-            return {
-              ...prev,
-              [prev.selectedFilter]: value,
-              page: isStartingSearch ? 0 : isClearingSearch ? prev.previousPage : prev.page,
-              previousPage: isStartingSearch ? prev.page : prev.previousPage,
-            };
-          });
-        }}
-        className="h-9 w-full rounded-sm border py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-      />
+                return {
+                  ...prev,
+                  [prev.selectedFilter]: value,
+                  page: isStartingSearch ? 0 : isClearingSearch ? prev.previousPage : prev.page,
+                  previousPage: isStartingSearch ? prev.page : prev.previousPage,
+                };
+              });
+            }}
+            className="h-9 w-full rounded-sm border py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+      </SearchField>
     </div>
   );
 };
@@ -356,7 +369,7 @@ const DependenciesTable = ({
           <TableRow className={TABLE_HEAD_ROW_CLASS}>
             {table.getHeaderGroups().map((headerGroup) =>
               headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className={TABLE_HEAD_CLASS}>
+                <TableHead key={header.id} className={TABLE_SORT_HEAD_CLASS}>
                   {header.isPlaceholder
                     ? null
                     : flexRender(header.column.columnDef.header, header.getContext())}

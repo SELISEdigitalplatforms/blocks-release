@@ -1,5 +1,6 @@
+import { SearchField } from "@blocks-deployment/components/deployment-details/shared/search-field";
 import React, { useState, useMemo } from "react";
-import { Search, ExternalLink, RefreshCw } from "lucide-react";
+import { ExternalLink, RefreshCw } from "lucide-react";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import {
   ColumnDef,
@@ -24,7 +25,7 @@ import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { SortHeader } from "@/components/filter-toolbar/sort-header/sort-header";
 import {
   TABLE_CELL_CLASS,
-  TABLE_HEAD_CLASS,
+  TABLE_SORT_HEAD_CLASS,
   TABLE_HEAD_ROW_CLASS,
 } from "@blocks-deployment/components/deployment-details/shared/surface-styles";
 
@@ -75,23 +76,29 @@ const VulnerabilityFilterToolbar = () => {
 
   return (
     <div className="px-6 py-4">
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search vulnerabilities..."
-          value={queryParams["selected-filter"] === "name" ? queryParams.name : queryParams.cwe}
-          onChange={(e) => {
-            const value = e.target.value;
-            setQueryParams((params) => ({
-              ...params,
-              [queryParams["selected-filter"]]: value,
-              page: 0,
-            }));
-          }}
-          className="h-9 w-full rounded-sm border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-        />
-      </div>
+      <SearchField
+        value={queryParams["selected-filter"] === "name" ? queryParams.name : queryParams.cwe}
+        label="Search vulnerabilities"
+        className="w-full max-w-sm"
+        paddingTarget="input"
+      >
+        <div className="relative max-w-sm">
+          <input
+            type="text"
+            placeholder="Search vulnerabilities..."
+            value={queryParams["selected-filter"] === "name" ? queryParams.name : queryParams.cwe}
+            onChange={(e) => {
+              const value = e.target.value;
+              setQueryParams((params) => ({
+                ...params,
+                [queryParams["selected-filter"]]: value,
+                page: 0,
+              }));
+            }}
+            className="h-9 w-full rounded-sm border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+      </SearchField>
     </div>
   );
 };
@@ -268,7 +275,7 @@ const VulnerabilitiesTable = ({
           <TableRow className={TABLE_HEAD_ROW_CLASS}>
             {table.getHeaderGroups().map((headerGroup) =>
               headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className={TABLE_HEAD_CLASS}>
+                <TableHead key={header.id} className={TABLE_SORT_HEAD_CLASS}>
                   {header.isPlaceholder
                     ? null
                     : flexRender(header.column.columnDef.header, header.getContext())}

@@ -2,11 +2,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { LogoLoader } from "@/components/loader-spinner/logo-loader";
 import { useParams, useNavigate, useSearchParams } from "react-router";
-import { Button } from "@/components/ui-kits/button/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use-github-info";
 import { toast } from "@/hooks/use-toast";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
-import { ChevronLeft } from "lucide-react";
+import { BackIconButton } from "@/components/buttons";
 import DeploymentLogsTab from "@blocks-deployment/components/deployment-details/tabs/deployment-logs-tab";
 import SASTTab from "@blocks-deployment/components/deployment-details/tabs/sast-tab";
 import SCATab from "@blocks-deployment/components/deployment-details/tabs/sca-tab";
@@ -14,6 +14,10 @@ import { DeploymentEventGroup, DeploymentEventType } from "@blocks-deployment/mo
 import ComingSoonTab from "@blocks-deployment/components/deployment-details/tabs/coming-soon";
 import { IHttpError } from "@blocks-deployment/models/github-info";
 import { useScopedPath } from "@/hooks/use-scoped-path";
+import {
+  UNDERLINE_TAB_TRIGGER_CLASS,
+  UNDERLINE_TABS_LIST_CLASS,
+} from "@blocks-deployment/components/deployment-details/shared/surface-styles";
 
 export interface IDeploymentEvent {
   id: string;
@@ -167,46 +171,46 @@ const DeploymentDetails = () => {
 
   return (
     <>
-      <div className="mb-8 mt-5 flex h-full w-full flex-col items-center gap-4">
-        <div className="flex w-full flex-col items-start gap-4">
-          <div className="flex w-full items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button variant={"ghost"} onClick={handleGoBack} className="pl-0">
-                <ChevronLeft size={20} />
-              </Button>
-              <h1 className="text-2xl font-bold text-high-emphasis">{buildIdStr}</h1>
+      <div className="w-full">
+        <div className="w-full">
+          {/* Same rhythm as PageHeader: title, subtitle, then mb-4 / sm:mb-6. */}
+          <header className="mb-4 flex items-start gap-1 sm:mb-6">
+            <BackIconButton
+              onClick={handleGoBack}
+              className="-ml-1.5 h-7 w-7 shrink-0 sm:h-8 sm:w-8"
+            />
+            <div className="min-w-0 flex-1 space-y-1">
+              <h1 className="break-all text-xl font-semibold tracking-tight text-high-emphasis sm:text-2xl">
+                {buildIdStr}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {cardData?.repoName
+                  ? `Build of ${cardData.repoName.split("/").pop()}${cardData.branch ? ` on ${cardData.branch}` : ""} · logs and security reports`
+                  : "Deployment logs and security reports for this build"}
+              </p>
             </div>
-          </div>
+          </header>
 
-          <div className="w-fit">
-            <nav className="flex rounded-lg bg-blocks-primary-shades-300 p-1">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList aria-label="Build details" className={UNDERLINE_TABS_LIST_CLASS}>
               {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`mx-0.5 rounded-md px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                    activeTab === tab.id
-                      ? "bg-background shadow-xs"
-                      : "text-medium-emphasis hover:bg-secondary"
-                  }`}
-                >
+                <TabsTrigger key={tab.id} value={tab.id} className={UNDERLINE_TAB_TRIGGER_CLASS}>
                   {tab.label}
-                </button>
+                </TabsTrigger>
               ))}
-            </nav>
-          </div>
-
-          <div className="w-full">
-            {ActiveTabComponent && (
-              <ActiveTabComponent
-                buildId={buildIdStr}
-                cardData={cardData}
-                isLoading={isLoading}
-                isError={isError}
-                isSuccess={isSuccess}
-              />
-            )}
-          </div>
+            </TabsList>
+            <TabsContent value={activeTab} className="mt-4 w-full">
+              {ActiveTabComponent && (
+                <ActiveTabComponent
+                  buildId={buildIdStr}
+                  cardData={cardData}
+                  isLoading={isLoading}
+                  isError={isError}
+                  isSuccess={isSuccess}
+                />
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 

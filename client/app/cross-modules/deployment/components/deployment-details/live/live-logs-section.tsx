@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useCallback, useMemo } from "react";
-import { Clock, ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { LogoLoader } from "@/components/loader-spinner/logo-loader";
 import {
   DeploymentEventGroup,
   DeploymentEventType,
@@ -25,22 +26,14 @@ interface LiveDeploymentLogsProps {
   historicalEvents?: IDeploymentEvent[];
 }
 
-const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
-  buildId,
-  historicalEvents,
-}) => {
+const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({ buildId, historicalEvents }) => {
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
   const [notificationSteps, setNotificationSteps] = useState<IBuildStep[]>([]);
   const [isLoadingHistorical, setIsLoadingHistorical] = useState<boolean>(true);
-  const [hasLoadedHistorical, setHasLoadedHistorical] =
-    useState<boolean>(false);
-  const [completedBuilds, setCompletedBuilds] = useState<Set<string>>(
-    new Set(),
-  );
+  const [hasLoadedHistorical, setHasLoadedHistorical] = useState<boolean>(false);
+  const [completedBuilds, setCompletedBuilds] = useState<Set<string>>(new Set());
   const [failedBuilds, setFailedBuilds] = useState<Set<string>>(new Set());
-  const [successfulSteps, setSuccessfulSteps] = useState<Set<string>>(
-    new Set(),
-  );
+  const [successfulSteps, setSuccessfulSteps] = useState<Set<string>>(new Set());
 
   const { getStatusIcon } = useStatusIcon();
 
@@ -123,8 +116,7 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
     if (!failedBuilds.has(buildId)) {
       toast({
         title: "Deployment Failed",
-        description:
-          "Deployment failed. Please check the logs for more details.",
+        description: "Deployment failed. Please check the logs for more details.",
         variant: "destructive",
       });
       setFailedBuilds((prev) => new Set(prev).add(buildId));
@@ -137,12 +129,9 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
 
       try {
         if (typeof notificationData.message.denormalizedPayload === "string") {
-          deploymentMessage = JSON.parse(
-            notificationData.message.denormalizedPayload,
-          ).Message;
+          deploymentMessage = JSON.parse(notificationData.message.denormalizedPayload).Message;
         } else {
-          deploymentMessage =
-            notificationData.message.denormalizedPayload.Message;
+          deploymentMessage = notificationData.message.denormalizedPayload.Message;
         }
       } catch (error) {
         console.error("Failed to parse notification data:", error);
@@ -157,9 +146,7 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
       if (deploymentMessage.EventGroup === DeploymentEventGroup.Deploy) {
         if (deploymentMessage.EventType === DeploymentEventType.EventFinished) {
           showSuccessToast(deploymentMessage.BuildId);
-        } else if (
-          deploymentMessage.EventType === DeploymentEventType.EventFailed
-        ) {
+        } else if (deploymentMessage.EventType === DeploymentEventType.EventFailed) {
           showErrorToast(deploymentMessage.BuildId);
         }
       }
@@ -176,18 +163,14 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
           }
         });
 
-        const isLogEvent =
-          deploymentMessage.EventType === DeploymentEventType.Log;
+        const isLogEvent = deploymentMessage.EventType === DeploymentEventType.Log;
         if (isLogEvent) {
           const stepId = `${deploymentMessage.BuildId}-${deploymentMessage.EventGroup}`;
           const existingStep = prevSteps.find(
             (step) => step.eventGroup === deploymentMessage.EventGroup,
           );
 
-          if (
-            existingStep &&
-            (!existingStep.logs || existingStep.logs.length === 0)
-          ) {
+          if (existingStep && (!existingStep.logs || existingStep.logs.length === 0)) {
             setExpandedSteps((prev) => new Set(prev).add(existingStep.id));
           } else if (!existingStep) {
             setExpandedSteps((prev) => new Set(prev).add(stepId));
@@ -219,25 +202,18 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
     return step.logs && step.logs.length > 0;
   };
 
-  if (
-    !buildId ||
-    (isLoadingHistorical && logSteps.length === 0 && !hasLoadedHistorical)
-  ) {
+  if (!buildId || (isLoadingHistorical && logSteps.length === 0 && !hasLoadedHistorical)) {
     return (
       <div className="mx-auto w-full rounded-lg border border-border bg-background">
         <div className="p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-high-emphasis">
-              {title}
-            </h2>
+            <h2 className="text-lg font-semibold text-high-emphasis">{title}</h2>
           </div>
           <div className="py-8 text-center text-gray-500">
-            <Clock className="mx-auto mb-2 h-8 w-8 animate-spin" />
-            <p>
-              {!buildId
-                ? "Waiting for build ID..."
-                : "Loading deployment logs..."}
-            </p>
+            <div className="mb-3 flex justify-center">
+              <LogoLoader size={32} label="Loading deployment logs" />
+            </div>
+            <p>{!buildId ? "Waiting for build ID..." : "Loading deployment logs..."}</p>
           </div>
         </div>
       </div>
@@ -251,47 +227,46 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
           <h2 className="text-xl font-semibold text-high-emphasis">{title}</h2>
         </div>
 
-        {logSteps.length === 0 &&
-          isLoadingHistorical &&
-          !hasLoadedHistorical && (
-            <div className="py-8 text-center text-gray-500">
-              <Clock className="mx-auto mb-2 h-8 w-8 animate-spin" />
-              <p>Loading deployment logs...</p>
+        {logSteps.length === 0 && isLoadingHistorical && !hasLoadedHistorical && (
+          <div className="py-8 text-center text-gray-500">
+            <div className="mb-3 flex justify-center">
+              <LogoLoader size={32} label="Loading deployment logs" />
             </div>
-          )}
+            <p>Loading deployment logs...</p>
+          </div>
+        )}
 
-        {logSteps.length === 0 &&
-          (!isLoadingHistorical || hasLoadedHistorical) && (
-            <div className="py-8 text-center text-gray-500">
-              <Clock className="mx-auto mb-2 h-8 w-8 animate-spin" />
-              <p>Loading deployment logs...</p>
+        {logSteps.length === 0 && (!isLoadingHistorical || hasLoadedHistorical) && (
+          <div className="py-8 text-center text-gray-500">
+            <div className="mb-3 flex justify-center">
+              <LogoLoader size={32} label="Loading deployment logs" />
             </div>
-          )}
+            <p>Loading deployment logs...</p>
+          </div>
+        )}
 
         {logSteps.length > 0 && (
           <div className="border-default space-y-0 overflow-hidden rounded-md border">
             {logSteps.map((step, stepIndex) => (
               <div
                 key={step.id}
-                className={`${stepIndex !== logSteps.length - 1 ? "border-default border-b" : ""}`}>
+                className={`${stepIndex !== logSteps.length - 1 ? "border-default border-b" : ""}`}
+              >
                 <div
                   role="button"
                   tabIndex={0}
                   className={`flex items-center justify-between bg-background p-3 transition-colors ${
-                    shouldShowChevron(step)
-                      ? "cursor-pointer hover:bg-secondary"
-                      : ""
+                    shouldShowChevron(step) ? "cursor-pointer hover:bg-secondary" : ""
                   }`}
-                  onClick={() =>
-                    shouldShowChevron(step) && toggleExpanded(step.id)
-                  }
+                  onClick={() => shouldShowChevron(step) && toggleExpanded(step.id)}
                   onKeyDown={(event) => {
                     if (event.key !== "Enter" && event.key !== " ") return;
                     event.preventDefault();
                     if (shouldShowChevron(step)) {
                       toggleExpanded(step.id);
                     }
-                  }}>
+                  }}
+                >
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center space-x-2">
                       {shouldShowChevron(step) &&
@@ -300,8 +275,7 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
                         ) : (
                           <ChevronRight className="h-4 w-4 text-medium-emphasis" />
                         ))}
-                      {memoizedStatusIcons.get(step.id) ||
-                        getStatusIcon(step.status)}
+                      {memoizedStatusIcons.get(step.id) || getStatusIcon(step.status)}
                     </div>
                     <span className="text-sm font-medium">{step.name}</span>
                   </div>
@@ -309,34 +283,34 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
                       placeholder rather than silently dropping the column. */}
                   <div
                     className="font-mono text-xs text-low-emphasis"
-                    title={getStepTimingTooltip(step)}>
+                    title={getStepTimingTooltip(step)}
+                  >
                     {step.duration ?? DURATION_PLACEHOLDER}
                   </div>
                 </div>
 
-                {expandedSteps.has(step.id) &&
-                  step.logs &&
-                  step.logs.length > 0 && (
-                    <div className="bg-secondary">
-                      <StepTimingBar step={step} />
-                      <div className="overflow-x-auto">
-                        <div className="p-0">
-                          {step.logs.map((log, logIndex) => (
-                            <div
-                              key={logIndex}
-                              className="flex bg-secondary font-mono text-xs last:border-b-0">
-                              <div className="min-w-12 select-none bg-secondary px-3 py-1 text-right text-medium-emphasis">
-                                {String(logIndex + 1).padStart(2, "0")}
-                              </div>
-                              <div className="flex-1 px-3 py-1">
-                                <LogLineText line={log} />
-                              </div>
+                {expandedSteps.has(step.id) && step.logs && step.logs.length > 0 && (
+                  <div className="bg-secondary">
+                    <StepTimingBar step={step} />
+                    <div className="overflow-x-auto">
+                      <div className="p-0">
+                        {step.logs.map((log, logIndex) => (
+                          <div
+                            key={logIndex}
+                            className="flex bg-secondary font-mono text-xs last:border-b-0"
+                          >
+                            <div className="min-w-12 select-none bg-secondary px-3 py-1 text-right text-medium-emphasis">
+                              {String(logIndex + 1).padStart(2, "0")}
                             </div>
-                          ))}
-                        </div>
+                            <div className="flex-1 px-3 py-1">
+                              <LogLineText line={log} />
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

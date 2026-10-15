@@ -47,7 +47,7 @@ const Deployment = () => {
   }
 
   if (loadingProjects) {
-    return <LoadingSpinner variant="overlay" label="Loading..." />;
+    return <LoadingSpinner />;
   }
 
   return <DeploymentOverview projects={apiProjects?.data} refetch={refetch} />;

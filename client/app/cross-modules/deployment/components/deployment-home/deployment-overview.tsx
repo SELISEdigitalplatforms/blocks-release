@@ -1,8 +1,6 @@
+import { PageHeader } from "@/components/page-header/page-header";
 
-import {
-  IBuildData,
-  IDeploySettings,
-} from "@blocks-deployment/models/deployed-logs";
+import { IBuildData, IDeploySettings } from "@blocks-deployment/models/deployed-logs";
 import { IRepoResponse, RepoCards } from "./repo-cards/repo-cards";
 import { NoRepositoryAvailable } from "../deployment-details/shared/no-repository";
 import { ErrorRepository } from "../deployment-details/shared/error-repository";
@@ -31,12 +29,12 @@ interface DeploymentOverviewProps {
 }
 
 const DeploymentOverview = ({ projects, refetch }: DeploymentOverviewProps) => {
-
   return (
     <div className="mx-auto min-h-screen w-full">
-      <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
-        <h1 className="text-xl font-semibold">Deployment Overview</h1>
-      </div>
+      <PageHeader
+        title="Deployment Overview"
+        description="Build and deploy repositories for this project."
+      />
 
       {GetProjectOverview(projects, refetch)}
     </div>
@@ -53,7 +51,7 @@ function GetProjectOverview(projects: IRepoResponse[], refetch: () => void) {
     return <NoRepositoryAvailable />;
   }
   return (
-    <div className="mb-8 space-y-4">
+    <div className="mb-8 space-y-3">
       {projects?.map((repo, index) => (
         <RepoCards key={index} repo={repo} />
       ))}

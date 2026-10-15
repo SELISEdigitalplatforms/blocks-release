@@ -1,11 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Search, ExternalLink } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui-kits/card/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui-kits/card/card";
 import {
   ColumnDef,
   flexRender,
@@ -40,14 +35,18 @@ import {
 import { useParams } from "react-router";
 import { Button } from "@/components/ui-kits/button/button";
 import { ErrorDisplay } from "@/components/error-display";
-import type {
-  IScaReportDetails,
-  IScaVulnerability,
-} from "@blocks-deployment/models/sca-report";
+import type { IScaReportDetails, IScaVulnerability } from "@blocks-deployment/models/sca-report";
 import {
   getDependencyTrackProjectUrl,
   openResolvedUrlInNewTab,
 } from "@blocks-deployment/utils/observability-links.utils";
+import {
+  OUTLINE_BUTTON_CLASS,
+  SURFACE_CARD_CLASS,
+  TABLE_CELL_CLASS,
+  TABLE_HEAD_CLASS,
+  TABLE_HEAD_ROW_CLASS,
+} from "@blocks-deployment/components/deployment-details/shared/surface-styles";
 
 interface Dependency {
   id: string;
@@ -130,7 +129,8 @@ const Badge = ({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 ${getVariantStyles()} ${className}`}>
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 ${getVariantStyles()} ${className}`}
+    >
       {children}
     </span>
   );
@@ -159,25 +159,19 @@ const DependencyFilterToolbar = ({
           setFilterState((prev) => {
             // If we're starting a new search, save current page
             const currentSearchTerm =
-              prev.selectedFilter === "component"
-                ? prev.component
-                : prev.vulnerability;
+              prev.selectedFilter === "component" ? prev.component : prev.vulnerability;
             const isStartingSearch = !currentSearchTerm && value;
             const isClearingSearch = currentSearchTerm && !value;
 
             return {
               ...prev,
               [prev.selectedFilter]: value,
-              page: isStartingSearch
-                ? 0
-                : isClearingSearch
-                  ? prev.previousPage
-                  : prev.page,
+              page: isStartingSearch ? 0 : isClearingSearch ? prev.previousPage : prev.page,
               previousPage: isStartingSearch ? prev.page : prev.previousPage,
             };
           });
         }}
-        className="w-full rounded-md border py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+        className="h-9 w-full rounded-sm border py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
       />
     </div>
   );
@@ -186,7 +180,7 @@ const DependencyFilterToolbar = ({
 const LoadingSkeleton = () => (
   <div className="grid w-full gap-2 p-6">
     {Array.from({ length: 5 }).map((_, index) => (
-      <Skeleton key={index} className="h-12 w-full rounded-lg" />
+      <Skeleton key={index} className="h-12 w-full rounded-sm" />
     ))}
   </div>
 );
@@ -205,8 +199,7 @@ const DependenciesTable = ({
   sortState: SortState;
   setSortState: React.Dispatch<React.SetStateAction<SortState>>;
 }) => {
-  const [selectedDependency, setSelectedDependency] =
-    useState<Dependency | null>(null);
+  const [selectedDependency, setSelectedDependency] = useState<Dependency | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const columns = useMemo<ColumnDef<Dependency>[]>(
     () => [
@@ -214,12 +207,7 @@ const DependenciesTable = ({
         id: "component",
         accessorKey: "component",
         header: () => (
-          <SortHeader
-            id="component"
-            label="Component"
-            value={sortState}
-            onChange={setSortState}
-          />
+          <SortHeader id="component" label="Component" value={sortState} onChange={setSortState} />
         ),
         cell: (info) => (
           <button className="text-left text-sm font-medium text-blue-600 hover:text-blue-800">
@@ -231,12 +219,7 @@ const DependenciesTable = ({
         id: "group",
         accessorKey: "group",
         header: () => (
-          <SortHeader
-            id="group"
-            label="Package"
-            value={sortState}
-            onChange={setSortState}
-          />
+          <SortHeader id="group" label="Package" value={sortState} onChange={setSortState} />
         ),
         cell: (info) => (
           <div className="text-sm font-medium text-medium-emphasis">
@@ -248,17 +231,10 @@ const DependenciesTable = ({
         id: "version",
         accessorKey: "version",
         header: () => (
-          <SortHeader
-            id="version"
-            label="Version"
-            value={sortState}
-            onChange={setSortState}
-          />
+          <SortHeader id="version" label="Version" value={sortState} onChange={setSortState} />
         ),
         cell: (info) => (
-          <div className="text-sm text-high-emphasis">
-            {info.getValue() as string}
-          </div>
+          <div className="text-sm text-high-emphasis">{info.getValue() as string}</div>
         ),
       },
       {
@@ -282,7 +258,8 @@ const DependenciesTable = ({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="text-sm font-medium text-blue-600 hover:text-blue-800">
+              className="text-sm font-medium text-blue-600 hover:text-blue-800"
+            >
               {info.getValue() as string}
             </a>
           </div>
@@ -292,12 +269,7 @@ const DependenciesTable = ({
         id: "cvss",
         accessorKey: "cvss",
         header: () => (
-          <SortHeader
-            id="cvss"
-            label="CVSS"
-            value={sortState}
-            onChange={setSortState}
-          />
+          <SortHeader id="cvss" label="CVSS" value={sortState} onChange={setSortState} />
         ),
         cell: (info) => {
           const cvss = info.getValue() as number | null;
@@ -309,8 +281,7 @@ const DependenciesTable = ({
             low: "low",
             unassigned: "unassigned",
           };
-          const variant =
-            severityVariantMap[severity.toLowerCase()] ?? "default";
+          const variant = severityVariantMap[severity.toLowerCase()] ?? "default";
 
           return (
             <div className="flex items-center gap-3">
@@ -326,20 +297,13 @@ const DependenciesTable = ({
         id: "epss",
         accessorKey: "epss",
         header: () => (
-          <SortHeader
-            id="epss"
-            label="EPSS %"
-            value={sortState}
-            onChange={setSortState}
-          />
+          <SortHeader id="epss" label="EPSS %" value={sortState} onChange={setSortState} />
         ),
         cell: (info) => {
           const epss = info.getValue() as number;
           return (
             <div className="text-sm font-medium text-medium-emphasis">
-              {epss !== null && epss !== undefined
-                ? `${epss.toFixed(2)}%`
-                : "N/A"}
+              {epss !== null && epss !== undefined ? `${epss.toFixed(2)}%` : "N/A"}
             </div>
           );
         },
@@ -357,10 +321,7 @@ const DependenciesTable = ({
 
       if (!searchTerm) return true;
 
-      const field =
-        filterState.selectedFilter === "component"
-          ? dep.component
-          : dep.vulnerability;
+      const field = filterState.selectedFilter === "component" ? dep.component : dep.vulnerability;
       return field.toLowerCase().includes(searchTerm.toLowerCase());
     });
   }, [dependencies, filterState]);
@@ -392,21 +353,16 @@ const DependenciesTable = ({
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow isHoverable>
-            {table
-              .getHeaderGroups()
-              .map((headerGroup) =>
-                headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                )),
-              )}
+          <TableRow className={TABLE_HEAD_ROW_CLASS}>
+            {table.getHeaderGroups().map((headerGroup) =>
+              headerGroup.headers.map((header) => (
+                <TableHead key={header.id} className={TABLE_HEAD_CLASS}>
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(header.column.columnDef.header, header.getContext())}
+                </TableHead>
+              )),
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -414,7 +370,8 @@ const DependenciesTable = ({
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground">
+                className="h-24 text-center text-muted-foreground"
+              >
                 No dependencies found.
               </TableCell>
             </TableRow>
@@ -427,7 +384,7 @@ const DependenciesTable = ({
               .map((dep) => (
                 <TableRow
                   key={dep.id}
-                  className="cursor-pointer hover:bg-secondary"
+                  className="cursor-pointer border-border/50 hover:bg-surface-warm/40"
                   onClick={(e) => {
                     const target = e.target as HTMLElement;
                     if (target && target.closest("a")) {
@@ -436,23 +393,20 @@ const DependenciesTable = ({
                     setSelectedDependency(dep);
                     setIsDialogOpen(true);
                   }}
-                  isHoverable>
-                  <TableCell>
+                  isHoverable
+                >
+                  <TableCell className={TABLE_CELL_CLASS}>
                     <button className="text-left text-sm font-medium text-blue-600 hover:text-blue-800">
                       {dep.component}
                     </button>
                   </TableCell>
-                  <TableCell>
-                    <div className="text-sm font-medium text-medium-emphasis">
-                      {dep.group}
-                    </div>
+                  <TableCell className={TABLE_CELL_CLASS}>
+                    <div className="text-sm font-medium text-medium-emphasis">{dep.group}</div>
                   </TableCell>
-                  <TableCell>
-                    <div className="text-sm text-high-emphasis">
-                      {dep.version}
-                    </div>
+                  <TableCell className={TABLE_CELL_CLASS}>
+                    <div className="text-sm text-high-emphasis">{dep.version}</div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className={TABLE_CELL_CLASS}>
                     <div className="flex items-center gap-2">
                       <span className="rounded bg-gray-100 px-2 py-1 text-xs text-low-emphasis">
                         {dep.source || "NVD"}
@@ -462,22 +416,21 @@ const DependenciesTable = ({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-800">
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                      >
                         {dep.vulnerability}
                       </a>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className={TABLE_CELL_CLASS}>
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-medium text-high-emphasis">
                         {dep.cvss !== null ? dep.cvss : "N/A"}
                       </span>
-                      <Badge variant={dep.severity.toLowerCase()}>
-                        {dep.severity}
-                      </Badge>
+                      <Badge variant={dep.severity.toLowerCase()}>{dep.severity}</Badge>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className={TABLE_CELL_CLASS}>
                     <div className="text-sm font-medium text-medium-emphasis">
                       {dep.epss !== null && dep.epss !== undefined
                         ? `${dep.epss.toFixed(2)}%`
@@ -496,72 +449,42 @@ const DependenciesTable = ({
             <DialogTitle>Vulnerability details</DialogTitle>
             <DialogDescription className="py-4">
               {/* {selectedDependency?.description || "No description available."} */}
-              <div className="text-sm font-bold text-muted-foreground">
-                Name
-              </div>
-              <div className="text-sm">
-                {selectedDependency?.name || "No name available."}
-              </div>
+              <div className="text-sm font-bold text-muted-foreground">Name</div>
+              <div className="text-sm">{selectedDependency?.name || "No name available."}</div>
 
-              <div className="mt-2 text-sm font-bold text-muted-foreground">
-                Group
-              </div>
-              <div className="text-sm">
-                {selectedDependency?.group || "No group available."}
-              </div>
+              <div className="mt-2 text-sm font-bold text-muted-foreground">Group</div>
+              <div className="text-sm">{selectedDependency?.group || "No group available."}</div>
 
-              <div className="mt-2 text-sm font-bold text-muted-foreground">
-                Version
-              </div>
+              <div className="mt-2 text-sm font-bold text-muted-foreground">Version</div>
               <div className="text-sm">
                 {selectedDependency?.version || "No version available."}
               </div>
 
-              <div className="mt-2 text-sm font-bold text-muted-foreground">
-                Latest Version
-              </div>
+              <div className="mt-2 text-sm font-bold text-muted-foreground">Latest Version</div>
               <div className="text-sm">
                 {selectedDependency?.latestVersion || "No data available."}
               </div>
 
-              <div className="mt-2 text-sm font-bold text-muted-foreground">
-                Source
-              </div>
-              <div className="text-sm">
-                {selectedDependency?.source || "No source available."}
-              </div>
+              <div className="mt-2 text-sm font-bold text-muted-foreground">Source</div>
+              <div className="text-sm">{selectedDependency?.source || "No source available."}</div>
 
-              <div className="mt-2 text-sm font-bold text-muted-foreground">
-                CVSS
-              </div>
-              <div className="text-sm">
-                {selectedDependency?.cvss || "No CVSS available."}
-              </div>
+              <div className="mt-2 text-sm font-bold text-muted-foreground">CVSS</div>
+              <div className="text-sm">{selectedDependency?.cvss || "No CVSS available."}</div>
 
-              <div className="mt-2 text-sm font-bold text-muted-foreground">
-                EPSS Percentile
-              </div>
-              <div className="text-sm">
-                {selectedDependency?.epss || "No EPSS available."}
-              </div>
+              <div className="mt-2 text-sm font-bold text-muted-foreground">EPSS Percentile</div>
+              <div className="text-sm">{selectedDependency?.epss || "No EPSS available."}</div>
 
-              <div className="mt-2 text-sm font-bold text-muted-foreground">
-                EPSS Score
-              </div>
+              <div className="mt-2 text-sm font-bold text-muted-foreground">EPSS Score</div>
               <div className="text-sm">
                 {selectedDependency?.epssScore || "No EPSS Score available."}
               </div>
 
-              <div className="mt-2 text-sm font-bold text-muted-foreground">
-                CWE Name
-              </div>
+              <div className="mt-2 text-sm font-bold text-muted-foreground">CWE Name</div>
               <div className="text-sm">
                 {selectedDependency?.cweName || "No CWE Name available."}
               </div>
 
-              <div className="mt-2 text-sm font-bold text-muted-foreground">
-                Description
-              </div>
+              <div className="mt-2 text-sm font-bold text-muted-foreground">Description</div>
               <div className="text-sm">
                 {selectedDependency?.description || "No description available."}
               </div>
@@ -582,24 +505,14 @@ const SummaryCards = ({
   onSeverityClick?: (
     severity: "Critical" | "High" | "Medium" | "Low" | "Unassigned" | null,
   ) => void;
-  activeSeverityFilter?:
-    | "Critical"
-    | "High"
-    | "Medium"
-    | "Low"
-    | "Unassigned"
-    | null;
+  activeSeverityFilter?: "Critical" | "High" | "Medium" | "Low" | "Unassigned" | null;
 }) => {
   return (
     <div className="border-b pb-5 transition-colors">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-6">
         <div className="border-l-4 border-red-800 pl-2 sm:pl-3">
-          <div className="mb-1 text-xs font-medium text-high-emphasis">
-            Total vulnerabilities
-          </div>
-          <div className="text-xl font-bold sm:text-2xl">
-            {summary.vulnerabilities}
-          </div>
+          <div className="mb-1 text-xs font-medium text-high-emphasis">Total vulnerabilities</div>
+          <div className="text-xl font-bold sm:text-2xl">{summary.vulnerabilities}</div>
         </div>
 
         <button
@@ -607,13 +520,10 @@ const SummaryCards = ({
           className={`w-full cursor-pointer border-l-4 border-red-500 pl-2 text-left transition-colors hover:bg-red-50 sm:pl-3 ${
             activeSeverityFilter === "Critical" ? "bg-red-50" : ""
           }`}
-          onClick={() => onSeverityClick?.("Critical")}>
-          <span className="mb-1 block text-xs font-medium text-high-emphasis">
-            Critical
-          </span>
-          <span className="block text-xl font-bold sm:text-2xl">
-            {summary.critical}
-          </span>
+          onClick={() => onSeverityClick?.("Critical")}
+        >
+          <span className="mb-1 block text-xs font-medium text-high-emphasis">Critical</span>
+          <span className="block text-xl font-bold sm:text-2xl">{summary.critical}</span>
         </button>
 
         <button
@@ -621,13 +531,10 @@ const SummaryCards = ({
           className={`w-full cursor-pointer border-l-4 border-orange-500 pl-2 text-left transition-colors hover:bg-orange-50 sm:pl-3 ${
             activeSeverityFilter === "High" ? "bg-orange-50" : ""
           }`}
-          onClick={() => onSeverityClick?.("High")}>
-          <span className="mb-1 block text-xs font-medium text-high-emphasis">
-            High
-          </span>
-          <span className="block text-xl font-bold sm:text-2xl">
-            {summary.high}
-          </span>
+          onClick={() => onSeverityClick?.("High")}
+        >
+          <span className="mb-1 block text-xs font-medium text-high-emphasis">High</span>
+          <span className="block text-xl font-bold sm:text-2xl">{summary.high}</span>
         </button>
 
         <button
@@ -635,13 +542,10 @@ const SummaryCards = ({
           className={`w-full cursor-pointer border-l-4 border-yellow-500 pl-2 text-left transition-colors hover:bg-yellow-50 sm:pl-3 ${
             activeSeverityFilter === "Medium" ? "bg-yellow-50" : ""
           }`}
-          onClick={() => onSeverityClick?.("Medium")}>
-          <span className="mb-1 block text-xs font-medium text-high-emphasis">
-            Medium
-          </span>
-          <span className="block text-xl font-bold sm:text-2xl">
-            {summary.medium}
-          </span>
+          onClick={() => onSeverityClick?.("Medium")}
+        >
+          <span className="mb-1 block text-xs font-medium text-high-emphasis">Medium</span>
+          <span className="block text-xl font-bold sm:text-2xl">{summary.medium}</span>
         </button>
 
         <button
@@ -649,13 +553,10 @@ const SummaryCards = ({
           className={`w-full cursor-pointer border-l-4 border-green-500 pl-2 text-left transition-colors hover:bg-green-50 sm:pl-3 ${
             activeSeverityFilter === "Low" ? "bg-green-50" : ""
           }`}
-          onClick={() => onSeverityClick?.("Low")}>
-          <span className="mb-1 block text-xs font-medium text-high-emphasis">
-            Low
-          </span>
-          <span className="block text-xl font-bold sm:text-2xl">
-            {summary.low}
-          </span>
+          onClick={() => onSeverityClick?.("Low")}
+        >
+          <span className="mb-1 block text-xs font-medium text-high-emphasis">Low</span>
+          <span className="block text-xl font-bold sm:text-2xl">{summary.low}</span>
         </button>
 
         <button
@@ -663,13 +564,10 @@ const SummaryCards = ({
           className={`w-full cursor-pointer border-l-4 border-gray-500 pl-2 text-left transition-colors hover:bg-gray-50 sm:pl-3 ${
             activeSeverityFilter === "Unassigned" ? "bg-secondary" : ""
           }`}
-          onClick={() => onSeverityClick?.("Unassigned")}>
-          <span className="mb-1 block text-xs font-medium text-high-emphasis">
-            Unassigned
-          </span>
-          <span className="block text-xl font-bold sm:text-2xl">
-            {summary.unassigned}
-          </span>
+          onClick={() => onSeverityClick?.("Unassigned")}
+        >
+          <span className="mb-1 block text-xs font-medium text-high-emphasis">Unassigned</span>
+          <span className="block text-xl font-bold sm:text-2xl">{summary.unassigned}</span>
         </button>
       </div>
     </div>
@@ -707,18 +605,18 @@ const DependencyPaginationComponent = ({
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="border-transition border-t bg-background px-6 py-4">
+    <div className="border-transition mt-4 border-t pt-4">
       <div className="flex items-center justify-between">
         <div className="text-xs text-low-emphasis">
           Showing {currentPage * filterState.pageSize + 1}-
-          {Math.min((currentPage + 1) * filterState.pageSize, totalItems)} of{" "}
-          {totalItems} entries
+          {Math.min((currentPage + 1) * filterState.pageSize, totalItems)} of {totalItems} entries
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
             disabled={currentPage === 0}
-            className="px-3 py-2 text-xs text-low-emphasis hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
+            className="px-3 py-2 text-xs text-low-emphasis hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
             Previous
           </button>
 
@@ -730,7 +628,8 @@ const DependencyPaginationComponent = ({
                 currentPage === pageNum
                   ? "bg-accent text-primary"
                   : "text-low-emphasis hover:text-medium-emphasis"
-              }`}>
+              }`}
+            >
               {pageNum + 1}
             </button>
           ))}
@@ -741,18 +640,18 @@ const DependencyPaginationComponent = ({
               <span className="px-2 text-xs text-gray-400">...</span>
               <button
                 onClick={() => handlePageChange(totalPages - 1)}
-                className="px-3 py-2 text-xs text-low-emphasis hover:text-primary">
+                className="px-3 py-2 text-xs text-low-emphasis hover:text-primary"
+              >
                 {totalPages}
               </button>
             </>
           )}
 
           <button
-            onClick={() =>
-              handlePageChange(Math.min(totalPages - 1, currentPage + 1))
-            }
+            onClick={() => handlePageChange(Math.min(totalPages - 1, currentPage + 1))}
             disabled={currentPage === totalPages - 1}
-            className="px-3 py-2 text-xs text-low-emphasis hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
+            className="px-3 py-2 text-xs text-low-emphasis hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
             Next
           </button>
         </div>
@@ -765,8 +664,7 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
   const params = useParams();
   const buildId = params?.buildId as string;
 
-  const { isLoading: isSCALoading, refetch: triggerSCARedirect } =
-    useSCARedirectLink(buildId);
+  const { isLoading: isSCALoading, refetch: triggerSCARedirect } = useSCARedirectLink(buildId);
 
   const [filterState, setFilterState] = useState<FilterState>({
     page: 0,
@@ -788,9 +686,7 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
 
     // Apply severity filter first
     if (filterState.severityFilter) {
-      filtered = filtered.filter(
-        (dep) => dep.severity === filterState.severityFilter,
-      );
+      filtered = filtered.filter((dep) => dep.severity === filterState.severityFilter);
     }
 
     // Apply search filter
@@ -802,9 +698,7 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
     if (searchTerm) {
       filtered = filtered.filter((dep) => {
         const field =
-          filterState.selectedFilter === "component"
-            ? dep.component
-            : dep.vulnerability;
+          filterState.selectedFilter === "component" ? dep.component : dep.vulnerability;
         return field.toLowerCase().includes(searchTerm.toLowerCase());
       });
     }
@@ -817,8 +711,7 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
   ) => {
     setFilterState((prev) => {
       const isClearingFilter = prev.severityFilter === severity;
-      const isSettingNewFilter =
-        prev.severityFilter !== severity && severity !== null;
+      const isSettingNewFilter = prev.severityFilter !== severity && severity !== null;
 
       return {
         ...prev,
@@ -837,7 +730,7 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
     });
 
   return (
-    <Card>
+    <div className={SURFACE_CARD_CLASS}>
       {/* Header Section */}
 
       <CardHeader className="flex flex-col gap-5">
@@ -847,7 +740,8 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
             variant={"outline"}
             onClick={handleSCARedirect}
             disabled={isSCALoading}
-            className="flex gap-2">
+            className={`${OUTLINE_BUTTON_CLASS} flex gap-2`}
+          >
             <ExternalLink className="h-4 w-4" />
             <span className="hidden sm:inline">View in Dependency Track</span>
             <span className="sm:hidden">Dependency Track</span>
@@ -861,9 +755,7 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
           </div>
           <div className="flex gap-2">
             <span className="text-low-emphasis">Vulnerable components:</span>
-            <span className="font-semibold">
-              {summary?.vulnerableComponents}
-            </span>
+            <span className="font-semibold">{summary?.vulnerableComponents}</span>
           </div>
           <div className="flex gap-2">
             <span className="text-low-emphasis">Risk Score:</span>
@@ -879,10 +771,7 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
           activeSeverityFilter={filterState.severityFilter}
         />
 
-        <DependencyFilterToolbar
-          filterState={filterState}
-          setFilterState={setFilterState}
-        />
+        <DependencyFilterToolbar filterState={filterState} setFilterState={setFilterState} />
 
         <DependenciesTable
           dependencies={filteredDependencies}
@@ -899,18 +788,14 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
           setFilterState={setFilterState}
         />
       </CardContent>
-    </Card>
+    </div>
   );
 };
 
 const SCATab: React.FC = () => {
   const params = useParams();
   const buildId = params?.buildId as string;
-  const {
-    data: scaData,
-    isLoading,
-    error,
-  } = useGetSCALibraryData(buildId);
+  const { data: scaData, isLoading, error } = useGetSCALibraryData(buildId);
   const scaDetails = scaData?.data?.details;
   const rawVulnerabilities = scaData?.data?.vulnerabilities;
   const vulnerabilities = useMemo(() => rawVulnerabilities || [], [rawVulnerabilities]);
@@ -927,18 +812,13 @@ const SCATab: React.FC = () => {
     components: details.components,
   });
 
-  const transformVulnerabilities = (
-    vulnerabilities: IScaVulnerability[],
-  ): Dependency[] => {
+  const transformVulnerabilities = (vulnerabilities: IScaVulnerability[]): Dependency[] => {
     if (!Array.isArray(vulnerabilities) || vulnerabilities.length === 0) {
       return [];
     }
 
     // Severity mapping
-    const severityMap: Record<
-      string,
-      "Critical" | "High" | "Medium" | "Low" | "Unassigned"
-    > = {
+    const severityMap: Record<string, "Critical" | "High" | "Medium" | "Low" | "Unassigned"> = {
       CRITICAL: "Critical",
       HIGH: "High",
       MEDIUM: "Medium",
@@ -1005,8 +885,8 @@ const SCATab: React.FC = () => {
       {isLoading ? (
         <>
           {/* Skeleton for Software library package */}
-          <div className="overflow-hidden rounded-lg border bg-background">
-            <div className="border-b px-6 py-4">
+          <div className={SURFACE_CARD_CLASS}>
+            <div className="border-b pb-4">
               <div className="flex items-center justify-between">
                 <Skeleton className="mb-2 h-6 w-48" />
                 <Skeleton className="h-8 w-40" />
@@ -1017,7 +897,7 @@ const SCATab: React.FC = () => {
                 <Skeleton className="h-4 w-40" />
               </div>
             </div>
-            <div className="p-6">
+            <div className="pt-6">
               <div className="mb-4 flex gap-4">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <Skeleton key={i} className="h-16 w-24 rounded-lg" />
@@ -1026,7 +906,7 @@ const SCATab: React.FC = () => {
               <Skeleton className="mb-4 h-8 w-64" />
               <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <Skeleton key={i} className="h-12 w-full rounded-lg" />
+                  <Skeleton key={i} className="h-12 w-full rounded-sm" />
                 ))}
               </div>
             </div>
@@ -1041,14 +921,11 @@ const SCATab: React.FC = () => {
           />
         </>
       ) : (
-        <Card>
-          <CardContent className="p-2">
-            <ErrorDisplay
-              text={error?.message || "Error loading SCA data"}
-              className="w-full"
-            />
+        <div className={SURFACE_CARD_CLASS}>
+          <CardContent>
+            <ErrorDisplay text={error?.message || "Error loading SCA data"} className="w-full" />
           </CardContent>
-        </Card>
+        </div>
       )}
     </div>
   );

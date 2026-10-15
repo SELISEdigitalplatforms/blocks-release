@@ -2,15 +2,15 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/project.store";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
 import DeploymentObservability from "@blocks-deployment/components/deployment-details/shared/deployment-observability";
-import { GitBranch, Rocket, Settings } from "lucide-react";
+import { ArrowUpRight, GitBranch, Rocket, Settings } from "lucide-react";
 import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
+import { cn } from "@/lib/utils";
 
 import { BackIconButton } from "@/components/buttons";
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
-import { Card, CardContent, CardHeader } from "@/components/ui-kits/card/card";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import {
@@ -20,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-kits/select/select";
-import { Separator } from "@/components/ui-kits/separator/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui-kits/tabs/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useScopedPath } from "@/hooks/use-scoped-path";
@@ -28,6 +27,12 @@ import { formatFullDate } from "@/utils/date.util";
 import DeleteDeploymentButton from "@blocks-deployment/components/deployment-details/shared/delete-deployment-button";
 import DeploymentStatusIndicator from "@blocks-deployment/components/deployment-details/shared/deployment-status-indicator";
 import DeploymentTargetLink from "@blocks-deployment/components/deployment-details/shared/deployment-target-link";
+import {
+  OUTLINE_BUTTON_CLASS,
+  SURFACE_CARD_CLASS,
+  UNDERLINE_TAB_TRIGGER_CLASS,
+  UNDERLINE_TABS_LIST_CLASS,
+} from "@blocks-deployment/components/deployment-details/shared/surface-styles";
 import { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
 import SecretsTab from "@blocks-deployment/components/deployment-details/tabs/secrets-tab";
 import { REPO_DETAILS_PROVIDERS } from "@blocks-deployment/constants/alert.constant";
@@ -37,10 +42,7 @@ import {
   useInitialRepoDeployment,
 } from "@/cross-modules/deployment/hooks/use-github-info";
 import { DEPLOYMENT_OPTIONS_DETAILS } from "@blocks-deployment/models/deployment-settings";
-import {
-  DeploymentFormData,
-  IHttpError,
-} from "@blocks-deployment/models/github-info";
+import { DeploymentFormData, IHttpError } from "@blocks-deployment/models/github-info";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { useQueryState } from "nuqs";
 import Alert from "../components/alert/alert";
@@ -100,6 +102,9 @@ export interface IPipeline {
 const DETAILS_BUILD_PAGE_SIZE = 1;
 const HISTORY_BUILD_PAGE_SIZE = 5;
 
+// Field labels in the details grid; matches the repository cards on the overview.
+const LABEL_CLASS = "text-[11px] text-muted-foreground";
+
 // The Details tab needs only the newest build; History shows one page of five. Asking
 // for a page instead of the whole history is the point of this endpoint's pagination.
 function buildPageFor(tabId: string, historyPageNumber: number) {
@@ -138,24 +143,21 @@ export default function RepoDetails() {
   const scoped = useScopedPath();
   // A string, unlike the function useScopedPath returns, is stable across renders.
   const deploymentPath = scoped("deployment");
-  const { projectKey, projectEnvironment, projectName, tenantGroupId } =
-    useSelectedProjectInfo();
+  const { projectKey, projectEnvironment, projectName, tenantGroupId } = useSelectedProjectInfo();
 
   const [isDeploying, setIsDeploying] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeploymentSettingsForDeploy, setIsDeploymentSettingsForDeploy] =
-    useState(false);
+  const [isDeploymentSettingsForDeploy, setIsDeploymentSettingsForDeploy] = useState(false);
   // 1-based, matching the API. Reset whenever the page would otherwise point past the end.
   const [historyPageNumber, setHistoryPageNumber] = useState(1);
 
   const { mutate: deployManually } = useInitialRepoDeployment();
   const { mutate: deleteDeployment } = useDeleteDeployment();
 
-  const { mutate: initialDeploy, isPending: isInitialDeploying } =
-    useInitialRepoDeployment();
+  const { mutate: initialDeploy, isPending: isInitialDeploying } = useInitialRepoDeployment();
   // A "?refresh=true" landing bypasses the cached repo details on the first read. Read once
   // up front so the very first query already skips the cache; the effect below only tidies
   // the URL.
@@ -215,10 +217,7 @@ export default function RepoDetails() {
       const httpError = error as IHttpError;
       const errorResponse = httpError.errors;
 
-      if (
-        errorResponse.data?.repo === null &&
-        errorResponse.isSuccess === false
-      ) {
+      if (errorResponse.data?.repo === null && errorResponse.isSuccess === false) {
         navigate(deploymentPath);
       }
     }
@@ -226,9 +225,7 @@ export default function RepoDetails() {
 
   // The repo's branch has no builds to show when the server reports the lookup failed.
   const isBranchMissing =
-    (!repoDetails ||
-      !repoDetails?.data?.build ||
-      !Array.isArray(repoDetails?.data?.build)) &&
+    (!repoDetails || !repoDetails?.data?.build || !Array.isArray(repoDetails?.data?.build)) &&
     repoDetails?.isSuccess === false;
 
   const filteredBuilds = useMemo<IPipeline[]>(() => {
@@ -240,12 +237,10 @@ export default function RepoDetails() {
           const matchesBranch = build.branch === repoDetails?.data?.repo.branch;
           return matchesBranch;
         })
-        .map(
-          (build: IPipeline): IPipeline => ({
-            ...build,
-            events: [],
-          }),
-        ) ?? []
+        .map((build: IPipeline): IPipeline => ({
+          ...build,
+          events: [],
+        })) ?? []
     );
   }, [repoDetails, isBranchMissing]);
 
@@ -276,17 +271,14 @@ export default function RepoDetails() {
       return null;
     }
 
-    const latest = builds.reduce<IPipeline | null>(
-      (latest, current) => {
-        if (!latest) return current;
+    const latest = builds.reduce<IPipeline | null>((latest, current) => {
+      if (!latest) return current;
 
-        const latestDate = new Date(latest.createdDate);
-        const currentDate = new Date(current.createdDate);
+      const latestDate = new Date(latest.createdDate);
+      const currentDate = new Date(current.createdDate);
 
-        return currentDate > latestDate ? current : latest;
-      },
-      null,
-    );
+      return currentDate > latestDate ? current : latest;
+    }, null);
 
     return latest;
   }, [repoDetails]);
@@ -318,9 +310,7 @@ export default function RepoDetails() {
       {
         onSuccess: (deployResponse) => {
           if (deployResponse && deployResponse.buildId) {
-            navigate(
-              scoped(`deployment/repo/${repoId}/deployment-live/${deployResponse.buildId}`),
-            );
+            navigate(scoped(`deployment/repo/${repoId}/deployment-live/${deployResponse.buildId}`));
             setIsDeploying(false);
           } else {
             navigate(scoped("deployment"));
@@ -370,9 +360,7 @@ export default function RepoDetails() {
       {
         onSuccess: (response) => {
           if (response && response.buildId) {
-            navigate(
-              scoped(`deployment/repo/${repoId}/deployment-live/${response.buildId}`),
-            );
+            navigate(scoped(`deployment/repo/${repoId}/deployment-live/${response.buildId}`));
             setIsDeploying(false);
           } else {
             navigate(scoped("deployment"));
@@ -421,8 +409,7 @@ export default function RepoDetails() {
         toast({
           title: "Deletion Started",
           description:
-            response?.message ||
-            "The deployment is being removed. This can take up to a minute.",
+            response?.message || "The deployment is being removed. This can take up to a minute.",
           variant: "success",
         });
       },
@@ -462,12 +449,9 @@ export default function RepoDetails() {
   const hasLiveDeployment = Boolean(repoDetails?.data?.repo?.deployedNamespace);
 
   const deploymentUrl =
-    latestBuild?.defaultDeploymentUrl ||
-    repoDetails?.data?.repo?.defaultDeploymentUrl ||
-    "";
+    latestBuild?.defaultDeploymentUrl || repoDetails?.data?.repo?.defaultDeploymentUrl || "";
 
-  const repoDisplayName =
-    latestBuild?.repoName.split("/").pop() || latestBuild?.repoName;
+  const repoDisplayName = latestBuild?.repoName.split("/").pop() || latestBuild?.repoName;
 
   const handleSettingsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -489,9 +473,7 @@ export default function RepoDetails() {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <div className="mb-4 text-lg text-red-600">
-            Missing required parameters:
-          </div>
+          <div className="mb-4 text-lg text-red-600">Missing required parameters:</div>
           <div className="mb-4 text-sm text-low-emphasis">
             repoId: {repoId || "MISSING"}
             <br />
@@ -500,7 +482,8 @@ export default function RepoDetails() {
           <div className="space-x-2">
             <button
               onClick={() => navigate(-1)}
-              className="rounded bg-gray-500 px-4 py-2 text-white">
+              className="rounded bg-gray-500 px-4 py-2 text-white"
+            >
               Go Back
             </button>
           </div>
@@ -509,107 +492,25 @@ export default function RepoDetails() {
     );
   }
   if (isLoading) {
-    return <LoadingSpinner variant="overlay" label="Loading..." />;
+    return <LoadingSpinner />;
   }
 
-  if (
-    repoDetails?.data?.build.length === 0 &&
-    repoDetails?.data?.repo !== null
-  ) {
-    const preDeployTab = preDeployTabFor(tabId);
+  const isEmptyHistory = repoDetails?.data?.build.length === 0 && repoDetails?.data?.repo !== null;
+  // Environment variables are deliberately reachable before the first deployment: the server
+  // keys them on the repository alone, and the first pipeline run reads whatever is stored at
+  // that point. Without this the set could only be created after a deployment that needed it.
+  const activeTab = isEmptyHistory ? preDeployTabFor(tabId) : tabId;
+  const repositoryName = latestBuild?.repoName || repoDetails?.data?.repo.repoName || "Repository";
+  const repositoryUrl = latestBuild?.repoUrl || repoDetails?.data?.repo.repoUrl;
+  const branch = repoDetails?.data?.repo.branch || "";
+  const customUrl = repoDetails?.data?.repo?.customDeploymentUrl;
+  const deploymentType =
+    DEPLOYMENT_OPTIONS_DETAILS.find(
+      (option) =>
+        option.value.toLowerCase() === repoDetails?.data?.repo.deploymentType?.toLowerCase(),
+    )?.label || "N/A";
 
-    return (
-      <div className="mx-auto pb-8">
-        <div className="mt-2 space-y-2">
-          <div className="flex items-center gap-2">
-            <BackIconButton onClick={handleGoBack} data-testid="back-button" />
-            <div>
-              <h1 className="text-2xl font-semibold">Repository Details</h1>
-              <div className="text-sm text-muted-foreground">
-                {repoDetails?.data?.repo.repoName || ""}
-              </div>
-            </div>
-          </div>
-
-          {/* Environment variables are deliberately reachable before the first deployment: the
-              server keys them on the repository alone, and the first pipeline run reads whatever
-              is stored at that point. Without this the set could only be created after a
-              deployment that already needed it. */}
-          <Tabs value={preDeployTab} onValueChange={setTabId}>
-            <div className="mb-5 mt-6 flex items-center justify-between rounded text-base">
-              <div className="md:hidden">
-                <Select value={preDeployTab} onValueChange={setTabId}>
-                  <SelectTrigger className="w-52">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="details">Details</SelectItem>
-                    <SelectItem value="secrets">
-                      Environment Variables
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="hidden md:block">
-                <TabsList>
-                  <TabsTrigger value="details" className="w-20">
-                    Details
-                  </TabsTrigger>
-                  <TabsTrigger value="secrets" className="px-4">
-                    Environment Variables
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-            </div>
-
-            <TabsContent value="details">
-              <Card>
-                <div className="flex h-auto flex-col items-center justify-center self-stretch rounded-sm bg-background px-1 py-5">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
-                    <GitBranch className="h-8 w-8 text-low-emphasis" />
-                  </div>
-                  <div className="flex flex-col items-center gap-2">
-                    <h3 className="py-4 text-xl font-semibold text-high-emphasis">
-                      No deployments available
-                    </h3>
-
-                    <p className="max-w-md items-center text-center text-sm text-low-emphasis">
-                      This repository has not been deployed yet. Click the
-                      deploy button to create your first deployment.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={handleDeploy}
-                    disabled={isProcessing}
-                    className="mt-4">
-                    Deploy Now
-                  </Button>
-                </div>
-                <DeploymentSettingsModal
-                  isOpen={isSettingsModalOpen}
-                  onClose={handleCloseModal}
-                  repoId={repoId}
-                  isDeploymentFlow={isDeploymentSettingsForDeploy}
-                  onDeploy={handleDeployFromSettings}
-                  isDeploying={isDeploying}
-                  pageNumber={buildPageNumber}
-                  pageSize={buildPageSize}
-                />
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="secrets">
-              <SecretsTab
-                repoId={repoId}
-                repoName={repoDetails?.data?.repo.repoName}
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
-    );
-  }
-  const tabChangedHandler = (value: keyof typeof REPO_DETAILS_PROVIDERS) => {
+  const tabChangedHandler = (value: string) => {
     setTabId(value);
   };
   // The Pagination control is 0-based; the API is 1-based.
@@ -618,284 +519,253 @@ export default function RepoDetails() {
   };
 
   return (
-    <div className="mx-auto pb-8">
-      <div className="mt-2 space-y-2">
-        <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <BackIconButton
-              onClick={handleGoBack}
-              data-testid="back-button"
-            />
-            <div>
-              <h1 className="text-lg font-semibold sm:text-2xl">
-                {latestBuild?.repoName.split("/").pop() ||
-                  latestBuild?.repoName}
-              </h1>
+    <div className="mx-auto min-w-0 pb-8">
+      {/* Same rhythm as PageHeader: title, subtitle, then mb-4 / sm:mb-6. */}
+      <header className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-start gap-1">
+          <BackIconButton
+            onClick={handleGoBack}
+            data-testid="back-button"
+            className="-ml-1.5 h-7 w-7 shrink-0 sm:h-8 sm:w-8"
+          />
+          <div className="min-w-0 space-y-1">
+            <h1 className="break-words text-xl font-semibold tracking-tight text-high-emphasis sm:text-2xl">
+              {repositoryName.split("/").pop()}
+            </h1>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+              {repositoryUrl ? (
+                <a
+                  href={repositoryUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-w-0 items-center gap-1.5 hover:text-primary"
+                >
+                  <span className="break-all">{repositoryName}</span>
+                  <ArrowUpRight className="h-3 w-3 shrink-0" aria-hidden="true" />
+                </a>
+              ) : (
+                <span>{repositoryName}</span>
+              )}
+              {branch && (
+                <span className="inline-flex items-center gap-1.5 rounded-sm bg-primary/[0.07] px-2 py-1 text-xs font-medium text-primary">
+                  <GitBranch className="h-3 w-3" aria-hidden="true" />
+                  {branch}
+                </span>
+              )}
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-4">
-            {/* Hidden until tracing and logs are available for repositories. */}
-            {/* <Button variant="outline" disabled>
-              <div className="flex h-8 w-8 items-center justify-center">
-                <ChartGantt size={20} />
-              </div>
-              <span className="hidden sm:inline">Tracing</span>
-            </Button>
-            <Button variant="outline" disabled>
-              <div className="flex h-8 w-8 items-center justify-center">
-                <Logs size={20} />
-              </div>
-              <span className="hidden sm:inline">Logs</span>
-            </Button> */}
-
-            <Button variant="outline" onClick={handleSettingsClick}>
-              <div className="flex h-8 w-8 items-center justify-center">
-                <Settings size={20} />
-              </div>
-              <span className="hidden sm:inline">Configure</span>
-            </Button>
           </div>
         </div>
-        <Tabs
-          value={tabId}
-          onValueChange={(value: string) =>
-            tabChangedHandler(value as keyof typeof REPO_DETAILS_PROVIDERS)
-          }>
-          <div className="mb-5 mt-6 flex items-center justify-between rounded text-base">
-            <div className="md:hidden">
-              <Select
-                value={tabId}
-                onValueChange={(value: string) =>
-                  tabChangedHandler(
-                    value as keyof typeof REPO_DETAILS_PROVIDERS,
-                  )
-                }>
-                <SelectTrigger className="w-52">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="details">Details</SelectItem>
-                  <SelectItem value="history">History</SelectItem>
-                  <SelectItem value="secrets">Environment Variables</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="hidden md:block">
-              <TabsList>
-                <TabsTrigger value="details" className="w-20">
-                  Details
-                </TabsTrigger>
-                <TabsTrigger value="history" className="w-20">
+        {!isEmptyHistory && (
+          <div className="flex flex-wrap items-center gap-1">
+            {/* Tracing and Logs stay hidden until they are available for repositories. */}
+            <Button
+              size="sm"
+              variant="outline"
+              className={cn("gap-2", OUTLINE_BUTTON_CLASS)}
+              onClick={handleSettingsClick}
+            >
+              <Settings size={16} />
+              Configure
+            </Button>
+          </div>
+        )}
+      </header>
+
+      <Tabs value={activeTab} onValueChange={tabChangedHandler}>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="md:hidden">
+            <Select value={activeTab} onValueChange={tabChangedHandler}>
+              <SelectTrigger className="h-9 w-52">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="details">Details</SelectItem>
+                {!isEmptyHistory && <SelectItem value="history">History</SelectItem>}
+                <SelectItem value="secrets">Environment Variables</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="hidden min-w-0 md:block">
+            <TabsList className={cn(UNDERLINE_TABS_LIST_CLASS, "gap-6")}>
+              <TabsTrigger value="details" className={UNDERLINE_TAB_TRIGGER_CLASS}>
+                Details
+              </TabsTrigger>
+              {!isEmptyHistory && (
+                <TabsTrigger value="history" className={UNDERLINE_TAB_TRIGGER_CLASS}>
                   History
                 </TabsTrigger>
-                <TabsTrigger value="secrets" className="px-4">
-                  Environment Variables
-                </TabsTrigger>
-              </TabsList>
-            </div>
+              )}
+              <TabsTrigger value="secrets" className={UNDERLINE_TAB_TRIGGER_CLASS}>
+                Environment Variables
+              </TabsTrigger>
+            </TabsList>
           </div>
-          <TabsContent value="details">
-            <div className="flex flex-col gap-5">
-              <Card>
-                <CardHeader className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  {" "}
-                  <h3 className="text-lg font-semibold">
-                    Deployment Information
-                  </h3>
-                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          onClick={() => setIsModalOpen(true)}
-                          disabled={isDeploying || isDeleting}
-                          className="w-full shadow-xs sm:w-auto">
-                          <div className="flex items-center justify-center gap-2">
-                            <Rocket size={20} />
-                            <span>
-                              {isDeploying ? "Deploying..." : "Deploy"}
-                            </span>
-                          </div>
-                        </Button>
-                      </DialogTrigger>
-                      <ConfirmationModal
-                        data={confirmationData}
-                        onCancel={handleCancel}
-                        onConfirm={handleManualDeploy}
-                        buttonState={{
-                          confirm: { disable: isDeploying },
-                        }}
-                      />
-                    </Dialog>
+          {!isEmptyHistory && (
+            <div className="flex items-center gap-2">
+              <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setIsModalOpen(true)}
+                    disabled={isDeploying || isDeleting}
+                    className="gap-2"
+                  >
+                    <Rocket size={16} />
+                    {isDeploying ? "Deploying..." : "Deploy"}
+                  </Button>
+                </DialogTrigger>
+                <ConfirmationModal
+                  data={confirmationData}
+                  onCancel={handleCancel}
+                  onConfirm={handleManualDeploy}
+                  buttonState={{ confirm: { disable: isDeploying } }}
+                />
+              </Dialog>
+              <DeleteDeploymentButton
+                hasLiveDeployment={hasLiveDeployment}
+                repoName={repoDisplayName}
+                deploymentUrl={deploymentUrl}
+                isDeleting={isDeleting}
+                isDisabled={isDeploying}
+                isModalOpen={isDeleteModalOpen}
+                onModalOpenChange={setIsDeleteModalOpen}
+                onConfirm={handleDeleteDeployment}
+                onCancel={handleDeleteCancel}
+              />
+            </div>
+          )}
+        </div>
 
-                    <DeleteDeploymentButton
-                      hasLiveDeployment={hasLiveDeployment}
-                      repoName={repoDisplayName}
-                      deploymentUrl={deploymentUrl}
-                      isDeleting={isDeleting}
-                      isDisabled={isDeploying}
-                      isModalOpen={isDeleteModalOpen}
-                      onModalOpenChange={setIsDeleteModalOpen}
-                      onConfirm={handleDeleteDeployment}
-                      onCancel={handleDeleteCancel}
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {" "}
-                  <div className="my-2 grid w-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <p className="text-sm text-low-emphasis">Repo URL</p>
+        <div className={SURFACE_CARD_CLASS}>
+          <TabsContent value="details">
+            {isEmptyHistory ? (
+              <section className="flex min-h-72 flex-col items-center justify-center px-4 py-10 text-center">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-sm bg-primary/[0.07] text-primary">
+                  <Rocket className="h-6 w-6" />
+                </div>
+                <h2 className="text-xl font-semibold tracking-tight">No deployments available</h2>
+                <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+                  Add your environment variables, then deploy this repository to bring your
+                  application online.
+                </p>
+                <Button
+                  onClick={handleDeploy}
+                  size="sm"
+                  disabled={isProcessing}
+                  className="mt-6 gap-2"
+                >
+                  <Rocket size={16} />
+                  Deploy Now
+                </Button>
+              </section>
+            ) : (
+              <div className="space-y-10">
+                <section aria-label="Deployment details">
+                  <dl className="grid grid-cols-2 gap-x-5 gap-y-5 sm:gap-x-10 xl:grid-cols-3">
+                    <div className="col-span-2 min-w-0 sm:col-span-1">
+                      <dt className={LABEL_CLASS}>Deploys To</dt>
+                      <dd className="mt-1.5 min-w-0">
+                        <DeploymentTargetLink isLive={hasLiveDeployment} url={deploymentUrl} />
+                      </dd>
+                    </div>
+                    <div className="col-span-2 min-w-0 sm:col-span-1">
+                      <dt className={LABEL_CLASS}>Repo URL</dt>
+                      <dd className="mt-1.5">
                         <a
-                          href={latestBuild?.repoUrl || "#"}
+                          href={repositoryUrl || "#"}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="block truncate text-sm text-primary hover:underline"
-                          onClick={(e) => e.stopPropagation()}>
-                          {latestBuild?.repoUrl || "N/A"}
+                          title={repositoryUrl}
+                        >
+                          {repositoryUrl || "N/A"}
                         </a>
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-sm text-low-emphasis">
-                          Deploys To
-                        </p>
-                        <DeploymentTargetLink
-                          isLive={hasLiveDeployment}
-                          url={deploymentUrl}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-sm text-low-emphasis">
-                          Custom Deployment URL
-                        </p>
-                        {repoDetails?.data?.repo?.customDeploymentUrl &&
-                        repoDetails?.data?.repo?.customDeploymentUrl !==
-                          "N/A" ? (
-                          <CopyToClipboardButton
-                            textToCopy={
-                              repoDetails?.data?.repo?.customDeploymentUrl
-                            }
-                            isHoverable={false}>
+                      </dd>
+                    </div>
+                    <div className="col-span-2 min-w-0 sm:col-span-1">
+                      <dt className={LABEL_CLASS}>Custom Deployment URL</dt>
+                      <dd className="mt-1.5">
+                        {customUrl && customUrl !== "N/A" ? (
+                          <CopyToClipboardButton textToCopy={customUrl} isHoverable={false}>
                             <a
-                              href={
-                                repoDetails?.data?.repo?.customDeploymentUrl
-                              }
+                              href={customUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="block truncate text-sm text-primary hover:underline"
-                              onClick={(e) => e.stopPropagation()}>
-                              {repoDetails?.data?.repo?.customDeploymentUrl}
+                              title={customUrl}
+                            >
+                              {customUrl}
                             </a>
                           </CopyToClipboardButton>
                         ) : (
-                          <span className="block truncate text-sm">
-                            {"N/A"}
-                          </span>
+                          <span className="text-sm text-muted-foreground">N/A</span>
                         )}
-                      </div>
+                      </dd>
                     </div>
-
-                    <div className="grid grid-cols-1 gap-4 md:mb-4 md:gap-6">
-                      <div className="space-y-4">
-                        <div className="space-y-2" data-testid="deployment-status">
-                          <p className="text-sm text-low-emphasis">
-                            Deployment Status
-                          </p>
-                          <DeploymentStatusIndicator
-                            hasLiveDeployment={hasLiveDeployment}
-                            latestBuild={latestBuild}
-                            buildStatus={latestBuild?.status}
-                            repoStatus={
-                              repoDetails?.data?.repo?.lastDeploymentStatus
-                            }
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <p className="text-sm text-low-emphasis">
-                            Latest Deployment Date
-                          </p>
-                          <span className="text-sm">
-                            {latestBuild
-                              ? formatFullDate(
-                                  new Date(
-                                    repoDetails?.data?.repo
-                                      ?.lastDeploymentDate as string,
-                                  ),
-                                )
-                              : "N/A"}
-                          </span>
-                        </div>
-
-                        <div className="space-y-2">
-                          <p className="text-sm text-low-emphasis">
-                            Deployment Type
-                          </p>
-                          <span className="text-sm">
-                            {(() => {
-                              const result =
-                                DEPLOYMENT_OPTIONS_DETAILS.find(
-                                  (option) =>
-                                    option.value.toLowerCase() ===
-                                    repoDetails?.data.repo.deploymentType?.toLowerCase(),
-                                )?.label || "N/A";
-                              return result;
-                            })()}
-                          </span>
-                        </div>
-                      </div>
+                    <div data-testid="deployment-status">
+                      <dt className={LABEL_CLASS}>Deployment Status</dt>
+                      <dd className="mt-1.5">
+                        <DeploymentStatusIndicator
+                          hasLiveDeployment={hasLiveDeployment}
+                          latestBuild={latestBuild}
+                          buildStatus={latestBuild?.status}
+                          repoStatus={repoDetails?.data?.repo?.lastDeploymentStatus}
+                        />
+                      </dd>
                     </div>
+                    <div>
+                      <dt className={LABEL_CLASS}>Latest Deployment Date</dt>
+                      <dd className="mt-1.5 text-sm font-medium text-high-emphasis">
+                        {latestBuild
+                          ? formatFullDate(
+                              new Date(repoDetails?.data?.repo?.lastDeploymentDate as string),
+                            )
+                          : "N/A"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className={LABEL_CLASS}>Deployment Type</dt>
+                      <dd className="mt-1.5 text-sm font-medium text-high-emphasis">
+                        {deploymentType}
+                      </dd>
+                    </div>
+                  </dl>
+                </section>
+
+                <section aria-label="Latest deployment" className="min-w-0">
+                  <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 className="text-base font-semibold text-high-emphasis">
+                      Latest deployment
+                    </h2>
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-primary hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                      onClick={() => tabChangedHandler(REPO_DETAILS_PROVIDERS.HISTORY)}
+                    >
+                      View all history <span aria-hidden="true">↗</span>
+                    </button>
                   </div>
-                  <div className="w-full">
-                    <Separator
-                      orientation="horizontal"
-                      className="my-2 w-full"
-                    />
-
-                    <div className="flex w-full flex-col gap-3 pb-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                      <h3 className="text-lg font-semibold">
-                        Deployment History
-                      </h3>
-                    </div>
-                    <DeploymentObservability
-                      builds={filteredBuilds}
-                      viewLatestBuild={true}
-                      dataUpdatedAt={dataUpdatedAt}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-              <Alert
-                repoId={repoId}
-                status={latestBuild?.status || ""}
-                latestBuild={latestBuild}
-                buildLength={filteredBuilds?.length}
-              />
-            </div>
-          </TabsContent>
-          <TabsContent value="history">
-            <Card>
-              <div className="flex w-full flex-col gap-3 pb-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-col items-start gap-2">
-                  <h3 className="text-lg font-semibold">
-                    Deployment History
-                  </h3>
-                </div>
+                  <DeploymentObservability
+                    builds={filteredBuilds}
+                    viewLatestBuild
+                    dataUpdatedAt={dataUpdatedAt}
+                  />
+                </section>
               </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="history">
+            <section aria-label="Deployment history" className="min-w-0 space-y-6">
               <DeploymentObservability
                 builds={filteredBuilds}
-                startIndex={
-                  (historyPageNumber - 1) * HISTORY_BUILD_PAGE_SIZE + 1
-                }
+                startIndex={(historyPageNumber - 1) * HISTORY_BUILD_PAGE_SIZE + 1}
                 totalCount={totalBuildCount}
                 dataUpdatedAt={dataUpdatedAt}
               />
               {totalBuildCount > HISTORY_BUILD_PAGE_SIZE && (
-                <div className="mt-4 flex items-center px-4 pb-4 md:justify-end">
+                <div className="flex items-center justify-end">
                   <Pagination
                     page={historyPageNumber - 1}
                     pageSize={HISTORY_BUILD_PAGE_SIZE}
@@ -904,16 +774,23 @@ export default function RepoDetails() {
                   />
                 </div>
               )}
-            </Card>
+            </section>
           </TabsContent>
           <TabsContent value="secrets">
-            <SecretsTab
-              repoId={repoId}
-              repoName={repoDetails?.data?.repo.repoName}
-            />
+            <SecretsTab repoId={repoId} repoName={repoDetails?.data?.repo.repoName} />
           </TabsContent>
-        </Tabs>
-      </div>
+        </div>
+        {!isEmptyHistory && activeTab === "details" && (
+          <div className="mt-6">
+            <Alert
+              repoId={repoId}
+              status={latestBuild?.status || ""}
+              latestBuild={latestBuild}
+              buildLength={filteredBuilds?.length}
+            />
+          </div>
+        )}
+      </Tabs>
 
       <DeploymentSettingsModal
         isOpen={isSettingsModalOpen}

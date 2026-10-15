@@ -2,15 +2,14 @@ import { useCallback, useState } from "react";
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { getDeploymentLogEventBadgeClassName } from "@blocks-deployment/utils/deployment-logs.utils";
+import { cn } from "@/lib/utils";
 
 // Custom hook - handles all the notification logic
 export const useDeploymentStatus = (
   latestBuild?: unknown,
   deploymentStatus: string = "NoBuild",
 ) => {
-  const latestBuildItemId = (
-    latestBuild as { itemId?: string } | null | undefined
-  )?.itemId;
+  const latestBuildItemId = (latestBuild as { itemId?: string } | null | undefined)?.itemId;
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [liveBuildId, setLiveBuildId] = useState<string | null>(null);
   const [hasReceivedUpdate, setHasReceivedUpdate] = useState(false);
@@ -19,9 +18,7 @@ export const useDeploymentStatus = (
     (notificationData: { message: { denormalizedPayload: string } }) => {
       try {
         setHasReceivedUpdate(true);
-        const denormalizedPayload = JSON.parse(
-          notificationData.message.denormalizedPayload,
-        );
+        const denormalizedPayload = JSON.parse(notificationData.message.denormalizedPayload);
         const message = denormalizedPayload.Message;
         const repoStatus = denormalizedPayload.RepoStatus;
         const buildStatus = repoStatus?.BuildStatus || message?.EventType;
@@ -49,11 +46,15 @@ export const useDeploymentStatus = (
 };
 
 // Presentational component - just renders the badge
-export const DeploymentStatusBadge = ({ status }: { status: string }) => {
+export const DeploymentStatusBadge = ({
+  status,
+  className,
+}: {
+  status: string;
+  className?: string;
+}) => {
   return (
-    <Badge className={getDeploymentLogEventBadgeClassName(status)}>
-      {status}
-    </Badge>
+    <Badge className={cn(getDeploymentLogEventBadgeClassName(status), className)}>{status}</Badge>
   );
 };
 

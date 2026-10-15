@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Clock, ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { LogoLoader } from "@/components/loader-spinner/logo-loader";
 import { DeployedLogsService } from "@blocks-deployment/services/deployed-logs.service";
 import {
   DEPLOYMENT_LOG_EVENT_STATUS,
@@ -57,8 +58,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
       );
       setBuildSteps(steps);
 
-      const defaultExpanded: Set<string> =
-        DeployedLogsService.getDefaultExpandedSteps(steps);
+      const defaultExpanded: Set<string> = DeployedLogsService.getDefaultExpandedSteps(steps);
       setExpandedSteps(defaultExpanded);
     }
 
@@ -95,15 +95,9 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
                 <span className="text-xs text-white">✕</span>
               </div>
               <div className="ml-3">
-                <h3 className="text-lg font-medium text-red-800">
-                  Failed to load deployment data
-                </h3>
-                <h4 className="text-sm font-medium text-red-800">
-                  Unable to show deployment logs
-                </h4>
-                <p className="mt-1 text-xs text-red-600">
-                  Build ID: {buildId || "N/A"}
-                </p>
+                <h3 className="text-lg font-medium text-red-800">Failed to load deployment data</h3>
+                <h4 className="text-sm font-medium text-red-800">Unable to show deployment logs</h4>
+                <p className="mt-1 text-xs text-red-600">Build ID: {buildId || "N/A"}</p>
               </div>
             </div>
           </div>
@@ -125,12 +119,10 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
         <div className="p-6">
           <h2 className="mb-4 text-lg font-semibold">{title}</h2>
           <div className="py-8 text-center text-gray-500">
-            <Clock className="mx-auto mb-2 h-8 w-8 animate-spin" />
-            <p>
-              {!buildId
-                ? "Waiting for build ID..."
-                : "Loading deployment logs..."}
-            </p>
+            <div className="mb-3 flex justify-center">
+              <LogoLoader size={32} label="Loading deployment logs" />
+            </div>
+            <p>{!buildId ? "Waiting for build ID..." : "Loading deployment logs..."}</p>
           </div>
         </div>
       </div>
@@ -170,7 +162,8 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
           {buildSteps.map((step: IBuildStep, stepIndex: number) => (
             <div
               key={step.id}
-              className={`${stepIndex !== buildSteps.length - 1 ? "border-default border-b" : ""}`}>
+              className={`${stepIndex !== buildSteps.length - 1 ? "border-default border-b" : ""}`}
+            >
               {/* Step Header */}
               <div
                 role="button"
@@ -181,8 +174,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
                     : ""
                 }`}
                 onClick={() =>
-                  DeployedLogsService.shouldShowChevron(step) &&
-                  toggleExpanded(step.id)
+                  DeployedLogsService.shouldShowChevron(step) && toggleExpanded(step.id)
                 }
                 onKeyDown={(event) => {
                   if (event.key !== "Enter" && event.key !== " ") return;
@@ -190,7 +182,8 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
                   if (DeployedLogsService.shouldShowChevron(step)) {
                     toggleExpanded(step.id);
                   }
-                }}>
+                }}
+              >
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center space-x-2">
                     {DeployedLogsService.shouldShowChevron(step) &&
@@ -209,35 +202,35 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
                 </div>
                 <div
                   className="font-mono text-xs text-low-emphasis"
-                  title={getStepTimingTooltip(step)}>
+                  title={getStepTimingTooltip(step)}
+                >
                   {step.duration}
                 </div>
               </div>
 
               {/* Step Logs */}
-              {expandedSteps.has(step.id) &&
-                step.logs &&
-                step.logs.length > 0 && (
-                  <div className="bg-gray-100">
-                    <StepTimingBar step={step} />
-                    <div className="overflow-x-auto">
-                      <div className="p-0">
-                        {step.logs.map((log: string, logIndex: number) => (
-                          <div
-                            key={logIndex}
-                            className="flex bg-secondary font-mono text-xs last:border-b-0">
-                            <div className="min-w-12 select-none bg-secondary px-3 py-1 text-right">
-                              {String(logIndex + 1).padStart(2, "0")}
-                            </div>
-                            <div className="flex-1 px-3 py-1">
-                              <LogLineText line={log} />
-                            </div>
+              {expandedSteps.has(step.id) && step.logs && step.logs.length > 0 && (
+                <div className="bg-gray-100">
+                  <StepTimingBar step={step} />
+                  <div className="overflow-x-auto">
+                    <div className="p-0">
+                      {step.logs.map((log: string, logIndex: number) => (
+                        <div
+                          key={logIndex}
+                          className="flex bg-secondary font-mono text-xs last:border-b-0"
+                        >
+                          <div className="min-w-12 select-none bg-secondary px-3 py-1 text-right">
+                            {String(logIndex + 1).padStart(2, "0")}
                           </div>
-                        ))}
-                      </div>
+                          <div className="flex-1 px-3 py-1">
+                            <LogLineText line={log} />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                )}
+                </div>
+              )}
             </div>
           ))}
         </div>

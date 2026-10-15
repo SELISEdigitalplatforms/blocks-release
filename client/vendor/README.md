@@ -7,6 +7,8 @@
 Release applies `app-kit-console-ui.patch` to that source commit before building
 this archive. It brings Console's breadcrumb top bar, overview hero, metadata,
 Bootstrap dialog, and Domains/Repositories tables into the shared package.
+`DashboardOverview` takes `showDomains` and `showRepositories` (both default to
+`true`); Release's `/dashboard` route passes `false` for both.
 Release's Core APIs components and Swagger hook remain unchanged. The package
 build targets browsers so Bootstrap's Markdown dependencies use browser entry
 points.

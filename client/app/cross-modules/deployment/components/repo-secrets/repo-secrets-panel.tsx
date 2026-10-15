@@ -1,11 +1,8 @@
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
+import { cn } from "@/lib/utils";
+import { OUTLINE_BUTTON_CLASS } from "@blocks-deployment/components/deployment-details/shared/surface-styles";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui-kits/card/card";
 import { Dialog, DialogTrigger } from "@/components/ui-kits/dialog/dialog";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
@@ -43,16 +40,16 @@ type RepoSecretsPanelProps = {
 
 /** Mirrors the real layout so nothing jumps when the data arrives. */
 export const RepoSecretsPanelLoading = () => (
-  <Card data-testid="repo-secrets-loading">
-    <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <Skeleton className="h-6 w-40" />
+  <section data-testid="repo-secrets-loading">
+    <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <Skeleton className="h-6 w-16" />
       <Skeleton className="h-9 w-64" />
-    </CardHeader>
-    <CardContent className="flex flex-col gap-3">
+    </header>
+    <div className="flex flex-col gap-3">
       <Skeleton className="h-5 w-56" />
       <Skeleton className="h-5 w-72" />
-    </CardContent>
-  </Card>
+    </div>
+  </section>
 );
 
 /**
@@ -83,13 +80,13 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
     const forbidden = getServerReason(error) === "FORBIDDEN";
 
     return (
-      <Card>
-        <CardContent className="px-6 py-12 text-center text-sm text-muted-foreground">
+      <section>
+        <div className="px-6 py-12 text-center text-sm text-muted-foreground">
           {forbidden
             ? "You do not have permission to manage environment variables for this repository."
             : "The environment variables for this repository could not be loaded."}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     );
   }
 
@@ -155,9 +152,9 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
   if (!data?.hasSecrets) {
     return (
       <>
-        <Card>
+        <section>
           <RepoSecretsEmpty onAdd={() => openEditor()} disabled={isBusy} />
-        </Card>
+        </section>
         <SecretFormModal
           open={isFormOpen}
           onOpenChange={setIsFormOpen}
@@ -170,10 +167,12 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
 
   return (
     <>
-      <Card className={isBusy ? "opacity-60 transition-opacity" : undefined}>
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <section
+        aria-label="Environment variables"
+        className={isBusy ? "opacity-60 transition-opacity" : undefined}
+      >
+        <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <h3 className="text-base font-semibold">Environment Variables</h3>
             {status && (
               <Badge variant={isDeleted ? "outline" : "secondary"}>
                 {REPO_SECRET_STATUS_LABEL[status]}
@@ -191,17 +190,17 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                         type="button"
                         variant="outline"
                         size="sm"
+                        className={cn(OUTLINE_BUTTON_CLASS, "h-9 gap-1.5 px-3 text-xs")}
                         disabled={isBusy || isLocked}
-                        onClick={handleReveal}>
-                        <Eye className="mr-2 h-4 w-4" />
+                        onClick={handleReveal}
+                      >
+                        <Eye className="h-4 w-4" />
                         Reveal
                       </Button>
                     </span>
                   </TooltipTrigger>
                   {isLocked && (
-                    <TooltipContent>
-                      Unlock these variables to read or change them.
-                    </TooltipContent>
+                    <TooltipContent>Unlock these variables to read or change them.</TooltipContent>
                   )}
                 </Tooltip>
               </TooltipProvider>
@@ -212,9 +211,11 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                 type="button"
                 variant="outline"
                 size="sm"
+                className={cn(OUTLINE_BUTTON_CLASS, "h-9 gap-1.5 px-3 text-xs")}
                 disabled={isBusy || isLocked}
-                onClick={handleEdit}>
-                <Pencil className="mr-2 h-4 w-4" />
+                onClick={handleEdit}
+              >
+                <Pencil className="h-4 w-4" />
                 Edit
               </Button>
             )}
@@ -225,9 +226,11 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                   type="button"
                   variant="outline"
                   size="sm"
+                  className={cn(OUTLINE_BUTTON_CLASS, "h-9 gap-1.5 px-3 text-xs")}
                   disabled={isBusy}
-                  onClick={() => runLifecycle(unlock, "Environment variables unlocked")}>
-                  <Unlock className="mr-2 h-4 w-4" />
+                  onClick={() => runLifecycle(unlock, "Environment variables unlocked")}
+                >
+                  <Unlock className="h-4 w-4" />
                   Unlock
                 </Button>
               ) : (
@@ -235,9 +238,11 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                   type="button"
                   variant="outline"
                   size="sm"
+                  className={cn(OUTLINE_BUTTON_CLASS, "h-9 gap-1.5 px-3 text-xs")}
                   disabled={isBusy}
-                  onClick={() => runLifecycle(lock, "Environment variables locked")}>
-                  <Lock className="mr-2 h-4 w-4" />
+                  onClick={() => runLifecycle(lock, "Environment variables locked")}
+                >
+                  <Lock className="h-4 w-4" />
                   Lock
                 </Button>
               ))}
@@ -247,8 +252,10 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                 type="button"
                 variant="outline"
                 size="sm"
+                className={cn(OUTLINE_BUTTON_CLASS, "h-9 gap-1.5 px-3 text-xs")}
                 disabled={isBusy}
-                onClick={() => runLifecycle(restore, "Environment variables restored")}>
+                onClick={() => runLifecycle(restore, "Environment variables restored")}
+              >
                 Restore
               </Button>
             )}
@@ -257,9 +264,11 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
               type="button"
               variant="outline"
               size="sm"
+              className={cn(OUTLINE_BUTTON_CLASS, "h-9 gap-1.5 px-3 text-xs")}
               disabled={isBusy}
-              onClick={() => setIsAuditOpen(true)}>
-              <History className="mr-2 h-4 w-4" />
+              onClick={() => setIsAuditOpen(true)}
+            >
+              <History className="h-4 w-4" />
               Activity
             </Button>
 
@@ -270,8 +279,10 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                     type="button"
                     variant="destructive-outline"
                     size="sm"
-                    disabled={isBusy}>
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    className="h-9 gap-1.5 px-3 text-xs"
+                    disabled={isBusy}
+                  >
+                    <Trash2 className="h-4 w-4" />
                     Delete
                   </Button>
                 </DialogTrigger>
@@ -291,26 +302,25 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
               </Dialog>
             )}
           </div>
-        </CardHeader>
+        </header>
 
-        <CardContent className="flex flex-col gap-2 text-sm text-muted-foreground">
+        <div className="flex flex-col gap-2 text-sm text-muted-foreground">
           <p>
-            Stored in Key Vault. Variable names and values are shown only through a
-            deliberate reveal, which is recorded in the activity log.
+            Stored in Key Vault. Variable names and values are shown only through a deliberate
+            reveal, which is recorded in the activity log.
           </p>
           {data.lastRotatedDate && (
             <p>
               Last changed {new Date(data.lastRotatedDate).toLocaleString()}
-              {data.lastRotatedBy ? ` by ${data.lastRotatedBy}` : ""} ·{" "}
-              {data.rotationCount} update
+              {data.lastRotatedBy ? ` by ${data.lastRotatedBy}` : ""} · {data.rotationCount} update
               {data.rotationCount === 1 ? "" : "s"}
             </p>
           )}
           {isDeleted && data.deletedDate && (
             <p>Deleted {new Date(data.deletedDate).toLocaleString()}</p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       <SecretFormModal
         open={isFormOpen}
@@ -319,17 +329,9 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
         initialSecrets={editing}
       />
 
-      <RevealSecretModal
-        open={isRevealOpen}
-        onOpenChange={closeReveal}
-        secrets={revealed}
-      />
+      <RevealSecretModal open={isRevealOpen} onOpenChange={closeReveal} secrets={revealed} />
 
-      <SecretAuditModal
-        open={isAuditOpen}
-        onOpenChange={setIsAuditOpen}
-        repoId={repoId}
-      />
+      <SecretAuditModal open={isAuditOpen} onOpenChange={setIsAuditOpen} repoId={repoId} />
     </>
   );
 };

@@ -78,6 +78,12 @@ export class HttpError extends Error {
 
 export { Outlet };
 
+export const AppLoadingSpinner = () =>
+  React.createElement(
+    "div",
+    { role: "status" },
+    React.createElement("span", { className: "sr-only" }, "Loading"),
+  );
 export const BlocksAppLayout = passthrough("BlocksAppLayout");
 export const TooltipProvider = passthrough("TooltipProvider");
 export const ConsoleLayout = passthrough("ConsoleLayout");

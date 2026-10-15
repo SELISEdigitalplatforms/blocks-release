@@ -22,6 +22,11 @@ import {
 } from "@/components/ui-kits/table/table";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { SortHeader } from "@/components/filter-toolbar/sort-header/sort-header";
+import {
+  TABLE_CELL_CLASS,
+  TABLE_HEAD_CLASS,
+  TABLE_HEAD_ROW_CLASS,
+} from "@blocks-deployment/components/deployment-details/shared/surface-styles";
 
 interface Vulnerability {
   id: string;
@@ -84,7 +89,7 @@ const VulnerabilityFilterToolbar = () => {
               page: 0,
             }));
           }}
-          className="w-full rounded-md border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+          className="h-9 w-full rounded-sm border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
         />
       </div>
     </div>
@@ -94,7 +99,7 @@ const VulnerabilityFilterToolbar = () => {
 const LoadingSkeleton = () => (
   <div className="grid w-full gap-2 p-6">
     {Array.from({ length: 10 }).map((_, index) => (
-      <Skeleton key={index} className="h-12 w-full rounded-lg" />
+      <Skeleton key={index} className="h-12 w-full rounded-sm" />
     ))}
   </div>
 );
@@ -260,18 +265,16 @@ const VulnerabilitiesTable = ({
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow isHoverable>
-            {table
-              .getHeaderGroups()
-              .map((headerGroup) =>
-                headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                )),
-              )}
+          <TableRow className={TABLE_HEAD_ROW_CLASS}>
+            {table.getHeaderGroups().map((headerGroup) =>
+              headerGroup.headers.map((header) => (
+                <TableHead key={header.id} className={TABLE_HEAD_CLASS}>
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(header.column.columnDef.header, header.getContext())}
+                </TableHead>
+              )),
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -288,12 +291,12 @@ const VulnerabilitiesTable = ({
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
-                className="cursor-pointer hover:bg-gray-50"
+                className="cursor-pointer border-border/50 hover:bg-surface-warm/40"
                 onClick={() => {}}
                 isHoverable
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell key={cell.id} className={TABLE_CELL_CLASS}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

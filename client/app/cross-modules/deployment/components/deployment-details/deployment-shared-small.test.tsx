@@ -18,10 +18,8 @@ const cardData = {
 
 describe("DeploymentGeneralInfo", () => {
   it("renders general info in the success state", () => {
-    renderWithProviders(
-      <DeploymentGeneralInfo cardData={cardData} isSuccess buildId="b1" />,
-    );
-    expect(screen.getByText("General information")).toBeInTheDocument();
+    renderWithProviders(<DeploymentGeneralInfo cardData={cardData} isSuccess buildId="b1" />);
+    expect(screen.getByRole("region", { name: "General information" })).toBeInTheDocument();
     expect(screen.getByText("https://github.com/acme/app")).toBeInTheDocument();
   });
 
@@ -33,12 +31,8 @@ describe("DeploymentGeneralInfo", () => {
   });
 
   it("renders the error state", () => {
-    renderWithProviders(
-      <DeploymentGeneralInfo cardData={undefined} isError />,
-    );
-    expect(
-      screen.getByText("Failed to load deployment information"),
-    ).toBeInTheDocument();
+    renderWithProviders(<DeploymentGeneralInfo cardData={undefined} isError />);
+    expect(screen.getByText("Failed to load deployment information")).toBeInTheDocument();
   });
 });
 
@@ -54,9 +48,7 @@ describe("empty/waiting states", () => {
   });
 
   it("renders ErrorRepository", () => {
-    const { container } = renderWithProviders(
-      <ErrorRepository refetch={() => {}} />,
-    );
+    const { container } = renderWithProviders(<ErrorRepository refetch={() => {}} />);
     expect(container.firstChild).toBeTruthy();
   });
 
@@ -72,8 +64,6 @@ describe("empty/waiting states", () => {
 
   it("renders the SCA overall-waiting card", () => {
     renderWithProviders(<ContainerWaiting type="overall" />);
-    expect(
-      screen.getByText("Software Composition Analysis"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Software Composition Analysis")).toBeInTheDocument();
   });
 });

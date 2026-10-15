@@ -88,7 +88,8 @@ export const routes = [
               },
               {
                 path: "dashboard",
-                element: <DashboardOverview />,
+                // Release's dashboard leaves out the Domains and Repositories tables.
+                element: <DashboardOverview showDomains={false} showRepositories={false} />,
               },
               {
                 element: <DeploymentLayout />,

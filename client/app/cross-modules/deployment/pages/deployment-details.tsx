@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { LogoLoader } from "@/components/loader-spinner/logo-loader";
 import { useParams, useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/ui-kits/button/button";
 import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use-github-info";
@@ -9,10 +10,7 @@ import { ChevronLeft } from "lucide-react";
 import DeploymentLogsTab from "@blocks-deployment/components/deployment-details/tabs/deployment-logs-tab";
 import SASTTab from "@blocks-deployment/components/deployment-details/tabs/sast-tab";
 import SCATab from "@blocks-deployment/components/deployment-details/tabs/sca-tab";
-import {
-  DeploymentEventGroup,
-  DeploymentEventType,
-} from "@blocks-deployment/models/live-logs";
+import { DeploymentEventGroup, DeploymentEventType } from "@blocks-deployment/models/live-logs";
 import ComingSoonTab from "@blocks-deployment/components/deployment-details/tabs/coming-soon";
 import { IHttpError } from "@blocks-deployment/models/github-info";
 import { useScopedPath } from "@/hooks/use-scoped-path";
@@ -76,9 +74,7 @@ const DeploymentDetails = () => {
     return Array.isArray(buildId) ? buildId[0] : buildId;
   }, [buildId]);
 
-  const [activeTab, setActiveTab] = useState(
-    () => tabFromUrl || "deployment-logs",
-  );
+  const [activeTab, setActiveTab] = useState(() => tabFromUrl || "deployment-logs");
   // A ?tab= in the URL selects that tab, including when it changes later.
   const [syncedTabFromUrl, setSyncedTabFromUrl] = useState(tabFromUrl);
   if (syncedTabFromUrl !== tabFromUrl) {
@@ -90,14 +86,7 @@ const DeploymentDetails = () => {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   const queryResult = useGetCardProjectAndBranch(buildIdStr ?? "");
-  const {
-    data: apiResponse,
-    isSuccess,
-    isError,
-    error,
-    isLoading,
-    refetch,
-  } = queryResult;
+  const { data: apiResponse, isSuccess, isError, error, isLoading, refetch } = queryResult;
 
   const cardData = (apiResponse as IDeploymentResponse | undefined)?.data;
 
@@ -166,8 +155,8 @@ const DeploymentDetails = () => {
     return (
       <div className="flex h-64 w-full items-center justify-center">
         <div className="text-center">
-          <div className="mb-2 h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
-          <p className="text-sm text-gray-600">Loading deployment details...</p>
+          <LogoLoader size={40} label="Loading deployment details" />
+          <p className="mt-4 text-sm text-muted-foreground">Loading deployment details...</p>
         </div>
       </div>
     );
@@ -185,9 +174,7 @@ const DeploymentDetails = () => {
               <Button variant={"ghost"} onClick={handleGoBack} className="pl-0">
                 <ChevronLeft size={20} />
               </Button>
-              <h1 className="text-2xl font-bold text-high-emphasis">
-                {buildIdStr}
-              </h1>
+              <h1 className="text-2xl font-bold text-high-emphasis">{buildIdStr}</h1>
             </div>
           </div>
 
@@ -201,7 +188,8 @@ const DeploymentDetails = () => {
                     activeTab === tab.id
                       ? "bg-background shadow-xs"
                       : "text-medium-emphasis hover:bg-secondary"
-                  }`}>
+                  }`}
+                >
                   {tab.label}
                 </button>
               ))}

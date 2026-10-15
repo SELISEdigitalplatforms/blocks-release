@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Loader } from "lucide-react"; // or wherever your Loader component is imported from
+import LoadingSpinner from "@/components/loader-spinner/loader-spinner";
 
 const RedirectCallbackUrl = () => {
   const navigate = useNavigate();
@@ -9,9 +9,7 @@ const RedirectCallbackUrl = () => {
 
   useEffect(() => {
     const redirection = localStorage.getItem("destination");
-    const queryString = new URLSearchParams(
-      Object.fromEntries(searchParams.entries()),
-    ).toString();
+    const queryString = new URLSearchParams(Object.fromEntries(searchParams.entries())).toString();
 
     // Immediate redirect (loader will show briefly during navigation)
     if (!redirection || redirection === "") {
@@ -26,14 +24,7 @@ const RedirectCallbackUrl = () => {
 
   // Show loader while redirecting
   if (isLoading) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-xs">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader className="h-8 w-8 animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return null;

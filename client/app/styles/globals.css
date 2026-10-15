@@ -31,6 +31,7 @@
   --color-sunset-soft: hsl(var(--sunset-soft));
   --color-forest-ink: hsl(var(--success-ink));
   --color-warn-ink: hsl(var(--warn-ink));
+  --color-danger-ink: hsl(var(--danger-ink));
   --shadow-surface-ring: 0 0 0 1px hsl(var(--border));
   --shadow-raised: 0 4px 20px hsl(var(--shadow-ink) / 0.08), 0 0 0 1px hsl(var(--border));
   --radius-xl: 1.5rem;
@@ -58,6 +59,7 @@
   --color-high-emphasis: hsl(var(--high-emphasis));
   --color-medium-emphasis: hsl(var(--medium-emphasis));
   --color-low-emphasis: hsl(var(--low-emphasis));
+  --color-border-soft: hsl(var(--border-soft));
   --color-border-default: hsl(var(--border-default));
   --color-border-medium-emphasis: hsl(var(--border-medium-emphasis));
   --color-blocks-primary-25: hsl(var(--blocks-primary-25));
@@ -475,6 +477,7 @@
     --destructive: 0 100% 65%;
     --destructive-foreground: 0 0% 100%;
     --border: 214 28% 90%;
+    --border-soft: 214 30% 94%;
     --input: 214 28% 90%;
     --ring: 206 100% 35%;
     --radius: 0.5rem;
@@ -552,6 +555,7 @@
     --forest-soft: 150 26% 88%;
     --success-ink: 154 25% 35%;
     --warn-ink: 32 60% 35%;
+    --danger-ink: 12 45% 43%;
     --shadow-ink: 219 34% 17%;
   }
 
@@ -573,6 +577,7 @@
     --destructive: 0 100% 65%;
     --destructive-foreground: 218 42% 9%;
     --border: 214 27% 24%;
+    --border-soft: 216 28% 20%;
     --input: 214 27% 24%;
     --ring: 204 86% 62%;
 
@@ -648,6 +653,7 @@
     --forest-soft: 150 25% 22%;
     --success-ink: 154 30% 68%;
     --warn-ink: 32 60% 70%;
+    --danger-ink: 12 55% 70%;
     --shadow-ink: 0 0% 0%;
   }
 }

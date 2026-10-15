@@ -1,12 +1,5 @@
-import {
-  FilterControls,
-  useSortQueryParams,
-} from "@/components/filter-toolbar";
+import { FilterControls, useSortQueryParams } from "@/components/filter-toolbar";
 import { Pagination } from "@/components/ui-kits/pagination/pagination";
-import {
-  ScrollArea,
-  ScrollBar,
-} from "@/components/ui-kits/scroll-area/scroll-area";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import {
   Table,
@@ -20,15 +13,18 @@ import AlertAction from "@/cross-modules/deployment/components/alert/alert-actio
 import ProgressBar from "@/cross-modules/deployment/components/alert/progress-bar";
 import { useProjectStore } from "@/store/project.store";
 import type { AlertTree } from "@blocks-deployment/models/alerts.model";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useMemo } from "react";
 import { useAlertFilterQueryParams } from "./alerts-filter-toolbar";
+import {
+  TABLE_CARD_CLASS,
+  TABLE_CELL_CLASS,
+  TABLE_HEAD_CLASS,
+  TABLE_HEAD_ROW_CLASS,
+  TABLE_ROW_CLASS,
+} from "@blocks-deployment/components/deployment-details/shared/surface-styles";
+import { cn } from "@/lib/utils";
 
 type AlertsListProps = {
   data: AlertTree[];
@@ -42,7 +38,7 @@ type AlertsListProps = {
 export const LoadingSkelton = () => (
   <div className="grid w-full gap-2">
     {Array.from({ length: 10 }).map((_, index) => (
-      <Skeleton key={index} className="h-12 w-full rounded-xl" />
+      <Skeleton key={index} className="h-12 w-full rounded-sm" />
     ))}
   </div>
 );
@@ -118,7 +114,7 @@ export function AlertsList({
         cell: ({ row }) => {
           const name = row.original.name || row.original.operationName || "N/A";
           return (
-            <div className="ml-2 flex flex-row items-center sm:ml-0 sm:w-[180px]">
+            <div className="truncate">
               <span>{name}</span>
             </div>
           );
@@ -135,12 +131,9 @@ export function AlertsList({
           />
         ),
         cell: ({ row }) => {
-          const monitorType =
-            row.original.monitorConfigurationType === 0
-              ? "Request"
-              : "Callback";
+          const monitorType = row.original.monitorConfigurationType === 0 ? "Request" : "Callback";
           return (
-            <div className="ml-2 flex w-[180px] items-center sm:ml-0 sm:w-[150px]">
+            <div className="flex items-center">
               <span>{monitorType}</span>
             </div>
           );
@@ -159,7 +152,7 @@ export function AlertsList({
         cell: ({ row }) => {
           const url = row.original.url || "N/A";
           return (
-            <div className="ml-2 flex w-[180px] items-center sm:ml-0 sm:w-[150px]">
+            <div className="flex items-center">
               <span className="break-all">{url}</span>
             </div>
           );
@@ -182,13 +175,12 @@ export function AlertsList({
           const zeroDate = new Date("0001-01-01T00:00:00Z").getTime();
           const lastIncidentTime = new Date(lastIncidentDateStr).getTime();
           const createdTime = new Date(createdDate).getTime();
-          const incidentTime =
-            lastIncidentTime === zeroDate ? createdTime : lastIncidentTime;
+          const incidentTime = lastIncidentTime === zeroDate ? createdTime : lastIncidentTime;
           const uptime = Date.now() - incidentTime;
           const formattedDate = formatDate(uptime);
 
           return (
-            <div className="ml-2 flex w-[180px] items-center sm:ml-0 sm:w-[150px]">
+            <div className="flex items-center">
               <span>{formattedDate}</span>
               {currentStatus ? (
                 <ArrowUp className="ml-1 h-4 w-4 text-green-500" />
@@ -214,7 +206,7 @@ export function AlertsList({
           const incidentList = row.original.incidentSummaries;
           const status = row.original.currentStatus;
           return (
-            <div className="flex justify-start mt-3">
+            <div className="flex justify-start">
               <ProgressBar incidents={incidentList} status={status} />
             </div>
           );
@@ -224,8 +216,7 @@ export function AlertsList({
         accessorKey: "AlertActions",
         header: () => <div className="text-center"></div>,
         cell: ({ row }) => {
-          const request =
-            row.original.monitorConfigurationType === 0 ? true : false;
+          const request = row.original.monitorConfigurationType === 0 ? true : false;
           const name = row.original.name;
           const monitorSourceType = row.original.monitorSourceTypes;
           return (
@@ -234,7 +225,8 @@ export function AlertsList({
                 <div
                   onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
-                  className="flex justify-center">
+                  className="flex justify-center"
+                >
                   <AlertAction
                     monitorId={row.original.itemId as string}
                     isActive={row.original.isActive ?? false}
@@ -265,23 +257,17 @@ export function AlertsList({
   if (isLoading) return <LoadingSkelton />;
   return (
     <>
-      <ScrollArea className="w-full">
-        <Table className="text-sm">
+      {/* The table draws its own card. */}
+      <div className={TABLE_CARD_CLASS}>
+        <Table aria-label="Monitors" className="w-full min-w-[760px]">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow
-                key={headerGroup.id}
-                className="px-4 py-2 hover:bg-transparent">
+              <TableRow key={headerGroup.id} className={TABLE_HEAD_ROW_CLASS}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    className="font-bold text-medium-emphasis">
+                  <TableHead key={header.id} className={TABLE_HEAD_CLASS}>
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -293,42 +279,40 @@ export function AlertsList({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="text-medium-emphasis cursor-auto"
-                  isHoverable>
+                  className={cn(TABLE_ROW_CLASS, "text-medium-emphasis cursor-auto")}
+                  isHoverable
+                >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
+                    <TableCell key={cell.id} className={TABLE_CELL_CLASS}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
-              <TableRow>
+              <TableRow className={TABLE_ROW_CLASS}>
                 <TableCell
                   colSpan={table.getAllColumns().length}
-                  className="h-24 text-center text-muted-foreground">
+                  className={cn(TABLE_CELL_CLASS, "h-24 text-center text-muted-foreground")}
+                >
                   No results.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
-        {totalCount > pageSize && (
-          <div className="mt-5 flex items-center md:justify-end">
-            <Pagination
-              page={pageNumber as number}
-              pageSize={pageSize as number}
-              pageSizeOptions={[pageSize as number]}
-              onChange={handlePageChange}
-              totalCount={totalCount || 0}
-            />
-          </div>
-        )}
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+      </div>
+      {totalCount > pageSize && (
+        <div className="mt-5 flex items-center md:justify-end">
+          <Pagination
+            page={pageNumber as number}
+            pageSize={pageSize as number}
+            pageSizeOptions={[pageSize as number]}
+            onChange={handlePageChange}
+            totalCount={totalCount || 0}
+          />
+        </div>
+      )}
     </>
   );
 }

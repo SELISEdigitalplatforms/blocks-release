@@ -2225,7 +2225,7 @@
 +};
 --- a/src/pages/dashboard/dashboard-overview.tsx
 +++ b/src/pages/dashboard/dashboard-overview.tsx
-@@ -1,28 +1,91 @@
+@@ -1,28 +1,115 @@
 -import { ProjectDetail } from "@app-kit/components/common/project";
  import { useBlocksAppConfigStore } from "@app-kit/hooks/use-blocks-app-config-store";
 +import { CoreApiCard, useSwaggerEndpoints } from "./dashboard-overview-sections";
@@ -2242,8 +2242,19 @@
 +  ProjectRepoList,
 +} from "@app-kit/components/common/project";
 +import { ProjectMetadata, ProjectMetadataSkeleton } from "./dashboard-overview-sections/project-metadata";
-
- export const DashboardOverview = () => {
+ 
+-export const DashboardOverview = () => {
++export type DashboardOverviewProps = {
++  /** Show the Domains table. Defaults to true; a host without domains can turn it off. */
++  showDomains?: boolean;
++  /** Show the Repositories table. Defaults to true; a host without repositories can turn it off. */
++  showRepositories?: boolean;
++};
++
++export const DashboardOverview = ({
++  showDomains = true,
++  showRepositories = true,
++}: DashboardOverviewProps = {}) => {
 +  const { data, isFetching, isError } = useGetProject();
    const { name } = useBlocksAppConfigStore((state) => state.config);
 -  const { data, isFetching } = useGetProject();
@@ -2253,10 +2264,13 @@
 -    error,
 -  } = useSwaggerEndpoints(name);
 +  const { endpoints, isLoading, error } = useSwaggerEndpoints(name);
-+
+ 
 +  // A failed load has nothing to stand in for, so it renders nothing, as before.
-+  if (!data?.data) return isError ? null : <DashboardOverviewSkeleton />;
-
++  if (!data?.data)
++    return isError ? null : (
++      <DashboardOverviewSkeleton showDomains={showDomains} showRepositories={showRepositories} />
++    );
++
    return (
      <main className="flex flex-col gap-6 p-6">
 -      <ProjectDetail isLoading={isFetching} project={data?.data} />
@@ -2264,6 +2278,7 @@
 -        endpoints={endpoints}
 -        isLoading={isLoadingEndpoints}
 -        error={error}
+-      />
 +      <header className="dashboard-overview-hero relative isolate overflow-hidden rounded-lg bg-card shadow-surface-ring">
 +        <div className="relative z-10 flex min-w-0 flex-col">
 +          <div className="flex min-w-0 flex-col gap-5 p-5 sm:flex-row sm:items-start sm:justify-between sm:p-7">
@@ -2290,25 +2305,32 @@
 +      </header>
 +      {/* Keyed on the project: both sections now hold a page index, and switching
 +          projects must not land the reader on page 2 of a project they just left. */}
-+      <DomainsSection
-+        key={`domains-${data.data.tenantId}`}
-+        applications={data?.data.applications || []}
-       />
-+      <ProjectRepoList
-+        key={`repos-${data.data.tenantId}`}
-+        project={data?.data}
-+        isLoading={isFetching}
-+      />
++      {showDomains && (
++        <DomainsSection
++          key={`domains-${data.data.tenantId}`}
++          applications={data?.data.applications || []}
++        />
++      )}
++      {showRepositories && (
++        <ProjectRepoList
++          key={`repos-${data.data.tenantId}`}
++          project={data?.data}
++          isLoading={isFetching}
++        />
++      )}
 +      <CoreApiCard endpoints={endpoints} isLoading={isLoading} error={error} />
      </main>
    );
  };
 +
 +/**
-+ * The page's own layout — hero, Domains, Repositories — with placeholders in place of the
++ * The page's own layout — hero, plus whichever of Domains and Repositories are shown — with placeholders in place of the
 + * project, so the first load doesn't flash a blank page and nothing jumps when it arrives.
 + */
-+const DashboardOverviewSkeleton = () => (
++const DashboardOverviewSkeleton = ({
++  showDomains,
++  showRepositories,
++}: Required<DashboardOverviewProps>) => (
 +  <main aria-busy="true" aria-label="Loading project" className="flex flex-col gap-6 p-6">
 +    <header className="dashboard-overview-hero relative isolate overflow-hidden rounded-lg bg-card shadow-surface-ring">
 +      <div className="relative z-10 flex min-w-0 flex-col">
@@ -2321,15 +2343,19 @@
 +        </div>
 +      </div>
 +    </header>
-+    <DashboardTableSection
-+      title="Domains"
-+      description="Domains and cookie domains configured for this project"
-+    >
-+      <DashboardTableSkeleton label="Loading domains" rows={3} />
-+    </DashboardTableSection>
-+    <DashboardTableSection title="Repositories" description="Repositories deployed for this project">
-+      <DashboardTableSkeleton label="Loading repositories" />
-+    </DashboardTableSection>
++    {showDomains && (
++      <DashboardTableSection
++        title="Domains"
++        description="Domains and cookie domains configured for this project"
++      >
++        <DashboardTableSkeleton label="Loading domains" rows={3} />
++      </DashboardTableSection>
++    )}
++    {showRepositories && (
++      <DashboardTableSection title="Repositories" description="Repositories deployed for this project">
++        <DashboardTableSkeleton label="Loading repositories" />
++      </DashboardTableSection>
++    )}
 +  </main>
 +);
 --- /dev/null

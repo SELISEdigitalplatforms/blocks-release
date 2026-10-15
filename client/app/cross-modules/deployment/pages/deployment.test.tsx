@@ -18,7 +18,7 @@ describe("Deployment page", () => {
       isPending: true,
     } as never);
     renderWithProviders(<Deployment />);
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
   it("renders the overview once projects resolve", () => {

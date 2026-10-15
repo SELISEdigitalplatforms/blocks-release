@@ -5,7 +5,7 @@ import { CircleX } from "lucide-react";
 export function ErrorRepository({ refetch }: { refetch: () => void }) {
   return (
     <Card>
-      <div className="flex h-auto flex-col items-center justify-center self-stretch rounded-sm bg-background px-1 py-5">
+      <div className="flex h-auto flex-col items-center justify-center self-stretch rounded-sm bg-card px-1 py-5">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
           <CircleX className="h-8 w-8 text-low-emphasis" />
         </div>

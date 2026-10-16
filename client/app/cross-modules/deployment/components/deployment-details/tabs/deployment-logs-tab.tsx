@@ -31,7 +31,7 @@ const DeploymentLogsTab = ({
       />
 
       {isLoading ? (
-        <div className="flex w-full flex-col items-start gap-4 rounded-lg border border-border bg-background p-6 shadow-xs">
+        <div className="flex w-full flex-col items-start gap-4 rounded-lg border border-border bg-card p-6 shadow-xs">
           <Skeleton className="h-6 w-32" />
           <div className="w-full space-y-3">
             <Skeleton className="h-4 w-full" />
@@ -47,10 +47,7 @@ const DeploymentLogsTab = ({
         <>
           {cardData?.status == DEPLOYMENT_LOG_EVENT_STATUS.STARTED ||
           cardData?.status == DEPLOYMENT_LOG_EVENT_STATUS.RUNNING ? (
-            <LiveDeploymentLogs
-              buildId={buildId}
-              historicalEvents={cardData?.events}
-            />
+            <LiveDeploymentLogs buildId={buildId} historicalEvents={cardData?.events} />
           ) : (
             <DeployedLogs
               buildId={buildId}

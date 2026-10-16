@@ -1,10 +1,4 @@
-import {
-  createEvent,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { createEvent, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import BranchVerificationModal from "./unmatched-branch-modal";
 import type { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
@@ -31,13 +25,7 @@ const baseProps = {
 describe("BranchVerificationModal", () => {
   it("runs verification via refetch when open", async () => {
     const refetch = vi.fn().mockResolvedValue({ data: { isSuccess: true } });
-    render(
-      <BranchVerificationModal
-        {...baseProps}
-        isOpen
-        refetch={refetch as never}
-      />,
-    );
+    render(<BranchVerificationModal {...baseProps} isOpen refetch={refetch as never} />);
     await waitFor(() => expect(refetch).toHaveBeenCalled());
   });
 
@@ -64,9 +52,7 @@ describe("BranchVerificationModal", () => {
         refetch={refetch as never}
       />,
     );
-    expect(
-      screen.getByText("Expected branch not available"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Expected branch not available")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Retry/i }));
     expect(onRetry).toHaveBeenCalled();
     await waitFor(() => expect(refetch).toHaveBeenCalled());
@@ -94,17 +80,9 @@ describe("BranchVerificationModal", () => {
 
   it("moves to the error state when refetch reports an error", async () => {
     const refetch = vi.fn().mockResolvedValue({ error: new Error("nope") });
-    render(
-      <BranchVerificationModal
-        {...baseProps}
-        isOpen
-        refetch={refetch as never}
-      />,
-    );
+    render(<BranchVerificationModal {...baseProps} isOpen refetch={refetch as never} />);
     await waitFor(() =>
-      expect(
-        screen.getByText("Expected branch not available"),
-      ).toBeInTheDocument(),
+      expect(screen.getByText("Expected branch not available")).toBeInTheDocument(),
     );
   });
 
@@ -120,24 +98,18 @@ describe("BranchVerificationModal", () => {
         refetch={refetch as never}
       />,
     );
-    expect(screen.getByText("Please wait…")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByText(/Checking your repository setup/)).toBeInTheDocument();
+    // No footer Cancel any more - the header's close button is the one way out.
+    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel verification" }));
     expect(onClose).toHaveBeenCalled();
   });
 
   it("moves to the error state when refetch throws", async () => {
     const refetch = vi.fn().mockRejectedValue(new Error("boom"));
-    render(
-      <BranchVerificationModal
-        {...baseProps}
-        isOpen
-        refetch={refetch as never}
-      />,
-    );
+    render(<BranchVerificationModal {...baseProps} isOpen refetch={refetch as never} />);
     await waitFor(() =>
-      expect(
-        screen.getByText("Expected branch not available"),
-      ).toBeInTheDocument(),
+      expect(screen.getByText("Expected branch not available")).toBeInTheDocument(),
     );
   });
 
@@ -224,7 +196,7 @@ describe("BranchVerificationModal", () => {
         refetch={refetch as never}
       />,
     );
-    expect(screen.getByText("Please wait…")).toBeInTheDocument();
+    expect(screen.getByText(/Checking your repository setup/)).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole("button", { name: "Close dialog" }), {
       key: "Enter",
     });

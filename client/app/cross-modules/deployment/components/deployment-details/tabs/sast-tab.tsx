@@ -9,19 +9,13 @@ import React, { useMemo } from "react";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { getDeploymentLogEventBadgeClassName } from "@blocks-deployment/utils/deployment-logs.utils";
 import {
-  Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
 } from "@/components/ui-kits/card/card";
 import { Button } from "@/components/ui-kits/button/button";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/components/ui-kits/tabs/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui-kits/tabs/tabs";
 import {
   getSonarQubeDashboardUrl,
   openResolvedUrlInNewTab,
@@ -43,6 +37,12 @@ import {
   type SastQualityGate,
   type SastStat,
 } from "@blocks-deployment/utils/sast-metrics.utils";
+import {
+  OUTLINE_BUTTON_CLASS,
+  SURFACE_CARD_CLASS,
+  UNDERLINE_TAB_TRIGGER_CLASS,
+  UNDERLINE_TABS_LIST_CLASS,
+} from "@blocks-deployment/components/deployment-details/shared/surface-styles";
 
 const RATING_BADGE_CLASS: Record<RatingLetter, string> = {
   A: "bg-green-100 text-green-700",
@@ -70,22 +70,22 @@ const OverviewStats = ({
             <div
               key={item.id}
               data-testid={`sast-stat-${item.id}`}
-              className="flex h-20 items-start gap-4">
+              className="flex h-20 items-start gap-4"
+            >
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <p className="text-sm text-high-emphasis">{item.title}</p>
                   {failed && (
                     <span
                       data-testid={`sast-failed-${item.id}`}
-                      className={`${getDeploymentLogEventBadgeClassName("Failed")} text-[10px]`}>
+                      className={`${getDeploymentLogEventBadgeClassName("Failed")} text-[10px]`}
+                    >
                       Failed
                     </span>
                   )}
                 </div>
                 <p className="text-lg font-semibold">{item.value}</p>
-                {failed && (
-                  <p className="text-xs text-red-600">{formatRequired(failed)}</p>
-                )}
+                {failed && <p className="text-xs text-red-600">{formatRequired(failed)}</p>}
                 {item.subtitle && !failed && (
                   <p className="text-xs text-gray-400">{item.subtitle}</p>
                 )}
@@ -109,7 +109,8 @@ const renderIndicator = (item: SastStat) => {
       <div className="flex items-center gap-2">
         <span
           data-testid={`sast-rating-${item.id}`}
-          className={`flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold ${RATING_BADGE_CLASS[indicator.letter]}`}>
+          className={`flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold ${RATING_BADGE_CLASS[indicator.letter]}`}
+        >
           {indicator.letter}
         </span>
       </div>
@@ -180,16 +181,12 @@ const SastTab = () => {
   const params = useParams();
   const buildId = params?.buildId as string;
   const { data: sastData, isLoading, error } = useGetSASTData(buildId);
-  const { isLoading: isSASTLoading, refetch: triggerSASTRedirect } =
-    useSASTRedirectLink(buildId);
+  const { isLoading: isSASTLoading, refetch: triggerSASTRedirect } = useSASTRedirectLink(buildId);
 
   let details: SastDetails | null | undefined = undefined;
   let qualityGate: SastQualityGate | null = null;
   let issueBreakdown: SastIssueBreakdown | null = null;
-  const envelope = sastData as
-    | { data?: { details?: SastDetails | null } }
-    | undefined
-    | null;
+  const envelope = sastData as { data?: { details?: SastDetails | null } } | undefined | null;
   if (
     envelope &&
     typeof envelope === "object" &&
@@ -199,25 +196,17 @@ const SastTab = () => {
   ) {
     details = envelope.data.details;
     qualityGate = (envelope.data as { qualityGate?: SastQualityGate | null }).qualityGate ?? null;
-    issueBreakdown = (envelope.data as { issueBreakdown?: SastIssueBreakdown | null }).issueBreakdown ?? null;
+    issueBreakdown =
+      (envelope.data as { issueBreakdown?: SastIssueBreakdown | null }).issueBreakdown ?? null;
   }
 
   const overviewData = useMemo(
     () => (details ? getOverviewData(details, qualityGate) : []),
     [details, qualityGate],
   );
-  const newCodeStats = useMemo(
-    () => (details ? getNewCodeStats(details) : []),
-    [details],
-  );
-  const overallStats = useMemo(
-    () => (details ? getOverallCodeStats(details) : []),
-    [details],
-  );
-  const periodLabel = useMemo(
-    () => (details ? getNewCodePeriodLabel(details) : null),
-    [details],
-  );
+  const newCodeStats = useMemo(() => (details ? getNewCodeStats(details) : []), [details]);
+  const overallStats = useMemo(() => (details ? getOverallCodeStats(details) : []), [details]);
+  const periodLabel = useMemo(() => (details ? getNewCodePeriodLabel(details) : null), [details]);
   const showNewCode = details ? hasNewCode(details) : false;
 
   const handleSASTRedirect = () =>
@@ -229,8 +218,8 @@ const SastTab = () => {
   let body: React.ReactNode;
   if (isLoading) {
     body = (
-      <Card>
-        <div className="px-6 py-4">
+      <div className={SURFACE_CARD_CLASS}>
+        <div className="pb-4">
           <div className="flex items-center justify-between">
             <Skeleton className="mb-2 h-6 w-48" />
             <Skeleton className="h-8 w-40" />
@@ -241,27 +230,29 @@ const SastTab = () => {
             <Skeleton className="h-4 w-40" />
           </div>
         </div>
-        <div className="p-6">
+        <div className="pt-6">
           <Skeleton className="mb-4 h-8 w-64" />
           <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-lg" />
+              <Skeleton key={i} className="h-12 w-full rounded-sm" />
             ))}
           </div>
         </div>
-      </Card>
+      </div>
     );
   } else if (!error && details) {
     body = (
-      <Card>
+      <div className={SURFACE_CARD_CLASS}>
         <CardHeader className="mb-0 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <CardTitle>Overview</CardTitle>
             <Button
               variant="outline"
               size="sm"
+              className={OUTLINE_BUTTON_CLASS}
               onClick={handleSASTRedirect}
-              disabled={isSASTLoading}>
+              disabled={isSASTLoading}
+            >
               <ExternalLink className="mr-2 h-4 w-4" />
               View in SonarQube
             </Button>
@@ -276,7 +267,8 @@ const SastTab = () => {
                     item.name === "Quality Gate"
                       ? `${getDeploymentLogEventBadgeClassName(qualityGateBadgeStatus(item.value))} ml-2`
                       : `pl-2`
-                  }>
+                  }
+                >
                   {item.value}
                 </span>
               </div>
@@ -286,21 +278,26 @@ const SastTab = () => {
         <CardContent>
           <Separator orientation="horizontal" className="my-4 w-full" />
           <Tabs defaultValue="new">
-            <TabsList>
-              <TabsTrigger value="new">New Code</TabsTrigger>
-              <TabsTrigger value="overall">Overall Code</TabsTrigger>
+            <TabsList className={UNDERLINE_TABS_LIST_CLASS}>
+              <TabsTrigger value="new" className={UNDERLINE_TAB_TRIGGER_CLASS}>
+                New Code
+              </TabsTrigger>
+              <TabsTrigger value="overall" className={UNDERLINE_TAB_TRIGGER_CLASS}>
+                Overall Code
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="new" className="mt-4 space-y-3">
               {periodLabel && (
-                <p className="text-xs text-medium-emphasis">
-                  New code: {periodLabel}
-                </p>
+                <p className="text-xs text-medium-emphasis">New code: {periodLabel}</p>
               )}
               {qualityGate && getConditionsForScope(qualityGate, "new").length > 0 && (
                 <div className="space-y-1 rounded-md border border-border p-3 text-xs">
                   {(() => {
-                    const failed = getConditionsForScope(qualityGate, "new").filter((c) => c.status === "ERROR");
-                    if (failed.length === 0) return <p className="text-green-700">All conditions passed</p>;
+                    const failed = getConditionsForScope(qualityGate, "new").filter(
+                      (c) => c.status === "ERROR",
+                    );
+                    if (failed.length === 0)
+                      return <p className="text-green-700">All conditions passed</p>;
                     return (
                       <>
                         <p className="font-medium text-red-700">
@@ -311,7 +308,8 @@ const SastTab = () => {
                             const f = formatCondition(c);
                             return (
                               <li key={c.metricKey}>
-                                <span className="font-medium text-high-emphasis">{f.value}</span> {f.label} {f.requirement}
+                                <span className="font-medium text-high-emphasis">{f.value}</span>{" "}
+                                {f.label} {f.requirement}
                               </li>
                             );
                           })}
@@ -325,12 +323,9 @@ const SastTab = () => {
                 <OverviewStats stats={newCodeStats} qualityGate={qualityGate} />
               ) : (
                 <div className="space-y-1 py-6 text-center">
-                  <p className="text-sm font-medium text-high-emphasis">
-                    No new lines to analyze
-                  </p>
+                  <p className="text-sm font-medium text-high-emphasis">No new lines to analyze</p>
                   <p className="text-xs text-medium-emphasis">
-                    There is no new code on this branch since the new code
-                    period started.
+                    There is no new code on this branch since the new code period started.
                   </p>
                 </div>
               )}
@@ -339,7 +334,10 @@ const SastTab = () => {
                   <p className="text-xs font-medium text-high-emphasis">Issues by severity</p>
                   <div className="flex flex-wrap gap-2">
                     {getSeverityRows(issueBreakdown.newCode).map((r) => (
-                      <span key={r.key} className="rounded-full bg-muted px-2 py-0.5 text-xs text-medium-emphasis">
+                      <span
+                        key={r.key}
+                        className="rounded-full bg-muted px-2 py-0.5 text-xs text-medium-emphasis"
+                      >
                         {r.label} {r.count}
                       </span>
                     ))}
@@ -351,8 +349,11 @@ const SastTab = () => {
               {qualityGate && getConditionsForScope(qualityGate, "overall").length > 0 && (
                 <div className="space-y-1 rounded-md border border-border p-3 text-xs">
                   {(() => {
-                    const failed = getConditionsForScope(qualityGate, "overall").filter((c) => c.status === "ERROR");
-                    if (failed.length === 0) return <p className="text-green-700">All conditions passed</p>;
+                    const failed = getConditionsForScope(qualityGate, "overall").filter(
+                      (c) => c.status === "ERROR",
+                    );
+                    if (failed.length === 0)
+                      return <p className="text-green-700">All conditions passed</p>;
                     return (
                       <>
                         <p className="font-medium text-red-700">
@@ -363,7 +364,8 @@ const SastTab = () => {
                             const f = formatCondition(c);
                             return (
                               <li key={c.metricKey}>
-                                <span className="font-medium text-high-emphasis">{f.value}</span> {f.label} {f.requirement}
+                                <span className="font-medium text-high-emphasis">{f.value}</span>{" "}
+                                {f.label} {f.requirement}
                               </li>
                             );
                           })}
@@ -379,7 +381,10 @@ const SastTab = () => {
                   <p className="text-xs font-medium text-high-emphasis">Issues by severity</p>
                   <div className="flex flex-wrap gap-2">
                     {getSeverityRows(issueBreakdown.overall).map((r) => (
-                      <span key={r.key} className="rounded-full bg-muted px-2 py-0.5 text-xs text-medium-emphasis">
+                      <span
+                        key={r.key}
+                        className="rounded-full bg-muted px-2 py-0.5 text-xs text-medium-emphasis"
+                      >
                         {r.label} {r.count}
                       </span>
                     ))}
@@ -389,11 +394,11 @@ const SastTab = () => {
             </TabsContent>
           </Tabs>
         </CardContent>
-      </Card>
+      </div>
     );
   } else if (!error && !details) {
     body = (
-      <Card className="w-full">
+      <div className={`${SURFACE_CARD_CLASS} w-full`}>
         <CardHeader className="pb-4 text-center">
           <div className="mb-4 flex justify-center">
             <div className="relative">
@@ -401,12 +406,8 @@ const SastTab = () => {
               <Clock className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-background p-1 text-blue-600" />
             </div>
           </div>
-          <CardTitle className="text-2xl">
-            Static Application Security Testing
-          </CardTitle>
-          <CardDescription className="text-lg">
-            Data Processing
-          </CardDescription>
+          <CardTitle className="text-2xl">Static Application Security Testing</CardTitle>
+          <CardDescription className="text-lg">Data Processing</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-center">
           <p className="text-muted-foreground">
@@ -420,11 +421,11 @@ const SastTab = () => {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </div>
     );
   } else {
     body = (
-      <Card className="w-full">
+      <div className={`${SURFACE_CARD_CLASS} w-full`}>
         <CardHeader className="pb-4 text-center">
           <div className="mb-4 flex justify-center">
             <div className="relative">
@@ -432,24 +433,19 @@ const SastTab = () => {
               <AlertTriangle className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-background p-1 text-red-600" />
             </div>
           </div>
-          <CardTitle className="text-2xl">
-            Static Application Security Testing
-          </CardTitle>
-          <CardDescription className="text-lg">
-            Error Loading Data
-          </CardDescription>
+          <CardTitle className="text-2xl">Static Application Security Testing</CardTitle>
+          <CardDescription className="text-lg">Error Loading Data</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-center">
           <p className="text-muted-foreground">
             There was an error loading the SAST data. Please try again later.
           </p>
         </CardContent>
-      </Card>
+      </div>
     );
   }
 
   return <div className="min-h-screen w-full space-y-6">{body}</div>;
 };
-
 
 export default SastTab;

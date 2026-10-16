@@ -130,3 +130,23 @@ e2e/
     release-helpers.ts            # feature navigation helpers
   fixtures/                       # gitignored
 ```
+
+### Local Console UI check
+
+Start Release with `npm run local -- --host 127.0.0.1 --port 4020` from
+`client/`, then run from `e2e/`:
+
+```sh
+npm ci
+RELEASE_UI_BASE_URL=http://127.0.0.1:4020 npm run test:console-ui
+```
+
+Install Playwright Chromium with `npx playwright install chromium`, or set
+`CHROME_PATH` to an existing Chrome executable. This check opens the actual
+Release routes with fixture API responses; it does not require login or write to
+a backend. It covers console search and Cmd+K, breadcrumbs, Bootstrap,
+Domains/Repositories, repository pagination, Core APIs, mobile navigation, and
+dark mode. Screenshots go to `test-results/console-ui/` (override with
+`RELEASE_UI_OUTPUT_DIR`). Theme view transitions are disabled for this check;
+notification negotiation is mocked and its existing StrictMode teardown error
+is ignored, so this is not a notification integration test.

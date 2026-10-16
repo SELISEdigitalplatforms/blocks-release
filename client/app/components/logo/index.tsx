@@ -1,5 +1,5 @@
 import { RenderAlternatively } from "@/components/render-elements";
-import { useAppSettingsStore } from "@seliseblocks/genesis-os/store";
+import { useAppSettingsStore } from "@seliseblocks/app-kit/store";
 
 function getSystemTheme(): "light" | "dark" {
   if (typeof window === "undefined") return "light";

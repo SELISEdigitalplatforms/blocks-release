@@ -1,4 +1,5 @@
-import { Loader, X } from "lucide-react";
+import { GitBranch, Loader2, X } from "lucide-react";
+import { LogoLoader } from "@/components/loader-spinner/logo-loader";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "@/hooks/use-toast";
 import { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
@@ -61,8 +62,7 @@ export default function BranchVerificationModal({
         setModalState("error");
         toast({
           title: "Branch Match Failed",
-          description:
-            "Unable to check branch compatibility. Please try again later.",
+          description: "Unable to check branch compatibility. Please try again later.",
           variant: "destructive",
         });
         return;
@@ -94,8 +94,7 @@ export default function BranchVerificationModal({
       setModalState("error");
       toast({
         title: "Branch Match Failed",
-        description:
-          "Unable to check branch compatibility. Please try again later.",
+        description: "Unable to check branch compatibility. Please try again later.",
         variant: "destructive",
       });
     }
@@ -177,62 +176,63 @@ export default function BranchVerificationModal({
     switch (modalState) {
       case "loading":
         return {
-          title: "Please wait…",
+          title: "",
           content: (
-            <div className="flex flex-col items-center justify-center space-x-3">
-              <div className="mb-2 py-2">
-                <Loader className="h-8 w-8 animate-spin" />
-              </div>
-              <p className="text-sm leading-relaxed text-medium-emphasis">
-                We&apos;re verifying your repository setup. This may take a few
-                seconds.
+            <div className="flex flex-col items-center px-2 pb-2 pt-4 text-center">
+              <LogoLoader size={44} label="Loading" />
+              <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
+                Checking your repository setup. This may take a few seconds.
               </p>
+              {repo.branch && (
+                <span className="mt-4 inline-flex items-center gap-1.5 rounded-sm bg-primary/[0.07] px-2 py-1 text-xs font-medium text-primary">
+                  <GitBranch className="h-3 w-3" aria-hidden="true" />
+                  {repo.repoName?.split("/").pop()} · {repo.branch}
+                </span>
+              )}
             </div>
           ),
-          footer: (
-            <Button
-              onClick={handleClose}
-              variant="outline"
-              className="px-4 py-2 text-sm">
-              Cancel
-            </Button>
-          ),
+          // The header's close button already cancels; a second Cancel would repeat it.
+          footer: null,
         };
 
       case "error":
         return {
           title: "Expected branch not available",
           content: (
-            <p className="text-sm leading-relaxed text-gray-600">
-              This environment expects a branch named &apos;{repo.branch}&apos;.
-              Please create or adjust the branch name in your Git repository to
-              proceed to deployment.
-            </p>
+            <div className="flex items-start gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-sunset-soft text-warn-ink">
+                <GitBranch className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <p className="text-sm leading-relaxed text-medium-emphasis">
+                This environment expects a branch named{" "}
+                <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-xs text-high-emphasis">
+                  {repo.branch}
+                </code>
+                . Create it, or adjust the branch name in your Git repository, to proceed to
+                deployment.
+              </p>
+            </div>
           ),
           footer: (
-            <div className="flex space-x-2">
-              <Button
-                onClick={handleRetry}
-                variant="outline"
-                className="px-4 py-2 text-sm"
-                disabled={isRetrying || isProcessing}>
-                {isRetrying ? (
-                  <>
-                    <div className="mr-2 h-3 w-3 animate-spin rounded-full border-b-2 border-current"></div>
-                    Retrying...
-                  </>
-                ) : (
-                  "Retry"
-                )}
-              </Button>
+            <>
               <Button
                 onClick={handleClose}
                 variant="outline"
-                className="px-4 py-2 text-sm"
-                disabled={isRetrying || isProcessing}>
+                size="sm"
+                disabled={isRetrying || isProcessing}
+              >
                 Close
               </Button>
-            </div>
+              <Button
+                onClick={handleRetry}
+                size="sm"
+                className="gap-2"
+                disabled={isRetrying || isProcessing}
+              >
+                {isRetrying && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+                {isRetrying ? "Retrying..." : "Retry"}
+              </Button>
+            </>
           ),
         };
 
@@ -259,24 +259,42 @@ export default function BranchVerificationModal({
         }}
       />
 
-      <div className="relative mx-4 w-full max-w-md rounded-lg bg-background shadow-xl dark:border dark:border-border">
-        <div className="flex items-center justify-between px-6 py-4">
-          <h2 className="text-lg font-semibold">{modalContent.title}</h2>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={modalContent.title ? undefined : "Verifying repository"}
+        aria-labelledby={modalContent.title ? "branch-verification-title" : undefined}
+        className="relative mx-4 w-full max-w-md rounded-sm bg-card shadow-xl ring-1 ring-border"
+      >
+        <div className="flex items-center justify-between gap-4 px-6 pb-2 pt-5">
+          {modalContent.title ? (
+            <h2
+              id="branch-verification-title"
+              className="text-base font-semibold text-high-emphasis"
+            >
+              {modalContent.title}
+            </h2>
+          ) : (
+            <span aria-hidden="true" />
+          )}
           <button
+            type="button"
             onClick={handleClose}
-            className={`p-1 text-gray-400 hover:text-gray-600 ${
-              isProcessing ? "hover:text-red-600" : ""
-            }`}
-            title={isProcessing ? "Cancel operation" : "Close"}>
-            <X size={20} />
+            aria-label={modalState === "loading" ? "Cancel verification" : "Close"}
+            title={modalState === "loading" ? "Cancel verification" : "Close"}
+            className="rounded-sm p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-high-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="px-6 pb-4">{modalContent.content}</div>
+        <div className="px-6 pb-6 pt-2">{modalContent.content}</div>
 
-        <div className="flex justify-end space-x-2 px-6 py-4">
-          {modalContent.footer}
-        </div>
+        {modalContent.footer && (
+          <div className="flex justify-end gap-2 border-t border-border-soft px-6 py-4">
+            {modalContent.footer}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -14,15 +14,15 @@ type RepoSecretsEmptyProps = {
  */
 export const RepoSecretsEmpty = ({ onAdd, disabled }: RepoSecretsEmptyProps) => (
   <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-    <div className="rounded-full bg-muted p-3">
-      <KeyRound className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+    <div className="rounded-sm bg-primary/[0.07] p-3">
+      <KeyRound className="h-6 w-6 text-primary" aria-hidden="true" />
     </div>
     <h3 className="text-base font-semibold">No environment variables yet</h3>
     <p className="max-w-md text-sm text-muted-foreground">
-      Add the variables this repository needs at deploy time. Values are stored
-      in Key Vault, never in the repository.
+      Add the variables this repository needs at deploy time. Values are stored in Key Vault, never
+      in the repository.
     </p>
-    <Button type="button" onClick={onAdd} disabled={disabled}>
+    <Button type="button" size="sm" onClick={onAdd} disabled={disabled}>
       Add variables
     </Button>
   </div>

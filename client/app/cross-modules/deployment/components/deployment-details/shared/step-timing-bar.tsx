@@ -4,9 +4,11 @@ import {
   isTerminalStepStatus,
 } from "@blocks-deployment/utils/deployment-logs.utils";
 import { formatClockTime } from "@/utils/date.util";
+import { cn } from "@/lib/utils";
 
 type StepTimingBarProps = {
   step: IBuildStep;
+  className?: string;
 };
 
 /**
@@ -24,7 +26,7 @@ type StepTimingBarProps = {
  * "Running" and calls the duration elapsed rather than taken. A step that never
  * reached a terminal status makes no claim about its end either way.
  */
-export const StepTimingBar = ({ step }: StepTimingBarProps) => {
+export const StepTimingBar = ({ step, className }: StepTimingBarProps) => {
   const { startTime, endTime, duration, timingSource, status } = step;
 
   // `duration` is the placeholder whenever the range is not presentable - no
@@ -50,7 +52,12 @@ export const StepTimingBar = ({ step }: StepTimingBarProps) => {
   const isRunning = status === "running";
 
   return (
-    <div className="border-default flex flex-wrap items-center gap-x-2 border-b bg-secondary px-3 py-1.5 text-xs text-medium-emphasis">
+    <div
+      className={cn(
+        "border-default flex flex-wrap items-center gap-x-2 border-b bg-secondary px-3 py-1.5 text-xs text-medium-emphasis",
+        className,
+      )}
+    >
       <span>
         Started {approximate}
         {formatClockTime(start, withMillis)}

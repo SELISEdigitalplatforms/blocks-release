@@ -1,10 +1,33 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
+import { GitBranch } from "lucide-react";
 import { formatFullDate } from "@/utils/date.util";
 import { IDeploymentPageData } from "@blocks-deployment/pages/deployment-details";
 import NotificationListener from "./notification-listener";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { cn } from "@/lib/utils";
+import { SURFACE_CARD_CLASS } from "./surface-styles";
+
+// Same card and label treatment as the details grid on the repository page.
+const CARD_CLASS = cn(SURFACE_CARD_CLASS, "w-full");
+const LABEL_CLASS = "text-[11px] text-muted-foreground";
+
+const LinkValue = ({ url }: { url: string }) =>
+  url && url !== "N/A" ? (
+    <CopyToClipboardButton textToCopy={url} isHoverable={false}>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block truncate text-sm text-primary hover:underline"
+        title={url}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {url}
+      </a>
+    </CopyToClipboardButton>
+  ) : (
+    <span className="text-sm text-muted-foreground">N/A</span>
+  );
 
 interface DeploymentGeneralInfoProps {
   buildId?: string;
@@ -41,149 +64,78 @@ const DeploymentGeneralInfo = ({
 
   if (isLoading) {
     return (
-      <div className="flex h-auto flex-col items-start justify-center gap-6 self-stretch rounded-lg border border-border bg-background p-6 shadow-xs">
-        <Skeleton className="h-6 w-48" />
-
-        <div className="grid w-full grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-4 w-64" />
-            </div>
-
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-56" />
-            </div>
-
-            <div className="space-y-2">
+      <section className={CARD_CLASS}>
+        <div className="grid grid-cols-2 gap-x-5 gap-y-5 sm:gap-x-10 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="col-span-2 space-y-2 sm:col-span-1">
+              <Skeleton className="h-3 w-20" />
               <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-4 w-32" />
             </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-6 w-24" />
-            </div>
-
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-36" />
-              <Skeleton className="h-4 w-44" />
-            </div>
-          </div>
+          ))}
         </div>
-      </div>
+      </section>
     );
   }
 
   if (isError) {
     return (
-      <div className="flex h-auto flex-col items-start justify-center gap-4 self-stretch rounded-lg border border-red-200 bg-red-50 p-6 shadow-xs">
-        <div className="text-red-600">
-          <p className="font-medium">Failed to load deployment information</p>
-          <p className="text-sm">Please try refreshing the page</p>
-        </div>
-      </div>
+      <section className={CARD_CLASS}>
+        <p role="alert" className="text-sm font-medium text-danger-ink">
+          Failed to load deployment information
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">Please try refreshing the page</p>
+      </section>
     );
   }
 
   return (
-    <div className="flex h-auto flex-col items-start justify-center gap-4 self-stretch rounded-lg border bg-background p-4 shadow-xs sm:gap-6 sm:p-6">
-      <h1 className="text-lg font-semibold text-high-emphasis">
-        General information
-      </h1>
-
-      <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-        <div className="space-y-4">
-          <div>
-            <p className="mb-2 text-sm font-medium text-medium-emphasis">
-              Repo URL
-            </p>
-            {selectedRepoURL ? (
-              <CopyToClipboardButton
-                textToCopy={selectedRepoURL}
-                isHoverable={false}>
-                <a
-                  href={selectedRepoURL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block truncate text-sm text-blue-600 hover:underline"
-                  onClick={(e) => e.stopPropagation()}>
-                  {selectedRepoURL}
-                </a>
-              </CopyToClipboardButton>
-            ) : (
-              <span className="block truncate text-sm font-medium">N/A</span>
-            )}
-          </div>
-
-          <div>
-            <p className="mb-2 text-sm font-medium text-medium-emphasis">
-              Deploys To
-            </p>
-            <CopyToClipboardButton
-              textToCopy={defaultDeploymentURL}
-              isHoverable={false}>
-              <a
-                href={defaultDeploymentURL || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block truncate text-sm text-blue-600 hover:underline"
-                onClick={(e) => e.stopPropagation()}>
-                {defaultDeploymentURL || "N/A"}
-              </a>
-            </CopyToClipboardButton>
-          </div>
-
-          <div>
-            <p className="mb-2 text-sm font-medium text-medium-emphasis">
-              Custom Deployment URL
-            </p>
-            {customDeploymentURL && customDeploymentURL !== "N/A" ? (
-              <CopyToClipboardButton
-                textToCopy={customDeploymentURL}
-                isHoverable={false}>
-                <a
-                  href={customDeploymentURL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block truncate text-sm text-blue-600 hover:underline"
-                  onClick={(e) => e.stopPropagation()}>
-                  {customDeploymentURL}
-                </a>
-              </CopyToClipboardButton>
-            ) : (
-              <span className="block truncate text-sm font-medium">
-                {customDeploymentURL || "N/A"}
+    <section aria-label="General information" className={CARD_CLASS}>
+      <dl className="grid grid-cols-2 gap-x-5 gap-y-5 sm:gap-x-10 xl:grid-cols-3">
+        <div className="col-span-2 min-w-0 sm:col-span-1">
+          <dt className={LABEL_CLASS}>Deploys To</dt>
+          <dd className="mt-1.5 min-w-0">
+            <LinkValue url={defaultDeploymentURL} />
+          </dd>
+        </div>
+        <div className="col-span-2 min-w-0 sm:col-span-1">
+          <dt className={LABEL_CLASS}>Repo URL</dt>
+          <dd className="mt-1.5 min-w-0">
+            <LinkValue url={selectedRepoURL} />
+          </dd>
+        </div>
+        <div className="col-span-2 min-w-0 sm:col-span-1">
+          <dt className={LABEL_CLASS}>Custom Deployment URL</dt>
+          <dd className="mt-1.5 min-w-0">
+            <LinkValue url={customDeploymentURL} />
+          </dd>
+        </div>
+        <div>
+          <dt className={LABEL_CLASS}>Deployment Status</dt>
+          <dd className="mt-1.5">
+            <NotificationListener latestBuild={latestBuild} deploymentStatus={deploymentStatus} />
+          </dd>
+        </div>
+        <div>
+          <dt className={LABEL_CLASS}>Deployment Date</dt>
+          <dd className="mt-1.5 text-sm font-medium text-high-emphasis">
+            {deploymentDate ? formatFullDate(new Date(deploymentDate)) : "N/A"}
+          </dd>
+        </div>
+        <div>
+          <dt className={LABEL_CLASS}>Branch</dt>
+          <dd className="mt-1.5 text-sm font-medium text-high-emphasis">
+            {cardData?.branch ? (
+              <span className="inline-flex items-center gap-1.5 rounded-sm bg-primary/[0.07] px-2 py-1 text-xs text-primary">
+                <GitBranch className="h-3 w-3" aria-hidden="true" />
+                {cardData.branch}
               </span>
+            ) : (
+              "N/A"
             )}
-          </div>
+          </dd>
         </div>
-
-        <div className="space-y-4">
-          <div>
-            <p className="mb-2 text-sm font-medium text-medium-emphasis">
-              Deployment Status
-            </p>
-            <NotificationListener
-              latestBuild={latestBuild}
-              deploymentStatus={deploymentStatus}
-            />
-          </div>
-
-          <div>
-            <p className="mb-2 text-sm font-medium text-medium-emphasis">
-              Latest Deployment Date
-            </p>
-            <span className="text-sm font-medium">
-              {formatFullDate(new Date(deploymentDate))}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
+      </dl>
+    </section>
   );
 };
 

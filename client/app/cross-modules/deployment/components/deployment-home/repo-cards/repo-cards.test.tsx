@@ -1,9 +1,4 @@
-import {
-  createEvent,
-  fireEvent,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { createEvent, fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
 import {
@@ -56,7 +51,7 @@ describe("RepoCards", () => {
     renderWithProviders(<RepoCards repo={repo} />, { route: "/app/deployment" });
     fireEvent.click(screen.getByText(/Deploys for/));
     await waitFor(() =>
-      expect(screen.getByText("Please wait…")).toBeInTheDocument(),
+      expect(screen.getByText(/Checking your repository setup/)).toBeInTheDocument(),
     );
   });
 
@@ -67,9 +62,7 @@ describe("RepoCards", () => {
     } as never);
     renderWithProviders(<RepoCards repo={repo} />, { route: "/app/deployment" });
     fireEvent.click(screen.getByText(/Deploys for/));
-    await waitFor(() =>
-      expect(screen.getByText("Repository access denied")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("Repository access denied")).toBeInTheDocument());
   });
 
   it("ignores clicks that originate on a link inside the card", () => {
@@ -99,9 +92,7 @@ describe("RepoCards", () => {
       />,
       { route: "/app/deployment" },
     );
-    expect(
-      screen.getByText("https://custom.example.com"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("https://custom.example.com")).toBeInTheDocument();
   });
 
   it("proceeds to branch verification after a successful retry", async () => {
@@ -118,15 +109,13 @@ describe("RepoCards", () => {
     // Access modal opens; retry now authorizes and advances to the branch modal.
     fireEvent.click(await screen.findByRole("button", { name: /Retry/i }));
     await waitFor(() =>
-      expect(screen.getByText("Please wait…")).toBeInTheDocument(),
+      expect(screen.getByText(/Checking your repository setup/)).toBeInTheDocument(),
     );
   });
 
   it("renders the no-build badge when no deployment status is present", () => {
     renderWithProviders(
-      <RepoCards
-        repo={{ ...repo, lastDeploymentStatus: null, deploymentType: "" } as never}
-      />,
+      <RepoCards repo={{ ...repo, lastDeploymentStatus: null, deploymentType: "" } as never} />,
       { route: "/app/deployment" },
     );
     expect(screen.getByText("No build")).toBeInTheDocument();
@@ -143,7 +132,7 @@ describe("RepoCards", () => {
       key: "Enter",
     });
     await waitFor(() =>
-      expect(screen.getByText("Please wait…")).toBeInTheDocument(),
+      expect(screen.getByText(/Checking your repository setup/)).toBeInTheDocument(),
     );
   });
 
@@ -158,7 +147,7 @@ describe("RepoCards", () => {
     fireEvent(card, space);
     expect(space.defaultPrevented).toBe(true);
     await waitFor(() =>
-      expect(screen.getByText("Please wait…")).toBeInTheDocument(),
+      expect(screen.getByText(/Checking your repository setup/)).toBeInTheDocument(),
     );
   });
 
@@ -184,10 +173,9 @@ describe("RepoCards", () => {
     } as never);
     renderWithProviders(<RepoCards repo={repo} />, { route: "/app/deployment" });
     // Enter on the repo URL link belongs to the link, not to the card.
-    fireEvent.keyDown(
-      screen.getByRole("link", { name: "https://github.com/acme/app" }),
-      { key: "Enter" },
-    );
+    fireEvent.keyDown(screen.getByRole("link", { name: "https://github.com/acme/app" }), {
+      key: "Enter",
+    });
     expect(refetchAuthorization).not.toHaveBeenCalled();
   });
 });
@@ -205,9 +193,7 @@ describe("RepositoryAccessModal", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /Retry/i }));
     await waitFor(() =>
-      expect(
-        screen.getByText(/Authorization still denied/i),
-      ).toBeInTheDocument(),
+      expect(screen.getByText(/Authorization still denied/i)).toBeInTheDocument(),
     );
   });
 
@@ -236,9 +222,7 @@ describe("RepositoryAccessModal", () => {
         refetchAuthorization={vi.fn().mockResolvedValue({ data: {} })}
       />,
     );
-    fireEvent.click(
-      screen.getByRole("button", { name: /Manage repositories/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /Manage repositories/i }));
     expect(openSpy).toHaveBeenCalled();
     openSpy.mockRestore();
   });

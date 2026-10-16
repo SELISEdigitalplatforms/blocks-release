@@ -1,0 +1,2440 @@
+--- a/src/components/common/app-shell/app-topbar.tsx
++++ b/src/components/common/app-shell/app-topbar.tsx
+@@ -1,57 +1,30 @@
+-import { useLocation, useParams } from "react-router";
+-import { Search } from "lucide-react-v1";
+-import {
+-  AppSwitcher,
+-  BackToConsoleNavigator,
+-  Notification,
+-  SidebarTrigger,
+-  UserDropdownMenu,
+-} from "@app-kit/components";
++import { useParams } from "react-router";
++import type { ReactNode } from "react";
++import { AppSwitcher, Notification, SidebarTrigger, UserDropdownMenu } from "@app-kit/components";
+ import type { PaletteNavSection } from "@app-kit/components/common/command-palette";
++import { TopbarBreadcrumbs } from "./topbar-breadcrumbs";
+
+ export type AppTopbarProps = {
+   sections?: PaletteNavSection[];
+   showSidebarTrigger?: boolean;
+   onOpenCommand?: () => void;
++  /** Optional host actions, such as its configured AI agent. */
++  actions?: ReactNode;
+ };
+
+-export function AppTopbar({
+-  sections = [],
+-  showSidebarTrigger = true,
+-  onOpenCommand,
+-}: AppTopbarProps) {
+-  const { pathname } = useLocation();
++export function AppTopbar({ sections = [], showSidebarTrigger = true, actions }: AppTopbarProps) {
+   const { itemId } = useParams();
+-  const title =
+-    sections
+-      .flatMap((section) => section.items)
+-      .find(
+-        (item) =>
+-          pathname === item.path || pathname.startsWith(`${item.path}/`),
+-      )?.name ?? (pathname.endsWith("profile") ? "Profile" : "Console");
+   return (
+-    <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-border bg-background px-5">
+-      {showSidebarTrigger && (
+-        <SidebarTrigger className="md:hidden" aria-label="Open sidebar" />
+-      )}
+-      <span className="text-sm font-medium text-high-emphasis">{title}</span>
+-      <div className="ml-auto flex items-center gap-3">
+-        {onOpenCommand && (
+-          <button
+-            type="button"
+-            aria-label="Open command menu"
+-            onClick={onOpenCommand}
+-            className="rounded-sm p-2 text-muted-foreground hover:bg-surface-warm"
+-          >
+-            <Search aria-hidden="true" className="h-4 w-4" />
+-          </button>
+-        )}
+-        {showSidebarTrigger && <BackToConsoleNavigator />}
++    <header className="relative flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-surface-app px-5 md:px-8">
++      <div className="relative z-[1] flex min-w-0 items-center gap-3">
++        {showSidebarTrigger && <SidebarTrigger className="h-9 w-9 rounded-lg md:hidden" aria-label="Open sidebar" />}
++        <TopbarBreadcrumbs sections={sections} />
++      </div>
++      <div className="relative z-[1] flex shrink-0 items-center gap-2">
++        {actions}
+         <Notification />
+-        <AppSwitcher
+-          forwardedTo={itemId ? `/app/${itemId}/dashboard` : "/app/console"}
+-        />
+-        {!showSidebarTrigger && <UserDropdownMenu showThemeToggle />}
++        <AppSwitcher forwardedTo={itemId ? `/app/${itemId}/dashboard` : "/app/console"} />
++        {!showSidebarTrigger && <div className="ml-4"><UserDropdownMenu showThemeToggle /></div>}
+       </div>
+     </header>
+   );
+--- /dev/null
++++ b/src/components/common/app-shell/breadcrumb-titles-context.tsx
+@@ -0,0 +1,79 @@
++import {
++  createContext,
++  useCallback,
++  useContext,
++  useEffect,
++  useMemo,
++  useState,
++  type ReactNode,
++} from "react";
++
++/** A crumb a page appends after the active nav item (e.g. the record's name). */
++export type TrailCrumb = { label: string; href?: string };
++
++type BreadcrumbTrailContextValue = {
++  trail: TrailCrumb[];
++  publish: (key: string, crumbs: TrailCrumb[]) => void;
++  retract: (key: string) => void;
++};
++
++const BreadcrumbTrailContext =
++  createContext<BreadcrumbTrailContextValue | null>(null);
++
++/**
++ * Lets a page append dynamic crumbs — a user's name, a role, a trace id — to the
++ * trail the top bar derives from the navigation model. Entries are keyed per
++ * publisher so an unmounting page withdraws only its own.
++ */
++export function BreadcrumbTrailProvider({ children }: { children: ReactNode }) {
++  const [entries, setEntries] = useState<Record<string, TrailCrumb[]>>({});
++
++  const publish = useCallback((key: string, crumbs: TrailCrumb[]) => {
++    setEntries((prev) => ({ ...prev, [key]: crumbs }));
++  }, []);
++
++  const retract = useCallback((key: string) => {
++    setEntries((prev) => {
++      if (!(key in prev)) return prev;
++      const next = { ...prev };
++      delete next[key];
++      return next;
++    });
++  }, []);
++
++  const value = useMemo(
++    () => ({ trail: Object.values(entries).flat(), publish, retract }),
++    [entries, publish, retract],
++  );
++
++  return (
++    <BreadcrumbTrailContext.Provider value={value}>
++      {children}
++    </BreadcrumbTrailContext.Provider>
++  );
++}
++
++/** Read the appended crumbs. Returns `[]` outside a provider. */
++export function useBreadcrumbTrail(): TrailCrumb[] {
++  return useContext(BreadcrumbTrailContext)?.trail ?? [];
++}
++
++/**
++ * Append crumbs for the current page.
++ *
++ * Safe to call outside a provider, so a page can adopt it without caring which
++ * shell renders it. Pass `[]` while data is still loading.
++ */
++export function useSetBreadcrumbTrail(key: string, crumbs: TrailCrumb[]): void {
++  const context = useContext(BreadcrumbTrailContext);
++  const publish = context?.publish;
++  const retract = context?.retract;
++  // Callers pass an array literal, so compare by value rather than identity.
++  const serialized = JSON.stringify(crumbs);
++
++  useEffect(() => {
++    if (!publish || !retract) return;
++    publish(key, JSON.parse(serialized) as TrailCrumb[]);
++    return () => retract(key);
++  }, [key, serialized, publish, retract]);
++}
+--- a/src/components/common/app-shell/index.ts
++++ b/src/components/common/app-shell/index.ts
+@@ -1,3 +1,5 @@
+ export * from "./app-sidebar";
+ export * from "./app-topbar";
+ export * from "./workspace-switcher";
++export * from "./breadcrumb-titles-context";
++export * from "./topbar-breadcrumbs";
+--- /dev/null
++++ b/src/components/common/app-shell/topbar-breadcrumbs.tsx
+@@ -0,0 +1,125 @@
++import React from "react";
++import { Link, useLocation } from "react-router";
++import { Home } from "lucide-react-v1";
++import { Logo } from "@app-kit/components";
++import { useLogo } from "@app-kit/hooks";
++import { cn } from "@app-kit/lib/utils";
++import type { PaletteNavSection as NavSection } from "@app-kit/components/common/command-palette";
++import { useBreadcrumbTrail } from "./breadcrumb-titles-context";
++
++/**
++ * The top bar's trail: home / group / current page.
++ *
++ * Derived from the navigation model rather than from path segments. The URL
++ * carries an opaque project id (`/app/<itemId>/iam/user-detail/7`), so a
++ * segment-derived trail reads "App / 019ab… / Iam / Users / 7" — which is why
++ * every in-page breadcrumb had to slice it with a hard-coded `breadcrumbIndex`.
++ * Reading the active menu instead gives the group and page names directly, and
++ * pages append their own dynamic crumbs through `useSetBreadcrumbTrail`.
++ */
++export function TopbarBreadcrumbs({
++  sections,
++  className,
++}: {
++  sections: NavSection[];
++  className?: string;
++}) {
++  const { pathname } = useLocation();
++  const appended = useBreadcrumbTrail();
++  const { appLightLogo, appDarkLogo } = useLogo();
++  const isConsoleShell = sections.length === 0;
++
++  const active = React.useMemo(() => {
++    let best: { section: NavSection; label: string; href: string } | null = null;
++    for (const section of sections) {
++      for (const item of section.items) {
++        if (pathname !== item.path && !pathname.startsWith(`${item.path}/`)) continue;
++        // Longest match wins, so a nested path beats its parent prefix.
++        if (!best || item.path.length > best.href.length) {
++          best = { section, label: item.name, href: item.path };
++        }
++      }
++    }
++    return best;
++  }, [sections, pathname]);
++
++  const crumbs: { label: string; href?: string; key: string }[] = [];
++  if (active?.section.label) {
++    crumbs.push({ label: active.section.label, key: `group:${active.section.id}` });
++  }
++  if (active) {
++    crumbs.push({ label: active.label, href: active.href, key: `item:${active.href}` });
++  }
++  appended.forEach((crumb, index) =>
++    crumbs.push({ ...crumb, key: `extra:${index}:${crumb.label}` }),
++  );
++
++  return (
++    <nav
++      aria-label="Breadcrumb"
++      className={cn(
++        "flex min-w-0 items-center gap-3 text-[13px] text-muted-foreground",
++        className,
++      )}
++    >
++      {/* The home icon and its separator are the first things to go on mobile.
++          On the console shell, the Blocks OS wordmark replaces the home icon. */}
++      <Link
++        to="/app/console"
++        aria-label={isConsoleShell ? "Console" : "Home"}
++        className={cn("shrink-0 transition-colors hover:text-high-emphasis", !isConsoleShell && "hidden md:inline-flex")}
++      >
++        {isConsoleShell ? (
++          <Logo
++            lightSrc={appLightLogo}
++            darkSrc={appDarkLogo}
++            alt="Console"
++            className="h-6 w-auto"
++          />
++        ) : (
++          <Home aria-hidden="true" className="h-3.5 w-3.5" />
++        )}
++      </Link>
++      {crumbs.length > 0 ? (
++        <span aria-hidden="true" className="hidden text-low-emphasis md:inline">
++          /
++        </span>
++      ) : null}
++
++      {crumbs.map((crumb, index) => {
++        const isLast = index === crumbs.length - 1;
++        return (
++          <React.Fragment key={crumb.key}>
++            {isLast ? (
++              <span
++                aria-current="page"
++                className="truncate font-medium text-high-emphasis"
++              >
++                {crumb.label}
++              </span>
++            ) : (
++              <>
++                {crumb.href ? (
++                  <Link
++                    to={crumb.href}
++                    className="hidden shrink-0 transition-colors hover:text-high-emphasis sm:inline"
++                  >
++                    {crumb.label}
++                  </Link>
++                ) : (
++                  <span className="hidden shrink-0 sm:inline">{crumb.label}</span>
++                )}
++                <span
++                  aria-hidden="true"
++                  className="hidden text-low-emphasis sm:inline"
++                >
++                  /
++                </span>
++              </>
++            )}
++          </React.Fragment>
++        );
++      })}
++    </nav>
++  );
++}
+--- a/src/components/common/archive-project/index.tsx
++++ b/src/components/common/archive-project/index.tsx
+@@ -37,7 +37,7 @@
+         <Button
+           variant="destructive"
+           size="sm"
+-          className="flex items-center gap-2"
++          className="flex h-9 items-center gap-2 rounded-md"
+         >
+           <Archive className="h-4 w-4" />
+           <span className="sr-only sm:not-sr-only">Delete</span>
+--- a/src/components/common/project/actions.tsx
++++ b/src/components/common/project/actions.tsx
+@@ -1,3 +1,4 @@
++import { OnboardProject } from "./onboard";
+ import { ArchiveProject, RenderConditionally } from "@app-kit/components";
+ import { Skeleton } from "@app-kit/components/core";
+ import { useAuthStore } from "@app-kit/store";
+@@ -21,16 +22,16 @@
+   }
+
+   return (
+-    <RenderConditionally condition={isOwner && !isDisabled}>
+-      <div className="flex items-center gap-2">
+-        {/* <EditProject /> */}
+-        <ArchiveProject />
++    <RenderConditionally condition={!isDisabled}>
++      <div className="flex shrink-0 items-center gap-2 sm:pt-1">
++        <OnboardProject />
++        <RenderConditionally condition={isOwner}><ArchiveProject /></RenderConditionally>
+       </div>
+     </RenderConditionally>
+   );
+ };
+
+-const ProjectActionsSkeleton = () => {
++export const ProjectActionsSkeleton = () => {
+   return (
+     <div className="flex items-center gap-2">
+       {/* <Skeleton className="h-10 w-20 rounded-md" /> */}
+--- /dev/null
++++ b/src/components/common/project/onboard/copy-button.tsx
+@@ -0,0 +1,57 @@
++import { Button } from "@app-kit/components/core/button";
++import { cn } from "@app-kit/lib/utils";
++import { Check, Copy } from "lucide-react-v1";
++import { useEffect, useRef, useState } from "react";
++import { copyText } from "./copy-text";
++
++type CopyButtonProps = {
++  text: string;
++  /** Accessible name — icon-only buttons have nothing else to announce. */
++  label: string;
++  /** Renders the label next to the icon instead of visually hiding it. */
++  showLabel?: boolean;
++  variant?: "ghost" | "outline" | "default";
++  className?: string;
++  onCopied?: (succeeded: boolean) => void;
++};
++
++export const CopyButton = ({
++  text,
++  label,
++  showLabel = false,
++  variant = "ghost",
++  className,
++  onCopied,
++}: CopyButtonProps) => {
++  const [isCopied, setIsCopied] = useState(false);
++  const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
++
++  useEffect(() => () => clearTimeout(resetTimer.current), []);
++
++  const handleCopy = async () => {
++    const succeeded = await copyText(text);
++    setIsCopied(succeeded);
++    clearTimeout(resetTimer.current);
++    resetTimer.current = setTimeout(() => setIsCopied(false), 1500);
++    onCopied?.(succeeded);
++  };
++
++  return (
++    <Button
++      type="button"
++      variant={variant}
++      size="sm"
++      aria-label={label}
++      title={label}
++      onClick={handleCopy}
++      className={cn("gap-1.5", showLabel ? "" : "h-8 w-8 p-0", className)}
++    >
++      {isCopied ? (
++        <Check className="h-4 w-4 text-success" aria-hidden="true" />
++      ) : (
++        <Copy className="h-4 w-4" aria-hidden="true" />
++      )}
++      {showLabel ? <span>{isCopied ? "Copied" : label}</span> : null}
++    </Button>
++  );
++};
+--- /dev/null
++++ b/src/components/common/project/onboard/copy-text.ts
+@@ -0,0 +1,28 @@
++/**
++ * Writes `text` to the clipboard, falling back to a hidden textarea when the
++ * async Clipboard API isn't available (non-secure context / older browsers).
++ * Mirrors the behaviour of `CopyToClipboardButton`, but usable outside JSX.
++ */
++export const copyText = async (text: string): Promise<boolean> => {
++  try {
++    if (navigator.clipboard && window.isSecureContext) {
++      await navigator.clipboard.writeText(text);
++      return true;
++    }
++
++    const textArea = document.createElement("textarea");
++    textArea.value = text;
++    textArea.style.position = "fixed";
++    textArea.style.left = "-999999px";
++    textArea.style.top = "-999999px";
++    document.body.appendChild(textArea);
++    textArea.focus();
++    textArea.select();
++    const copied = document.execCommand("copy");
++    document.body.removeChild(textArea);
++    return copied;
++  } catch (error) {
++    console.error("Failed to copy:", error);
++    return false;
++  }
++};
+--- /dev/null
++++ b/src/components/common/project/onboard/index.ts
+@@ -0,0 +1,2 @@
++export { OnboardProject } from "./onboard";
++export { OnboardDialog } from "./onboard-dialog";
+--- /dev/null
++++ b/src/components/common/project/onboard/onboard-dialog.tsx
+@@ -0,0 +1,87 @@
++import {
++  Dialog,
++  DialogContent,
++  DialogDescription,
++  DialogHeader,
++  DialogTitle,
++} from "@app-kit/components/core/dialog";
++import type { IProject } from "@app-kit/models/project.model";
++import { showErrorToast, showSuccessToast } from "@app-kit/utils";
++import { ArrowUpRight, Rocket } from "lucide-react-v1";
++import { useMemo } from "react";
++import { CopyButton } from "./copy-button";
++import { resolveOnboardingGuide } from "./onboard-guide";
++import { OnboardMarkdown } from "./onboard-markdown";
++import { BOOTSTRAP_GUIDE_URL } from "./onboarding-guide.constant";
++
++type OnboardDialogProps = {
++  open: boolean;
++  onOpenChange: (open: boolean) => void;
++  project?: IProject;
++};
++
++export const OnboardDialog = ({ open, onOpenChange, project }: OnboardDialogProps) => {
++  const tenantId = project?.tenantId ?? "";
++
++  const resolved = useMemo(() => resolveOnboardingGuide({ tenantId }), [tenantId]);
++
++  const handleCopied = (succeeded: boolean) => {
++    if (succeeded) {
++      showSuccessToast({
++        title: "Instructions copied",
++        description: "Paste them into your coding agent to start building.",
++      });
++      return;
++    }
++    showErrorToast({ errors: { clipboard: "Could not copy the instructions." } });
++  };
++
++  return (
++    <Dialog open={open} onOpenChange={onOpenChange}>
++      <DialogContent className="flex max-h-[88vh] w-[95vw] max-w-2xl flex-col gap-0 overflow-hidden rounded-lg p-0">
++        <DialogHeader className="space-y-0 border-b border-border/60 px-6 py-5 pr-12 text-left">
++          <div className="flex items-start gap-3">
++            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary/10 text-primary">
++              <Rocket className="h-5 w-5" aria-hidden="true" />
++            </span>
++            <div className="min-w-0">
++              <DialogTitle className="text-lg font-semibold leading-6 tracking-tight text-high-emphasis">
++                Bootstrap with an AI agent
++              </DialogTitle>
++              <DialogDescription className="mt-1 text-sm leading-5">
++                Paste this into Claude Code, Codex or Cursor.
++              </DialogDescription>
++            </div>
++          </div>
++        </DialogHeader>
++
++        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
++          <div className="rounded-md border border-border-default bg-surface-app p-4">
++            <OnboardMarkdown markdown={resolved.markdown} />
++            <div className="mt-3 flex justify-end">
++              <CopyButton
++                text={resolved.markdown}
++                label="Copy instructions"
++                showLabel
++                variant="default"
++                onCopied={handleCopied}
++              />
++            </div>
++          </div>
++          <p className="text-sm leading-6 text-muted-foreground">
++            The agent installs the Blocks skills and walks you through sign-in.{" "}
++            <a
++              href={BOOTSTRAP_GUIDE_URL}
++              target="_blank"
++              rel="noopener noreferrer"
++              className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
++            >
++              See what it does
++              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
++            </a>
++          </p>
++        </div>
++      </DialogContent>
++    </Dialog>
++  );
++};
+--- /dev/null
++++ b/src/components/common/project/onboard/onboard-guide.ts
+@@ -0,0 +1,42 @@
++import { ONBOARDING_GUIDE_TEMPLATE } from "./onboarding-guide.constant";
++
++export { ONBOARDING_GUIDE_TEMPLATE };
++
++/**
++ * Stands in for a value this project hasn't configured yet.
++ */
++export const NOT_CONFIGURED = "<not configured>";
++
++export type OnboardingPlaceholder = "X_BLOCKS_KEY";
++
++export type OnboardingValues = Record<OnboardingPlaceholder, string>;
++
++export type ResolvedOnboardingGuide = {
++  /** Guide with every placeholder substituted — this is what gets copied. */
++  markdown: string;
++  /** The real values. */
++  values: OnboardingValues;
++};
++
++const fillPlaceholders = (template: string, values: OnboardingValues): string =>
++  template.replace(/\{\{(\w+)\}\}/g, (token, key: string) =>
++    key in values ? values[key as OnboardingPlaceholder] || NOT_CONFIGURED : token,
++  );
++
++export type ResolveOnboardingGuideOptions = {
++  /** The project key — `IProject.tenantId`. */
++  tenantId?: string;
++};
++
++export const resolveOnboardingGuide = ({
++  tenantId = "",
++}: ResolveOnboardingGuideOptions): ResolvedOnboardingGuide => {
++  const values: OnboardingValues = {
++    X_BLOCKS_KEY: tenantId.trim(),
++  };
++
++  return {
++    markdown: fillPlaceholders(ONBOARDING_GUIDE_TEMPLATE, values),
++    values,
++  };
++};
+--- /dev/null
++++ b/src/components/common/project/onboard/onboard-markdown.tsx
+@@ -0,0 +1,97 @@
++import { cn } from "@app-kit/lib/utils";
++import type { Components } from "react-markdown";
++import ReactMarkdown from "react-markdown";
++import remarkGfm from "remark-gfm";
++import { CopyButton } from "./copy-button";
++
++type GuideCodeBlockProps = {
++  language: string;
++  code: string;
++};
++
++const GuideCodeBlock = ({ language, code }: GuideCodeBlockProps) => (
++  <div className="my-3 overflow-hidden rounded-md border border-border-default">
++    <div className="flex items-center justify-between gap-2 border-b border-border-default bg-muted px-3 py-1">
++      <span className="font-mono text-xs uppercase tracking-wide text-medium-emphasis">
++        {language}
++      </span>
++      <CopyButton text={code} label={`Copy ${language} command`} />
++    </div>
++    <pre className="overflow-x-auto bg-surface-app p-3">
++      <code className="font-mono text-[13px] leading-6 text-high-emphasis">{code}</code>
++    </pre>
++  </div>
++);
++
++/**
++ * Markdown styling for the onboarding brief. The shared `MarkdownRenderer` leans
++ * on `prose` utilities, but `@tailwindcss/typography` isn't installed here, so a
++ * structured document needs its headings, lists and emphasis styled explicitly.
++ */
++const createGuideComponents = (): Components => ({
++  h1: ({ children }) => (
++    <h1 className="mb-3 mt-0 text-xl font-bold text-high-emphasis">{children}</h1>
++  ),
++  h2: ({ children }) => (
++    <h2 className="mb-3 mt-7 border-b border-border-default pb-1.5 text-lg font-semibold text-high-emphasis">
++      {children}
++    </h2>
++  ),
++  h3: ({ children }) => (
++    <h3 className="mb-2 mt-6 text-base font-semibold text-high-emphasis">{children}</h3>
++  ),
++  h4: ({ children }) => (
++    <h4 className="mb-2 mt-4 text-sm font-semibold text-high-emphasis">{children}</h4>
++  ),
++  p: ({ children }) => <p className="my-3 leading-relaxed text-medium-emphasis">{children}</p>,
++  ul: ({ children }) => (
++    <ul className="my-3 list-disc space-y-1.5 pl-5 text-medium-emphasis">{children}</ul>
++  ),
++  ol: ({ children }) => (
++    <ol className="my-3 list-decimal space-y-1.5 pl-5 text-medium-emphasis">{children}</ol>
++  ),
++  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
++  strong: ({ children }) => (
++    <strong className="font-semibold text-high-emphasis">{children}</strong>
++  ),
++  a: ({ children, href }) => (
++    <a
++      href={href}
++      target="_blank"
++      rel="noreferrer"
++      className="text-primary underline underline-offset-2"
++    >
++      {children}
++    </a>
++  ),
++  hr: () => <hr className="my-6 border-border-default" />,
++  // Fenced blocks arrive as <pre><code class="language-…">; unwrap the <pre> so
++  // the block can render its own header row without nesting a div inside it.
++  pre: ({ children }) => <>{children}</>,
++  code: ({ className, children }) => {
++    const language = /language-(\w+)/.exec(className ?? "")?.[1];
++    if (!language) {
++      return (
++        <code className="break-words rounded bg-muted px-1 py-0.5 font-mono text-[0.85em] text-high-emphasis">
++          {children}
++        </code>
++      );
++    }
++    return (
++      <GuideCodeBlock language={language} code={String(children).replace(/\n$/, "")} />
++    );
++  },
++});
++
++type OnboardMarkdownProps = {
++  markdown: string;
++  className?: string;
++};
++
++export const OnboardMarkdown = ({ markdown, className }: OnboardMarkdownProps) => (
++  <div className={cn("text-sm", className)}>
++    <ReactMarkdown remarkPlugins={[remarkGfm]} components={createGuideComponents()}>
++      {markdown}
++    </ReactMarkdown>
++  </div>
++);
+--- /dev/null
++++ b/src/components/common/project/onboard/onboard.tsx
+@@ -0,0 +1,81 @@
++import { Button } from "@app-kit/components/core/button";
++import { useGetProject } from "@app-kit/hooks/use-project";
++import { Rocket } from "lucide-react-v1";
++import { useEffect, useState } from "react";
++import { motion, useAnimationControls, useReducedMotion } from "framer-motion";
++import { useLocation } from "react-router";
++import { OnboardDialog } from "./onboard-dialog";
++
++/**
++ * Opens the ready-to-paste onboarding brief for the selected project. Reads the
++ * project from the same cached query the overview page uses, so it costs no
++ * extra request and needs no props threaded through `ProjectActions`.
++ */
++export const OnboardProject = () => {
++  const [open, setOpen] = useState(false);
++  const { data } = useGetProject();
++  const reducedMotion = useReducedMotion();
++  const rocketControls = useAnimationControls();
++  const { pathname } = useLocation();
++
++  useEffect(() => {
++    if (reducedMotion) rocketControls.set("rest");
++    else void rocketControls.start("enter");
++  }, [rocketControls, reducedMotion, pathname, data?.data?.tenantId]);
++
++  useEffect(() => {
++    if (open && !reducedMotion) void rocketControls.start("launch");
++  }, [rocketControls, open, reducedMotion]);
++
++  return (
++    <>
++      <Button
++        variant="ghost"
++        size="sm"
++        className="flex h-9 items-center gap-2 rounded-md bg-card px-4 text-high-emphasis shadow-surface-ring hover:bg-surface-warm hover:shadow-raised"
++        onClick={() => setOpen(true)}
++        asChild
++      >
++        <motion.button
++          initial="rest"
++          animate={rocketControls}
++          whileHover={reducedMotion || open ? undefined : "hover"}
++          whileFocus={reducedMotion || open ? undefined : "hover"}
++          type="button"
++        >
++          <motion.span
++            className="inline-flex"
++            aria-hidden="true"
++            variants={{
++              rest: { x: 0, y: 0, rotate: 0, scale: 1, transition: { duration: 0.15 } },
++              enter: {
++                x: [0, -1, 1, -1, 6, 0],
++                y: [0, 1, -1, 1, -6, 0],
++                rotate: [0, -6, 6, -4, 0],
++                scale: [1, 1, 1, 0.95, 1.1, 1],
++                transition: { duration: 0.85, delay: 0.12 },
++              },
++              hover: {
++                x: [0, -1, 1, -1, 2, 0],
++                y: [0, 1, -1, 1, -3, 0],
++                rotate: [0, -6, 6, -4, 0],
++                transition: { duration: 0.8, repeat: Infinity, repeatDelay: 1.1 },
++              },
++              launch: {
++                x: [0, -1, 6, 0],
++                y: [0, 1, -6, 0],
++                rotate: [0, -5, 0, 0],
++                scale: [1, 0.95, 1.1, 1],
++                transition: { duration: 0.4 },
++              },
++            }}
++          >
++            <Rocket className="h-4 w-4" />
++          </motion.span>
++          <span>Bootstrap</span>
++        </motion.button>
++      </Button>
++      <OnboardDialog open={open} onOpenChange={setOpen} project={data?.data} />
++    </>
++  );
++};
+--- /dev/null
++++ b/src/components/common/project/onboard/onboarding-guide.constant.ts
+@@ -0,0 +1,13 @@
++/**
++ * The onboarding brief handed to a coding agent, still carrying its
++ * `{{PLACEHOLDER}}` tokens - `resolveOnboardingGuide` fills them in from the
++ * selected project.
++ *
++ * Held as a plain string constant rather than a raw file import, so it travels
++ * with the module graph and needs nothing bundler-specific. Backticks and
++ * backslashes are escaped for the template literal; the text itself is ordinary
++ * markdown.
++ */
++export const BOOTSTRAP_GUIDE_URL = "https://seliseblocks.com/bootstrap";
++
++export const ONBOARDING_GUIDE_TEMPLATE = `Read ${BOOTSTRAP_GUIDE_URL} and follow it to bootstrap this repo, then help me sign in, get me set up on project {{X_BLOCKS_KEY}} and show me what's already there.`;
+--- a/src/components/common/project/repo-list.tsx
++++ b/src/components/common/project/repo-list.tsx
+@@ -1,7 +1,7 @@
+-import { Skeleton } from "@app-kit/components";
+-import { DashboardSectionCard } from "@app-kit/components/common/dashboard-section-card";
++import { DashboardTableSection, DashboardTableSkeleton } from "@app-kit/pages/dashboard/dashboard-overview-sections/dashboard-table-section";
+ import { useGetEnvRepositories } from "@app-kit/hooks/use-project";
+-import type { IProject } from "@app-kit/models";
++import type { IProject } from "@app-kit/models/project.model";
++import { useState } from "react";
+ import { ProjectRepoTable } from "./repo-table";
+
+ export const ProjectRepoList = ({
+@@ -12,39 +12,41 @@
+   isLoading: boolean;
+ }) => {
+   const { applications } = project;
++  // Held here rather than in the table: the skeleton branch below unmounts the table on
++  // every background refetch, which would silently return a reader to the first page.
++  const [repoPageIndex, setRepoPageIndex] = useState(0);
++  const [repoSearch, setRepoSearch] = useState("");
++  const handleRepoSearchChange = (value: string) => {
++    setRepoPageIndex(0);
++    setRepoSearch(value);
++  };
+   const {
+     data: envRepositoriesResponse,
+     isLoading: isLoadingEnvRepos,
+     isFetching: isFetchingEnvRepos,
+   } = useGetEnvRepositories(project?.tenantId || "");
+
+-  if (isLoading || isLoadingEnvRepos || isFetchingEnvRepos) {
+-    return (
+-      <div className="mt-6 rounded-lg border bg-card px-2 py-2 shadow-sm md:mt-0">
+-        <div className="grid-col-1 grid gap-3 px-2 py-4 md:grid-cols-2 md:gap-4 lg:gap-6">
+-          {["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"].map((itemKey) => (
+-            <div key={itemKey}>
+-              <Skeleton className="h-5 w-1/2" />
+-              <Skeleton className="mt-2 h-5 w-full" />
+-            </div>
+-          ))}
+-        </div>
+-      </div>
+-    );
+-  }
+-
+   return (
+-    <DashboardSectionCard
+-      title="Repositories"
+-      description="Repositories deployed for this project"
+-      contentClassName="p-0"
+-    >
+-      <ProjectRepoTable
+-        data={envRepositoriesResponse?.data ?? []}
+-        domains={applications}
+-        projectKey={project?.tenantId || ""}
+-        projectEnv={project?.environment || ""}
+-      />
+-    </DashboardSectionCard>
++    <>
++      {isLoading || isLoadingEnvRepos || isFetchingEnvRepos ? (
++        <DashboardTableSection
++          title="Repositories"
++          description="Repositories deployed for this project"
++        >
++          <DashboardTableSkeleton label="Loading repositories" />
++        </DashboardTableSection>
++      ) : (
++        <ProjectRepoTable
++          data={envRepositoriesResponse?.data ?? []}
++          domains={applications}
++          projectKey={project?.tenantId || ""}
++          projectEnv={project?.environment || ""}
++          page={repoPageIndex}
++          onPageChange={setRepoPageIndex}
++          search={repoSearch}
++          onSearchChange={handleRepoSearchChange}
++        />
++      )}
++    </>
+   );
+ };
+--- a/src/components/common/project/repo-table.tsx
++++ b/src/components/common/project/repo-table.tsx
+@@ -1,5 +1,5 @@
+-import { Button } from "@app-kit/components";
+-import { cn } from "@app-kit/lib";
++import { Button } from "@app-kit/components/core/button";
++import { cn } from "@app-kit/lib/utils";
+ import type { IEnvRepository } from "@app-kit/models";
+ import type { IDomain } from "@app-kit/models/project.model";
+ import { formatFullDate } from "@app-kit/utils";
+@@ -7,48 +7,126 @@
+   createColumnHelper,
+   flexRender,
+   getCoreRowModel,
++  getPaginationRowModel,
+   useReactTable,
+ } from "@tanstack/react-table";
+-import { Pencil } from "lucide-react-v1";
+-import { useState } from "react";
++import { CalendarDays, ExternalLink, GitBranch, Pencil, Plus } from "lucide-react-v1";
++import { useLayoutEffect, useMemo, useState } from "react";
++import {
++  DashboardTablePagination,
++  DashboardTableSearch,
++  DashboardTableSection,
++} from "@app-kit/pages/dashboard/dashboard-overview-sections/dashboard-table-section";
++import { DASHBOARD_TABLE_PAGE_SIZE } from "@app-kit/pages/dashboard/dashboard-overview-sections/dashboard.constant";
++import { Tooltip, TooltipContent, TooltipTrigger } from "@app-kit/components/core/tooltip";
+ import { SetCustomDomainDialog } from "./set-custom-domain/dialog";
+
+ // ─── Column helper ────────────────────────────────────────────────────────────
+
+ const columnHelper = createColumnHelper<IEnvRepository>();
++
++const RepositoryName = ({ repo }: { repo: IEnvRepository }) => {
++  let href: string | undefined;
++  try {
++    const url = new URL(repo.repoUrl);
++    if (["https:", "http:"].includes(url.protocol)) href = url.href;
++  } catch {
++    /* Repositories without a valid web URL remain readable. */
++  }
++
++  return href ? (
++    <a
++      href={href}
++      target="_blank"
++      rel="noopener noreferrer"
++      title={repo.repoUrl}
++      className="max-w-80 truncate rounded-sm text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
++    >
++      {repo.repoName}
++    </a>
++  ) : (
++    <span
++      className="max-w-80 truncate text-[13px] font-semibold text-high-emphasis"
++      title={repo.repoName}
++    >
++      {repo.repoName}
++    </span>
++  );
++};
++
++const DeploymentDomain = ({ value }: { value: string }) => {
++  if (!value) return <span className="text-xs text-muted-foreground">Not configured</span>;
++  let href: string | undefined;
++  try {
++    const url = new URL(value.includes("://") ? value : `https://${value}`);
++    if (["https:", "http:"].includes(url.protocol)) href = url.href;
++  } catch {
++    /* Invalid domains remain readable without a link. */
++  }
++  return href ? (
++    <a
++      href={href}
++      target="_blank"
++      rel="noopener noreferrer"
++      className="group/link inline-flex max-w-64 items-center gap-1.5 rounded-sm text-[13px] text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
++    >
++      <span className="truncate" title={value}>
++        {value}
++      </span>
++      <ExternalLink
++        className="h-3 w-3 shrink-0 opacity-50 group-hover/link:opacity-100"
++        aria-hidden="true"
++      />
++    </a>
++  ) : (
++    <span className="break-all text-[13px] text-muted-foreground">{value}</span>
++  );
++};
+
+ const buildColumns = (onSet: (repo: IEnvRepository) => void) => [
+   columnHelper.accessor("repoName", {
+-    header: "Name",
++    header: "Repository",
+     cell: (info) => (
+-      <span className="text-sm font-medium text-high-emphasis">{info.getValue()}</span>
++      <div className="flex min-w-0 items-center gap-3">
++        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-primary/[0.08] text-primary">
++          <GitBranch className="h-4 w-4" strokeWidth={1.7} aria-hidden="true" />
++        </span>
++        <RepositoryName repo={info.row.original} />
++      </div>
+     ),
+   }),
+   columnHelper.accessor("defaultDeploymentUrl", {
+     header: "Deployment Domain",
+-    cell: (info) => <span className="text-sm text-medium-emphasis">{info.getValue()}</span>,
++    cell: (info) => <DeploymentDomain value={info.getValue()} />,
+   }),
+   columnHelper.accessor("customDeploymentUrl", {
+     header: "Custom Domain",
+     cell: ({ row }) => {
+       const repo = row.original;
+       return repo.customDeploymentUrl ? (
+-        <span className="text-sm text-medium-emphasis">{repo.customDeploymentUrl}</span>
++        <DeploymentDomain value={repo.customDeploymentUrl} />
+       ) : (
+-        <Button variant="outline" size="xxs" onClick={() => onSet(repo)}>
+-          <span className="px-2">Set</span>
++        <Button
++          variant="ghost"
++          size="xxs"
++          className="gap-1 rounded-sm border border-dashed border-border px-2.5 text-xs text-muted-foreground hover:bg-surface-warm hover:text-primary"
++          onClick={() => onSet(repo)}
++        >
++          <Plus className="h-3 w-3" aria-hidden="true" />
++          Set
+         </Button>
+       );
+     },
+   }),
+   columnHelper.display({
+     id: "lastDeploymentDate",
+-    header: "Last Deployment Date",
++    header: "Last deployed",
+     cell: ({ row }) => {
+       const repo = row.original;
+       const isDefaultDate = repo.lastDeploymentDate === "0001-01-01T00:00:00";
+       return (
+-        <div className="text-sm text-medium-emphasis">
++        <div className="flex items-center gap-2 whitespace-nowrap text-xs text-muted-foreground">
++          <CalendarDays className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden="true" />
+           {!repo.lastDeploymentDate || isDefaultDate
+             ? "Not deployed"
+             : formatFullDate(new Date(repo.lastDeploymentDate))}
+@@ -58,21 +136,30 @@
+   }),
+   columnHelper.display({
+     id: "actions",
+-    header: "Actions",
++    header: () => <span className="sr-only">Actions</span>,
+     cell: ({ row }) => {
+       const repo = row.original;
+       const hasCustomDomain = !!repo.customDeploymentUrl;
++      const tooltipText = hasCustomDomain
++        ? "Edit custom domain"
++        : "Set a custom domain first to enable editing";
+       return (
+         <div className="flex items-center justify-end gap-1">
+-          <Button
+-            variant="ghost"
+-            size="icon"
+-            title="Edit custom domain"
+-            disabled={!hasCustomDomain}
+-            onClick={() => onSet(repo)}
+-          >
+-            <Pencil className="h-4 w-4 text-muted-foreground" />
+-          </Button>
++          <Tooltip>
++            <TooltipTrigger asChild>
++              <Button
++                variant="ghost"
++                size="icon"
++                aria-label="Edit custom domain"
++                disabled={!hasCustomDomain}
++                onClick={() => onSet(repo)}
++                className="h-8 w-8 rounded-sm hover:bg-surface-warm disabled:cursor-not-allowed disabled:opacity-30"
++              >
++                <Pencil className="h-4 w-4 text-muted-foreground" />
++              </Button>
++            </TooltipTrigger>
++            <TooltipContent>{tooltipText}</TooltipContent>
++          </Tooltip>
+         </div>
+       );
+     },
+@@ -86,6 +173,12 @@
+   domains: IDomain[];
+   projectKey: string;
+   projectEnv: string;
++  /** Page index is owned by the parent: this table is unmounted and remounted on every
++   *  background refetch (see repo-list.tsx), which would destroy state held here. */
++  page: number;
++  onPageChange: (pageIndex: number) => void;
++  search: string;
++  onSearchChange: (value: string) => void;
+ }
+
+ export const ProjectRepoTable = ({
+@@ -93,6 +186,10 @@
+   domains,
+   projectKey,
+   projectEnv,
++  page,
++  onPageChange,
++  search,
++  onSearchChange,
+ }: ProjectRepoTableProps) => {
+   // ── Set custom domain dialog ────────────────────────────────────────────────
+   const [setTarget, setSetTarget] = useState<IEnvRepository | null>(null);
+@@ -105,11 +202,36 @@
+
+   // ── Table ──────────────────────────────────────────────────────────────────
+   const columns = buildColumns(handleSet);
++  const filteredData = useMemo(() => {
++    const normalizedSearch = search.toLowerCase();
++    return data.filter((repo) => repo.repoName.toLowerCase().includes(normalizedSearch));
++  }, [data, search]);
+   const table = useReactTable({
+-    data,
++    data: filteredData,
+     columns,
+     getCoreRowModel: getCoreRowModel(),
++    getPaginationRowModel: getPaginationRowModel(),
++    // See `autoResetPageIndex` in domain-table.tsx: the queued reset would override the
++    // clamp below.
++    autoResetPageIndex: false,
++    state: { pagination: { pageIndex: page, pageSize: DASHBOARD_TABLE_PAGE_SIZE } },
++    onPaginationChange: (updater) => {
++      const next =
++        typeof updater === "function"
++          ? updater({ pageIndex: page, pageSize: DASHBOARD_TABLE_PAGE_SIZE })
++          : updater;
++      onPageChange(next.pageIndex);
++    },
+   });
++
++  const lastPageIndex = Math.max(0, table.getPageCount() - 1);
++
++  // Clamp a now-out-of-range page back to the last one that exists, before paint.
++  // Routed through the table (not straight to onPageChange) so every page change
++  // takes the same path out through onPaginationChange.
++  useLayoutEffect(() => {
++    if (page > lastPageIndex) table.setPageIndex(lastPageIndex);
++  }, [page, lastPageIndex, table]);
+
+   return (
+     <>
+@@ -126,54 +248,94 @@
+         projectEnv={projectEnv}
+       />
+
+-      {/* Table */}
+-      <div
+-        data-table-container=""
+-        className="relative w-full overflow-x-auto rounded-sm bg-card shadow-surface-ring"
++      <DashboardTableSection
++        title="Repositories"
++        description="Repositories deployed for this project"
++        tools={
++          data.length > 0 && (
++            <DashboardTableSearch
++              value={search}
++              onChange={onSearchChange}
++              placeholder="Search repositories..."
++            />
++          )
++        }
+       >
+-        <table data-table="" className="w-full border-collapse min-w-[720px] bg-card text-sm">
+-          <thead className="bg-card">
+-            {table.getHeaderGroups().map((headerGroup) => (
+-              <tr key={headerGroup.id}>
+-                {headerGroup.headers.map((header) => (
+-                  <th
+-                    key={header.id}
+-                    scope="col"
+-                    className={cn(
+-                      "h-10 px-5 text-left text-xs font-semibold uppercase tracking-wide text-medium-emphasis",
+-                      header.id === "actions" && "w-32 text-right",
+-                    )}
+-                  >
+-                    {flexRender(header.column.columnDef.header, header.getContext())}
+-                  </th>
+-                ))}
+-              </tr>
+-            ))}
+-          </thead>
+-          <tbody>
+-            {table.getRowModel().rows.length === 0 ? (
+-              <tr>
+-                <td
+-                  colSpan={columns.length}
+-                  className="bg-card py-10 text-center text-sm text-muted-foreground"
+-                >
+-                  No repositories found for this project.
+-                </td>
+-              </tr>
+-            ) : (
+-              table.getRowModel().rows.map((row) => (
+-                <tr key={row.id} data-hoverable="true">
+-                  {row.getVisibleCells().map((cell) => (
+-                    <td key={cell.id} className="bg-card px-5 py-4">
+-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+-                    </td>
++        {/* Table */}
++        <div className="relative w-full overflow-x-auto">
++          <table
++            data-dashboard-table=""
++            aria-label="Repositories"
++            className="w-full min-w-[800px] border-collapse text-sm"
++          >
++            <thead className="border-b border-border-default">
++              {table.getHeaderGroups().map((headerGroup) => (
++                <tr key={headerGroup.id}>
++                  {headerGroup.headers.map((header) => (
++                    <th
++                      key={header.id}
++                      scope="col"
++                      className={cn(
++                        "h-10 px-5 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-medium-emphasis",
++                        header.id === "customDeploymentUrl" && "text-center",
++                        header.id === "actions" && "w-20 text-right",
++                      )}
++                    >
++                      {flexRender(header.column.columnDef.header, header.getContext())}
++                    </th>
+                   ))}
+                 </tr>
+-              ))
+-            )}
+-          </tbody>
+-        </table>
+-      </div>
++              ))}
++            </thead>
++            <tbody>
++              {table.getRowModel().rows.length === 0 ? (
++                <tr>
++                  <td
++                    colSpan={columns.length}
++                    className="px-5 py-12 text-center text-sm text-muted-foreground"
++                  >
++                    <GitBranch
++                      className="mx-auto mb-3 h-6 w-6 text-muted-foreground/50"
++                      strokeWidth={1.5}
++                      aria-hidden="true"
++                    />
++                    {data.length === 0
++                      ? "No repositories found for this project."
++                      : "No repositories match your search."}
++                  </td>
++                </tr>
++              ) : (
++                table.getRowModel().rows.map((row) => (
++                  <tr
++                    key={row.id}
++                    className="border-t border-border/50 transition-colors hover:bg-surface-warm/40 focus-within:bg-surface-warm/40"
++                  >
++                    {row.getVisibleCells().map((cell) => (
++                      <td
++                        key={cell.id}
++                        className={cn(
++                          "px-5 py-4 align-middle",
++                          cell.column.id === "customDeploymentUrl" && "text-center",
++                        )}
++                      >
++                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
++                      </td>
++                    ))}
++                  </tr>
++                ))
++              )}
++            </tbody>
++          </table>
++        </div>
++
++        {/* Pagination — same component and same rules as the Domains section. */}
++        <DashboardTablePagination
++          label="Repositories"
++          page={page}
++          totalCount={filteredData.length}
++          onPageChange={(nextPageIndex) => table.setPageIndex(nextPageIndex)}
++        />
++      </DashboardTableSection>
+     </>
+   );
+ };
+--- a/src/layouts/app-shell.tsx
++++ b/src/layouts/app-shell.tsx
+@@ -1,4 +1,5 @@
+ import type { ReactNode } from "react";
++import { BreadcrumbTrailProvider } from "@app-kit/components/common/app-shell/breadcrumb-titles-context";
+ import { AppSidebar, AppTopbar } from "@app-kit/components/common/app-shell";
+ import {
+   SidebarInset,
+@@ -13,19 +14,21 @@
+   sections?: PaletteNavSection[];
+   /** Connects both navigation search buttons to the host's command palette. */
+   onOpenCommand?: () => void;
++  topbarActions?: ReactNode;
+ };
+
+ /** Shared Console shell: top bar, sidebar, workspace switcher, and account controls. */
+-export function AppShell({
++function AppShellContent({
+   children,
+   sidebar = false,
+   sections = [],
+   onOpenCommand,
++  topbarActions,
+ }: AppShellProps) {
+   if (!sidebar)
+     return (
+       <div className="flex min-h-screen flex-col bg-surface-app">
+-        <AppTopbar showSidebarTrigger={false} onOpenCommand={onOpenCommand} />
++        <AppTopbar showSidebarTrigger={false} onOpenCommand={onOpenCommand} actions={topbarActions} />
+         <main className="flex-1">{children}</main>
+       </div>
+     );
+@@ -33,7 +36,7 @@
+     <SidebarProvider open onOpenChange={() => undefined}>
+       <AppSidebar sections={sections} onOpenCommand={onOpenCommand} />
+       <SidebarInset className="flex h-svh min-w-0 flex-col overflow-hidden bg-surface-app">
+-        <AppTopbar sections={sections} onOpenCommand={onOpenCommand} />
++        <AppTopbar sections={sections} onOpenCommand={onOpenCommand} actions={topbarActions} />
+         <div
+           data-slot="dashboard-main"
+           className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+@@ -44,3 +47,7 @@
+     </SidebarProvider>
+   );
+ }
++
++export function AppShell(props: AppShellProps) {
++  return <BreadcrumbTrailProvider><AppShellContent {...props} /></BreadcrumbTrailProvider>;
++}
+--- /dev/null
++++ b/src/pages/dashboard/dashboard-overview-sections/dashboard-pagination.tsx
+@@ -0,0 +1,132 @@
++import React from "react";
++import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react-v1";
++import {
++  Select,
++  SelectContent,
++  SelectItem,
++  SelectTrigger,
++  SelectValue,
++} from "@app-kit/components/core/select";
++import { Button } from "@app-kit/components/core/button";
++import { cn } from "@app-kit/lib/utils";
++interface PaginationProps {
++  onChange: (pageIndex: number) => void;
++  totalCount: number;
++  pageSizeOptions?: number[];
++  pageSize: number;
++  page: number;
++  onPageSizeChange?: (pageSize: number) => void;
++  /** Tightens spacing and control sizes for placement inside a card footer or side panel. */
++  compact?: boolean;
++}
++export function Pagination({
++  page,
++  onChange,
++  totalCount,
++  pageSizeOptions,
++  pageSize,
++  onPageSizeChange,
++  compact,
++}: PaginationProps) {
++  const pageChangeHandler = (page: number) => {
++    onChange(page);
++  };
++  const canGoPreviousPage = !!page;
++  const totalPage = Math.max(1, Math.ceil(totalCount / pageSize) || 0);
++  const canGoNextPage = page < totalPage - 1;
++  const onPageSizeChangeHandler = (value: string) => {
++    if (onPageSizeChange) onPageSizeChange(+value);
++  };
++  return (
++    <div
++      className={cn(
++        "flex flex-col gap-0 md:flex-row md:gap-8",
++        compact && "flex-row items-center gap-2",
++      )}
++    >
++      {pageSizeOptions && pageSizeOptions?.length > 0 ? (
++        <div className={cn("flex items-center space-x-2", compact && "shrink-0 space-x-1.5")}>
++          <p className={cn("text-sm font-medium", compact && "hidden md:block")}>Rows per page</p>
++          <Select value={`${pageSize}`} onValueChange={onPageSizeChangeHandler}>
++            <SelectTrigger
++              className={cn(
++                "h-8 w-[70px]",
++                compact && "h-7 w-[58px] text-xs md:h-8 md:w-[70px] md:text-sm",
++              )}
++            >
++              <SelectValue placeholder={pageSize} />
++            </SelectTrigger>
++            <SelectContent side="top">
++              {pageSizeOptions?.map((pageSize) => (
++                <SelectItem key={pageSize} value={`${pageSize}`}>
++                  {pageSize}
++                </SelectItem>
++              ))}
++            </SelectContent>
++          </Select>
++        </div>
++      ) : (
++        ""
++      )}
++      <div className={cn("mt-2 flex items-center gap-4 md:mt-0", compact && "mt-0 gap-2")}>
++        <div
++          className={cn(
++            "flex items-center justify-center whitespace-nowrap text-sm font-medium",
++            compact && "text-xs md:text-sm",
++          )}
++        >
++          Page {page + 1} of {totalPage}
++        </div>
++        <div className={cn("flex items-center gap-1", compact && "gap-0.5")}>
++          <Button
++            aria-label="Go to first page"
++            variant="outline"
++            className={cn(
++              "flex h-8 w-8 p-0 disabled:cursor-not-allowed",
++              compact && "h-7 w-7 md:h-8 md:w-8",
++            )}
++            onClick={() => {
++              pageChangeHandler(0);
++            }}
++            disabled={!canGoPreviousPage}
++          >
++            <ChevronsLeft className="h-4 w-4" />
++          </Button>
++          <Button
++            aria-label="Go to previous page"
++            variant="outline"
++            className={cn("h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
++            onClick={() => {
++              pageChangeHandler(page - 1);
++            }}
++            disabled={!canGoPreviousPage}
++          >
++            <ChevronLeft className="h-4 w-4" />
++          </Button>
++          <Button
++            aria-label="Go to next page"
++            variant="outline"
++            className={cn("h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
++            onClick={() => {
++              pageChangeHandler(page + 1);
++            }}
++            disabled={!canGoNextPage}
++          >
++            <ChevronRight className="h-4 w-4" />
++          </Button>
++          <Button
++            aria-label="Go to last page"
++            variant="outline"
++            className={cn("flex h-8 w-8 p-0", compact && "h-7 w-7 md:h-8 md:w-8")}
++            onClick={() => {
++              pageChangeHandler(totalPage - 1);
++            }}
++            disabled={!canGoNextPage}
++          >
++            <ChevronsRight className="h-4 w-4" />
++          </Button>
++        </div>
++      </div>
++    </div>
++  );
++}
+--- /dev/null
++++ b/src/pages/dashboard/dashboard-overview-sections/dashboard-search-input.tsx
+@@ -0,0 +1,104 @@
++import { SearchField } from "@app-kit/components/common/filter-toolbar/search-field";
++import { useRef, MouseEvent, useState, useEffect, useMemo } from "react";
++import { X } from "lucide-react-v1";
++import { Button } from "@app-kit/components/core/button";
++import { Input } from "@app-kit/components/core/input";
++import { cn } from "@app-kit/lib/utils";
++import { debounce } from "@app-kit/utils/functions";
++export interface SearchInputProps {
++  onChange: (value: string) => void;
++  placeholder?: string;
++  value: string;
++  className?: string;
++  containerClassName?: string;
++  ariaLabel?: string;
++  disabled?: boolean;
++  debounceMs?: number;
++  type?: "text" | "search";
++}
++export const SearchInput: React.FC<SearchInputProps> = ({
++  onChange,
++  placeholder = "Search...",
++  value,
++  className = "",
++  containerClassName,
++  ariaLabel,
++  disabled = false,
++  debounceMs = 300,
++  type = "text",
++}) => {
++  const [state, setState] = useState(value);
++  const [prevValue, setPrevValue] = useState(value);
++  if (prevValue !== value) {
++    setPrevValue(value);
++    setState(value);
++  }
++  const inputRef = useRef<HTMLInputElement>(null);
++  // The debounced wrapper must stay stable for the whole lifetime, but callers pass a new
++  // inline onChange every render. Route through a ref refreshed on each render so the
++  // debounced call always reaches the latest prop instead of the first render's closure.
++  const onChangeRef = useRef(onChange);
++  useEffect(() => {
++    onChangeRef.current = onChange;
++  });
++  // debounce stores this callback for a timer; it never reads the ref during render.
++  const debounced = useMemo(
++    // eslint-disable-next-line react-hooks/refs
++    () => debounce((val: string) => onChangeRef.current(val), debounceMs),
++    [debounceMs],
++  );
++  useEffect(() => {
++    return () => {
++      debounced.cancel();
++    };
++  }, [debounced]);
++  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
++    event.stopPropagation();
++    setState(event.target.value);
++    if (debounceMs === 0) onChange(event.target.value);
++    else debounced(event.target.value);
++  };
++  const handleClear = (e: MouseEvent) => {
++    e.stopPropagation();
++    debounced.cancel();
++    setState("");
++    onChange("");
++    inputRef.current?.focus();
++  };
++  return (
++    <SearchField
++      value={state}
++      label={ariaLabel ?? placeholder.replace(/\.\.\.$/, "")}
++      disabled={disabled}
++      className={containerClassName}
++    >
++      <div className="flex h-9 w-full min-w-0 items-center rounded-sm border border-border-default bg-card px-3 shadow-sm transition-colors focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/10">
++        <Input
++          ref={inputRef}
++          type={type}
++          disabled={disabled}
++          placeholder={placeholder}
++          aria-label={ariaLabel ?? placeholder.replace(/\.\.\.$/, "")}
++          value={state}
++          onChange={handleChange}
++          className={cn(
++            "h-full min-w-0 w-52 border-none bg-transparent p-0 text-[13px] focus-visible:ring-0 focus-visible:ring-offset-0",
++            className,
++            "h-full",
++          )}
++        />
++        <Button
++          variant="ghost"
++          size="xs"
++          className={cn("h-6 w-6 shrink-0 rounded-sm p-1", !state && "invisible")}
++          aria-label="Clear search"
++          disabled={disabled}
++          type="button"
++          onClick={handleClear}
++        >
++          <X className="h-4 w-4 text-muted-foreground" />
++        </Button>
++      </div>
++    </SearchField>
++  );
++};
+--- /dev/null
++++ b/src/pages/dashboard/dashboard-overview-sections/dashboard-table-section.tsx
+@@ -0,0 +1,108 @@
++import type { ReactNode } from "react";
++import { Skeleton } from "@app-kit/components/core/skeleton";
++import { SearchInput } from "./dashboard-search-input";
++import { Pagination } from "./dashboard-pagination";
++import { DASHBOARD_TABLE_PAGE_SIZE } from "./dashboard.constant";
++
++export function DashboardTableSection({
++  title,
++  description,
++  tools,
++  children,
++}: {
++  title: string;
++  description: string;
++  tools?: ReactNode;
++  children: ReactNode;
++}) {
++  return (
++    <section aria-label={title} className="min-w-0 space-y-2">
++      <header className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
++        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2.5 gap-y-1">
++          <h2 className="text-[13px] font-bold uppercase tracking-[0.06em] text-high-emphasis">
++            {title}
++          </h2>
++          <p className="text-[13px] text-muted-foreground">{description}</p>
++        </div>
++        {tools && (
++          <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 lg:shrink-0">
++            {tools}
++          </div>
++        )}
++      </header>
++      <div className="overflow-hidden rounded-sm bg-card shadow-surface-ring">{children}</div>
++    </section>
++  );
++}
++
++/** Placeholder rows for a section's table body: an icon, a name, and a trailing value. */
++export function DashboardTableSkeleton({ label, rows = 5 }: { label: string; rows?: number }) {
++  return (
++    <div aria-label={label} className="border-t border-border/60">
++      {Array.from({ length: rows }).map((_item, index) => (
++        <div
++          key={index}
++          className="flex items-center gap-4 border-b border-border/50 px-5 py-4 last:border-0"
++        >
++          <Skeleton className="h-8 w-8 shrink-0 rounded-sm" />
++          <Skeleton className="h-4 w-1/4" />
++          <Skeleton className="ml-auto h-4 w-1/3" />
++        </div>
++      ))}
++    </div>
++  );
++}
++
++export function DashboardTableSearch({
++  value,
++  onChange,
++  placeholder,
++}: {
++  value: string;
++  onChange: (value: string) => void;
++  placeholder: string;
++}) {
++  return (
++    <SearchInput
++      value={value}
++      onChange={onChange}
++      placeholder={placeholder}
++      type="search"
++      debounceMs={0}
++      containerClassName="sm:w-64"
++      className="w-full [&::-webkit-search-cancel-button]:appearance-none"
++    />
++  );
++}
++
++export function DashboardTablePagination({
++  label,
++  page,
++  totalCount,
++  onPageChange,
++}: {
++  label: string;
++  page: number;
++  totalCount: number;
++  onPageChange: (page: number) => void;
++}) {
++  if (totalCount === 0) return null;
++  return (
++    <nav
++      aria-label={`${label} pagination`}
++      className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 px-5 py-3"
++    >
++      <p className="text-xs tabular-nums text-muted-foreground">
++        Showing {page * DASHBOARD_TABLE_PAGE_SIZE + 1}–
++        {Math.min((page + 1) * DASHBOARD_TABLE_PAGE_SIZE, totalCount)} of {totalCount}
++      </p>
++      <Pagination
++        compact
++        page={page}
++        pageSize={DASHBOARD_TABLE_PAGE_SIZE}
++        totalCount={totalCount}
++        onChange={onPageChange}
++      />
++    </nav>
++  );
++}
+--- /dev/null
++++ b/src/pages/dashboard/dashboard-overview-sections/dashboard.constant.ts
+@@ -0,0 +1,3 @@
++/** Dashboard tables show at most this many rows per page.
++ *  Shared by the Domains and Repositories sections so the two cannot drift apart. */
++export const DASHBOARD_TABLE_PAGE_SIZE = 5;
+--- a/src/pages/dashboard/dashboard-overview-sections/domain/domain-section.tsx
++++ b/src/pages/dashboard/dashboard-overview-sections/domain/domain-section.tsx
+@@ -1,45 +1,12 @@
+ import { useState } from "react";
+-import { Plus } from "lucide-react-v1";
+-import { Button } from "@app-kit/components";
+-import { DashboardSectionCard } from "@app-kit/components/common/dashboard-section-card";
+ import { DomainFormDialog } from "./domain-form-dialog";
+ import { DomainTable } from "./domain-table";
+ import type { IDomain } from "@app-kit/models/project.model";
+
+-interface DomainsSectionProps {
+-  applications: IDomain[];
+-}
+-
+-export const DomainsSection = ({ applications }: DomainsSectionProps) => {
+-  const [addDialogOpen, setAddDialogOpen] = useState(false);
+-
+-  return (
+-    <>
+-      {/* Add dialog — self-contained here, no prop callbacks needed */}
+-      <DomainFormDialog
+-        open={addDialogOpen}
+-        onOpenChange={setAddDialogOpen}
+-        // No application prop → add mode
+-      />
+-
+-      <DashboardSectionCard
+-        title="Domains"
+-        description="Domains and cookie domains configured for this project"
+-        contentClassName="p-0"
+-        headerRight={
+-          <Button
+-            variant="outline"
+-            size="sm"
+-            className="gap-1.5"
+-            onClick={() => setAddDialogOpen(true)}
+-          >
+-            <Plus className="h-4 w-4" />
+-            Add Domain
+-          </Button>
+-        }
+-      >
+-        <DomainTable data={applications} />
+-      </DashboardSectionCard>
+-    </>
+-  );
++export const DomainsSection = ({ applications }: { applications: IDomain[] }) => {
++  const [open, setOpen] = useState(false);
++  return <>
++    <DomainFormDialog open={open} onOpenChange={setOpen} />
++    <DomainTable data={applications} onAddDomain={() => setOpen(true)} />
++  </>;
+ };
+--- a/src/pages/dashboard/dashboard-overview-sections/domain/domain-table.tsx
++++ b/src/pages/dashboard/dashboard-overview-sections/domain/domain-table.tsx
+@@ -1,5 +1,3 @@
+-import { Button, CopyToClipboardButton, Dialog, RenderConditionally } from "@app-kit/components";
+-import { ConfirmationModal } from "@app-kit/components/common/confirmation-modal";
+ import { useUpdateProject } from "@app-kit/hooks/use-project";
+ import { cn } from "@app-kit/lib/utils";
+ import type { IDomain } from "@app-kit/models/project.model";
+@@ -7,24 +5,36 @@
+   createColumnHelper,
+   flexRender,
+   getCoreRowModel,
++  getPaginationRowModel,
+   useReactTable,
+ } from "@tanstack/react-table";
+-import { Settings, ShieldCheck, Trash2 } from "lucide-react-v1";
+-import { useState } from "react";
++import { Check, Globe2, Plus, Settings, ShieldCheck, Trash2 } from "lucide-react-v1";
++import { useLayoutEffect, useMemo, useState } from "react";
++import {
++  DashboardTablePagination,
++  DashboardTableSearch,
++  DashboardTableSection,
++} from "../dashboard-table-section";
++import { Button } from "@app-kit/components/core/button";
++import { DASHBOARD_TABLE_PAGE_SIZE } from "../dashboard.constant";
+ import { DomainFormDialog } from "./domain-form-dialog";
+ import { DomainAction } from "./domain.constant";
+-import { showErrorToast, showSuccessToast } from "@app-kit/utils/toast";
++import { showErrorToast, showSuccessToast } from "@app-kit/utils";
+ import { CnameValidatorDialog } from "../cname/dialog";
++import { CopyToClipboardButton, RenderConditionally } from "@app-kit/components";
++import { Dialog, ConfirmationModal } from "@app-kit/components";
+
+ // ─── Status badge ─────────────────────────────────────────────────────────────
+
+ const StatusBadge = ({ verified }: { verified: boolean }) =>
+   verified ? (
+-    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">
++    <span className="inline-flex items-center gap-1.5 rounded-full bg-forest-soft px-2.5 py-1 text-[11px] font-medium text-forest-ink">
++      <Check className="h-3 w-3" aria-hidden="true" />
+       Verified
+     </span>
+   ) : (
+-    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
++    <span className="inline-flex items-center gap-1.5 rounded-full bg-sunset-soft px-2.5 py-1 text-[11px] font-medium text-warn-ink">
++      <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+       Unverified
+     </span>
+   );
+@@ -34,9 +44,20 @@
+ const columnHelper = createColumnHelper<IDomain>();
+
+ const CopyableDomainValue = ({ value, muted = false }: { value: string; muted?: boolean }) => (
+-  <CopyToClipboardButton textToCopy={value} isHoverable className="min-w-0">
++  <CopyToClipboardButton
++    textToCopy={value}
++    isHoverable
++    className={cn(
++      "min-w-0",
++      muted && "relative [&>div]:absolute [&>div]:left-full [&>div]:ml-2 [&>div]:min-w-0",
++    )}
++  >
+     <span
+-      className={cn("break-all text-sm", muted ? "text-muted-foreground" : "text-high-emphasis")}
++      title={value}
++      className={cn(
++        "block max-w-[24rem] truncate text-[13px]",
++        muted ? "font-mono text-muted-foreground" : "font-medium text-high-emphasis",
++      )}
+     >
+       {value}
+     </span>
+@@ -50,7 +71,14 @@
+ ) => [
+   columnHelper.accessor("domain", {
+     header: "Domain",
+-    cell: (info) => <CopyableDomainValue value={info.getValue()} />,
++    cell: (info) => (
++      <div className="flex min-w-0 items-center gap-3">
++        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-surface-warm text-muted-foreground">
++          <Globe2 className="h-4 w-4" strokeWidth={1.7} aria-hidden="true" />
++        </span>
++        <CopyableDomainValue value={info.getValue()} />
++      </div>
++    ),
+   }),
+   columnHelper.accessor("isDomainVerified", {
+     header: "DNS Status",
+@@ -58,11 +86,15 @@
+   }),
+   columnHelper.accessor("cookieDomain", {
+     header: "Cookie Domain",
+-    cell: (info) => <CopyableDomainValue value={info.getValue()} muted />,
++    cell: (info) => (
++      <div className="flex min-w-0 justify-center">
++        <CopyableDomainValue value={info.getValue()} muted />
++      </div>
++    ),
+   }),
+   columnHelper.display({
+     id: "actions",
+-    header: "Actions",
++    header: () => <span className="sr-only">Actions</span>,
+     cell: ({ row }) => {
+       const domain = row.original;
+       return (
+@@ -71,7 +103,8 @@
+             variant="ghost"
+             size="icon"
+             title="Delete domain"
+-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
++            aria-label="Delete domain"
++            className="order-last h-8 w-8 rounded-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+             onClick={() => onDeleteRequest(domain)}
+           >
+             <Trash2 className="h-4 w-4" />
+@@ -83,6 +116,8 @@
+               variant="ghost"
+               size="icon"
+               title="Configure domain"
++              aria-label="Configure domain"
++              className="h-8 w-8 rounded-sm hover:bg-surface-warm"
+               onClick={() => onEdit(domain)}
+             >
+               <Settings className="h-4 w-4 text-muted-foreground" />
+@@ -91,6 +126,8 @@
+               variant="ghost"
+               size="icon"
+               title="Validate CNAME"
++              aria-label="Validate CNAME"
++              className="h-8 w-8 rounded-sm hover:bg-surface-warm"
+               onClick={() => onCname(domain)}
+             >
+               <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+@@ -106,10 +143,12 @@
+
+ interface DomainTableProps {
+   data: IDomain[];
++  onAddDomain?: () => void;
+ }
+
+-export const DomainTable = ({ data }: DomainTableProps) => {
++export const DomainTable = ({ data, onAddDomain }: DomainTableProps) => {
+   const { mutateAsync, isPending } = useUpdateProject();
++  const [search, setSearch] = useState("");
+
+   // ── Edit dialog ────────────────────────────────────────────────────────────
+   const [editTarget, setEditTarget] = useState<IDomain | null>(null);
+@@ -161,11 +200,36 @@
+
+   // ── Table ──────────────────────────────────────────────────────────────────
+   const columns = buildColumns(handleEdit, handleDeleteRequest, handleCname);
++  const filteredData = useMemo(() => {
++    const normalizedSearch = search.toLowerCase();
++    return data.filter((domain) => domain.domain.toLowerCase().includes(normalizedSearch));
++  }, [data, search]);
+   const table = useReactTable({
+-    data,
++    data: filteredData,
+     columns,
+     getCoreRowModel: getCoreRowModel(),
++    getPaginationRowModel: getPaginationRowModel(),
++    initialState: { pagination: { pageSize: DASHBOARD_TABLE_PAGE_SIZE } },
++    // A data change otherwise queues a reset of the page index back to the first page.
++    // That reset would race the clamp below and win, throwing a reader back to page 1 on
++    // every background refetch, so the index is kept and corrected explicitly instead.
++    autoResetPageIndex: false,
+   });
++
++  const { pageIndex } = table.getState().pagination;
++  const lastPageIndex = Math.max(0, table.getPageCount() - 1);
++
++  // Deleting the last row of the last page leaves the index past the end of the data,
++  // which renders an empty table body. Clamp in a layout effect so that blank frame is
++  // never painted.
++  useLayoutEffect(() => {
++    if (pageIndex > lastPageIndex) table.setPageIndex(lastPageIndex);
++  }, [pageIndex, lastPageIndex, table]);
++
++  const handleSearchChange = (value: string) => {
++    table.setPageIndex(0);
++    setSearch(value);
++  };
+
+   return (
+     <>
+@@ -212,55 +276,111 @@
+         }}
+       />
+
+-      {/* Table — min width keeps columns readable and scrolls horizontally
++      <DashboardTableSection
++        title="Domains"
++        description="Domains and cookie domains configured for this project"
++        tools={
++          <>
++            {data.length > 0 && (
++              <DashboardTableSearch
++                value={search}
++                onChange={handleSearchChange}
++                placeholder="Search domains..."
++              />
++            )}
++            {onAddDomain && (
++              <Button size="sm" className="gap-1.5 rounded-sm shadow-sm" onClick={onAddDomain}>
++                <Plus className="h-4 w-4" aria-hidden="true" />
++                Add Domain
++              </Button>
++            )}
++          </>
++        }
++      >
++        {/* Table — min width keeps columns readable and scrolls horizontally
+           on narrow screens, matching the repo table's behavior */}
+-      <div
+-        data-table-container=""
+-        className="relative w-full overflow-x-auto rounded-sm bg-card shadow-surface-ring"
+-      >
+-        <table data-table="" className="w-full border-collapse min-w-[640px] bg-card text-sm">
+-          <thead className="bg-card">
+-            {table.getHeaderGroups().map((headerGroup) => (
+-              <tr key={headerGroup.id}>
+-                {headerGroup.headers.map((header) => (
+-                  <th
+-                    key={header.id}
+-                    scope="col"
+-                    className={cn(
+-                      "h-10 px-5 text-left text-xs font-semibold uppercase tracking-wide text-medium-emphasis",
+-                      header.id === "actions" && "w-32 text-right",
+-                    )}
+-                  >
+-                    {flexRender(header.column.columnDef.header, header.getContext())}
+-                  </th>
+-                ))}
+-              </tr>
+-            ))}
+-          </thead>
+-          <tbody>
+-            {table.getRowModel().rows.length === 0 ? (
+-              <tr>
+-                <td
+-                  colSpan={columns.length}
+-                  className="bg-card py-10 text-center text-sm text-muted-foreground"
+-                >
+-                  No domains configured yet.
+-                </td>
+-              </tr>
+-            ) : (
+-              table.getRowModel().rows.map((row) => (
+-                <tr key={row.id} data-hoverable="true">
+-                  {row.getVisibleCells().map((cell) => (
+-                    <td key={cell.id} className="bg-card px-5 py-4">
+-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+-                    </td>
++        <div className="relative w-full overflow-x-auto">
++          <table
++            data-dashboard-table=""
++            aria-label="Domains"
++            className="w-full min-w-[640px] table-fixed border-collapse text-sm"
++          >
++            <colgroup>
++              <col className="w-[34%]" />
++              <col className="w-40" />
++              <col />
++              <col className="w-32" />
++            </colgroup>
++            <thead className="border-b border-border-default">
++              {table.getHeaderGroups().map((headerGroup) => (
++                <tr key={headerGroup.id}>
++                  {headerGroup.headers.map((header) => (
++                    <th
++                      key={header.id}
++                      scope="col"
++                      className={cn(
++                        "h-10 px-5 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-medium-emphasis",
++                        header.id === "cookieDomain" && "text-center",
++                        header.id === "actions" && "w-32 text-right",
++                      )}
++                    >
++                      {flexRender(header.column.columnDef.header, header.getContext())}
++                    </th>
+                   ))}
+                 </tr>
+-              ))
+-            )}
+-          </tbody>
+-        </table>
+-      </div>
++              ))}
++            </thead>
++            <tbody>
++              {table.getRowModel().rows.length === 0 ? (
++                <tr>
++                  <td
++                    colSpan={columns.length}
++                    className="px-5 py-12 text-center text-sm text-muted-foreground"
++                  >
++                    <Globe2
++                      className="mx-auto mb-3 h-6 w-6 text-muted-foreground/50"
++                      strokeWidth={1.5}
++                      aria-hidden="true"
++                    />
++                    {data.length === 0
++                      ? "No domains configured yet."
++                      : "No domains match your search."}
++                  </td>
++                </tr>
++              ) : (
++                table.getRowModel().rows.map((row) => (
++                  <tr
++                    key={row.id}
++                    className="border-t border-border/50 transition-colors hover:bg-surface-warm/40 focus-within:bg-surface-warm/40"
++                  >
++                    {row.getVisibleCells().map((cell) => (
++                      <td
++                        key={cell.id}
++                        className={cn(
++                          "px-5 py-4 align-middle",
++                          cell.column.id === "domain" && "min-w-0",
++                        )}
++                      >
++                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
++                      </td>
++                    ))}
++                  </tr>
++                ))
++              )}
++            </tbody>
++          </table>
++        </div>
++
++        {/* Pagination — omitted entirely when there is nothing to page through, so the
++          empty state is not captioned "Page 1 of 1". No page-size selector: the size is
++          fixed at five. */}
++        <DashboardTablePagination
++          label="Domains"
++          page={pageIndex}
++          totalCount={filteredData.length}
++          onPageChange={(nextPageIndex) => table.setPageIndex(nextPageIndex)}
++        />
++      </DashboardTableSection>
+     </>
+   );
+ };
+--- /dev/null
++++ b/src/pages/dashboard/dashboard-overview-sections/project-metadata.tsx
+@@ -0,0 +1,126 @@
++import { GitBranch } from "lucide-react-v1";
++import { Skeleton } from "@app-kit/components/core/skeleton";
++import type { IProject } from "@app-kit/models/project.model";
++import { getRuntimeEnv } from "@app-kit/lib/runtime-env";
++import { getProjectCreator } from "@app-kit/services/project-creator.service";
++import { useImpersonateStore } from "@app-kit/store";
++import { useAuthStore, useUserStore } from "@app-kit/store";
++import { useQuery } from "@tanstack/react-query";
++import { getUserDisplayName } from "@app-kit/utils/user-display-name";
++
++type ProjectMetadataProps = Pick<
++  IProject,
++  "environment" | "createdBy" | "createdDate" | "lastUpdatedDate"
++>;
++
++export const ProjectMetadata = ({
++  environment,
++  createdBy,
++  createdDate,
++  lastUpdatedDate,
++}: ProjectMetadataProps) => {
++  const { originalTenantId } = useImpersonateStore();
++  const { userDetails } = useUserStore();
++  const { user } = useAuthStore();
++  const normalizeUserId = (id?: string) => id?.replace(/^blocks\|/, "");
++  const profileMatches = Boolean(
++    createdBy &&
++    normalizeUserId(userDetails?.itemId || userDetails?.sub) === normalizeUserId(createdBy),
++  );
++  const signedInCreator = Boolean(
++    createdBy && normalizeUserId(user?.sub) === normalizeUserId(createdBy),
++  );
++  const profileName = profileMatches ? getUserDisplayName(userDetails) : "-";
++  const sessionName = signedInCreator ? user?.name?.trim() || getUserDisplayName(user) : "-";
++  const cachedName = profileName !== "-" ? profileName : sessionName;
++  const hasCachedName = cachedName !== "-";
++  const consoleTenantId = originalTenantId || getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
++  const { data: creator, isLoading } = useQuery({
++    queryKey: ["project-creator", consoleTenantId, createdBy],
++    queryFn: () => getProjectCreator(createdBy, consoleTenantId),
++    enabled: Boolean(createdBy && consoleTenantId && !hasCachedName),
++    retry: false,
++    staleTime: 5 * 60 * 1000,
++  });
++  const displayName = hasCachedName ? cachedName : getUserDisplayName(creator);
++  const creatorEmail = profileMatches
++    ? userDetails?.email
++    : signedInCreator
++      ? user?.email
++      : creator?.email;
++  const branchName = environment === "prod" ? "main" : environment;
++
++  return (
++    <dl className="grid w-full grid-cols-2 gap-x-5 gap-y-3 pt-3 sm:grid-cols-4 sm:gap-x-6">
++      <div className="min-w-0 space-y-1">
++        <dt className="text-xs text-muted-foreground">Branch Name</dt>
++        <dd className="flex items-center gap-1.5 font-mono text-sm font-medium text-high-emphasis">
++          <GitBranch className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
++          <span className="break-all">{branchName || "—"}</span>
++        </dd>
++      </div>
++      <div className="min-w-0 space-y-1">
++        <dt className="text-xs text-muted-foreground">Created by</dt>
++        <dd className="text-sm font-medium text-high-emphasis">
++          {isLoading && !hasCachedName ? (
++            <Skeleton className="h-5 w-24 max-w-full" aria-label="Loading creator" />
++          ) : (
++            <span className="block break-words" title={creatorEmail || createdBy || undefined}>
++              {displayName === "-" ? "Unavailable" : displayName}
++            </span>
++          )}
++        </dd>
++      </div>
++      <div className="min-w-0 space-y-1">
++        <dt className="text-xs text-muted-foreground">Created</dt>
++        <dd>
++          <MetadataDate value={createdDate} />
++        </dd>
++      </div>
++      <div className="min-w-0 space-y-1">
++        <dt className="text-xs text-muted-foreground">Last updated</dt>
++        <dd>
++          <MetadataDate value={lastUpdatedDate} />
++        </dd>
++      </div>
++    </dl>
++  );
++};
++
++/** The same four cells, labels in place, while the project itself is still loading. */
++export const ProjectMetadataSkeleton = () => (
++  <dl className="grid w-full grid-cols-2 gap-x-5 gap-y-3 pt-3 sm:grid-cols-4 sm:gap-x-6">
++    {["Branch Name", "Created by", "Created", "Last updated"].map((label, index) => (
++      <div key={label} className="min-w-0 space-y-1">
++        <dt className="text-xs text-muted-foreground">{label}</dt>
++        <dd className="space-y-1">
++          <Skeleton className="h-5 w-24 max-w-full" />
++          {/* The two dates carry a second line, the time. */}
++          {index >= 2 && <Skeleton className="h-4 w-16 max-w-full" />}
++        </dd>
++      </div>
++    ))}
++  </dl>
++);
++
++const MetadataDate = ({ value }: { value?: string }) => {
++  const date = value ? new Date(value) : null;
++  if (!date || Number.isNaN(date.getTime())) {
++    return <span className="text-sm text-muted-foreground">—</span>;
++  }
++
++  return (
++    <time dateTime={value} title={date.toLocaleString()} className="block space-y-1">
++      <span className="block text-sm font-medium text-high-emphasis">
++        {date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
++      </span>
++      <span className="block text-xs text-muted-foreground">
++        {date.toLocaleTimeString(undefined, {
++          hour: "numeric",
++          minute: "2-digit",
++          timeZoneName: "short",
++        })}
++      </span>
++    </time>
++  );
++};
+--- /dev/null
++++ b/src/pages/dashboard/dashboard-overview-sections/project-overview.tsx
+@@ -0,0 +1,49 @@
++import { Skeleton } from "@app-kit/components/core/skeleton";
++import { MaskedText } from "@app-kit/components";
++import { CopyButton } from "@app-kit/components/common/project/onboard/copy-button";
++
++type ProjectOverviewProps = {
++  name: string;
++  tenantId: string;
++  isFetching?: boolean;
++};
++
++export const ProjectOverview: React.FC<ProjectOverviewProps> = ({
++  name,
++  tenantId,
++  isFetching = false,
++}) => {
++  if (isFetching) {
++    return <ProjectOverviewSkeleton />;
++  }
++  return (
++    <div className="flex min-w-0 max-w-full flex-col items-start gap-1.5">
++      <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight text-high-emphasis sm:text-3xl">
++        {name}
++      </h1>
++      <div className="flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-1 font-mono text-xs text-muted-foreground">
++        <span>X-Blocks-Key:</span>
++        <MaskedText text={tenantId || ""} showFirstN={3} showLastN={3} length={14} />
++        <CopyButton
++          text={tenantId || ""}
++          label="Copy project key"
++          className="h-6 w-6 rounded-sm text-muted-foreground hover:text-primary"
++        />
++      </div>
++    </div>
++  );
++};
++
++export const ProjectOverviewSkeleton = () => {
++  return (
++    <div className="flex max-w-full flex-col items-start gap-1.5">
++      <div className="flex items-center gap-2">
++        <Skeleton className="h-8 w-56" />
++      </div>
++      <div className="flex flex-wrap items-center gap-1.5">
++        <p className="font-mono text-xs text-muted-foreground">X-Blocks-Key:</p>
++        <Skeleton className="h-4 w-28" />
++      </div>
++    </div>
++  );
++};
+--- a/src/pages/dashboard/dashboard-overview.tsx
++++ b/src/pages/dashboard/dashboard-overview.tsx
+@@ -1,28 +1,115 @@
+-import { ProjectDetail } from "@app-kit/components/common/project";
+ import { useBlocksAppConfigStore } from "@app-kit/hooks/use-blocks-app-config-store";
++import { CoreApiCard, useSwaggerEndpoints } from "./dashboard-overview-sections";
++import { ProjectOverview, ProjectOverviewSkeleton } from "./dashboard-overview-sections/project-overview";
++import { ProjectActionsSkeleton } from "@app-kit/components/common/project/actions";
+ import { useGetProject } from "@app-kit/hooks/use-project";
++import { DomainsSection } from "./dashboard-overview-sections/domain";
++import { DashboardTableSection, DashboardTableSkeleton } from "./dashboard-overview-sections/dashboard-table-section";
+ import {
+-  CoreApiCard,
+-  useSwaggerEndpoints,
+-} from "./dashboard-overview-sections";
++  ProjectActions,
++  ProjectRepoList,
++} from "@app-kit/components/common/project";
++import { ProjectMetadata, ProjectMetadataSkeleton } from "./dashboard-overview-sections/project-metadata";
+ 
+-export const DashboardOverview = () => {
++export type DashboardOverviewProps = {
++  /** Show the Domains table. Defaults to true; a host without domains can turn it off. */
++  showDomains?: boolean;
++  /** Show the Repositories table. Defaults to true; a host without repositories can turn it off. */
++  showRepositories?: boolean;
++};
++
++export const DashboardOverview = ({
++  showDomains = true,
++  showRepositories = true,
++}: DashboardOverviewProps = {}) => {
++  const { data, isFetching, isError } = useGetProject();
+   const { name } = useBlocksAppConfigStore((state) => state.config);
+-  const { data, isFetching } = useGetProject();
+-  const {
+-    endpoints,
+-    isLoading: isLoadingEndpoints,
+-    error,
+-  } = useSwaggerEndpoints(name);
++  const { endpoints, isLoading, error } = useSwaggerEndpoints(name);
+ 
++  // A failed load has nothing to stand in for, so it renders nothing, as before.
++  if (!data?.data)
++    return isError ? null : (
++      <DashboardOverviewSkeleton showDomains={showDomains} showRepositories={showRepositories} />
++    );
++
+   return (
+     <main className="flex flex-col gap-6 p-6">
+-      <ProjectDetail isLoading={isFetching} project={data?.data} />
+-      <CoreApiCard
+-        endpoints={endpoints}
+-        isLoading={isLoadingEndpoints}
+-        error={error}
+-      />
++      <header className="dashboard-overview-hero relative isolate overflow-hidden rounded-lg bg-card shadow-surface-ring">
++        <div className="relative z-10 flex min-w-0 flex-col">
++          <div className="flex min-w-0 flex-col gap-5 p-5 sm:flex-row sm:items-start sm:justify-between sm:p-7">
++            <ProjectOverview
++              name={data?.data?.name || ""}
++              tenantId={data?.data?.tenantId || ""}
++              isFetching={isFetching}
++            />
++            <ProjectActions
++              isDisabled={!!data?.data?.isDisabled}
++              createdBy={data?.data?.createdBy || ""}
++              isFetching={isFetching}
++            />
++          </div>
++          <div className="border-t border-border/60 bg-card/75 px-5 pb-5 pt-2 backdrop-blur-sm sm:px-7 sm:pb-6 sm:pt-3">
++            <ProjectMetadata
++              environment={data.data.environment}
++              createdBy={data.data.createdBy}
++              createdDate={data.data.createdDate}
++              lastUpdatedDate={data.data.lastUpdatedDate}
++            />
++          </div>
++        </div>
++      </header>
++      {/* Keyed on the project: both sections now hold a page index, and switching
++          projects must not land the reader on page 2 of a project they just left. */}
++      {showDomains && (
++        <DomainsSection
++          key={`domains-${data.data.tenantId}`}
++          applications={data?.data.applications || []}
++        />
++      )}
++      {showRepositories && (
++        <ProjectRepoList
++          key={`repos-${data.data.tenantId}`}
++          project={data?.data}
++          isLoading={isFetching}
++        />
++      )}
++      <CoreApiCard endpoints={endpoints} isLoading={isLoading} error={error} />
+     </main>
+   );
+ };
++
++/**
++ * The page's own layout — hero, plus whichever of Domains and Repositories are shown — with placeholders in place of the
++ * project, so the first load doesn't flash a blank page and nothing jumps when it arrives.
++ */
++const DashboardOverviewSkeleton = ({
++  showDomains,
++  showRepositories,
++}: Required<DashboardOverviewProps>) => (
++  <main aria-busy="true" aria-label="Loading project" className="flex flex-col gap-6 p-6">
++    <header className="dashboard-overview-hero relative isolate overflow-hidden rounded-lg bg-card shadow-surface-ring">
++      <div className="relative z-10 flex min-w-0 flex-col">
++        <div className="flex min-w-0 flex-col gap-5 p-5 sm:flex-row sm:items-start sm:justify-between sm:p-7">
++          <ProjectOverviewSkeleton />
++          <ProjectActionsSkeleton />
++        </div>
++        <div className="border-t border-border/60 bg-card/75 px-5 pb-5 pt-2 backdrop-blur-sm sm:px-7 sm:pb-6 sm:pt-3">
++          <ProjectMetadataSkeleton />
++        </div>
++      </div>
++    </header>
++    {showDomains && (
++      <DashboardTableSection
++        title="Domains"
++        description="Domains and cookie domains configured for this project"
++      >
++        <DashboardTableSkeleton label="Loading domains" rows={3} />
++      </DashboardTableSection>
++    )}
++    {showRepositories && (
++      <DashboardTableSection title="Repositories" description="Repositories deployed for this project">
++        <DashboardTableSkeleton label="Loading repositories" />
++      </DashboardTableSection>
++    )}
++  </main>
++);
+--- /dev/null
++++ b/src/services/project-creator.service.ts
+@@ -0,0 +1,18 @@
++import { iamClient } from "@app-kit/lib/http";
++import type { UserNameFields } from "@app-kit/utils/user-display-name";
++
++type CreatorResponse = UserNameFields | { data: UserNameFields | null } | null;
++
++/** Read the creator's Console profile using the IAM host and Console tenant, not the environment. */
++export async function getProjectCreator(
++  userId: string,
++  consoleTenantId: string,
++): Promise<UserNameFields | null> {
++  const response = await iamClient.get<CreatorResponse>(
++    `/api/iam/users/${encodeURIComponent(userId)}`,
++    { "X-Blocks-Key": consoleTenantId },
++    { withCredentials: true },
++  );
++  // This card needs a name only; do not require organization/role fields to render a profile.
++  return response && "data" in response ? response.data : response;
++}
+--- /dev/null
++++ b/src/utils/user-display-name.ts
+@@ -0,0 +1,45 @@
++/**
++ * Shared display-name and initials fallback for users.
++ *
++ * A user who has not activated yet (or was provisioned without a profile) has no
++ * first or last name, so every surface that shows a user needs the same ladder:
++ * real name -> the email's local part -> a neutral placeholder. Keeping it here
++ * means the users table, the organization members table, the profile header and
++ * the mobile profile sidebar cannot drift apart.
++ */
++
++export const USER_DISPLAY_NAME_FALLBACK = "-";
++export const USER_INITIALS_FALLBACK = "?";
++
++export type UserNameFields = {
++  firstName?: string | null;
++  lastName?: string | null;
++  email?: string | null;
++};
++
++const trimmed = (value?: string | null) => value?.trim() ?? "";
++
++/**
++ * The part of the email before "@". Empty for a missing email and for a
++ * malformed one with nothing before the separator (e.g. "@example.com"), so
++ * callers can treat both the same way.
++ */
++const emailLocalPart = (email?: string | null) => trimmed(trimmed(email).split("@")[0]);
++
++/** "First Last" -> the email's local part -> "-". */
++export function getUserDisplayName(user?: UserNameFields | null): string {
++  const first = trimmed(user?.firstName);
++  const last = trimmed(user?.lastName);
++
++  if (first || last) return [first, last].filter(Boolean).join(" ");
++  return emailLocalPart(user?.email) || USER_DISPLAY_NAME_FALLBACK;
++}
++
++/** "FL" -> the first letter of the email's local part -> "?". */
++export function getUserInitials(user?: UserNameFields | null): string {
++  const first = trimmed(user?.firstName);
++  const last = trimmed(user?.lastName);
++
++  if (first || last) return `${first[0] ?? ""}${last[0] ?? ""}`.toUpperCase();
++  return emailLocalPart(user?.email)[0]?.toUpperCase() || USER_INITIALS_FALLBACK;
++}
+--- a/tsup.config.ts
++++ b/tsup.config.ts
+@@ -17,6 +17,8 @@
+     "pages/index": "entries/pages.ts",
+   },
+   format: ["esm", "cjs"],
++  // React consumers need browser entry points (not Node built-ins in markdown dependencies).
++  platform: "browser",
+   dts: true,
+   sourcemap: true,
+   clean: true,

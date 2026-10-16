@@ -10,7 +10,7 @@ export const NoBranch = ({ projectEnvironment }: { projectEnvironment: string })
   return (
     <div className="mx-auto pb-8">
       <div className="mt-2 space-y-2">
-        <div className="flex h-auto flex-col items-center justify-center gap-6 self-stretch rounded-sm border border-border-default bg-background px-6 py-12">
+        <div className="flex h-auto flex-col items-center justify-center gap-6 self-stretch rounded-sm border border-border-default bg-card px-6 py-12">
           <div className="space-y-4 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
               <GitBranch className="h-8 w-8 text-gray-400" />
@@ -23,9 +23,7 @@ export const NoBranch = ({ projectEnvironment }: { projectEnvironment: string })
               </p>
             </div>
             <Button
-              onClick={() =>
-                navigate(`/app/project/${tenantGroupId}/environments`)
-              }
+              onClick={() => navigate(`/app/project/${tenantGroupId}/environments`)}
               size={"sm"}
             >
               Go to Deployment Overview

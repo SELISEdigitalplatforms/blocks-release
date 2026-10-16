@@ -1,5 +1,5 @@
 /**
- * Test-only double for the `@seliseblocks/genesis-os` barrel.
+ * Test-only double for the `@seliseblocks/app-kit` barrel.
  *
  * The real package's barrel eagerly imports framer-motion (whose motion-utils
  * reads process.env.NODE_ENV at import time) and instantiates a signalr-backed
@@ -78,6 +78,12 @@ export class HttpError extends Error {
 
 export { Outlet };
 
+export const AppLoadingSpinner = () =>
+  React.createElement(
+    "div",
+    { role: "status" },
+    React.createElement("span", { className: "sr-only" }, "Loading"),
+  );
 export const BlocksAppLayout = passthrough("BlocksAppLayout");
 export const TooltipProvider = passthrough("TooltipProvider");
 export const ConsoleLayout = passthrough("ConsoleLayout");

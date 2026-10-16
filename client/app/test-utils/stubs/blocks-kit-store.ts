@@ -1,5 +1,5 @@
 /**
- * Test double for `@seliseblocks/genesis-os/store`.
+ * Test double for `@seliseblocks/app-kit/store`.
  */
 export {
   useProjectStore,

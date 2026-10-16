@@ -1,12 +1,12 @@
 import React from "react";
 import { Shield, Clock } from "lucide-react";
 import {
-  Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui-kits/card/card";
+import { SURFACE_CARD_CLASS } from "@blocks-deployment/components/deployment-details/shared/surface-styles";
 
 type ComingSoonProps = {
   buildId: string;
@@ -19,7 +19,7 @@ type ComingSoonProps = {
 const ComingSoonTab: React.FC<ComingSoonProps> = () => {
   return (
     <div className="w-full">
-      <Card className="w-full">
+      <div className={`${SURFACE_CARD_CLASS} w-full`}>
         <CardHeader className="pb-4 text-center">
           <div className="mb-4 flex justify-center">
             <div className="relative">
@@ -42,7 +42,7 @@ const ComingSoonTab: React.FC<ComingSoonProps> = () => {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </div>
     </div>
   );
 };

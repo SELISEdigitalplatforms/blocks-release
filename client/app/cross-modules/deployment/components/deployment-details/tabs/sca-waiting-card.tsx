@@ -1,11 +1,11 @@
 import {
-  Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui-kits/card/card";
 import { Clock, Shield, Container } from "lucide-react";
+import { SURFACE_CARD_CLASS } from "@blocks-deployment/components/deployment-details/shared/surface-styles";
 
 interface ContainerWaitingProps {
   type?: "overall" | "container";
@@ -15,7 +15,7 @@ const ContainerWaiting = ({ type = "container" }: ContainerWaitingProps) => {
   if (type === "overall") {
     return (
       <div className="w-full">
-        <Card className="w-full">
+        <div className={`${SURFACE_CARD_CLASS} w-full`}>
           <CardHeader className="pb-4 text-center">
             <div className="mb-4 flex justify-center">
               <div className="relative">
@@ -39,14 +39,14 @@ const ContainerWaiting = ({ type = "container" }: ContainerWaitingProps) => {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="w-full">
-      <Card className="w-full">
+      <div className={`${SURFACE_CARD_CLASS} w-full`}>
         <CardHeader className="pb-4 text-center">
           <div className="mb-4 flex justify-center">
             <div className="relative">
@@ -70,7 +70,7 @@ const ContainerWaiting = ({ type = "container" }: ContainerWaitingProps) => {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </div>
     </div>
   );
 };

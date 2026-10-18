@@ -2438,3 +2438,121 @@
    dts: true,
    sourcemap: true,
    clean: true,
+--- a/src/components/common/command-palette/index.ts
++++ b/src/components/common/command-palette/index.ts
+@@ -9,6 +9,12 @@
+   type PaletteNavSection,
+ } from "./command-palette";
+ export { DEFAULT_TYPEWRITER_HINTS } from "./typewriter-hints";
++// Commands every host offers (Go to Console, View Profile, theme), defined once here.
++export {
++  SHARED_COMMANDS,
++  resolveSharedCommands,
++  useThemePaletteActions,
++} from "./shared-commands";
+ export * from "./types";
+ export { layerHomePath, type CommandScope } from "./layer-home";
+ export { useCommandLayer, layerForPath } from "./use-command-layer";
+--- /dev/null
++++ b/src/components/common/command-palette/shared-commands.ts
+@@ -0,0 +1,100 @@
++import { useMemo } from "react";
++import { Home, Monitor, Moon, Sun, UserCog } from "lucide-react-v1";
++import { useTheme, type Theme } from "@app-kit/hooks/use-theme";
++import type { PaletteAction } from "./command-palette";
++import type { CommandDef, CommandLayer, ResolvedCommand } from "./types";
++
++/**
++ * Commands every Blocks app's palette offers, defined once here instead of in each host. A host
++ * with its own registry spreads these into it; a host without one resolves them with
++ * {@link resolveSharedCommands}. Both need nothing in scope, so they run from any layer.
++ */
++export const SHARED_COMMANDS: CommandDef[] = [
++  // Only offered from outside the console: on it, the console page itself is the same ground.
++  {
++    id: "goto-console",
++    layer: "console",
++    group: "Go to",
++    name: "View Console",
++    desc: "All your projects",
++    icon: Home,
++    needs: "none",
++    crossLayerOnly: true,
++    keywords: ["home", "projects", "workspace", "back", "go to"],
++    shortcut: { mod: true, shift: true, key: "h" },
++    kind: "navigate",
++    view: true,
++    path: () => "/app/console",
++  },
++  {
++    id: "goto-profile",
++    layer: "console",
++    group: "Go to",
++    name: "View Profile",
++    desc: "Your account details",
++    icon: UserCog,
++    needs: "none",
++    keywords: ["account", "me", "settings", "go to"],
++    kind: "navigate",
++    view: true,
++    path: () => "/app/profile",
++  },
++];
++
++/**
++ * Resolves commands that need nothing in scope against the layer the user is standing in, with
++ * the same rule a host registry uses: a command is offered on its own layer, a `crossLayerOnly`
++ * jump only from outside it, and anything else from another layer stays search-only in
++ * `elsewhere`.
++ */
++export function resolveSharedCommands(
++  layer: CommandLayer,
++  defs: CommandDef[] = SHARED_COMMANDS,
++): { all: ResolvedCommand[]; elsewhere: ResolvedCommand[] } {
++  const all: ResolvedCommand[] = [];
++  const elsewhere: ResolvedCommand[] = [];
++  for (const def of defs) {
++    if (def.needs !== "none") continue;
++    const isCurrentLayer = def.layer === layer;
++    const belongsHere = def.crossLayerOnly ? !isCurrentLayer : isCurrentLayer;
++    const resolved: ResolvedCommand = { def, scopeId: "", isCurrentLayer };
++    if (belongsHere) all.push(resolved);
++    else if (!def.crossLayerOnly) elsewhere.push(resolved);
++  }
++  return { all, elsewhere };
++}
++
++const THEME_OPTIONS: { theme: Theme; name: string; icon: typeof Sun; keywords: string[] }[] = [
++  { theme: "light", name: "Switch to Light Theme", icon: Sun, keywords: ["light mode", "day"] },
++  { theme: "dark", name: "Switch to Dark Theme", icon: Moon, keywords: ["dark mode", "night"] },
++  {
++    theme: "system",
++    name: "Use System Theme",
++    icon: Monitor,
++    keywords: ["auto", "system", "os", "follow system"],
++  },
++];
++
++/**
++ * The theme switches as palette actions. Each reads live state — the current theme decides which
++ * rows appear, so the active one is never offered — which a static {@link CommandDef} can't
++ * express, hence actions rather than registry commands.
++ */
++export function useThemePaletteActions(): PaletteAction[] {
++  const { theme, setTheme } = useTheme();
++  return useMemo(
++    () =>
++      THEME_OPTIONS.filter((option) => option.theme !== theme).map((option) => ({
++        id: `theme-${option.theme}`,
++        group: "Appearance",
++        name: option.name,
++        desc: "Change how the app looks",
++        icon: option.icon,
++        keywords: ["theme", "appearance", "color scheme", ...option.keywords],
++        run: () => setTheme(option.theme),
++      })),
++    // setTheme is recreated each render by useTheme; the rows depend only on the active theme.
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++    [theme],
++  );
++}

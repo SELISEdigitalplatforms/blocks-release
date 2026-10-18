@@ -2,16 +2,17 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { useLocation, useNavigate, useParams } from "react-router";
 import {
   CommandPalette,
+  resolveSharedCommands,
   useAuthStore,
   useCommandLayer,
   useGetProjects,
   useProjectStore,
   useStartImpersonation,
+  useThemePaletteActions,
   type CommandPaletteProps,
   type IProject,
   type PaletteAction,
 } from "@seliseblocks/app-kit";
-import { Home, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { useReleaseNavigation } from "@/hooks/use-release-navigation";
 
@@ -68,23 +69,8 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
         projectName: currentProject?.name,
         environmentName: currentProject?.environment,
       },
-      all: [
-        { id: "console", name: "Go to Console", icon: Home, path: "/app/console" },
-        { id: "profile", name: "View Profile", icon: UserRound, path: "/app/profile" },
-      ].map((item) => ({
-        def: {
-          ...item,
-          kind: "navigate",
-          desc: item.id === "console" ? "Return to your projects" : "Manage your account",
-          layer,
-          group: "Account",
-          needs: "none",
-          path: () => item.path,
-        },
-        scopeId: "",
-        isCurrentLayer: true,
-      })),
-      elsewhere: [],
+      // View Console, View Profile: defined once in app-kit and shared with every Blocks app.
+      ...resolveSharedCommands(layer),
     }),
     [layer, itemId, currentProject],
   );
@@ -102,6 +88,8 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
 
   // The engine's project rows lead to Console's /app/project subtree, which Release
   // does not have. Offer environment entries with Release's impersonation flow instead.
+  // Light / dark / system, shared with every Blocks app's palette through app-kit.
+  const themeActions = useThemePaletteActions();
   const actions: PaletteAction[] = (projectGroups ?? [])
     .filter((group) => !group.isShared || !group.accessPolicies || group.accessPolicies.length > 0)
     .filter((group) => layer === "console" || group.tenantGroupId !== currentProject?.tenantGroupId)
@@ -132,7 +120,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
           selectedTenantGroup={currentProject?.tenantGroupId}
           selectedProject={currentProject}
           onEnterEnvironment={enterEnvironment}
-          actions={actions}
+          actions={[...actions, ...themeActions]}
           typewriterHints={{
             console: ["Find a project", "View Profile"],
             project: [],

@@ -137,6 +137,15 @@ describe("Release command palette integration", () => {
     expect(h.props?.projectGroups).toBeUndefined();
   });
 
+  it("offers app-kit's shared commands and theme switches", () => {
+    setup();
+    // On the dashboard layer, View Console is offered and View Profile is search-only.
+    expect(h.props?.commands.all.map((command) => command.def.id)).toContain("goto-console");
+    expect(h.props?.commands.elsewhere.map((command) => command.def.id)).toContain("goto-profile");
+    const themeRows = h.props?.actions?.filter((action) => action.group === "Appearance") ?? [];
+    expect(themeRows).toHaveLength(2);
+  });
+
   it("impersonates before updating selection and navigating to another environment", async () => {
     setup();
     const project = {

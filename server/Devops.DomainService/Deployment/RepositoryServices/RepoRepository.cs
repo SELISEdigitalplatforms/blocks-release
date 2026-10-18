@@ -1,3 +1,4 @@
+using Blocks.Genesis.DataAccess.Rules;
 using Blocks.Genesis.Entities.Release;
 using Blocks.Genesis;
 using Devops.DomainService.Deployment.Entities;
@@ -183,12 +184,33 @@ public class RepoRepository : IRepoRepository
             bool exists = await collection.Find(filter).AnyAsync();
 
             if (!exists)
+            {
+                await _access.PrepareWriteAsync(ReleaseSchemas.Repo, repo, isInsert: true, "RepoRepository.SaveRepo");
                 await collection.InsertOneAsync(repo);
+            }
         }
         catch (MongoWriteException e)
         {
             _logger.LogError(e.Message);
         }
+    }
+
+    /// <summary>The fields a repo update request sets: only the ones it carries. Null when it carries none.</summary>
+    private static UpdateDefinition<Repo>? BuildRepoUpdate(RepoUpdateRequest request)
+    {
+        var update = Builders<Repo>.Update;
+        var sets = new List<UpdateDefinition<Repo>>();
+        if (request.deploySettings is not null)
+            sets.Add(update.Set(r => r.DeploySettings, request.deploySettings));
+        if (!string.IsNullOrWhiteSpace(request.DeploymentType))
+            sets.Add(update.Set(r => r.DeploymentType, request.DeploymentType));
+        if (!string.IsNullOrWhiteSpace(request.CustomDomain))
+            sets.Add(update.Set(r => r.CustomDeploymentUrl, request.CustomDomain));
+        if (!string.IsNullOrWhiteSpace(request.LastDeploymentStatus))
+            sets.Add(update.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus));
+        if (request.LastDeploymentDate is not null)
+            sets.Add(update.Set(r => r.LastDeploymentDate, request.LastDeploymentDate));
+        return sets.Count == 0 ? null : update.Combine(sets);
     }
 
     public async Task<bool> UpdateRepo(RepoUpdateRequest request)
@@ -200,37 +222,16 @@ public class RepoRepository : IRepoRepository
             var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
                 Builders<Repo>.Filter.Eq(r => r.ItemId, request.RepoId), "RepoRepository.UpdateRepo");
             if (filter is null) return false;
-            var updateBuilder = Builders<Repo>.Update;
-            UpdateDefinition<Repo>? update = null;
-
-            // Dynamically build update only for non-null values
-            if (request.deploySettings is not null)
-                update = (update == null ? updateBuilder.Set(r => r.DeploySettings, request.deploySettings)
-                                         : update.Set(r => r.DeploySettings, request.deploySettings));
-
-            if (!string.IsNullOrWhiteSpace(request.DeploymentType))
-                update = (update == null ? updateBuilder.Set(r => r.DeploymentType, request.DeploymentType)
-                                         : update.Set(r => r.DeploymentType, request.DeploymentType));
-
-            if (!string.IsNullOrWhiteSpace(request.CustomDomain))
-                update = (update == null ? updateBuilder.Set(r => r.CustomDeploymentUrl, request.CustomDomain)
-                                         : update.Set(r => r.CustomDeploymentUrl, request.CustomDomain));
-
-            if (!string.IsNullOrWhiteSpace(request.LastDeploymentStatus))
-                update = (update == null ? updateBuilder.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus)
-                                         : update.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus));
-
-            if (request.LastDeploymentDate is not null)
-                update = (update == null ? updateBuilder.Set(r => r.LastDeploymentDate, request.LastDeploymentDate)
-                                         : update.Set(r => r.LastDeploymentDate, request.LastDeploymentDate));
-
+            var update = BuildRepoUpdate(request);
             if (update == null)
                 return false;
 
+            await _access.CheckUpdateAsync(ReleaseSchemas.Repo, update, "RepoRepository.UpdateRepo");
             var result = await collection.UpdateOneAsync(filter, update);
             return true;
         }
-        catch(Exception ex)
+        // A rule refusing the update reaches the caller with its message, not as a quiet "false".
+        catch (Exception ex) when (ex is not DataValidationException)
         {
             _logger.LogError($"Failed to update repo {ex.Message}");
             return false;
@@ -248,36 +249,16 @@ public class RepoRepository : IRepoRepository
             var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
                 Builders<Repo>.Filter.Eq(r => r.ItemId, request.RepoId), "RepoRepository.UpdateRepoByTenant", tenantId);
             if (filter is null) return false;
-            var updateBuilder = Builders<Repo>.Update;
-            UpdateDefinition<Repo>? update = null;
-
-            // Dynamically build update only for non-null values
-            if (request.deploySettings is not null)
-                update = (update == null ? updateBuilder.Set(r => r.DeploySettings, request.deploySettings)
-                                         : update.Set(r => r.DeploySettings, request.deploySettings));
-
-            if (!string.IsNullOrWhiteSpace(request.DeploymentType))
-                update = (update == null ? updateBuilder.Set(r => r.DeploymentType, request.DeploymentType)
-                                         : update.Set(r => r.DeploymentType, request.DeploymentType));
-
-            if (!string.IsNullOrWhiteSpace(request.CustomDomain))
-                update = (update == null ? updateBuilder.Set(r => r.CustomDeploymentUrl, request.CustomDomain)
-                                         : update.Set(r => r.CustomDeploymentUrl, request.CustomDomain));
-
-            if (!string.IsNullOrWhiteSpace(request.LastDeploymentStatus))
-                update = (update == null ? updateBuilder.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus)
-                                         : update.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus));
-            if (request.LastDeploymentDate is not null)
-                update = (update == null ? updateBuilder.Set(r => r.LastDeploymentDate, request.LastDeploymentDate)
-                                         : update.Set(r => r.LastDeploymentDate, request.LastDeploymentDate));
-
+            var update = BuildRepoUpdate(request);
             if (update == null)
                 return false;
 
+            await _access.CheckUpdateAsync(ReleaseSchemas.Repo, update, "RepoRepository.UpdateRepoByTenant", tenantId);
             var result = await collection.UpdateOneAsync(filter, update);
             return result.MatchedCount == 1 && result.ModifiedCount == 1;
         }
-        catch (Exception ex)
+        // A rule refusing the update reaches the caller with its message, not as a quiet "false".
+        catch (Exception ex) when (ex is not DataValidationException)
         {
             _logger.LogError($"Failed to update repo {ex.Message}");
             return false;
@@ -288,6 +269,7 @@ public class RepoRepository : IRepoRepository
     public async Task<bool> UpdateRepo(Repo repo)
     {
         var collection = _dbContextProvider.GetCollection<Repo>("Repos");
+        await _access.PrepareWriteAsync(ReleaseSchemas.Repo, repo, isInsert: false, "RepoRepository.UpdateRepoWhole");
         return await ReplaceRepoAsync(collection, repo);
     }
 
@@ -298,6 +280,7 @@ public class RepoRepository : IRepoRepository
             Builders<Repo>.Filter.Eq(r => r.ItemId, repo.ItemId), "RepoRepository.ReplaceRepo", tenantId);
         if (filter is null) return false;
 
+        await _access.PrepareWriteAsync(ReleaseSchemas.Repo, repo, isInsert: false, "RepoRepository.ReplaceRepo", tenantId);
         var collection = _dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>("Repos");
         var result = await collection.ReplaceOneAsync(filter, repo, cancellationToken: default);
         return result.MatchedCount == 1;
@@ -424,6 +407,20 @@ public class RepoRepository : IRepoRepository
             .GetCollection<Repo>("Repos");
     }
 
+    /// <summary>
+    /// Checks each requested domain against CustomDeploymentUrl's validation rules, before anything is written;
+    /// throws <see cref="DataValidationException"/> on the first refused one. Returns the domains to apply.
+    /// </summary>
+    public async Task<List<RepoWithDomain>> CheckRepoDomainsAsync(RepoDomainUpdateRequest request)
+    {
+        var requested = request.repoWithDomains
+            .Where(rd => !string.IsNullOrWhiteSpace(rd.RepoId) && !string.IsNullOrWhiteSpace(rd.CustomDeploymentDomain))
+            .ToList();
+        foreach (var rd in requested)
+            await _access.CheckUpdateAsync(ReleaseSchemas.Repo, Builders<Repo>.Update.Set(r => r.CustomDeploymentUrl, rd.CustomDeploymentDomain), "RepoRepository.UpdateRepoDomain");
+        return requested;
+    }
+
     public async Task<BulkOperationSummary> UpdateRepoDomain(RepoDomainUpdateRequest request)
     {
         var collection = _dbContextProvider.GetCollection<Repo>("Repos");
@@ -435,8 +432,9 @@ public class RepoRepository : IRepoRepository
         if (policy is null)
             return new BulkOperationSummary { RequestedCount = 0, MatchedCount = 0, ModifiedCount = 0, IsAcknowledged = true };
 
-        var bulkOps = request.repoWithDomains
-            .Where(rd => !string.IsNullOrWhiteSpace(rd.RepoId) && !string.IsNullOrWhiteSpace(rd.CustomDeploymentDomain))
+        var requested = await CheckRepoDomainsAsync(request);
+
+        var bulkOps = requested
             .Select(rd => new UpdateOneModel<Repo>(
                 Builders<Repo>.Filter.Eq(r => r.ItemId, rd.RepoId) &
                 Builders<Repo>.Filter.Eq(r => r.ProjectId, projectId) &

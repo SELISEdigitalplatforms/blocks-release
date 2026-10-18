@@ -51,6 +51,12 @@
         <member name="M:Api.Controllers.RepoSecretController.Delete(System.String,System.Threading.CancellationToken)">
             <summary>Soft-deletes. The vault value is retained so restore works.</summary>
         </member>
+        <member name="T:Api.Middleware.DataValidationExceptionFilter">
+            <summary>
+            A save refused by a system schema's validation rules (IReleaseDataAccess PrepareWriteAsync / CheckUpdateAsync)
+            is the caller's mistake, not a server error: 400 with one message per property, the field's path as key.
+            </summary>
+        </member>
         <member name="T:Api.Middleware.SecurityHeadersMiddleware">
             <summary>
             Browser security headers (ZAP DAST bar). Env bootstrap via /runtime-config.js

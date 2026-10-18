@@ -195,6 +195,24 @@ public class RepoRepository : IRepoRepository
         }
     }
 
+    /// <summary>The fields a repo update request sets: only the ones it carries. Null when it carries none.</summary>
+    private static UpdateDefinition<Repo>? BuildRepoUpdate(RepoUpdateRequest request)
+    {
+        var update = Builders<Repo>.Update;
+        var sets = new List<UpdateDefinition<Repo>>();
+        if (request.deploySettings is not null)
+            sets.Add(update.Set(r => r.DeploySettings, request.deploySettings));
+        if (!string.IsNullOrWhiteSpace(request.DeploymentType))
+            sets.Add(update.Set(r => r.DeploymentType, request.DeploymentType));
+        if (!string.IsNullOrWhiteSpace(request.CustomDomain))
+            sets.Add(update.Set(r => r.CustomDeploymentUrl, request.CustomDomain));
+        if (!string.IsNullOrWhiteSpace(request.LastDeploymentStatus))
+            sets.Add(update.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus));
+        if (request.LastDeploymentDate is not null)
+            sets.Add(update.Set(r => r.LastDeploymentDate, request.LastDeploymentDate));
+        return sets.Count == 0 ? null : update.Combine(sets);
+    }
+
     public async Task<bool> UpdateRepo(RepoUpdateRequest request)
     {
         try
@@ -204,30 +222,7 @@ public class RepoRepository : IRepoRepository
             var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
                 Builders<Repo>.Filter.Eq(r => r.ItemId, request.RepoId), "RepoRepository.UpdateRepo");
             if (filter is null) return false;
-            var updateBuilder = Builders<Repo>.Update;
-            UpdateDefinition<Repo>? update = null;
-
-            // Dynamically build update only for non-null values
-            if (request.deploySettings is not null)
-                update = (update == null ? updateBuilder.Set(r => r.DeploySettings, request.deploySettings)
-                                         : update.Set(r => r.DeploySettings, request.deploySettings));
-
-            if (!string.IsNullOrWhiteSpace(request.DeploymentType))
-                update = (update == null ? updateBuilder.Set(r => r.DeploymentType, request.DeploymentType)
-                                         : update.Set(r => r.DeploymentType, request.DeploymentType));
-
-            if (!string.IsNullOrWhiteSpace(request.CustomDomain))
-                update = (update == null ? updateBuilder.Set(r => r.CustomDeploymentUrl, request.CustomDomain)
-                                         : update.Set(r => r.CustomDeploymentUrl, request.CustomDomain));
-
-            if (!string.IsNullOrWhiteSpace(request.LastDeploymentStatus))
-                update = (update == null ? updateBuilder.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus)
-                                         : update.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus));
-
-            if (request.LastDeploymentDate is not null)
-                update = (update == null ? updateBuilder.Set(r => r.LastDeploymentDate, request.LastDeploymentDate)
-                                         : update.Set(r => r.LastDeploymentDate, request.LastDeploymentDate));
-
+            var update = BuildRepoUpdate(request);
             if (update == null)
                 return false;
 
@@ -254,29 +249,7 @@ public class RepoRepository : IRepoRepository
             var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
                 Builders<Repo>.Filter.Eq(r => r.ItemId, request.RepoId), "RepoRepository.UpdateRepoByTenant", tenantId);
             if (filter is null) return false;
-            var updateBuilder = Builders<Repo>.Update;
-            UpdateDefinition<Repo>? update = null;
-
-            // Dynamically build update only for non-null values
-            if (request.deploySettings is not null)
-                update = (update == null ? updateBuilder.Set(r => r.DeploySettings, request.deploySettings)
-                                         : update.Set(r => r.DeploySettings, request.deploySettings));
-
-            if (!string.IsNullOrWhiteSpace(request.DeploymentType))
-                update = (update == null ? updateBuilder.Set(r => r.DeploymentType, request.DeploymentType)
-                                         : update.Set(r => r.DeploymentType, request.DeploymentType));
-
-            if (!string.IsNullOrWhiteSpace(request.CustomDomain))
-                update = (update == null ? updateBuilder.Set(r => r.CustomDeploymentUrl, request.CustomDomain)
-                                         : update.Set(r => r.CustomDeploymentUrl, request.CustomDomain));
-
-            if (!string.IsNullOrWhiteSpace(request.LastDeploymentStatus))
-                update = (update == null ? updateBuilder.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus)
-                                         : update.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus));
-            if (request.LastDeploymentDate is not null)
-                update = (update == null ? updateBuilder.Set(r => r.LastDeploymentDate, request.LastDeploymentDate)
-                                         : update.Set(r => r.LastDeploymentDate, request.LastDeploymentDate));
-
+            var update = BuildRepoUpdate(request);
             if (update == null)
                 return false;
 

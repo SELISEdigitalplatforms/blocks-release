@@ -235,6 +235,29 @@ namespace XUnitTest.Devops.Deployment
         }
 
         [Fact]
+        public async Task UpdateRepo_ARefusingValidationRule_ReachesTheCaller_AndNothingIsWritten()
+        {
+            var refused = new Blocks.Genesis.DataAccess.Rules.DataValidationResult();
+            refused.AddError("CustomDeploymentUrl", "CustomDeploymentUrl must end with .example.com", "Regex");
+            var access = new Mock<global::Devops.DomainService.Deployment.Interfaces.IReleaseDataAccess>();
+            access.Setup(a => a.EditFilterAsync(It.IsAny<string>(), It.IsAny<FilterDefinition<Repo>>(), It.IsAny<string>(), It.IsAny<string?>()))
+                  .ReturnsAsync((string _, FilterDefinition<Repo> f, string _, string? _) => f);
+            access.Setup(a => a.CheckUpdateAsync(It.IsAny<string>(), It.IsAny<UpdateDefinition<Repo>>(), It.IsAny<string>(), It.IsAny<string?>()))
+                  .ThrowsAsync(new Blocks.Genesis.DataAccess.Rules.DataValidationException(refused));
+            var sut = new RepoRepository(_provider.Object,
+                new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string>()).Build(),
+                new Mock<ILogger<RepoRepository>>().Object, new Mock<IBlocksSecret>().Object, access.Object);
+
+            // Not swallowed into "false" like a database error: the caller gets the rule's message.
+            var act = () => sut.UpdateRepo(new RepoUpdateRequest { RepoId = "repo-1", CustomDomain = "web.other.com" });
+
+            await act.Should().ThrowAsync<Blocks.Genesis.DataAccess.Rules.DataValidationException>();
+            _repos.Verify(c => c.UpdateOneAsync(
+                It.IsAny<FilterDefinition<Repo>>(), It.IsAny<UpdateDefinition<Repo>>(),
+                It.IsAny<UpdateOptions>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
         public async Task UpdateRepo_ReplacesTheWholeDocumentWhenGivenAnEntity()
         {
             var repo = new Repo { ItemId = "repo-1", RepoName = "web" };

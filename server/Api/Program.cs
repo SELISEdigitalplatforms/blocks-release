@@ -47,6 +47,8 @@ builder.Services.Configure<MvcOptions>(options =>
     // only the five SecretException subtypes and leaves every other exception alone, so no
     // existing controller's error behaviour changes.
     options.Filters.Add<SecretExceptionFilter>();
+    // A system schema's validation rules refusing a save (repos): 400 with the failed properties.
+    options.Filters.Add<Api.Middleware.DataValidationExceptionFilter>();
 });
 
 // Scoped internally: these read the request-scoped BlocksContext. The Key Vault client behind

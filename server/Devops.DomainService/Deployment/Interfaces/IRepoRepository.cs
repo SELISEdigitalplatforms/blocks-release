@@ -38,6 +38,8 @@ public interface IRepoRepository
     public Task<bool> ArchiveRepo(string repoId, Tenant project);
     public Task<IReadOnlyList<RepoWithBuildsResponse>> GetReposWithBuildsAsync(string projectId);
     public Task<DeploySettings> GetDeploySettings(string hostingProviderId, string regionId, string machineConfigId);
+    /// <summary>Checks the domains against the Repo schema's validation rules before anything is written; throws when one is refused.</summary>
+    public Task<List<RepoWithDomain>> CheckRepoDomainsAsync(RepoDomainUpdateRequest request);
     public Task<BulkOperationSummary> UpdateRepoDomain(RepoDomainUpdateRequest repowithdomain);
     public Task<List<RepoCustomDomain>> GetRepoCustomDomainsAsync(List<RepoWithDomain> domains, string pojectId);
     public Task<bool> GetRepoCustomDomainExists(List<RepoWithDomain> domains);

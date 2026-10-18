@@ -1,3 +1,4 @@
+using Blocks.Genesis.DataAccess.Rules;
 using Blocks.Genesis.Entities.Release;
 using Blocks.Genesis;
 using Devops.DomainService.Deployment.Entities;
@@ -183,7 +184,10 @@ public class RepoRepository : IRepoRepository
             bool exists = await collection.Find(filter).AnyAsync();
 
             if (!exists)
+            {
+                await _access.PrepareWriteAsync(ReleaseSchemas.Repo, repo, isInsert: true, "RepoRepository.SaveRepo");
                 await collection.InsertOneAsync(repo);
+            }
         }
         catch (MongoWriteException e)
         {
@@ -227,10 +231,12 @@ public class RepoRepository : IRepoRepository
             if (update == null)
                 return false;
 
+            await _access.CheckUpdateAsync(ReleaseSchemas.Repo, update, "RepoRepository.UpdateRepo");
             var result = await collection.UpdateOneAsync(filter, update);
             return true;
         }
-        catch(Exception ex)
+        // A rule refusing the update reaches the caller with its message, not as a quiet "false".
+        catch (Exception ex) when (ex is not DataValidationException)
         {
             _logger.LogError($"Failed to update repo {ex.Message}");
             return false;
@@ -274,10 +280,12 @@ public class RepoRepository : IRepoRepository
             if (update == null)
                 return false;
 
+            await _access.CheckUpdateAsync(ReleaseSchemas.Repo, update, "RepoRepository.UpdateRepoByTenant", tenantId);
             var result = await collection.UpdateOneAsync(filter, update);
             return result.MatchedCount == 1 && result.ModifiedCount == 1;
         }
-        catch (Exception ex)
+        // A rule refusing the update reaches the caller with its message, not as a quiet "false".
+        catch (Exception ex) when (ex is not DataValidationException)
         {
             _logger.LogError($"Failed to update repo {ex.Message}");
             return false;
@@ -288,6 +296,7 @@ public class RepoRepository : IRepoRepository
     public async Task<bool> UpdateRepo(Repo repo)
     {
         var collection = _dbContextProvider.GetCollection<Repo>("Repos");
+        await _access.PrepareWriteAsync(ReleaseSchemas.Repo, repo, isInsert: false, "RepoRepository.UpdateRepoWhole");
         return await ReplaceRepoAsync(collection, repo);
     }
 
@@ -298,6 +307,7 @@ public class RepoRepository : IRepoRepository
             Builders<Repo>.Filter.Eq(r => r.ItemId, repo.ItemId), "RepoRepository.ReplaceRepo", tenantId);
         if (filter is null) return false;
 
+        await _access.PrepareWriteAsync(ReleaseSchemas.Repo, repo, isInsert: false, "RepoRepository.ReplaceRepo", tenantId);
         var collection = _dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>("Repos");
         var result = await collection.ReplaceOneAsync(filter, repo, cancellationToken: default);
         return result.MatchedCount == 1;
@@ -424,6 +434,20 @@ public class RepoRepository : IRepoRepository
             .GetCollection<Repo>("Repos");
     }
 
+    /// <summary>
+    /// Checks each requested domain against CustomDeploymentUrl's validation rules, before anything is written;
+    /// throws <see cref="DataValidationException"/> on the first refused one. Returns the domains to apply.
+    /// </summary>
+    public async Task<List<RepoWithDomain>> CheckRepoDomainsAsync(RepoDomainUpdateRequest request)
+    {
+        var requested = request.repoWithDomains
+            .Where(rd => !string.IsNullOrWhiteSpace(rd.RepoId) && !string.IsNullOrWhiteSpace(rd.CustomDeploymentDomain))
+            .ToList();
+        foreach (var rd in requested)
+            await _access.CheckUpdateAsync(ReleaseSchemas.Repo, Builders<Repo>.Update.Set(r => r.CustomDeploymentUrl, rd.CustomDeploymentDomain), "RepoRepository.UpdateRepoDomain");
+        return requested;
+    }
+
     public async Task<BulkOperationSummary> UpdateRepoDomain(RepoDomainUpdateRequest request)
     {
         var collection = _dbContextProvider.GetCollection<Repo>("Repos");
@@ -435,8 +459,9 @@ public class RepoRepository : IRepoRepository
         if (policy is null)
             return new BulkOperationSummary { RequestedCount = 0, MatchedCount = 0, ModifiedCount = 0, IsAcknowledged = true };
 
-        var bulkOps = request.repoWithDomains
-            .Where(rd => !string.IsNullOrWhiteSpace(rd.RepoId) && !string.IsNullOrWhiteSpace(rd.CustomDeploymentDomain))
+        var requested = await CheckRepoDomainsAsync(request);
+
+        var bulkOps = requested
             .Select(rd => new UpdateOneModel<Repo>(
                 Builders<Repo>.Filter.Eq(r => r.ItemId, rd.RepoId) &
                 Builders<Repo>.Filter.Eq(r => r.ProjectId, projectId) &

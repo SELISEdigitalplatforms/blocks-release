@@ -268,9 +268,15 @@ public class RepoRepository : IRepoRepository
 
     public async Task<bool> UpdateRepo(Repo repo)
     {
-        var collection = _dbContextProvider.GetCollection<Repo>("Repos");
+        // Row gate only. The repo was read whole (GetRepo uses no projection), so no masked value is written back.
+        var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
+            Builders<Repo>.Filter.Eq(r => r.ItemId, repo.ItemId), "RepoRepository.UpdateRepoWhole");
+        if (filter is null) return false;
+
         await _access.PrepareWriteAsync(ReleaseSchemas.Repo, repo, isInsert: false, "RepoRepository.UpdateRepoWhole");
-        return await ReplaceRepoAsync(collection, repo);
+        var collection = _dbContextProvider.GetCollection<Repo>("Repos");
+        var result = await collection.ReplaceOneAsync(filter, repo, cancellationToken: default);
+        return result.MatchedCount == 1;
     }
 
     public async Task<bool> UpdateRepo(Repo repo, string tenantId)
@@ -286,12 +292,8 @@ public class RepoRepository : IRepoRepository
         return result.MatchedCount == 1;
     }
 
-    private static async Task<bool> ReplaceRepoAsync(IMongoCollection<Repo> collection, Repo repo)
-    {
-        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repo.ItemId);
-        var result = await collection.ReplaceOneAsync(filter, repo, cancellationToken: default);
-        return result.MatchedCount == 1;
-    }
+    public Task CheckRepoAsync(Repo repo, string tenantId) =>
+        _access.PrepareWriteAsync(ReleaseSchemas.Repo, repo, isInsert: false, "RepoRepository.CheckRepo", tenantId);
 
     /// <summary>
     /// Clears the recorded deployment namespace and stamps the display status, in one atomic update against

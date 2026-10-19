@@ -1,6 +1,7 @@
 using Blocks.Genesis.Entities.Release;
 using Microsoft.Extensions.Configuration;
 using Blocks.Genesis;
+using Blocks.Genesis.DataAccess.Rules;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.Shared.Interfaces;
@@ -155,7 +156,8 @@ public class GithubWebhookService : IGithubWebhookService
                 return false;
             }
         }
-        catch (Exception ex)
+        // A rule refusing the repo write reaches the caller with its message, not as a quiet "false".
+        catch (Exception ex) when (ex is not DataValidationException)
         {
             _logger.LogError($"Failed to update webhook status for {repo.RepoName} with error {ex.Message}");
             return false;
@@ -175,7 +177,7 @@ public class GithubWebhookService : IGithubWebhookService
             }
             return false;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not DataValidationException)
         {
             _logger.LogError($"Failed to create new webhook for {repo.RepoName} with error {ex.Message}");
             return false;

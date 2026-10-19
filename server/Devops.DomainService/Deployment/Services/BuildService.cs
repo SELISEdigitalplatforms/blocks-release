@@ -1,5 +1,6 @@
 ﻿using Blocks.Genesis.Entities.Release;
 using Blocks.Genesis;
+using Blocks.Genesis.DataAccess.Rules;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using FluentValidation;
@@ -75,6 +76,8 @@ public class BuildService : IBuildService
                 && !string.IsNullOrWhiteSpace(blocksContext?.UserId)
                     ? blocksContext.UserId
                     : repo.CreatedBy;
+            // Rules on the repo first, so a refused repo leaves no namespace, pipeline or GitHub webhook behind.
+            await _repoRepository.CheckRepoAsync(repo, tenantId);
             var (pipelineRunNameGuid, buildImageName, paramNamespace, errorMessage) =
                 await _pipelineRunService.CreateNamespaceAsync(repo, tenantId, blocksUserId);
          
@@ -127,6 +130,17 @@ public class BuildService : IBuildService
                 StatusCode = HttpStatusCode.OK
             };
             return buildResponse;
+        }
+        catch (DataValidationException e)
+        {
+            _logger.LogWarning(e, "Build(): the repository was refused by a validation rule.");
+            return new BuildResponse
+            {
+                Message = e.Message,
+                Errors = e.ToErrors(),
+                IsSuccess = false,
+                StatusCode = HttpStatusCode.BadRequest
+            };
         }
         catch (Exception e)
         {
@@ -604,6 +618,16 @@ public class BuildService : IBuildService
                 IsSuccess = false,
                 Message = "Something went wrong.",
                 StatusCode = HttpStatusCode.OK
+            };
+        }
+        catch (DataValidationException ex)
+        {
+            return new BuildResponse
+            {
+                IsSuccess = false,
+                Message = ex.Message,
+                Errors = ex.ToErrors(),
+                StatusCode = HttpStatusCode.BadRequest
             };
         }
         catch (Exception ex)

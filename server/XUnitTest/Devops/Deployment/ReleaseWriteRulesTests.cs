@@ -1,18 +1,30 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Genesis;
 using Blocks.Genesis.DataAccess;
 using Blocks.Genesis.DataAccess.Rules;
 using Blocks.Genesis.Entities.Release;
+using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Interfaces;
+using Devops.DomainService.Deployment.Models.Request;
+using Devops.DomainService.Deployment.Models.Response;
 using Devops.DomainService.Deployment.RepositoryServices;
+using Devops.DomainService.Shared.Entities;
+using Devops.DomainService.Shared.Interfaces;
+using Devops.DomainService.VersionControlSystems.Entities;
+using Devops.DomainService.VersionControlSystems.Interfaces;
+using Devops.DomainService.VersionControlSystems.Services;
 using FluentAssertions;
+using FluentValidation.Results;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Moq;
+using XUnitTest.TestDoubles;
 using Xunit;
 
 namespace XUnitTest.Devops.Deployment;
@@ -168,5 +180,119 @@ public class ReleaseWriteRulesTests : IDisposable
         });
 
         await act.Should().ThrowAsync<DataValidationException>();
+    }
+
+    private static RepoRepository RepositoryOver(IMongoCollection<Repo> collection, IReleaseDataAccess access)
+    {
+        var provider = new Mock<IDbContextProvider>();
+        provider.Setup(p => p.GetCollection<Repo>("Repos")).Returns(collection);
+        return new RepoRepository(provider.Object, Mock.Of<Microsoft.Extensions.Configuration.IConfiguration>(),
+            NullLogger<RepoRepository>.Instance, Mock.Of<IBlocksSecret>(), access);
+    }
+
+    [Fact]
+    public async Task AWholeRepoReplace_DeniedByTheEditFilter_WritesNothing()
+    {
+        var access = new Mock<IReleaseDataAccess>(MockBehavior.Strict);
+        access.Setup(a => a.EditFilterAsync(ReleaseSchemas.Repo, It.IsAny<FilterDefinition<Repo>>(), "RepoRepository.UpdateRepoWhole", null))
+            .ReturnsAsync((FilterDefinition<Repo>?)null);
+        // Strict: rules on a denied write, or a ReplaceOneAsync, would throw a MockException instead of returning false.
+        var collection = new Mock<IMongoCollection<Repo>>(MockBehavior.Strict);
+
+        var updated = await RepositoryOver(collection.Object, access.Object).UpdateRepo(new Repo { ItemId = "r1" });
+
+        updated.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task AWholeRepoReplace_IsScopedByThePolicyFilter_AndRunsTheRules()
+    {
+        var policy = Builders<Repo>.Filter.Eq(r => r.ItemId, "r1") & Builders<Repo>.Filter.Eq(r => r.ProjectId, "t1");
+        var access = new Mock<IReleaseDataAccess>();
+        access.Setup(a => a.EditFilterAsync(ReleaseSchemas.Repo, It.IsAny<FilterDefinition<Repo>>(), It.IsAny<string>(), null))
+            .ReturnsAsync(policy);
+        var repo = new Repo { ItemId = "r1" };
+        access.Setup(a => a.PrepareWriteAsync(ReleaseSchemas.Repo, repo, false, It.IsAny<string>(), null)).ReturnsAsync(repo);
+        var collection = new Mock<IMongoCollection<Repo>>();
+        collection.Setup(c => c.ReplaceOneAsync(policy, repo, It.IsAny<ReplaceOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ReplaceOneResult.Acknowledged(1, 1, null));
+
+        var updated = await RepositoryOver(collection.Object, access.Object).UpdateRepo(repo);
+
+        updated.Should().BeTrue();
+        access.Verify(a => a.PrepareWriteAsync(ReleaseSchemas.Repo, repo, false, It.IsAny<string>(), null), Times.Once);
+    }
+
+    [Fact]
+    public async Task ARefusedRepo_StopsTheBuild_BeforeTheNamespaceOrWebhook_AndReturnsTheMessage()
+    {
+        var factory = new DeploymentServiceFactory();
+        factory.RepoRepo.Setup(r => r.CheckRepoAsync(It.IsAny<Repo>(), "t1"))
+            .ThrowsAsync(new DataValidationException(Failed("Branch", "Branch must be main or release/*")));
+
+        var response = await factory.BuildService().Build(new BuildRequest(), new Repo { ItemId = "r1", ProjectId = "t1", Branch = "feature/x" });
+
+        response.IsSuccess.Should().BeFalse();
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.Message.Should().Contain("Branch must be main or release/*");
+        response.Errors.Should().ContainKey("Branch").WhoseValue.Should().Be("Branch must be main or release/*");
+        // CreateNamespaceAsync reads the owner's token before anything else; no read means no PipelineRun.
+        factory.TokenRepo.Verify(t => t.getToken(It.IsAny<string>()), Times.Never);
+        factory.Webhook.Verify(w => w.CreateWebhook(It.IsAny<Repo>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        factory.RepoRepo.Verify(r => r.UpdateRepo(It.IsAny<Repo>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ARefusedDomain_ReturnsItsMessagePerField()
+    {
+        var factory = new DeploymentServiceFactory();
+        factory.DomainValidator.Setup(v => v.ValidateAsync(It.IsAny<RepoDomainUpdateRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+        factory.RepoRepo.Setup(r => r.GetRepoCustomDomainsAsync(It.IsAny<List<RepoWithDomain>>(), It.IsAny<string>()))
+            .ReturnsAsync([]);
+        factory.RepoRepo.Setup(r => r.CheckRepoDomainsAsync(It.IsAny<RepoDomainUpdateRequest>()))
+            .ThrowsAsync(new DataValidationException(Failed("CustomDeploymentUrl", "CustomDeploymentUrl must end with .example.com")));
+
+        var response = await factory.BuildService().UpdateRepoDomain(new RepoDomainUpdateRequest
+        {
+            repoWithDomains = [new() { RepoId = "r1", CustomDeploymentDomain = "web.other.com" }],
+        });
+
+        response.IsSuccess.Should().BeFalse();
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.Errors.Should().ContainKey("CustomDeploymentUrl").WhoseValue.Should().Be("CustomDeploymentUrl must end with .example.com");
+        factory.RepoRepo.Verify(r => r.UpsertRepoCustomDomainsAsync(It.IsAny<List<RepoCustomDomain>>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ARefusedWebhookSave_ReachesTheCaller_NotAQuietFalse()
+    {
+        var token = new Mock<ITokenRepository>();
+        token.Setup(t => t.getToken()).ReturnsAsync(new RepositoryToken { AccessToken = "token" });
+        using var created = new HttpResponseMessage(HttpStatusCode.Created);
+        var http = new Mock<IHttpHelperServices>();
+        http.Setup(h => h.MakeHttpRequest<GithubWebhookSuccessResponse, GithubWebhookErrorResponse>(
+                It.IsAny<string>(), It.IsAny<string>(), HttpMethod.Post, It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+            .ReturnsAsync((new GithubWebhookSuccessResponse { id = 7, active = true }, null, created));
+        var repos = new Mock<IRepoRepository>();
+        repos.Setup(r => r.UpdateRepo(It.IsAny<Repo>()))
+            .ThrowsAsync(new DataValidationException(Failed("Branch", "Branch must be main or release/*")));
+        var service = new GithubWebhookService(NullLogger<GithubWebhookService>.Instance,
+            Mock.Of<Microsoft.Extensions.Configuration.IConfiguration>(), http.Object, token.Object, repos.Object, Mock.Of<ICloudBuildSecret>());
+
+        var act = () => service.UpdateWebhookStatus(new Repo { ItemId = "r1", RepoName = "org/web" }, activationStatus: true);
+
+        await act.Should().ThrowAsync<DataValidationException>();
+    }
+
+    [Fact]
+    public async Task WithoutRules_AWholeRepoReplace_StillWrites()
+    {
+        var repo = new Repo { ItemId = "r1" };
+        var collection = new Mock<IMongoCollection<Repo>>();
+        collection.Setup(c => c.ReplaceOneAsync(It.IsAny<FilterDefinition<Repo>>(), repo, It.IsAny<ReplaceOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ReplaceOneResult.Acknowledged(1, 1, null));
+
+        (await RepositoryOver(collection.Object, new PassThroughReleaseDataAccess()).UpdateRepo(repo)).Should().BeTrue();
     }
 }

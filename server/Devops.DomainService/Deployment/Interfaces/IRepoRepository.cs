@@ -30,6 +30,8 @@ public interface IRepoRepository
     public Task<bool> UpdateRepo(RepoUpdateRequest repo,string tenantId);
     public Task<bool> UpdateRepo(Repo repo);
     public Task<bool> UpdateRepo(Repo repo, string tenantId);
+    /// <summary>Checks the repo against the Repo schema's validation rules before anything is written; throws when one is refused.</summary>
+    public Task CheckRepoAsync(Repo repo, string tenantId);
     public Task<bool> ClearDeployedNamespace(string repoId, string tenantId, string lastDeploymentStatus);
     public Task<bool> ClearDeployedNamespace(string repoId, Tenant project, string lastDeploymentStatus);
     public Task<List<Repo>> GetProjectRepos(string tenantId, string? resourceId = null);

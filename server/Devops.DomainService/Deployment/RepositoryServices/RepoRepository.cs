@@ -266,28 +266,23 @@ public class RepoRepository : IRepoRepository
 
     }
 
-    public async Task<bool> UpdateRepo(Repo repo)
+    public Task<bool> UpdateRepo(Repo repo) =>
+        ReplaceRepoAsync(repo, _dbContextProvider.GetCollection<Repo>("Repos"), null, "RepoRepository.UpdateRepoWhole");
+
+    public Task<bool> UpdateRepo(Repo repo, string tenantId) =>
+        ReplaceRepoAsync(repo, _dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>("Repos"), tenantId, "RepoRepository.ReplaceRepo");
+
+    /// <summary>
+    /// Replaces the whole repo when the edit policy allows it (false when it doesn't), after its validation rules.
+    /// Row gate only: the repo was read whole (GetRepo/GetRepoByBranch use no projection), so no masked value is written back.
+    /// </summary>
+    private async Task<bool> ReplaceRepoAsync(Repo repo, IMongoCollection<Repo> collection, string? tenantId, string callSite)
     {
-        // Row gate only. The repo was read whole (GetRepo uses no projection), so no masked value is written back.
         var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
-            Builders<Repo>.Filter.Eq(r => r.ItemId, repo.ItemId), "RepoRepository.UpdateRepoWhole");
+            Builders<Repo>.Filter.Eq(r => r.ItemId, repo.ItemId), callSite, tenantId);
         if (filter is null) return false;
 
-        await _access.PrepareWriteAsync(ReleaseSchemas.Repo, repo, isInsert: false, "RepoRepository.UpdateRepoWhole");
-        var collection = _dbContextProvider.GetCollection<Repo>("Repos");
-        var result = await collection.ReplaceOneAsync(filter, repo, cancellationToken: default);
-        return result.MatchedCount == 1;
-    }
-
-    public async Task<bool> UpdateRepo(Repo repo, string tenantId)
-    {
-        // Row gate only. The repo was read whole (GetRepo/GetRepoByBranch use no projection), so no masked value is written back.
-        var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
-            Builders<Repo>.Filter.Eq(r => r.ItemId, repo.ItemId), "RepoRepository.ReplaceRepo", tenantId);
-        if (filter is null) return false;
-
-        await _access.PrepareWriteAsync(ReleaseSchemas.Repo, repo, isInsert: false, "RepoRepository.ReplaceRepo", tenantId);
-        var collection = _dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>("Repos");
+        await _access.PrepareWriteAsync(ReleaseSchemas.Repo, repo, isInsert: false, callSite, tenantId);
         var result = await collection.ReplaceOneAsync(filter, repo, cancellationToken: default);
         return result.MatchedCount == 1;
     }

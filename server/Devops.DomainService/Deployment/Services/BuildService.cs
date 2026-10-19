@@ -134,13 +134,7 @@ public class BuildService : IBuildService
         catch (DataValidationException e)
         {
             _logger.LogWarning(e, "Build(): the repository was refused by a validation rule.");
-            return new BuildResponse
-            {
-                Message = e.Message,
-                Errors = e.ToErrors(),
-                IsSuccess = false,
-                StatusCode = HttpStatusCode.BadRequest
-            };
+            return RefusedByRule(e);
         }
         catch (Exception e)
         {
@@ -622,13 +616,7 @@ public class BuildService : IBuildService
         }
         catch (DataValidationException ex)
         {
-            return new BuildResponse
-            {
-                IsSuccess = false,
-                Message = ex.Message,
-                Errors = ex.ToErrors(),
-                StatusCode = HttpStatusCode.BadRequest
-            };
+            return RefusedByRule(ex);
         }
         catch (Exception ex)
         {
@@ -640,6 +628,15 @@ public class BuildService : IBuildService
             };
         }
     }
+
+    /// <summary>A save a validation rule refused: 400, with the rule's message per property.</summary>
+    private static BuildResponse RefusedByRule(DataValidationException exception) => new()
+    {
+        Message = exception.Message,
+        Errors = exception.ToErrors(),
+        IsSuccess = false,
+        StatusCode = HttpStatusCode.BadRequest
+    };
 
     public async Task<List<RepoCustomDomain>> TransformToRepoCustomDomains(RepoDomainUpdateRequest request)
     {

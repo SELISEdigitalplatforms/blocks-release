@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -55,7 +56,7 @@ namespace XUnitTest.Api.Controllers
 
         private AnalyticsToolController CreateController()
         {
-            var repoService = new DependencyTrackRepositoryService(_dbProvider.Object, new Mock<ILogger<DependencyTrackRepositoryService>>().Object);
+            var repoService = new DependencyTrackRepositoryService(_dbProvider.Object, new Mock<IKeyValueStore>().Object, new Mock<ILogger<DependencyTrackRepositoryService>>().Object);
             var dtAuth = new DependencyTrackAuthService(new Mock<ILogger<DependencyTrackAuthService>>().Object, _http.Object, _config, repoService, _secret.Object);
             var sca = new DependencyTrackAnalyticsService(new Mock<ILogger<DependencyTrackAnalyticsService>>().Object, _http.Object, _buildRepo.Object, _repoRepo.Object, repoService, _secret.Object, _config);
             return new AnalyticsToolController(dtAuth, sca, _buildRepo.Object, _sonar.Object, _tokenRepo.Object);

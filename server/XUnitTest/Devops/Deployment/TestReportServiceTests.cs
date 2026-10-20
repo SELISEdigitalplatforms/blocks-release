@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using System.Threading.Tasks;
 using Devops.DomainService.Deployment.Entities;
 using FluentAssertions;

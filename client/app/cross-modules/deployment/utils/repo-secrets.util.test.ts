@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  dropBlankRows,
   exceedsSizeLimit,
   findDuplicateKey,
   getServerMessage,
   getServerReason,
+  isBlankRow,
   mapToEnv,
   mapToJson,
   mapToRows,
@@ -116,6 +118,28 @@ describe("row helpers", () => {
         { key: "B", value: "2" },
       ]),
     ).toBeNull();
+  });
+
+  it("treats only a row with an empty key and an empty value as blank", () => {
+    expect(isBlankRow({ key: "", value: "" })).toBe(true);
+    expect(isBlankRow({ key: "", value: "x" })).toBe(false);
+    expect(isBlankRow({ key: "A", value: "" })).toBe(false);
+    // Not trimmed: whitespace is input the user typed.
+    expect(isBlankRow({ key: " ", value: "" })).toBe(false);
+  });
+
+  it("drops fully blank rows and keeps the rest in order", () => {
+    expect(
+      dropBlankRows([
+        { key: "", value: "" },
+        { key: "A", value: "" },
+        { key: "", value: "" },
+        { key: "", value: "x" },
+      ]),
+    ).toEqual([
+      { key: "A", value: "" },
+      { key: "", value: "x" },
+    ]);
   });
 });
 

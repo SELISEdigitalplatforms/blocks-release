@@ -51,6 +51,83 @@
         <member name="M:Api.Controllers.RepoSecretController.Delete(System.String,System.Threading.CancellationToken)">
             <summary>Soft-deletes. The vault value is retained so restore works.</summary>
         </member>
+        <member name="T:Api.Middleware.DataValidationExceptionFilter">
+            <summary>
+            A save refused by a system schema's validation rules (IReleaseDataAccess PrepareWriteAsync / CheckUpdateAsync)
+            is the caller's mistake, not a server error: 400 with one message per property, the field's path as key.
+            </summary>
+        </member>
+        <member name="T:Api.Middleware.SecurityHeadersMiddleware">
+            <summary>
+            Browser security headers (ZAP DAST bar). Env bootstrap via /runtime-config.js
+            so CSP can keep script-src 'self' without unsafe-inline. The policy itself is built from
+            configuration once at startup -- see <see cref="T:Api.Security.ContentSecurityPolicy"/>.
+            </summary>
+        </member>
+        <member name="M:Api.Middleware.SecurityHeadersMiddleware.#ctor(Microsoft.AspNetCore.Http.RequestDelegate,System.String)">
+            <summary>Creates the middleware with the policy built at startup.</summary>
+        </member>
+        <member name="M:Api.Middleware.SecurityHeadersMiddleware.InvokeAsync(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>Sets the headers now and again when the response starts.</summary>
+        </member>
+        <member name="M:Api.Middleware.SecurityHeadersMiddleware.Apply(Microsoft.AspNetCore.Http.HttpContext,System.String)">
+            <summary>Writes the browser security headers; a header already set by the endpoint wins.</summary>
+        </member>
+        <member name="T:Api.Security.ContentSecurityPolicy">
+            <summary>
+            Builds the SPA's Content-Security-Policy from configuration.
+            <para>
+            Same pattern as blocks-monitor, blocks-iam and blocks-os
+            (<c>server/Api/Security/ContentSecurityPolicy.cs</c>). The origins come from the
+            <c>FrontendRuntime</c> section that fills /runtime-config.js, so the policy follows the
+            environment the host runs in. The first release policy (#211, reverted in 97bca1e) hardcoded
+            <c>dev-*</c> hosts, which would have blocked stg and prod from calling their own IAM.
+            </para>
+            </summary>
+        </member>
+        <member name="F:Api.Security.ContentSecurityPolicy.ConnectOriginKeys">
+            <summary>
+            <c>FrontendRuntime</c> keys holding an origin the SPA makes requests to. Anything not
+            derivable from these (a CDN, a third-party service) goes in <c>Csp:ExtraConnectSrc</c> /
+            <c>Csp:ExtraImgSrc</c> rather than back into code.
+            </summary>
+        </member>
+        <member name="F:Api.Security.ContentSecurityPolicy.WebSocketOriginKeys">
+            <summary>
+            Origins the SPA opens a WebSocket to. A CSP source is scheme-sensitive, so
+            <c>https://host</c> does not permit <c>wss://host</c>. The deployment hub is
+            same-origin and covered by <c>'self'</c>; the notification hub lives on logic.
+            </summary>
+        </member>
+        <member name="F:Api.Security.ContentSecurityPolicy.FormActionOriginKeys">
+            <summary>Where a login POST may be sent: the identity host and the portal.</summary>
+        </member>
+        <member name="M:Api.Security.ContentSecurityPolicy.Build(Microsoft.Extensions.Configuration.IConfiguration)">
+            <summary>The policy for the environment this host is configured for.</summary>
+        </member>
+        <member name="M:Api.Security.ContentSecurityPolicy.BuildPolicy(System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.IEnumerable{System.String})">
+            <summary>The policy itself, separated from configuration so it can be asserted directly.</summary>
+        </member>
+        <member name="M:Api.Security.ContentSecurityPolicy.Normalize(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>Reduce configured values to distinct, sorted origins.</summary>
+        </member>
+        <member name="M:Api.Security.ContentSecurityPolicy.ToOrigin(System.String)">
+            <summary>
+            A CSP source is an origin, so any path, query or trailing slash is dropped. A value that
+            is not an absolute http(s)/ws(s) URL is ignored rather than emitted verbatim, so a
+            malformed secret cannot inject a directive.
+            </summary>
+        </member>
+        <member name="M:Api.Security.ContentSecurityPolicy.ToWebSocketOrigin(System.String)">
+            <summary>
+            The wss origin a browser uses to open a socket to an https host, or null. Plain http and
+            ws hosts get no socket allowance: an unencrypted socket would carry the session token and
+            notification payloads in clear text.
+            </summary>
+        </member>
+        <member name="M:Api.Security.ContentSecurityPolicy.Split(System.String)">
+            <summary>Space- or comma-separated list, for origins no runtime key describes.</summary>
+        </member>
         <member name="T:Program">
             <summary>
             Auto-generated public partial Program class for top-level statement apps.

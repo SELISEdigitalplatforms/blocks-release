@@ -3,7 +3,7 @@ using Blocks.Genesis;
 using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.Shared.Interfaces;
 using Devops.DomainService.Shared.Utilities;
-using Devops.DomainService.TestingTools.Entity;
+using Blocks.Genesis.Entities.Release;
 using Devops.DomainService.TestingTools.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;

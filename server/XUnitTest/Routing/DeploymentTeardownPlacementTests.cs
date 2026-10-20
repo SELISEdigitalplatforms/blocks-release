@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using Blocks.Genesis;
 using Blocks.Secrets;
 using Devops.DomainService.Deployment.Entities;
@@ -30,7 +31,7 @@ public sealed class DeploymentTeardownPlacementTests : IDisposable
 
         var configuration = new ConfigurationBuilder().Build();
         var repos = new RepoRepository(_fixture.Provider, configuration,
-            NullLogger<RepoRepository>.Instance, _fixture.Secret);
+            NullLogger<RepoRepository>.Instance, _fixture.Secret, new XUnitTest.TestDoubles.PassThroughReleaseDataAccess());
         var tenants = new TenantLookupRepository(_fixture.Provider, _fixture.Secret);
         var service = new DeploymentTeardownService(NullLogger<DeploymentTeardownService>.Instance,
             tenants, repos, new DeploymentServiceFactory().BuildService(), new Mock<ISecretService>().Object);

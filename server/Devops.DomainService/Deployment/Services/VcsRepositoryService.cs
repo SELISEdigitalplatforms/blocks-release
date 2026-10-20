@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using Blocks.Genesis.Entities.Release;
+using System.Net;
 using Blocks.Genesis;
 using Microsoft.Extensions.Logging;
 
@@ -124,6 +125,8 @@ public class VcsRepositoryService
             List<RepoCustomDomain> repoCustomDomains = new List<RepoCustomDomain>();
 
             repoCustomDomains = await TransformToRepoCustomDomains(request);
+            // Rules on the repo's domain first, so a refused domain leaves no custom-domain record behind.
+            await _repoRepository.CheckRepoDomainsAsync(request);
             var saveresult = await _repoRepository.UpsertRepoCustomDomainsAsync(repoCustomDomains);
 
             var bulkUpdateResult = await _repoRepository.UpdateRepoDomain(request);

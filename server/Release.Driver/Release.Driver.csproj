@@ -2,12 +2,12 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Version>4.0.3</Version>
+    <Version>4.0.4</Version>
     <PackageId>SeliseBlocks.ReleaseDriver.OS</PackageId>
     <Authors>SeliseBlocks</Authors>
     <Company>SeliseBlocks</Company>
     <Description>Blocks Release Driver</Description>
-    <PackageReleaseNotes>Rebuilt against Genesis 4.2.2 for the three-connection database architecture. The bundled Devops.DomainService assembly was last published on 2026-08-13, before tenant placement landed, so it shipped without the routing work: BuildRepository no longer resolves an unused ambient collection in its constructor, GetHostingProviders reads HostingProviders from the root database it already resolved instead of the caller's tenant, and RepoRepository, BuildService, DeploymentTeardownService and PipelineRunService carry the explicit tenant overloads added for multi-database routing. No API removals; the Tenant-taking overloads on IRepoRepository and IBuildRepository are additive.</PackageReleaseNotes>
+    <PackageReleaseNotes>GitHub access tokens are stored in Azure Key Vault through the Blocks.Secrets value store; the RepositoryTokens row keeps only TokenSecretId. Rows with a plaintext AccessToken stay readable and move to the vault on the user's next connect, so no data migration is needed. The host must resolve ISecretValueStore to the Key Vault store (KeyVault__KeyVaultUrl set, Secrets__ValueStore unset or KeyVault): with the database store, connecting, revoking and building webhooks fail with a token-store error, while legacy plaintext tokens keep working. RegisterBlocksReleaseServicesAsync calls AddBlocksSecrets(), whose registrations are TryAdd, so a host's own call made first is kept. The package now declares its SeliseBlocks.Secrets.OS dependency, which 4.0.3 bundled an assembly reference to without declaring. No API removals.</PackageReleaseNotes>
     <IncludeBuildOutput>true</IncludeBuildOutput>
     <IncludeOutputAssemblies>true</IncludeOutputAssemblies>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -25,6 +25,7 @@
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="SeliseBlocks.Genesis.OS" />
+    <PackageReference Include="SeliseBlocks.Secrets.OS" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 

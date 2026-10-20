@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using Blocks.Genesis;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Models.Dtos;
@@ -29,6 +30,8 @@ public interface IRepoRepository
     public Task<bool> UpdateRepo(RepoUpdateRequest repo,string tenantId);
     public Task<bool> UpdateRepo(Repo repo);
     public Task<bool> UpdateRepo(Repo repo, string tenantId);
+    /// <summary>Checks the repo against the Repo schema's validation rules before anything is written; throws when one is refused.</summary>
+    public Task CheckRepoAsync(Repo repo, string tenantId);
     public Task<bool> ClearDeployedNamespace(string repoId, string tenantId, string lastDeploymentStatus);
     public Task<bool> ClearDeployedNamespace(string repoId, Tenant project, string lastDeploymentStatus);
     public Task<List<Repo>> GetProjectRepos(string tenantId, string? resourceId = null);
@@ -37,6 +40,8 @@ public interface IRepoRepository
     public Task<bool> ArchiveRepo(string repoId, Tenant project);
     public Task<IReadOnlyList<RepoWithBuildsResponse>> GetReposWithBuildsAsync(string projectId);
     public Task<DeploySettings> GetDeploySettings(string hostingProviderId, string regionId, string machineConfigId);
+    /// <summary>Checks the domains against the Repo schema's validation rules before anything is written; throws when one is refused.</summary>
+    public Task<List<RepoWithDomain>> CheckRepoDomainsAsync(RepoDomainUpdateRequest request);
     public Task<BulkOperationSummary> UpdateRepoDomain(RepoDomainUpdateRequest repowithdomain);
     public Task<List<RepoCustomDomain>> GetRepoCustomDomainsAsync(List<RepoWithDomain> domains, string pojectId);
     public Task<bool> GetRepoCustomDomainExists(List<RepoWithDomain> domains);

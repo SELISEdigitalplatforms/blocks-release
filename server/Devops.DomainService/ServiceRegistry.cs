@@ -2,6 +2,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
+using Blocks.Genesis.DataAccess;
+using Blocks.Secrets;
 using Devops.DomainService.Deployment.Interfaces;
 using Devops.DomainService.Deployment.Models.Request;
 using Devops.DomainService.Deployment.RepositoryServices;
@@ -28,6 +30,16 @@ public static class ServiceRegistry
     public static void RegisterApplicationServices(this IServiceCollection services, ICloudBuildSecret cloudBuildSecret)
     {
         services.AddSingleton<ICloudBuildSecret>(cloudBuildSecret);
+
+        // GitHub tokens live in Key Vault through the secrets package's value store. Its
+        // registrations are TryAdd, so a host's own AddBlocksSecrets() call is kept; TokenRepository
+        // resolves the store only when a token is read or written.
+        services.AddBlocksSecrets();
+
+        // Genesis data access resolver (row filter + projection). ReleaseDataAccess is the only door to it.
+        // Registered here so Api, Worker and the in-process Release.Driver all get it.
+        services.AddBlocksDataAccess();
+        services.AddSingleton<IReleaseDataAccess, ReleaseDataAccess>();
 
         services.AddTransient<ITokenRepository, TokenRepository>();
         services.AddTransient<IBuildRepository, BuildRepository>();

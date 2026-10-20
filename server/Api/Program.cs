@@ -47,6 +47,8 @@ builder.Services.Configure<MvcOptions>(options =>
     // only the five SecretException subtypes and leaves every other exception alone, so no
     // existing controller's error behaviour changes.
     options.Filters.Add<SecretExceptionFilter>();
+    // A system schema's validation rules refusing a save (repos): 400 with the failed properties.
+    options.Filters.Add<Api.Middleware.DataValidationExceptionFilter>();
 });
 
 // Scoped internally: these read the request-scoped BlocksContext. The Key Vault client behind
@@ -75,6 +77,11 @@ services.RegisterApplicationServices(cloudBuildSecret);
 services.AddSingleton<IDeploymentHubService, DeploymentHubService>();
 
 var app = builder.Build();
+
+// The CSP origins come from configuration (FrontendRuntime + Csp:Extra*), not from a
+// compiled-in host list -- see Api.Security.ContentSecurityPolicy.
+var contentSecurityPolicy = Api.Security.ContentSecurityPolicy.Build(app.Configuration);
+app.UseMiddleware<Api.Middleware.SecurityHeadersMiddleware>(contentSecurityPolicy);
 
 app.MapHub<DeploymentLogHub>("/deploymentHub");
 app.UseDefaultFiles();

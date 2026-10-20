@@ -1,4 +1,6 @@
-﻿using Blocks.Genesis;
+﻿using Blocks.Genesis.Entities.Release;
+using Blocks.Genesis;
+using Blocks.Genesis.DataAccess.Rules;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using FluentValidation;
@@ -74,6 +76,8 @@ public class BuildService : IBuildService
                 && !string.IsNullOrWhiteSpace(blocksContext?.UserId)
                     ? blocksContext.UserId
                     : repo.CreatedBy;
+            // Rules on the repo first, so a refused repo leaves no namespace, pipeline or GitHub webhook behind.
+            await _repoRepository.CheckRepoAsync(repo, tenantId);
             var (pipelineRunNameGuid, buildImageName, paramNamespace, errorMessage) =
                 await _pipelineRunService.CreateNamespaceAsync(repo, tenantId, blocksUserId);
          
@@ -126,6 +130,11 @@ public class BuildService : IBuildService
                 StatusCode = HttpStatusCode.OK
             };
             return buildResponse;
+        }
+        catch (DataValidationException e)
+        {
+            _logger.LogWarning(e, "Build(): the repository was refused by a validation rule.");
+            return RefusedByRule(e);
         }
         catch (Exception e)
         {
@@ -584,6 +593,8 @@ public class BuildService : IBuildService
             List<RepoCustomDomain> repoCustomDomains = new List<RepoCustomDomain>();
 
             repoCustomDomains = await TransformToRepoCustomDomains(request);
+            // Rules on the repo's domain first, so a refused domain leaves no custom-domain record behind.
+            await _repoRepository.CheckRepoDomainsAsync(request);
             var saveresult = await _repoRepository.UpsertRepoCustomDomainsAsync(repoCustomDomains);
 
             var bulkUpdateResult = await _repoRepository.UpdateRepoDomain(request);
@@ -603,6 +614,10 @@ public class BuildService : IBuildService
                 StatusCode = HttpStatusCode.OK
             };
         }
+        catch (DataValidationException ex)
+        {
+            return RefusedByRule(ex);
+        }
         catch (Exception ex)
         {
             return new BuildResponse
@@ -613,6 +628,15 @@ public class BuildService : IBuildService
             };
         }
     }
+
+    /// <summary>A save a validation rule refused: 400, with the rule's message per property.</summary>
+    private static BuildResponse RefusedByRule(DataValidationException exception) => new()
+    {
+        Message = exception.Message,
+        Errors = exception.ToErrors(),
+        IsSuccess = false,
+        StatusCode = HttpStatusCode.BadRequest
+    };
 
     public async Task<List<RepoCustomDomain>> TransformToRepoCustomDomains(RepoDomainUpdateRequest request)
     {

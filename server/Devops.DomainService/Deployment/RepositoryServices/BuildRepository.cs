@@ -73,6 +73,7 @@ public class BuildRepository : IBuildRepository
         var collection = _dbContextProvider.GetCollection<Build>(BuildsCollectionName);
         try
         {
+            await _access.PrepareWriteAsync(ReleaseSchemas.Build, build, isInsert: true, "BuildRepository.SaveBuild");
             await collection.InsertOneAsync(build);
         }
         catch (MongoWriteException e)
@@ -85,6 +86,7 @@ public class BuildRepository : IBuildRepository
     {
         if (!await _access.InsertAllowedAsync(ReleaseSchemas.Build, "BuildRepository.SaveBuildByTenant", tenantId))
             throw new UnauthorizedAccessException("Data access policy denies creating a build.");
+        await _access.PrepareWriteAsync(ReleaseSchemas.Build, build, isInsert: true, "BuildRepository.SaveBuildByTenant", tenantId);
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
         var collection = _dbContext.GetCollection<Build>(BuildsCollectionName);
         await collection.InsertOneAsync(build);
@@ -190,6 +192,7 @@ public class BuildRepository : IBuildRepository
     {
         if (!await _access.InsertAllowedAsync(ReleaseSchemas.RepositoryWebhook, "BuildRepository.SaveWebhook", tenantId))
             return false;
+        await _access.PrepareWriteAsync(ReleaseSchemas.RepositoryWebhook, webhook, isInsert: true, "BuildRepository.SaveWebhook", tenantId);
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
         var collection = _dbContext.GetCollection<RepositoryWebhook>("RepositoryWebhooks");
         await collection.InsertOneAsync(webhook);

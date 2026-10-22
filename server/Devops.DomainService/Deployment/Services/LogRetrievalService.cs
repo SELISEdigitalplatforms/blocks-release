@@ -32,7 +32,6 @@ public class LogRetrievalService
                                 IBuildRepository buildRepository, 
                                 IRepoRepository repoRepository, 
                                 PipelineRunService pipelineRunService,
-                                TestReportService testReportService,
                                 IMessageClient messageClient,
                                 INotificationService notificationService,
                                 IDataGatewayDeploymentRepository dataGatewayDeploymentRepository,
@@ -51,7 +50,7 @@ public class LogRetrievalService
     private async Task SendBuiltInAsync(string tenantId, string configurationName, IEnumerable<string?> userIds, IDictionary<string, object?> payload)
     {
         try { await _notificationService.SendBuiltInAsync(tenantId, configurationName, userIds, payload); }
-        catch (Exception ex) { _logger?.LogWarning("Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", configurationName, tenantId, ex.GetType().Name); }
+        catch (Exception ex) { _logger.LogWarning(ex, "Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", configurationName, tenantId, ex.GetType().Name); }
     }
 
     public Task NotifyMonitoringTimedOutAsync(Build build) =>

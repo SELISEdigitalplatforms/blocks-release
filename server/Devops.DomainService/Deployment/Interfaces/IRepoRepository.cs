@@ -11,9 +11,9 @@ namespace Devops.DomainService.Deployment.Interfaces;
 public interface IRepoRepository
 {
     public Task<Repo> GetRepo(string repoId);
+    public Task<Repo> GetRepo(string repoId, string tenantId);
     /// <summary>The repo as the caller may see it: properties a View column rule hides are cleared. Never save it back.</summary>
     public Task<Repo?> GetRepoForView(string repoId);
-    public Task<Repo> GetRepo(string repoId, string tenantId);
     public Task<Repo?> GetRepoByBranch(string tenantId, string repoName, string branch);
     public Task<List<Repo>?> GetRepos();
     public Task<List<Build>?> GetRepoBuildList(

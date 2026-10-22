@@ -8,9 +8,9 @@ namespace Devops.DomainService.Deployment.Interfaces;
 public interface IBuildRepository
 {
     public Task<Build?> GetBuild(string buildId);
+    public Task<Build?> GetBuild(string buildId, string tenantId);
     /// <summary>The build as the caller may see it: properties a View column rule hides are cleared. Never save it back.</summary>
     public Task<Build?> GetBuildForView(string buildId);
-    public Task<Build?> GetBuild(string buildId, string tenantId);
     public Task<List<Build>?> GetBuilds(string repoId, string tenantId);
     public Task<List<Build>?> GetBuilds(string repoId, Tenant project);
     public Task SaveBuild(Build pod);

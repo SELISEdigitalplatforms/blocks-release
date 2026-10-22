@@ -158,14 +158,24 @@ internal static class ColumnMask
             {
                 changed |= RemoveHidden(nested, nestedRow);
             }
-            else if (element.Value is BsonArray array && masked is System.Collections.IList items && items.Count == array.Count)
+            else if (element.Value is BsonArray array && masked is System.Collections.IList items)
             {
-                for (var i = 0; i < array.Count; i++)
-                {
-                    if (array[i] is BsonDocument item && items[i] is IDictionary<string, object> itemRow)
-                        changed |= RemoveHidden(item, itemRow);
-                }
+                changed |= RemoveHiddenItems(array, items);
             }
+        }
+        return changed;
+    }
+
+    /// <summary><see cref="RemoveHidden"/> for each document in <paramref name="array"/>, matched by position to <paramref name="items"/>.</summary>
+    private static bool RemoveHiddenItems(BsonArray array, System.Collections.IList items)
+    {
+        if (items.Count != array.Count)
+            return false;
+        var changed = false;
+        for (var i = 0; i < array.Count; i++)
+        {
+            if (array[i] is BsonDocument item && items[i] is IDictionary<string, object> itemRow)
+                changed |= RemoveHidden(item, itemRow);
         }
         return changed;
     }

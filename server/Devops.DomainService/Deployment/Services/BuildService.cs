@@ -22,6 +22,8 @@ namespace Devops.DomainService.Deployment.Services;
 
 public class BuildService : IBuildService
 {
+    private const string CustomDomainFailedNotification = "release-custom-domain-failed";
+
     private readonly ILogger<BuildService> _logger;
     private readonly IBuildRepository _buildRepository;
     private readonly IRepoRepository _repoRepository;
@@ -558,9 +560,9 @@ public class BuildService : IBuildService
                 if (buildResponse.IsSuccess && request.viewInBlocksMonitor)
                     buildResponse.monitorError = await _monitorProvisioningService.CreateMonitorForRepoAsync(repo);
                 if (!string.IsNullOrWhiteSpace(buildResponse.monitorError))
-                    await NotificationService.SafeSendAsync(_notificationService, _logger, repo.ProjectId ?? BlocksContext.GetContext()?.TenantId, "release-custom-domain-failed",
+                    await NotificationService.SafeSendAsync(_notificationService, _logger, repo.ProjectId ?? BlocksContext.GetContext()?.TenantId, CustomDomainFailedNotification,
                         new[] { BlocksContext.GetContext()?.UserId },
-                        NotificationService.BuildPayload("release-custom-domain-failed", "Monitor entry not created",
+                        NotificationService.BuildPayload(CustomDomainFailedNotification, "Monitor entry not created",
                             "The monitor entry of the deployment could not be created.", false, ("repoId", repo.ItemId)));
                 return buildResponse;
             }
@@ -651,9 +653,9 @@ public class BuildService : IBuildService
     private Task NotifyCustomDomainFailedAsync()
     {
         var context = BlocksContext.GetContext();
-        return NotificationService.SafeSendAsync(_notificationService, _logger, context?.TenantId, "release-custom-domain-failed",
+        return NotificationService.SafeSendAsync(_notificationService, _logger, context?.TenantId, CustomDomainFailedNotification,
             new[] { context?.UserId },
-            NotificationService.BuildPayload("release-custom-domain-failed", "Custom domain update failed",
+            NotificationService.BuildPayload(CustomDomainFailedNotification, "Custom domain update failed",
                 "Updating the custom domain of the deployment failed.", false, ("projectId", context?.TenantId)));
     }
 

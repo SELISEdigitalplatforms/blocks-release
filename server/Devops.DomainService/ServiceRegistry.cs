@@ -63,6 +63,7 @@ public static class ServiceRegistry
         services.AddScoped<TestReportService>();
         services.AddScoped<SASTStrategy>();
         services.AddScoped<DASTStrategy>();
+        services.AddTransient<BuildAndRepoRepositories>();
         services.AddScoped<DependencyTrackAnalyticsService>();
         
 

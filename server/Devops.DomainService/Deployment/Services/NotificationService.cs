@@ -46,7 +46,7 @@ namespace Devops.DomainService.Deployment.Services
         {
             List<string>? people = null;
             try { people = await repoRepository.GetProjectPeopleList(tenantId); }
-            catch (Exception ex) { logger.LogWarning("Built-in notification: project people lookup failed. tenant={TenantId} error={ErrorType}", tenantId, ex.GetType().Name); }
+            catch (Exception ex) { logger.LogWarning(ex, "Built-in notification: project people lookup failed. tenant={TenantId} error={ErrorType}", tenantId, ex.GetType().Name); }
             return BuildRecipients(people, extra);
         }
 
@@ -70,7 +70,7 @@ namespace Devops.DomainService.Deployment.Services
         {
             if (service is null || string.IsNullOrWhiteSpace(tenantId)) return;
             try { await service.SendBuiltInAsync(tenantId, configurationName, userIds, payload); }
-            catch (Exception ex) { logger.LogWarning("Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", configurationName, tenantId, ex.GetType().Name); }
+            catch (Exception ex) { logger.LogWarning(ex, "Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", configurationName, tenantId, ex.GetType().Name); }
         }
 
         public async Task<bool> SendBuiltInAsync(string tenantId, string configurationName, IEnumerable<string?> userIds, IDictionary<string, object?> payload)
@@ -124,7 +124,7 @@ namespace Devops.DomainService.Deployment.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", configurationName, tenantId, ex.GetType().Name);
+                _logger.LogWarning(ex, "Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", configurationName, tenantId, ex.GetType().Name);
                 return false;
             }
         }

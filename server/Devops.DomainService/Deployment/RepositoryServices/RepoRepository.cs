@@ -46,16 +46,6 @@ public class RepoRepository : IRepoRepository
         return await scope.Apply(collection).FirstOrDefaultAsync();
     }
 
-    public async Task<Repo?> GetRepoForView(string repoId)
-    {
-        var collection = _dbContextProvider.GetCollection<Repo>(ReposCollection);
-        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId) & NotArchived;
-        // Masked: View column (property) rules clear what the caller may not see. Never save it back.
-        var scope = await _access.ReadAsync(ReleaseSchemas.Repo, filter, "RepoRepository.GetRepoForView");
-        if (!scope.Granted) return null;
-        return scope.ForView(await scope.Apply(collection).FirstOrDefaultAsync());
-    }
-
     public async Task<Repo?> GetRepo(string repoId, string tenantId)
     {
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
@@ -64,6 +54,16 @@ public class RepoRepository : IRepoRepository
         var scope = await _access.ReadAsync(ReleaseSchemas.Repo, filter, "RepoRepository.GetRepoByTenant", tenantId);
         if (!scope.Granted) return null;
         return await scope.Apply(collection).FirstOrDefaultAsync();
+    }
+
+    public async Task<Repo?> GetRepoForView(string repoId)
+    {
+        var collection = _dbContextProvider.GetCollection<Repo>(ReposCollection);
+        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId) & NotArchived;
+        // Masked: View column (property) rules clear what the caller may not see. Never save it back.
+        var scope = await _access.ReadAsync(ReleaseSchemas.Repo, filter, "RepoRepository.GetRepoForView");
+        if (!scope.Granted) return null;
+        return scope.ForView(await scope.Apply(collection).FirstOrDefaultAsync());
     }
 
     public async Task<Repo?> GetRepoByBranch(string tenantId, string repoFullName, string branch)

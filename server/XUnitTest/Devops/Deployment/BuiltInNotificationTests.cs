@@ -113,10 +113,13 @@ namespace XUnitTest.Devops.Deployment
         [Fact]
         public async Task SafeSend_NullServiceOrThrowingService_DoesNotThrow()
         {
-            await NotificationService.SafeSendAsync(null, NullLogger.Instance, "t1", "c", new[] { "u" }, Payload());
+            var withNull = () => NotificationService.SafeSendAsync(null, NullLogger.Instance, "t1", "c", new[] { "u" }, Payload());
+            await withNull.Should().NotThrowAsync();
             var svc = new Mock<INotificationService>();
             svc.Setup(s => s.SendBuiltInAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<IDictionary<string, object>>())).ThrowsAsync(new Exception("x"));
-            await NotificationService.SafeSendAsync(svc.Object, NullLogger.Instance, "t1", "c", new[] { "u" }, Payload());
+            var withThrowing = () => NotificationService.SafeSendAsync(svc.Object, NullLogger.Instance, "t1", "c", new[] { "u" }, Payload());
+            await withThrowing.Should().NotThrowAsync();
+            svc.Verify(s => s.SendBuiltInAsync("t1", "c", It.IsAny<IEnumerable<string>>(), It.IsAny<IDictionary<string, object>>()), Times.Once);
         }
 
         [Fact]
@@ -222,7 +225,9 @@ namespace XUnitTest.Devops.Deployment
         public async Task MonitoringTimedOut_NotifierFailure_Swallowed()
         {
             NotifierThrows();
-            await _f.LogRetrievalService().NotifyMonitoringTimedOutAsync(new Build { ItemId = "b1", CreatedBy = "starter", ProjectId = Tenant });
+            var act = () => _f.LogRetrievalService().NotifyMonitoringTimedOutAsync(new Build { ItemId = "b1", CreatedBy = "starter", ProjectId = Tenant });
+            await act.Should().NotThrowAsync();
+            _f.Notification.Verify(n => n.SendBuiltInAsync(Tenant, "release-build-monitoring-timed-out", It.IsAny<IEnumerable<string>>(), It.IsAny<IDictionary<string, object>>()), Times.Once);
         }
 
         // ---- 12 auto deploy ----
@@ -332,7 +337,9 @@ namespace XUnitTest.Devops.Deployment
         public async Task DataGateway_NotifierFailure_Swallowed()
         {
             NotifierThrows();
-            await _f.LogRetrievalService().NotifyDataGatewayFinishedAsync(Tenant, "run-1", "Failed");
+            var act = () => _f.LogRetrievalService().NotifyDataGatewayFinishedAsync(Tenant, "run-1", "Failed");
+            await act.Should().NotThrowAsync();
+            _f.Notification.Verify(n => n.SendBuiltInAsync(Tenant, "release-data-gateway-instance-finished", It.IsAny<IEnumerable<string>>(), It.IsAny<IDictionary<string, object>>()), Times.Once);
         }
 
         // ---- 46 code analysis ----

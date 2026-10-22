@@ -77,7 +77,7 @@ namespace XUnitTest.Devops.Deployment
             var repoService = new DependencyTrackRepositoryService(DbProvider.Object, new Mock<IKeyValueStore>().Object, new Mock<ILogger<DependencyTrackRepositoryService>>().Object);
             return new DependencyTrackAnalyticsService(
                 new Mock<ILogger<DependencyTrackAnalyticsService>>().Object,
-                Http.Object, BuildRepo.Object, RepoRepo.Object, repoService, Secret.Object, Config, Notification.Object);
+                Http.Object, new BuildAndRepoRepositories(BuildRepo.Object, RepoRepo.Object), repoService, Secret.Object, Config, Notification.Object);
         }
 
         public TestReportService TestReportService() =>
@@ -87,7 +87,7 @@ namespace XUnitTest.Devops.Deployment
                 new DASTStrategy());
 
         public LogRetrievalService LogRetrievalService() =>
-            new(BuildRepo.Object, RepoRepo.Object, PipelineRunService(), TestReportService(),
+            new(BuildRepo.Object, RepoRepo.Object, PipelineRunService(),
                 MessageClient.Object, Notification.Object, DataGatewayRepo.Object);
 
         public BuildService BuildService() =>

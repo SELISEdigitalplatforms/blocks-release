@@ -36,6 +36,15 @@ public class BuildRepository : IBuildRepository
         return await scope.Apply(buildCollection).FirstOrDefaultAsync();
     }
 
+    public async Task<Build?> GetBuild(string buildId, string tenantId)
+    {
+        var _dbContext = _dbContextProvider.GetDatabase(tenantId);
+        var buildCollection = _dbContext.GetCollection<Build>(BuildsCollectionName);
+        var filter = Builders<Build>.Filter.Eq(b => b.ItemId, buildId);
+        var build = buildCollection.Find(filter).FirstOrDefault();
+        return build;
+    }
+
     public async Task<Build?> GetBuildForView(string buildId)
     {
         var buildCollection = _dbContextProvider.GetCollection<Build>(BuildsCollectionName);
@@ -44,15 +53,6 @@ public class BuildRepository : IBuildRepository
         var scope = await _access.ReadAsync(ReleaseSchemas.Build, filter, "BuildRepository.GetBuildForView");
         if (!scope.Granted) return null;
         return scope.ForView(await scope.Apply(buildCollection).FirstOrDefaultAsync());
-    }
-
-    public async Task<Build?> GetBuild(string buildId, string tenantId)
-    {
-        var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-        var buildCollection = _dbContext.GetCollection<Build>(BuildsCollectionName);
-        var filter = Builders<Build>.Filter.Eq(b => b.ItemId, buildId);
-        var build = buildCollection.Find(filter).FirstOrDefault();
-        return build;
     }
 
     /// <summary>

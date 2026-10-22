@@ -41,7 +41,7 @@ namespace XUnitTest.Devops.AnalyticsTool
             var repoService = new DependencyTrackRepositoryService(_dbProvider.Object, new Mock<IKeyValueStore>().Object, new Mock<ILogger<DependencyTrackRepositoryService>>().Object);
             return new DependencyTrackAnalyticsService(
                 new Mock<ILogger<DependencyTrackAnalyticsService>>().Object,
-                _http.Object, _buildRepo.Object, _repoRepo.Object, repoService, _secret.Object, _config);
+                _http.Object, new BuildAndRepoRepositories(_buildRepo.Object, _repoRepo.Object), repoService, _secret.Object, _config);
         }
 
         private static HttpResponseMessage Resp(HttpStatusCode code) => new(code);

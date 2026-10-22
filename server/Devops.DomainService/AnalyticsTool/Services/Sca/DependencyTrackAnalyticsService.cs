@@ -26,13 +26,13 @@ public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
     private readonly IConfiguration _configuration;
     private readonly INotificationService? _notificationService;
 
-    public DependencyTrackAnalyticsService(ILogger<DependencyTrackAnalyticsService> logger, IHttpHelperServices httpHelperServices, IBuildRepository buildRepository, IRepoRepository repoRepository, DependencyTrackRepositoryService dependencyTrackRepositoryService, ICloudBuildSecret cloudBuildSecret, IConfiguration configuration, INotificationService? notificationService = null)
+    public DependencyTrackAnalyticsService(ILogger<DependencyTrackAnalyticsService> logger, IHttpHelperServices httpHelperServices, BuildAndRepoRepositories repositories, DependencyTrackRepositoryService dependencyTrackRepositoryService, ICloudBuildSecret cloudBuildSecret, IConfiguration configuration, INotificationService? notificationService = null)
     {
         _notificationService = notificationService;
         _logger = logger;
         _httpHelperServices = httpHelperServices;
-        _buildRepository = buildRepository;
-        _repoRepository = repoRepository;
+        _buildRepository = repositories.Builds;
+        _repoRepository = repositories.Repos;
         _dependencyTrackRepositoryService = dependencyTrackRepositoryService;
         _cloudBuildSecret = cloudBuildSecret;
         _configuration = configuration;
@@ -142,7 +142,7 @@ public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", "release-code-analysis-finished", build.ProjectId, ex.GetType().Name);
+            _logger.LogWarning(ex, "Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", "release-code-analysis-finished", build.ProjectId, ex.GetType().Name);
         }
     }
 

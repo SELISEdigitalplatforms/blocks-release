@@ -38,7 +38,7 @@ namespace XUnitTest.Devops.AnalyticsTool
 
         private DependencyTrackAnalyticsService CreateService() =>
             new(new Mock<ILogger<DependencyTrackAnalyticsService>>().Object,
-                _http.Object, _buildRepo.Object, _repoRepo.Object, null, _secret.Object, _config);
+                _http.Object, new BuildAndRepoRepositories(_buildRepo.Object, _repoRepo.Object), null, _secret.Object, _config);
 
         [Fact]
         public void ConvertAliasesToLinkAliases_BuildsAdvisoryLinks()

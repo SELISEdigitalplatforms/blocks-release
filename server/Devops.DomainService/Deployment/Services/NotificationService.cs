@@ -34,6 +34,101 @@ namespace Devops.DomainService.Deployment.Services
             _deploymentHubService = deploymentHubService;
         }
 
+        private static readonly TimeSpan BuiltInSendTimeout = TimeSpan.FromSeconds(5);
+
+        /// <summary>Distinct, non-empty user ids.</summary>
+        public static List<string> BuildRecipients(IEnumerable<string?>? people, params string?[] extra) =>
+            (people ?? Enumerable.Empty<string?>()).Concat(extra ?? Array.Empty<string?>())
+                .Where(u => !string.IsNullOrWhiteSpace(u)).Select(u => u!).Distinct().ToList();
+
+        /// <summary>Project people of a tenant plus extra ids. A failed lookup yields only the extra ids.</summary>
+        public static async Task<List<string>> ResolveRecipientsAsync(IRepoRepository repoRepository, ILogger logger, string tenantId, params string?[] extra)
+        {
+            List<string>? people = null;
+            try { people = await repoRepository.GetProjectPeopleList(tenantId); }
+            catch (Exception ex) { logger.LogWarning("Built-in notification: project people lookup failed. tenant={TenantId} error={ErrorType}", tenantId, ex.GetType().Name); }
+            return BuildRecipients(people, extra);
+        }
+
+        /// <summary>Payload with the common fields: ids and short text only.</summary>
+        public static Dictionary<string, object?> BuildPayload(string eventName, string title, string description, bool? isSuccess, params (string Key, object? Value)[] ids)
+        {
+            var payload = new Dictionary<string, object?>
+            {
+                ["event"] = eventName,
+                ["title"] = title,
+                ["description"] = description,
+                ["occurredAt"] = DateTime.UtcNow
+            };
+            if (isSuccess.HasValue) payload["isSuccess"] = isSuccess.Value;
+            foreach (var (key, value) in ids) payload[key] = value;
+            return payload;
+        }
+
+        /// <summary>Null-safe, never-throwing call for use at action sites.</summary>
+        public static async Task SafeSendAsync(INotificationService? service, ILogger logger, string? tenantId, string configurationName, IEnumerable<string?> userIds, IDictionary<string, object?> payload)
+        {
+            if (service is null || string.IsNullOrWhiteSpace(tenantId)) return;
+            try { await service.SendBuiltInAsync(tenantId, configurationName, userIds, payload); }
+            catch (Exception ex) { logger.LogWarning("Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", configurationName, tenantId, ex.GetType().Name); }
+        }
+
+        public async Task<bool> SendBuiltInAsync(string tenantId, string configurationName, IEnumerable<string?> userIds, IDictionary<string, object?> payload)
+        {
+            try
+            {
+                var recipients = BuildRecipients(userIds);
+                if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(configurationName))
+                    return false;
+                if (recipients.Count == 0)
+                {
+                    _logger.LogDebug("Built-in notification skipped, no recipient. config={ConfigurationName} tenant={TenantId}", configurationName, tenantId);
+                    return false;
+                }
+
+                var salt = _tenants.GetTenantByID(tenantId)?.TenantSalt;
+                var url = _configuration["NotificationServiceUrl"];
+                if (salt is null || string.IsNullOrWhiteSpace(url))
+                {
+                    _logger.LogWarning("Built-in notification not sent, tenant or notifier url unknown. config={ConfigurationName} tenant={TenantId}", configurationName, tenantId);
+                    return false;
+                }
+
+                var requestData = new
+                {
+                    ConnectionId = "",
+                    Roles = new List<string>(),
+                    UserIds = recipients,
+                    DenormalizedPayload = JsonSerializer.Serialize(payload),
+                    SaveDenormalizedPayloadAsAnObject = false,
+                    ConfigurationName = configurationName,
+                    ContentAvailable = true,
+                    ResponseKey = "status",
+                    ResponseValue = "sent"
+                };
+                var headers = new Dictionary<string, string>
+                {
+                    { "x-blocks-key", tenantId },
+                    { "Secret", _cryptoService.Hash(tenantId, salt) }
+                };
+
+                var (response, _) = await _httpHelperServices
+                    .MakeHttpPostRequest<NotificationResponse>(requestData, url, headers)
+                    .WaitAsync(BuiltInSendTimeout);
+
+                if (response is { isSuccess: true })
+                    return true;
+
+                _logger.LogWarning("Built-in notification was not accepted. config={ConfigurationName} tenant={TenantId} status=rejected", configurationName, tenantId);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", configurationName, tenantId, ex.GetType().Name);
+                return false;
+            }
+        }
+
         public async Task<bool> NotifyPipeLineLogData(BuildEventResponse logData, List<string> UserIds, string TenantId, string RepoId, string BuildStatus)
         {
             _logger.LogInformation($"Sending notification to users : {string.Join(", ", UserIds)} -- {TenantId}");

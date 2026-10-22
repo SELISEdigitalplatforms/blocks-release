@@ -12,6 +12,7 @@ using Devops.DomainService.AnalyticsTool.Models;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Devops.DomainService.DataGatewayDeployment.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Devops.DomainService.Deployment.Services;
 
@@ -25,6 +26,7 @@ public class LogRetrievalService
     private readonly IMessageClient _messageClient;
     private readonly INotificationService _notificationService;
     private readonly IDataGatewayDeploymentRepository _dataGatewayDeploymentRepository;
+    private readonly ILogger<LogRetrievalService> _logger;
 
     public LogRetrievalService(
                                 IBuildRepository buildRepository, 
@@ -33,7 +35,8 @@ public class LogRetrievalService
                                 TestReportService testReportService,
                                 IMessageClient messageClient,
                                 INotificationService notificationService,
-                                IDataGatewayDeploymentRepository dataGatewayDeploymentRepository
+                                IDataGatewayDeploymentRepository dataGatewayDeploymentRepository,
+                                ILogger<LogRetrievalService> logger = null
                                )
     {
         _buildRepository = buildRepository;
@@ -42,6 +45,31 @@ public class LogRetrievalService
         _messageClient = messageClient;
         _notificationService = notificationService;
         _dataGatewayDeploymentRepository = dataGatewayDeploymentRepository;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<LogRetrievalService>.Instance;
+    }
+
+    private async Task SendBuiltInAsync(string tenantId, string configurationName, IEnumerable<string?> userIds, IDictionary<string, object?> payload)
+    {
+        try { await _notificationService.SendBuiltInAsync(tenantId, configurationName, userIds, payload); }
+        catch (Exception ex) { _logger?.LogWarning("Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", configurationName, tenantId, ex.GetType().Name); }
+    }
+
+    public Task NotifyMonitoringTimedOutAsync(Build build) =>
+        SendBuiltInAsync(build.ProjectId, "release-build-monitoring-timed-out", new[] { build.CreatedBy },
+            NotificationService.BuildPayload("release-build-monitoring-timed-out", "Build monitoring timed out",
+                "Watching the pipeline timed out, so the build was marked failed.", false,
+                ("buildId", build.ItemId), ("repoId", build.RepoId), ("projectId", build.ProjectId)));
+
+    /// <remarks>The requester is not stored on the instance; the project people are told instead.</remarks>
+    public async Task NotifyDataGatewayFinishedAsync(string tenantId, string pipelineRunName, string status)
+    {
+        var ok = string.Equals(status, "Succeeded", StringComparison.OrdinalIgnoreCase);
+        var recipients = await NotificationService.ResolveRecipientsAsync(_repoRepository, _logger, tenantId);
+        await SendBuiltInAsync(tenantId, "release-data-gateway-instance-finished", recipients,
+            NotificationService.BuildPayload("release-data-gateway-instance-finished",
+                ok ? "Data gateway instance ready" : "Data gateway instance failed",
+                ok ? "Creating the data gateway instance finished." : "Creating the data gateway instance failed.", ok,
+                ("projectId", tenantId), ("pipelineRunName", pipelineRunName)));
     }
 
     public async Task CheckPodLogsAsync(Build build)
@@ -131,6 +159,7 @@ public class LogRetrievalService
             try
             {
                 await UpdateDeploymentStatus(pipelineRunName, tenantId, "Timeout");
+                await NotifyMonitoringTimedOutAsync(build);
                 try
                 {
                     PostBuildQueue postBuildQueue = new PostBuildQueue
@@ -411,6 +440,14 @@ public class LogRetrievalService
                     };
                     await _repoRepository.UpdateRepo(repoUpdate, tenantId);
                 }
+
+                var succeeded = finalStatus == EventStatus.SUCCEEDED;
+                var recipients = await NotificationService.ResolveRecipientsAsync(_repoRepository, _logger, tenantId, build.CreatedBy);
+                await SendBuiltInAsync(tenantId, "release-build-finished", recipients,
+                    NotificationService.BuildPayload("release-build-finished",
+                        succeeded ? "Build finished" : "Build failed",
+                        succeeded ? "The build and deployment succeeded." : "The build or deployment failed.", succeeded,
+                        ("buildId", build.ItemId), ("repoId", build.RepoId), ("projectId", tenantId), ("status", finalStatus)));
             }
         }
         catch (Exception ex)
@@ -594,7 +631,9 @@ public class LogRetrievalService
                     eventFinishedCount++;
                     if (eventFinishedCount > 10)
                     {
-                        await _dataGatewayDeploymentRepository.UpdatePipelineStatusAsync(tenantId,pipelineRunName, pipeLineStatus.Status);
+                        var gatewayUpdated = await _dataGatewayDeploymentRepository.UpdatePipelineStatusAsync(tenantId,pipelineRunName, pipeLineStatus.Status);
+                        if (gatewayUpdated)
+                            await NotifyDataGatewayFinishedAsync(tenantId, pipelineRunName, pipeLineStatus.Status);
                         Console.WriteLine($"All tasks reached a terminal state for pipeline {pipelineRunName}. Count {eventFinishedCount} Stopping polling.");
                         break;
                     }

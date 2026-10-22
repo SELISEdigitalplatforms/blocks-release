@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Interfaces;
+using Devops.DomainService.Deployment.Services;
 using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.Shared.Interfaces;
 using Blocks.Genesis.Entities.Release;
@@ -23,9 +24,11 @@ public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
     private readonly DependencyTrackRepositoryService _dependencyTrackRepositoryService;
     private readonly ICloudBuildSecret _cloudBuildSecret;
     private readonly IConfiguration _configuration;
+    private readonly INotificationService? _notificationService;
 
-    public DependencyTrackAnalyticsService(ILogger<DependencyTrackAnalyticsService> logger, IHttpHelperServices httpHelperServices, IBuildRepository buildRepository, IRepoRepository repoRepository, DependencyTrackRepositoryService dependencyTrackRepositoryService, ICloudBuildSecret cloudBuildSecret, IConfiguration configuration)
+    public DependencyTrackAnalyticsService(ILogger<DependencyTrackAnalyticsService> logger, IHttpHelperServices httpHelperServices, IBuildRepository buildRepository, IRepoRepository repoRepository, DependencyTrackRepositoryService dependencyTrackRepositoryService, ICloudBuildSecret cloudBuildSecret, IConfiguration configuration, INotificationService? notificationService = null)
     {
+        _notificationService = notificationService;
         _logger = logger;
         _httpHelperServices = httpHelperServices;
         _buildRepository = buildRepository;
@@ -119,6 +122,31 @@ public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
     }
 
     public async Task<string> RetrieveScaProjectUuid(Build build)
+    {
+        var uuid = await RetrieveScaProjectUuidCore(build);
+        var ok = !string.IsNullOrWhiteSpace(uuid);
+        await NotifyAnalysisFinishedAsync(build, ok);
+        return uuid;
+    }
+
+    private async Task NotifyAnalysisFinishedAsync(Build build, bool ok)
+    {
+        if (_notificationService is null) return;
+        try
+        {
+            await _notificationService.SendBuiltInAsync(build.ProjectId, "release-code-analysis-finished", new[] { build.CreatedBy },
+                NotificationService.BuildPayload("release-code-analysis-finished",
+                    ok ? "Dependency analysis finished" : "Dependency analysis failed",
+                    ok ? "The dependency (SCA) analysis of the build finished." : "The dependency (SCA) analysis of the build did not finish.", ok,
+                    ("buildId", build.ItemId), ("repoId", build.RepoId), ("projectId", build.ProjectId), ("analysisType", "SCA")));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", "release-code-analysis-finished", build.ProjectId, ex.GetType().Name);
+        }
+    }
+
+    private async Task<string> RetrieveScaProjectUuidCore(Build build)
     {
         var formattedRepoName = Regex.Replace(build.RepoName, "[^a-zA-Z0-9]", "-", RegexOptions.None, RegexTimeout).ToLower().Trim()
                     .Trim('-')

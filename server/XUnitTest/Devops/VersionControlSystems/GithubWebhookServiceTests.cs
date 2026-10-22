@@ -93,6 +93,25 @@ namespace XUnitTest.Devops.VersionControlSystems
         }
 
         [Fact]
+        public async Task CreateWebhook_Created_MapsGithubSnakeCaseConfig()
+        {
+            SetupToken();
+            var success = new GithubWebhookSuccessResponse
+            {
+                id = 42,
+                config = new GithubWebhookConfig { url = "https://hook/tenant-9", content_type = "json", insecure_ssl = "0" }
+            };
+            _http.Setup(h => h.MakeHttpRequest<GithubWebhookSuccessResponse, GithubWebhookErrorResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                 .ReturnsAsync((success, null, Resp(HttpStatusCode.Created)));
+
+            var result = await CreateService().CreateWebhook(Repo());
+
+            result.Config.Url.Should().Be("https://hook/tenant-9");
+            result.Config.ContentType.Should().Be("json");
+            result.Config.InsecureSsl.Should().Be("0");
+        }
+
+        [Fact]
         public async Task CreateWebhook_ExplicitTarget_IgnoresAnUnrelatedAmbientTenant()
         {
             GithubWebhookRequest sent = null;
@@ -169,14 +188,53 @@ namespace XUnitTest.Devops.VersionControlSystems
             result.Should().BeFalse();
         }
 
-        [Fact]
-        public async Task UpdateWebhookStatus_Ok_ReturnsFalse()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task UpdateWebhookStatus_Ok_SavesTheStateGithubReports(bool active)
         {
             SetupToken();
             var repo = Repo();
-            repo.GithubWebhook = new GithubWebhook { Id = 1 };
+            repo.ItemId = "repo-1";
+            repo.GithubWebhook = new GithubWebhook { Id = 1, Active = !active };
+            _http.Setup(h => h.MakeHttpRequest<GithubWebhookSuccessResponse, GithubWebhookErrorResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                 .ReturnsAsync((new GithubWebhookSuccessResponse { id = 1, active = active }, null, Resp(HttpStatusCode.OK)));
+            _repoRepo.Setup(r => r.UpdateRepoGithubWebhookActive("repo-1", active)).ReturnsAsync(true);
+
+            var result = await CreateService().UpdateWebhookStatus(repo, active);
+
+            result.Should().BeTrue();
+            repo.GithubWebhook.Active.Should().Be(active);
+            _repoRepo.Verify(r => r.UpdateRepoGithubWebhookActive("repo-1", active), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateWebhookStatus_OkWithoutTheHookInTheBody_SavesTheRequestedState()
+        {
+            SetupToken();
+            var repo = Repo();
+            repo.ItemId = "repo-1";
+            repo.GithubWebhook = new GithubWebhook { Id = 1, Active = false };
             _http.Setup(h => h.MakeHttpRequest<GithubWebhookSuccessResponse, GithubWebhookErrorResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
                  .ReturnsAsync((new GithubWebhookSuccessResponse(), null, Resp(HttpStatusCode.OK)));
+            _repoRepo.Setup(r => r.UpdateRepoGithubWebhookActive("repo-1", true)).ReturnsAsync(true);
+
+            var result = await CreateService().UpdateWebhookStatus(repo, true);
+
+            result.Should().BeTrue();
+            _repoRepo.Verify(r => r.UpdateRepoGithubWebhookActive("repo-1", true), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateWebhookStatus_OkButTheSaveIsRefused_ReturnsFalse()
+        {
+            SetupToken();
+            var repo = Repo();
+            repo.ItemId = "repo-1";
+            repo.GithubWebhook = new GithubWebhook { Id = 1 };
+            _http.Setup(h => h.MakeHttpRequest<GithubWebhookSuccessResponse, GithubWebhookErrorResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                 .ReturnsAsync((new GithubWebhookSuccessResponse { id = 1, active = true }, null, Resp(HttpStatusCode.OK)));
+            _repoRepo.Setup(r => r.UpdateRepoGithubWebhookActive("repo-1", true)).ReturnsAsync(false);
 
             var result = await CreateService().UpdateWebhookStatus(repo, true);
 
@@ -202,8 +260,32 @@ namespace XUnitTest.Devops.VersionControlSystems
 
             var result = await CreateService().UpdateWebhookStatus(repo, true);
 
-            result.Should().BeFalse();
+            result.Should().BeTrue();
+            repo.GithubWebhook.Id.Should().Be(2);
             _repoRepo.Verify(r => r.UpdateRepo(It.IsAny<Repo>()), Times.Once);
+            _repoRepo.Verify(r => r.UpdateRepoGithubWebhookActive(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateWebhookStatus_NotFoundAndRecreateFails_ReturnsFalse()
+        {
+            SetupToken();
+            var repo = Repo();
+            repo.GithubWebhook = new GithubWebhook { Id = 1 };
+            var call = 0;
+            _http.Setup(h => h.MakeHttpRequest<GithubWebhookSuccessResponse, GithubWebhookErrorResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                 .ReturnsAsync(() =>
+                 {
+                     call++;
+                     return call == 1
+                         ? ((GithubWebhookSuccessResponse)null, (GithubWebhookErrorResponse)null, Resp(HttpStatusCode.NotFound))
+                         : (null, new GithubWebhookErrorResponse { errors = new List<GithubWebhookError> { new() { message = "x" } } }, Resp(HttpStatusCode.UnprocessableEntity));
+                 });
+
+            var result = await CreateService().UpdateWebhookStatus(repo, true);
+
+            result.Should().BeFalse();
+            _repoRepo.Verify(r => r.UpdateRepo(It.IsAny<Repo>()), Times.Never);
         }
 
         [Fact]
@@ -218,6 +300,7 @@ namespace XUnitTest.Devops.VersionControlSystems
             var result = await CreateService().UpdateWebhookStatus(repo, true);
 
             result.Should().BeFalse();
+            _repoRepo.Verify(r => r.UpdateRepoGithubWebhookActive(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
         }
 
         [Fact]
@@ -237,10 +320,29 @@ namespace XUnitTest.Devops.VersionControlSystems
                          : (new GithubWebhookSuccessResponse(), null, Resp(HttpStatusCode.OK));
                  });
             _repoRepo.Setup(r => r.UpdateRepo(It.IsAny<Repo>())).ReturnsAsync(true);
+            _repoRepo.Setup(r => r.UpdateRepoGithubWebhookActive(It.IsAny<string>(), true)).ReturnsAsync(true);
+
+            var result = await CreateService().UpdateWebhookStatus(repo, true);
+
+            result.Should().BeTrue();
+            repo.GithubWebhook.Id.Should().Be(3);
+            _repoRepo.Verify(r => r.UpdateRepoGithubWebhookActive(It.IsAny<string>(), true), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateWebhookStatus_NullWebhookAndCreateFails_ReturnsFalseWithoutPatching()
+        {
+            SetupToken();
+            var repo = Repo();
+            repo.GithubWebhook = null;
+            _http.Setup(h => h.MakeHttpRequest<GithubWebhookSuccessResponse, GithubWebhookErrorResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(), It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                 .ReturnsAsync((null, new GithubWebhookErrorResponse { errors = new List<GithubWebhookError> { new() { message = "x" } } }, Resp(HttpStatusCode.UnprocessableEntity)));
 
             var result = await CreateService().UpdateWebhookStatus(repo, true);
 
             result.Should().BeFalse();
+            _http.Verify(h => h.MakeHttpRequest<GithubWebhookSuccessResponse, GithubWebhookErrorResponse>(It.IsAny<string>(), It.IsAny<string>(), HttpMethod.Patch, It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()), Times.Never);
+            _repoRepo.Verify(r => r.UpdateRepoGithubWebhookActive(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
         }
 
         [Fact]

@@ -112,6 +112,13 @@ public class GithubWebhookService : IGithubWebhookService
             if( response.StatusCode == HttpStatusCode.Created)
             {
                 GithubWebhook repoWebhook = MapService.Map<GithubWebhookSuccessResponse, GithubWebhook>(data);
+                // GitHub names these content_type and insecure_ssl, which the name-based mapper does not match.
+                if (repoWebhook is not null && data?.config is not null)
+                {
+                    repoWebhook.Config ??= new Config { Url = data.config.url };
+                    repoWebhook.Config.ContentType = data.config.content_type;
+                    repoWebhook.Config.InsecureSsl = data.config.insecure_ssl;
+                }
                 _logger.LogInformation($"Successfully created webhook for repo {repo.RepoUrl}");
                 return repoWebhook;
             }
@@ -135,6 +142,11 @@ public class GithubWebhookService : IGithubWebhookService
             if (repo.GithubWebhook is null)
             {
                 await CreateNewWebhook(repo);
+                if (repo.GithubWebhook is null)
+                {
+                    _logger.LogWarning("No webhook could be created for repo {RepoUrl}; its status was not updated.", repo.RepoUrl);
+                    return false;
+                }
             }
             var token = await _tokenRepository.getToken();
             if (token == null)
@@ -163,14 +175,24 @@ public class GithubWebhookService : IGithubWebhookService
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                _logger.LogInformation($"Successfully updated webhook status for repo {repo.RepoUrl}");
-                return false;
+                // GitHub answers with the hook as it now stands: trust that when it is this hook, otherwise
+                // store the state that was asked for, which GitHub has just accepted.
+                var active = data is not null && data.id == webhookId ? data.active : activationStatus;
+                repo.GithubWebhook.Active = active;
+                var saved = await _repoRepository.UpdateRepoGithubWebhookActive(repo.ItemId, active);
+                if (saved)
+                    _logger.LogInformation("Successfully updated webhook status for repo {RepoUrl}", repo.RepoUrl);
+                else
+                    _logger.LogWarning("Webhook status of repo {RepoUrl} changed on GitHub but could not be saved.", repo.RepoUrl);
+                return saved;
             }
             else if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                await CreateNewWebhook(repo);
-                _logger.LogInformation($"Successfully updated webhook status for repo {repo.RepoUrl}");
-                return false;
+                // The hook is gone on GitHub: a new one is created, and saved, in the state the
+                // repository's deployment type asks for.
+                var recreated = await CreateNewWebhook(repo);
+                _logger.LogInformation("Webhook of repo {RepoUrl} was missing on GitHub; recreated: {Recreated}", repo.RepoUrl, recreated);
+                return recreated;
             }
             else
             {

@@ -633,4 +633,20 @@ public class RepoRepository : IRepoRepository
         var result = await collection.UpdateOneAsync(filter, update);
         return result.MatchedCount == 1;
     }
+
+    // Keeps the stored hook in step with GitHub after a Manual/Auto switch. Sets GithubWebhook.Active
+    // only; a repository with no stored hook has no field to set and is left alone.
+    public async Task<bool> UpdateRepoGithubWebhookActive(string repoId, bool active)
+    {
+        var collection = _dbContextProvider.GetCollection<Repo>(ReposCollection);
+        var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
+            Builders<Repo>.Filter.Eq(r => r.ItemId, repoId) & Builders<Repo>.Filter.Ne(r => r.GithubWebhook, null),
+            "RepoRepository.UpdateRepoGithubWebhookActive");
+        if (filter is null) return false;
+        var update = Builders<Repo>.Update.Set(r => r.GithubWebhook.Active, active);
+
+        // MatchedCount only: saving the state the hook already holds is still a success.
+        var result = await collection.UpdateOneAsync(filter, update);
+        return result.MatchedCount == 1;
+    }
 }

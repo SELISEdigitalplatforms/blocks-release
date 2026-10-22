@@ -51,6 +51,7 @@ public interface IRepoRepository
     public Task<List<string>> GetProjectPeopleList(string tenantId);
     public Task<bool> UpdateRepoDependencyTrackProjectUuid(string repoId, string dependencyTrackProjectUuid, string tenantId);
     public Task<bool> UpdateRepoSecretStoreItemId(string repoId, string secretStoreItemId, string tenantId);
+    public Task<bool> UpdateRepoGithubWebhookActive(string repoId, bool active);
 
 
 

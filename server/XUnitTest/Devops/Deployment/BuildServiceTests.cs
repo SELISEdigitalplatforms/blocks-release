@@ -32,7 +32,7 @@ namespace XUnitTest.Devops.Deployment
         [Fact]
         public async Task GetBuildWithRepo_Found_ReturnsBuild()
         {
-            _f.BuildRepo.Setup(b => b.GetBuild("b1")).ReturnsAsync(new Build { RepoName = "r" });
+            _f.BuildRepo.Setup(b => b.GetBuildForView("b1")).ReturnsAsync(new Build { RepoName = "r" });
             (await _f.BuildService().GetBuildWithRepo("b1")).Should().NotBeNull();
         }
 

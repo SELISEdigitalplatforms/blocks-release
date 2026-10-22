@@ -98,7 +98,7 @@ public class BuildController : ControllerBase
             // The repo is resolved first: when it does not exist the contract is an empty
             // build array, so querying builds beforehand was both wasted work and the reason
             // the not-found body could carry builds in it.
-            var repo = await _repoRepository.GetRepo(RepoId);
+            var repo = await _repoRepository.GetRepoForView(RepoId);
             if (repo is null)
             {
                 // Built explicitly rather than as a BaseApiResponse: the inherited Errors

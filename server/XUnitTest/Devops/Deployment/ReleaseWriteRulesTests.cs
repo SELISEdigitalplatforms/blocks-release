@@ -253,15 +253,16 @@ public class ReleaseWriteRulesTests : IDisposable
         access.Setup(a => a.EditFilterAsync(ReleaseSchemas.Repo, It.IsAny<FilterDefinition<Repo>>(), It.IsAny<string>(), null))
             .ReturnsAsync(policy);
         var repo = new Repo { ItemId = "r1" };
-        access.Setup(a => a.PrepareWriteAsync(ReleaseSchemas.Repo, repo, false, It.IsAny<string>(), null)).ReturnsAsync(repo);
         var collection = new Mock<IMongoCollection<Repo>>();
+        // The replace keeps values hidden from the caller, then runs the rules.
+        access.Setup(a => a.PrepareReplaceAsync(ReleaseSchemas.Repo, repo, collection.Object, policy, It.IsAny<string>(), null)).ReturnsAsync(repo);
         collection.Setup(c => c.ReplaceOneAsync(policy, repo, It.IsAny<ReplaceOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ReplaceOneResult.Acknowledged(1, 1, null));
 
         var updated = await RepositoryOver(collection.Object, access.Object).UpdateRepo(repo);
 
         updated.Should().BeTrue();
-        access.Verify(a => a.PrepareWriteAsync(ReleaseSchemas.Repo, repo, false, It.IsAny<string>(), null), Times.Once);
+        access.Verify(a => a.PrepareReplaceAsync(ReleaseSchemas.Repo, repo, collection.Object, policy, It.IsAny<string>(), null), Times.Once);
     }
 
     [Fact]

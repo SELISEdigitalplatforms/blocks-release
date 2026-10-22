@@ -84,7 +84,7 @@ namespace ReleaseDriver
         {
             try
             {
-                var repo = await _repoRepository.GetRepo(repoId);
+                var repo = await _repoRepository.GetRepoForView(repoId);
                 if (repo is null)
                 {
                     return new BaseApiResponse

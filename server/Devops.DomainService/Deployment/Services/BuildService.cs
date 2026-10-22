@@ -436,7 +436,7 @@ public class BuildService : IBuildService
 
     public async Task<Build?> GetBuildWithRepo(string buildId)
     {
-        var builds = await _buildRepository.GetBuild(buildId);
+        var builds = await _buildRepository.GetBuildForView(buildId);
         if (builds != null)
             return builds;
         return null;

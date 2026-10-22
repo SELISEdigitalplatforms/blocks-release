@@ -46,6 +46,16 @@ public class RepoRepository : IRepoRepository
         return await scope.Apply(collection).FirstOrDefaultAsync();
     }
 
+    public async Task<Repo?> GetRepoForView(string repoId)
+    {
+        var collection = _dbContextProvider.GetCollection<Repo>(ReposCollection);
+        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId) & NotArchived;
+        // Masked: View column (property) rules clear what the caller may not see. Never save it back.
+        var scope = await _access.ReadAsync(ReleaseSchemas.Repo, filter, "RepoRepository.GetRepoForView");
+        if (!scope.Granted) return null;
+        return scope.ForView(await scope.Apply(collection).FirstOrDefaultAsync());
+    }
+
     public async Task<Repo?> GetRepo(string repoId, string tenantId)
     {
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
@@ -74,7 +84,8 @@ public class RepoRepository : IRepoRepository
         var collection = _dbContextProvider.GetCollection<Repo>(ReposCollection);
         var scope = await _access.ReadAsync(ReleaseSchemas.Repo, NotArchived, "RepoRepository.GetRepos");
         if (!scope.Granted) return new List<Repo>();
-        return await scope.Apply(collection).ToListAsync();
+        // Only the API lists these: View column (property) rules clear what the caller may not see.
+        return scope.ForView(await scope.Apply(collection).ToListAsync());
     }
 
     // Page bounds live here rather than in the controller so that no caller, present or
@@ -111,11 +122,12 @@ public class RepoRepository : IRepoRepository
             .Descending(b => b.CreatedDate)
             .Descending("_id");
 
-        return await scope.Apply(collection)
+        // Only the API lists these: View column (property) rules clear what the caller may not see.
+        return scope.ForView(await scope.Apply(collection)
             .Sort(sort)
             .Skip(safeSkip)
             .Limit(safePageSize)
-            .ToListAsync();
+            .ToListAsync());
     }
 
     public async Task<long> GetRepoBuildCount(string RepoId, string? branch)
@@ -283,7 +295,7 @@ public class RepoRepository : IRepoRepository
             Builders<Repo>.Filter.Eq(r => r.ItemId, repo.ItemId), callSite, tenantId);
         if (filter is null) return false;
 
-        await _access.PrepareWriteAsync(ReleaseSchemas.Repo, repo, isInsert: false, callSite, tenantId);
+        await _access.PrepareReplaceAsync(ReleaseSchemas.Repo, repo, collection, filter, callSite, tenantId);
         var result = await collection.ReplaceOneAsync(filter, repo, cancellationToken: default);
         return result.MatchedCount == 1;
     }

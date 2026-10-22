@@ -24,9 +24,7 @@ vi.mock("nuqs", async (importOriginal) => {
 
 vi.mock("@/cross-modules/deployment/hooks/use-github-info", async (importOriginal) => {
   const actual =
-    await importOriginal<
-      typeof import("@/cross-modules/deployment/hooks/use-github-info")
-    >();
+    await importOriginal<typeof import("@/cross-modules/deployment/hooks/use-github-info")>();
   return {
     ...actual,
     useGetRepoDetails: vi.fn(),
@@ -147,7 +145,7 @@ describe("RepoDetails page", () => {
       route: "/app/deployment/repo/r1?tab=details",
       nuqs: true,
     });
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
   it("renders the empty deployment state and opens settings modal via Deploy Now", () => {
@@ -180,9 +178,7 @@ describe("RepoDetails page", () => {
 
     // The set is keyed on the repository alone, so it has to be reachable before the first
     // build exists - otherwise it could only be created after a deployment that needed it.
-    expect(
-      screen.getByRole("tab", { name: "Environment Variables" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Environment Variables" })).toBeInTheDocument();
   });
 
   it("falls back to Details when a stale ?tab=history reaches the empty state", () => {
@@ -215,9 +211,7 @@ describe("RepoDetails page", () => {
     });
     // The first button in the empty state is the back control.
     fireEvent.click(screen.getAllByRole("button")[0]);
-    expect(navigateMock).toHaveBeenCalledWith(
-      expect.stringContaining("deployment"),
-    );
+    expect(navigateMock).toHaveBeenCalledWith(expect.stringContaining("deployment"));
   });
 
   it("deploys from the settings modal in the empty state", async () => {
@@ -246,9 +240,7 @@ describe("RepoDetails page", () => {
     });
     fireEvent.click(deployButtons[deployButtons.length - 1]);
     expect(initialDeploy).toHaveBeenCalled();
-    expect(navigateMock).toHaveBeenCalledWith(
-      expect.stringContaining("deployment-live/fresh"),
-    );
+    expect(navigateMock).toHaveBeenCalledWith(expect.stringContaining("deployment-live/fresh"));
   });
 
   it("sends the Blocks Monitor opt-in and reports a monitor failure", async () => {
@@ -283,9 +275,7 @@ describe("RepoDetails page", () => {
       expect.anything(),
     );
     // The deployment still counts as started; the monitor failure is reported on top of it.
-    expect(navigateMock).toHaveBeenCalledWith(
-      expect.stringContaining("deployment-live/fresh"),
-    );
+    expect(navigateMock).toHaveBeenCalledWith(expect.stringContaining("deployment-live/fresh"));
     expect(vi.mocked(toast)).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "Blocks Monitor",
@@ -315,12 +305,10 @@ describe("RepoDetails page", () => {
       route: "/app/deployment/repo/r1?tab=details",
       nuqs: true,
     });
-    expect(
-      screen.getByText("https://custom.example.com"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("https://custom.example.com")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Deploy" }));
     fireEvent.click(screen.getByRole("button", { name: /Cancel/i }));
-    expect(screen.getByText("Deployment Information")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Deployment details" })).toBeInTheDocument();
   });
 
   it("switches tabs through the mobile select", async () => {
@@ -383,7 +371,7 @@ describe("RepoDetails page", () => {
       route: "/app/deployment/repo/r1?tab=details",
       nuqs: true,
     });
-    expect(screen.getByText("Deployment Information")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Deployment details" })).toBeInTheDocument();
     expect(container.textContent).toContain("https://app.dev");
   });
 
@@ -411,9 +399,7 @@ describe("RepoDetails page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Deploy" }));
     fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
     expect(deployMutate).toHaveBeenCalled();
-    expect(navigateMock).toHaveBeenCalledWith(
-      expect.stringContaining("deployment-live/newbuild"),
-    );
+    expect(navigateMock).toHaveBeenCalledWith(expect.stringContaining("deployment-live/newbuild"));
   });
 
   it("consumes the refresh query param on mount", () => {
@@ -466,9 +452,7 @@ describe("RepoDetails page", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Deploy" }));
     fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
-    expect(navigateMock).toHaveBeenCalledWith(
-      expect.stringContaining("deployment"),
-    );
+    expect(navigateMock).toHaveBeenCalledWith(expect.stringContaining("deployment"));
   });
 
   it("deploys from the settings modal with no build id in the response", async () => {
@@ -495,9 +479,7 @@ describe("RepoDetails page", () => {
     });
     fireEvent.click(deployButtons[deployButtons.length - 1]);
     expect(initialDeploy).toHaveBeenCalled();
-    expect(navigateMock).toHaveBeenCalledWith(
-      expect.stringContaining("deployment"),
-    );
+    expect(navigateMock).toHaveBeenCalledWith(expect.stringContaining("deployment"));
   });
 
   it("handles a settings-modal deployment error", async () => {
@@ -578,9 +560,25 @@ describe("RepoDetails page", () => {
     // The old build was trimmed to three with a "View all history" toggle; a page is now
     // rendered whole, and the toggle is gone.
     expect(screen.getByText("Showing 1-4 of 4 deploys")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /View all history/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /View all history/i })).not.toBeInTheDocument();
+  });
+
+  it("jumps from the latest deployment to the full history", () => {
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: {
+        data: { repo: { ...baseRepo }, build: [makeBuild()] },
+        isSuccess: true,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    fireEvent.click(screen.getByRole("button", { name: /View all history/i }));
+    expect(currentTab).toBe("history");
   });
 
   it("does not offer a pager when the whole history fits on one page", () => {
@@ -621,7 +619,7 @@ describe("RepoDetails page", () => {
       nuqs: true,
     });
     fireEvent.click(screen.getByRole("button", { name: /Configure/i }));
-    expect(screen.getByText("Deployment Information")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Deployment Settings" })).toBeInTheDocument();
   });
 
   it("shows only Configure in the header, without the Tracing and Logs placeholders", () => {
@@ -694,18 +692,14 @@ describe("RepoDetails page", () => {
 
     it("offers Delete when a deployment is live", () => {
       renderWithRepo();
-      expect(
-        screen.getByTestId("delete-deployment-button"),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("delete-deployment-button")).toBeInTheDocument();
     });
 
     it("hides Delete when no namespace is recorded", () => {
       // Never deployed, already deleted, or deployed before the namespace was captured -
       // in every case there is nothing this page can delete.
       renderWithRepo({ deployedNamespace: null });
-      expect(
-        screen.queryByTestId("delete-deployment-button"),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId("delete-deployment-button")).not.toBeInTheDocument();
     });
 
     it("names the repository and URL in the modal and sends nothing until confirmed", () => {
@@ -782,12 +776,8 @@ describe("RepoDetails page", () => {
       expect(status).not.toHaveTextContent("Succeeded");
       // The URL is still shown for reference but is no longer a live link.
       expect(screen.getByTestId("deploys-to-inactive")).toBeInTheDocument();
-      expect(
-        container.querySelector('a[href="https://app.dev"]'),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByTestId("delete-deployment-button"),
-      ).not.toBeInTheDocument();
+      expect(container.querySelector('a[href="https://app.dev"]')).not.toBeInTheDocument();
+      expect(screen.queryByTestId("delete-deployment-button")).not.toBeInTheDocument();
     });
   });
 
@@ -803,9 +793,7 @@ describe("RepoDetails page", () => {
       route: "/app/deployment/repo/r1?tab=details",
       nuqs: true,
     });
-    expect(
-      screen.getByText(/Missing required parameters/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Missing required parameters/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Go Back" }));
     expect(navigateMock).toHaveBeenCalledWith(-1);
   });
@@ -820,9 +808,7 @@ describe("RepoDetails page", () => {
 
     const lastCallOptions = () => {
       const calls = vi.mocked(useGetRepoDetails).mock.calls;
-      return calls[calls.length - 1][1] as
-        | { pageNumber?: number; pageSize?: number }
-        | undefined;
+      return calls[calls.length - 1][1] as { pageNumber?: number; pageSize?: number } | undefined;
     };
 
     // H3
@@ -916,9 +902,7 @@ describe("RepoDetails page", () => {
       // latestBuild is populated. (Not asserting the absence of "N/A" anywhere on the
       // page - other fields legitimately render it, e.g. a null commit.) The probe that
       // reverts this derivation to the filtered list is what proves the assertion bites.
-      expect(
-        screen.getByText("https://github.com/acme/app"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("https://github.com/acme/app")).toBeInTheDocument();
     });
   });
 });

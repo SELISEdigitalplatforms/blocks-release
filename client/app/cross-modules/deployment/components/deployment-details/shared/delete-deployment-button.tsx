@@ -40,8 +40,7 @@ export const DeleteDeploymentButton = ({
     dialogTitle: "Delete deployment?",
     dialogSubtitle: (
       <>
-        This permanently destroys the deployment of{" "}
-        <strong>{repoName}</strong>
+        This permanently destroys the deployment of <strong>{repoName}</strong>
         {deploymentUrl ? (
           <>
             {" "}
@@ -64,10 +63,12 @@ export const DeleteDeploymentButton = ({
           variant="destructive"
           onClick={() => onModalOpenChange(true)}
           disabled={isDeleting || isDisabled}
-          className="w-full shadow-xs sm:w-auto"
-          data-testid="delete-deployment-button">
+          size="sm"
+          className="shadow-xs"
+          data-testid="delete-deployment-button"
+        >
           <div className="flex items-center justify-center gap-2">
-            <Trash2 size={20} />
+            <Trash2 size={16} />
             <span>{isDeleting ? "Deleting..." : "Delete"}</span>
           </div>
         </Button>

@@ -1,5 +1,5 @@
 /**
- * Test double for `@seliseblocks/genesis-os/providers`.
+ * Test double for `@seliseblocks/app-kit/providers`.
  */
 import React from "react";
 

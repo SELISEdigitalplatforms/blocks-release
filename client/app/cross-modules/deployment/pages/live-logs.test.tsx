@@ -40,10 +40,24 @@ describe("LiveLogs page", () => {
       route: "/app/deployment/repo/r1/deployment-live/b1",
     });
     expect(screen.getByRole("heading", { name: "b1" })).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button")[0]);
-    expect(navigateMock).toHaveBeenCalledWith(
-      expect.stringContaining("refresh=true"),
-    );
+    expect(screen.getByText("Live deployment logs for this build")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Go back" }));
+    expect(navigateMock).toHaveBeenCalledWith(expect.stringContaining("refresh=true"));
+  });
+
+  it("names the repository and branch under the title", () => {
+    vi.mocked(useGetCardProjectAndBranch).mockReturnValue({
+      data: { data: { events: [], repoName: "org/web-app", branch: "main" } },
+      isSuccess: true,
+      isError: false,
+      error: null,
+      isLoading: false,
+      refetch: vi.fn(),
+    } as never);
+    renderWithProviders(<LiveLogs />, {
+      route: "/app/deployment/repo/r1/deployment-live/b1",
+    });
+    expect(screen.getByText("Live build of web-app on main")).toBeInTheDocument();
   });
 
   it("redirects and toasts on a fatal error", async () => {
@@ -60,8 +74,6 @@ describe("LiveLogs page", () => {
     });
     const { toast } = await import("@/hooks/use-toast");
     expect(navigateMock).toHaveBeenCalled();
-    expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({ variant: "destructive" }),
-    );
+    expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" }));
   });
 });

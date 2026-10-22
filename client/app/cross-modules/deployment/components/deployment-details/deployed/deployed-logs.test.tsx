@@ -74,9 +74,7 @@ describe("DeployedLogs", () => {
 
   it("renders the error state", () => {
     render(<DeployedLogs buildId="b1" isError />);
-    expect(
-      screen.getByText("Failed to load deployment data"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Failed to load deployment data")).toBeInTheDocument();
   });
 
   it("toggles a step open and closed with Enter", () => {
@@ -107,9 +105,7 @@ describe("DeployedLogs", () => {
   });
 
   it("leaves a step without logs inert when Enter is pressed", () => {
-    const { container } = render(
-      <DeployedLogs buildId="b1" isSuccess cardData={inertCardData} />,
-    );
+    const { container } = render(<DeployedLogs buildId="b1" isSuccess cardData={inertCardData} />);
     const header = screen.getByRole("button", { name: /Build/ });
     const before = container.innerHTML;
     fireEvent.keyDown(header, { key: "Enter" });
@@ -121,7 +117,7 @@ describe("DeployedLogs", () => {
 
 const k8s = (iso: string, text = "working") => `${iso} ${text}`;
 
-/** The status line as the reader sees it, from both the desktop and mobile header. */
+/** The status line as the reader sees it in the section header. */
 const statusLines = (container: HTMLElement) =>
   Array.from(container.querySelectorAll("p"))
     .map((p) => p.textContent?.replace(/\s+/g, " ").trim() ?? "")
@@ -229,14 +225,12 @@ describe("DeployedLogs step timings", () => {
     expect(title).not.toContain("Approximate");
   });
 
-  it("totals the pipeline in both the desktop and the mobile header", () => {
-    const { container } = render(
-      <DeployedLogs buildId="b1" isSuccess cardData={timedCardData} />,
-    );
+  it("totals the pipeline in the section header", () => {
+    const { container } = render(<DeployedLogs buildId="b1" isSuccess cardData={timedCardData} />);
     // The status line is assembled from several text nodes, so read the
     // paragraphs directly rather than trying to match one node.
     const headers = statusLines(container);
-    expect(headers).toHaveLength(2);
+    expect(headers).toHaveLength(1);
     headers.forEach((text) => expect(text).toBe("Successful at push · 1.2s"));
   });
 
@@ -255,7 +249,7 @@ describe("DeployedLogs step timings", () => {
       <DeployedLogs buildId="b1" isSuccess cardData={pollerOnlyCardData} />,
     );
     const headers = statusLines(container);
-    expect(headers).toHaveLength(2);
+    expect(headers).toHaveLength(1);
     headers.forEach((text) => expect(text).toBe("Successful at push"));
   });
 
@@ -333,20 +327,12 @@ describe("DeployedLogs step timings", () => {
   });
 
   it("leaves the log body, gutter and labels untouched", () => {
-    const { container } = render(
-      <DeployedLogs buildId="b1" isSuccess cardData={timedCardData} />,
-    );
+    const { container } = render(<DeployedLogs buildId="b1" isSuccess cardData={timedCardData} />);
     // The RFC3339 prefix keeps rendering inline, in place. It now sits in its own
     // dimmed span, so the line is split across elements and has to be read off the
     // container rather than matched as one text node.
-    expect(container.textContent).toContain(
-      "2026-08-04T10:27:17.552157025Z cloning",
-    );
-    expect(screen.getByText("2026-08-04T10:27:17.552157025Z")).toHaveClass(
-      "text-low-emphasis",
-    );
+    expect(container.textContent).toContain("2026-08-04T10:27:17.552157025Z cloning");
+    expect(screen.getByText("2026-08-04T10:27:17.552157025Z")).toHaveClass("text-low-emphasis");
     expect(container.textContent).toContain("01");
   });
 });
-
-

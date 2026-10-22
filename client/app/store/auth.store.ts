@@ -1,5 +1,5 @@
 import type { StoreApi, UseBoundStore } from "zustand";
-import { useAuthStore as useBlocksAuthStore } from "@seliseblocks/genesis-os";
+import { useAuthStore as useBlocksAuthStore } from "@seliseblocks/app-kit";
 import { User } from "@blocks-idp/iam/models/user";
 
 // Auth state is owned by blocks-kit so that its guards (AuthResolver,

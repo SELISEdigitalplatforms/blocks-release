@@ -1,1 +1,1 @@
-export { useScopedPath } from "@seliseblocks/genesis-os/hooks";
+export { useScopedPath } from "@seliseblocks/app-kit/hooks";

@@ -35,6 +35,21 @@ describe("routes config", () => {
     expect(Array.isArray(mod.routes)).toBe(true);
     expect(mod.routes.length).toBeGreaterThan(0);
   }, 20000);
+
+  it("renders the project dashboard without the Domains and Repositories tables", async () => {
+    const mod = await import("./index");
+    type Node = { path?: string; element?: unknown; children?: Node[] };
+    const find = (nodes: readonly Node[]): Node | undefined =>
+      nodes.reduce<Node | undefined>(
+        (hit, node) => hit ?? (node.path === "dashboard" ? node : find(node.children ?? [])),
+        undefined,
+      );
+    const dashboard = find(mod.routes as readonly Node[]);
+    expect((dashboard?.element as { props: object }).props).toEqual({
+      showDomains: false,
+      showRepositories: false,
+    });
+  }, 20000);
 });
 
 describe("LoginPage", () => {
@@ -69,9 +84,7 @@ describe("LoginPage", () => {
       json: () => Promise.resolve({}),
     } as Response);
     renderWithProviders(<LoginPage />);
-    fireEvent.click(
-      screen.getByRole("button", { name: /log in to your account/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /log in to your account/i }));
     await waitFor(() => expect(fetch).toHaveBeenCalled());
   });
 });
@@ -131,8 +144,6 @@ describe("ProfilePage", () => {
   it("redirects to the idp profile", () => {
     const loc = stubLocation();
     render(<ProfilePage />);
-    expect(loc.replace).toHaveBeenCalledWith(
-      expect.stringContaining("/profile"),
-    );
+    expect(loc.replace).toHaveBeenCalledWith(expect.stringContaining("/profile"));
   });
 });

@@ -85,6 +85,11 @@ export default defineConfig(({ mode }) => {
           : {}),
         ...(proxyTarget
           ? {
+              "/runtime-config.js": {
+                target: proxyTarget,
+                changeOrigin: true,
+                secure: true,
+              },
               "/api": {
                 target: proxyTarget,
                 changeOrigin: true,

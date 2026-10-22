@@ -61,6 +61,7 @@ web_modules/
 
 # Output of 'npm pack'
 *.tgz
+!client/vendor/seliseblocks-app-kit-0.1.1.tgz
 
 # Yarn Integrity file
 .yarn-integrity

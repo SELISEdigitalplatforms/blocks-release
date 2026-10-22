@@ -1,5 +1,5 @@
 /**
- * Test-only double for the `@seliseblocks/genesis-os` barrel.
+ * Test-only double for the `@seliseblocks/app-kit` barrel.
  *
  * The real package's barrel eagerly imports framer-motion (whose motion-utils
  * reads process.env.NODE_ENV at import time) and instantiates a signalr-backed
@@ -78,6 +78,48 @@ export class HttpError extends Error {
 
 export { Outlet };
 
+// app-kit's shared palette commands. Same layer rule as the real resolver: View Console is offered
+// only off the console, View Profile on the console and search-only elsewhere.
+type StubLayer = "console" | "project" | "dashboard";
+const SHARED_COMMANDS = [
+  { id: "goto-console", name: "View Console", path: "/app/console", crossLayerOnly: true },
+  { id: "goto-profile", name: "View Profile", path: "/app/profile", crossLayerOnly: false },
+].map(({ path, ...def }) => ({
+  ...def,
+  layer: "console" as const,
+  group: "Go to",
+  desc: "",
+  needs: "none" as const,
+  kind: "navigate" as const,
+  view: true,
+  path: () => path,
+}));
+export const resolveSharedCommands = (layer: StubLayer) => {
+  const all: { def: (typeof SHARED_COMMANDS)[number]; scopeId: string; isCurrentLayer: boolean }[] =
+    [];
+  const elsewhere: typeof all = [];
+  for (const def of SHARED_COMMANDS) {
+    const isCurrentLayer = def.layer === layer;
+    const resolved = { def, scopeId: "", isCurrentLayer };
+    if (def.crossLayerOnly ? !isCurrentLayer : isCurrentLayer) all.push(resolved);
+    else if (!def.crossLayerOnly) elsewhere.push(resolved);
+  }
+  return { all, elsewhere };
+};
+export const useThemePaletteActions = () =>
+  ["dark", "system"].map((theme) => ({
+    id: `theme-${theme}`,
+    group: "Appearance",
+    name: theme === "dark" ? "Switch to Dark Theme" : "Use System Theme",
+    run: () => undefined,
+  }));
+
+export const AppLoadingSpinner = () =>
+  React.createElement(
+    "div",
+    { role: "status" },
+    React.createElement("span", { className: "sr-only" }, "Loading"),
+  );
 export const BlocksAppLayout = passthrough("BlocksAppLayout");
 export const TooltipProvider = passthrough("TooltipProvider");
 export const ConsoleLayout = passthrough("ConsoleLayout");

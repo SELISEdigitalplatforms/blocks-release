@@ -1,5 +1,5 @@
-import { HttpClient } from "@seliseblocks/genesis-os";
-import { createHttpFailureReporter, getRollbar } from "@seliseblocks/genesis-os/observability";
+import { HttpClient } from "@seliseblocks/app-kit";
+import { createHttpFailureReporter, getRollbar } from "@seliseblocks/app-kit/observability";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { SERVICE_NAME } from "@/constants/service.constant";
 

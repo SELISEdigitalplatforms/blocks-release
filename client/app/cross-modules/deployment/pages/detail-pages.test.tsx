@@ -49,6 +49,6 @@ describe("deployment detail pages", () => {
     renderWithProviders(<LiveLogs />, {
       route: "/app/deployment/repo/r1/deployment-live/b1",
     });
-    expect(screen.getByText("General information")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "General information" })).toBeInTheDocument();
   });
 });

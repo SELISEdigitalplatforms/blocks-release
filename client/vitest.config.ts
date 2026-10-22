@@ -6,28 +6,28 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      // Test doubles for @seliseblocks/genesis-os. The real package crashes on
+      // Test doubles for @seliseblocks/app-kit. The real package crashes on
       // import under jsdom (framer-motion + a signalr NotificationListener that
       // read env/process at module-eval time), so the design-system is aliased
       // to lightweight stubs for unit tests. Subpaths must precede the barrel so
       // the more specific match wins.
-      "@seliseblocks/genesis-os/observability": path.resolve(
+      "@seliseblocks/app-kit/observability": path.resolve(
         __dirname,
         "./app/test-utils/stubs/blocks-kit-observability.tsx",
       ),
-      "@seliseblocks/genesis-os/hooks": path.resolve(
+      "@seliseblocks/app-kit/hooks": path.resolve(
         __dirname,
         "./app/test-utils/stubs/blocks-kit-hooks.tsx",
       ),
-      "@seliseblocks/genesis-os/providers": path.resolve(
+      "@seliseblocks/app-kit/providers": path.resolve(
         __dirname,
         "./app/test-utils/stubs/blocks-kit-providers.tsx",
       ),
-      "@seliseblocks/genesis-os/store": path.resolve(
+      "@seliseblocks/app-kit/store": path.resolve(
         __dirname,
         "./app/test-utils/stubs/blocks-kit-store.ts",
       ),
-      "@seliseblocks/genesis-os": path.resolve(
+      "@seliseblocks/app-kit": path.resolve(
         __dirname,
         "./app/test-utils/stubs/blocks-kit.tsx",
       ),

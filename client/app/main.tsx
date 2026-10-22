@@ -1,4 +1,4 @@
-import "@seliseblocks/genesis-os/lib";
+import "@seliseblocks/app-kit/lib";
 import "@/styles/globals.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -8,7 +8,7 @@ import {
   RollbarProvider,
   attachQueryErrorReporting,
   getRollbar,
-} from "@seliseblocks/genesis-os/observability";
+} from "@seliseblocks/app-kit/observability";
 import { Toaster } from "@/components/ui-kits/toaster/toaster";
 import { ThemeProvider } from "@/hooks/use-theme";
 import QueryProvider, { getQueryClient } from "@/providers/query-provider";
@@ -16,10 +16,10 @@ import { NotificationHubListener } from "@/cross-modules/communication/component
 import { router } from "@/router";
 import { TooltipProvider } from "@/components/ui-kits/tooltip/tooltip";
 import { SERVICE_NAME } from "@/constants/service.constant";
-import { BlocksAppLayout } from "@seliseblocks/genesis-os";
+import { BlocksAppLayout } from "@seliseblocks/app-kit";
 
 // RollbarProvider wires query-error reporting to the query client owned by
-// @seliseblocks/genesis-os. This app keeps its own singleton, so bugs thrown inside its query and
+// @seliseblocks/app-kit. This app keeps its own singleton, so bugs thrown inside its query and
 // mutation functions -- which React Query stores as state and never rethrows to window.onerror --
 // need the reporter attached to that client explicitly.
 attachQueryErrorReporting(getQueryClient(), getRollbar({ service: SERVICE_NAME }));

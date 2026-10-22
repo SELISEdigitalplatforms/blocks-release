@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@seliseblocks/genesis-os", () => ({
+vi.mock("@seliseblocks/app-kit", () => ({
   HttpClient: class MockHttpClient {
     baseURL: () => string;
     blocksKey: () => string;

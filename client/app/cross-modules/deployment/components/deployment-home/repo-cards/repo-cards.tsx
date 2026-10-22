@@ -3,7 +3,8 @@ import { Badge } from "@/components/ui-kits/badge/badge";
 import { useNavigate } from "react-router";
 import { getDeploymentLogEventBadgeClassName } from "@blocks-deployment/utils/deployment-logs.utils";
 import { IDeploySettings } from "@blocks-deployment/models/deployed-logs";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, FolderGit2, GitBranch, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { formatFullDate } from "@/utils/date.util";
 import { useScopedPath } from "@/hooks/use-scoped-path";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
@@ -44,6 +45,31 @@ export interface IRepoResponse {
   deploymentType: string | null;
 }
 
+const LABEL_CLASS = "text-[11px] text-muted-foreground";
+
+const LinkValue = ({ url, copyable = false }: { url?: string | null; copyable?: boolean }) => {
+  if (!url || url === "N/A") return <span className="text-sm text-muted-foreground">N/A</span>;
+  const link = (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block truncate text-sm text-primary hover:underline"
+      title={url}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {url}
+    </a>
+  );
+  return copyable ? (
+    <CopyToClipboardButton textToCopy={url} isHoverable={false}>
+      {link}
+    </CopyToClipboardButton>
+  ) : (
+    link
+  );
+};
+
 export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
   const navigate = useNavigate();
   const scoped = useScopedPath();
@@ -51,8 +77,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [skipInitialVerification, setSkipInitialVerification] = useState(false);
   const { refetch } = useRepoAndGitBranchMatch(repo.itemId, false);
-  const { data: _isAuthenticated, refetch: refetchAuthorization } =
-    useValidateAuthorization();
+  const { data: _isAuthenticated, refetch: refetchAuthorization } = useValidateAuthorization();
   const [repositoryModalOpen, setRepositoryModalOpen] = useState(false);
 
   const handleRepoClick = async (e: React.MouseEvent | React.KeyboardEvent) => {
@@ -79,7 +104,6 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
       setRepositoryModalOpen(false);
     }
   };
-
 
   const handleAccessGranted = () => {
     setRepositoryModalOpen(false);
@@ -118,158 +142,105 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
     setShowBranchModal(true);
   };
 
+  const repoDisplayName = repo.repoName?.split("/").pop() || repo.repoName;
+  const deploymentType =
+    (repo.deploymentType &&
+      DEPLOYMENT_OPTIONS_DETAILS.find(
+        (option) => option.value.toLowerCase() === repo.deploymentType?.toLowerCase(),
+      )?.label) ||
+    "N/A";
+
   return (
     <>
-      <div className="mb-4 space-y-2">
-        <div
-          role="button"
-          tabIndex={0}
-          className={`group flex h-auto cursor-pointer flex-col items-start justify-start gap-4 self-stretch rounded-sm border bg-background px-4 pb-2 pt-4 transition-colors sm:gap-6 sm:px-6 sm:pt-6 ${
-            isLoading ? "pointer-events-none opacity-50" : ""
-          }`}
-          onClick={handleRepoClick}
-          onKeyDown={(event) => {
-            if (event.key !== "Enter" && event.key !== " ") return;
-            if (event.target !== event.currentTarget) return;
-            event.preventDefault();
-            handleRepoClick(event);
-          }}>
-          {/* Header */}
-          <div className="flex w-full items-center justify-start">
-            <h3 className="flex flex-wrap items-center gap-2 text-lg font-semibold">
-              <span>
-                Deploys for {repo.repoName?.split("/").pop() || repo.repoName}
-              </span>
-              {isLoading && (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-blue-600"></div>
-                  <span className="text-sm font-normal text-blue-600">
-                    {showBranchModal
-                      ? "Processing..."
-                      : "Processing in background..."}
-                  </span>
-                </>
-              )}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-busy={isLoading}
+        className={cn(
+          "group rounded-sm bg-card px-5 py-4 shadow-surface-ring transition-[background-color,box-shadow] hover:bg-primary/[0.03] hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-6",
+          isLoading ? "pointer-events-none opacity-60" : "cursor-pointer",
+        )}
+        onClick={handleRepoClick}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          if (event.target !== event.currentTarget) return;
+          event.preventDefault();
+          handleRepoClick(event);
+        }}
+      >
+        <header className="flex items-start gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-primary/[0.07] text-primary">
+            <FolderGit2 className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-base font-semibold text-high-emphasis">
+              <span className="text-sm font-normal text-muted-foreground">Deploys for</span>
+              <span className="min-w-0 break-words">{repoDisplayName}</span>
             </h3>
-            {!isLoading && (
-              <ChevronRight className="ml-2 h-4 w-4 shrink-0 opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100" />
-            )}
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              {repo.branch && (
+                <span className="inline-flex items-center gap-1 rounded-sm bg-primary/[0.07] px-1.5 py-0.5 font-medium text-primary">
+                  <GitBranch className="h-3 w-3" aria-hidden="true" />
+                  {repo.branch}
+                </span>
+              )}
+              {isLoading && (
+                <span role="status" className="inline-flex items-center gap-1.5 text-primary">
+                  <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                  {showBranchModal ? "Processing..." : "Processing in background..."}
+                </span>
+              )}
+            </div>
           </div>
+          <ChevronRight
+            className="mt-2 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
+            aria-hidden="true"
+          />
+        </header>
 
-          {/* Two-column grid */}
-          <div className="mb-2 grid w-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-            {/* Left column */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm text-low-emphasis">Repo URL</p>
-                <a
-                  href={repo.repoUrl || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block truncate text-sm text-blue-600 hover:underline"
-                  onClick={(e) => e.stopPropagation()}>
-                  {repo.repoUrl || "N/A"}
-                </a>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm text-low-emphasis">Deploys To</p>
-                <CopyToClipboardButton
-                  textToCopy={repo.defaultDeploymentUrl}
-                  isHoverable={false}>
-                  <a
-                    href={repo.defaultDeploymentUrl || "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block truncate text-sm text-blue-600 hover:underline"
-                    onClick={(e) => e.stopPropagation()}>
-                    {repo.defaultDeploymentUrl ?? "N/A"}
-                  </a>
-                </CopyToClipboardButton>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm text-low-emphasis">
-                  Custom Deployment URL
-                </p>
-                {repo.customDeploymentUrl &&
-                repo.customDeploymentUrl !== "N/A" ? (
-                  <CopyToClipboardButton
-                    textToCopy={repo.customDeploymentUrl}
-                    isHoverable={false}>
-                    <a
-                      href={repo.customDeploymentUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block truncate text-sm text-blue-600 hover:underline"
-                      onClick={(e) => e.stopPropagation()}>
-                      {repo.customDeploymentUrl}
-                    </a>
-                  </CopyToClipboardButton>
-                ) : (
-                  <span className="block truncate text-sm">{"N/A"}</span>
+        {/* Same fields, order and label treatment as the Details tab grid. */}
+        <dl className="mt-3 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border-soft pt-3 sm:gap-x-10 xl:grid-cols-3">
+          <div className="col-span-2 min-w-0 sm:col-span-1">
+            <dt className={LABEL_CLASS}>Deploys To</dt>
+            <dd className="mt-1.5 min-w-0">
+              <LinkValue url={repo.defaultDeploymentUrl} copyable />
+            </dd>
+          </div>
+          <div className="col-span-2 min-w-0 sm:col-span-1">
+            <dt className={LABEL_CLASS}>Repo URL</dt>
+            <dd className="mt-1.5 min-w-0">
+              <LinkValue url={repo.repoUrl} />
+            </dd>
+          </div>
+          <div className="col-span-2 min-w-0 sm:col-span-1">
+            <dt className={LABEL_CLASS}>Custom Deployment URL</dt>
+            <dd className="mt-1.5 min-w-0">
+              <LinkValue url={repo.customDeploymentUrl} copyable />
+            </dd>
+          </div>
+          <div>
+            <dt className={LABEL_CLASS}>Deployment Status</dt>
+            <dd className="mt-1.5">
+              <Badge
+                className={getDeploymentLogEventBadgeClassName(
+                  repo.lastDeploymentStatus || "NoBuild",
                 )}
-              </div>
-            </div>
-
-            {/* Right column */}
-            <div className="mb-2 grid grid-cols-1 gap-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <p className="text-sm text-low-emphasis">Deployment Status</p>
-                  {repo.lastDeploymentStatus ? (
-                    <Badge
-                      className={getDeploymentLogEventBadgeClassName(
-                        repo.lastDeploymentStatus,
-                      )}>
-                      {repo.lastDeploymentStatus}
-                    </Badge>
-                  ) : (
-                    <Badge
-                      className={getDeploymentLogEventBadgeClassName(
-                        "NoBuild",
-                      )}>
-                      No build
-                    </Badge>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-low-emphasis">
-                    Latest Deployment Date
-                  </p>
-                  <span className="text-sm">
-                    {repo.lastDeploymentDate
-                      ? formatFullDate(new Date(repo.lastDeploymentDate))
-                      : "N/A"}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-low-emphasis">Deployment Type</p>
-                  <span className="text-sm">
-                    {(() => {
-                      if (
-                        repo.deploymentType == null ||
-                        repo.deploymentType == undefined ||
-                        repo.deploymentType == ""
-                      ) {
-                        return "N/A";
-                      }
-
-                      const result =
-                        DEPLOYMENT_OPTIONS_DETAILS.find(
-                          (option) =>
-                            option.value.toLowerCase() ==
-                            repo.deploymentType?.toLowerCase(),
-                        )?.label || "N/A";
-
-                      return result;
-                    })()}
-                  </span>
-                </div>
-              </div>
-            </div>
+              >
+                {repo.lastDeploymentStatus || "No build"}
+              </Badge>
+            </dd>
           </div>
-        </div>
+          <div>
+            <dt className={LABEL_CLASS}>Latest Deployment Date</dt>
+            <dd className="mt-1.5 text-sm font-medium text-high-emphasis">
+              {repo.lastDeploymentDate ? formatFullDate(new Date(repo.lastDeploymentDate)) : "N/A"}
+            </dd>
+          </div>
+          <div>
+            <dt className={LABEL_CLASS}>Deployment Type</dt>
+            <dd className="mt-1.5 text-sm font-medium text-high-emphasis">{deploymentType}</dd>
+          </div>
+        </dl>
       </div>
 
       <BranchVerificationModal

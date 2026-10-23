@@ -45,6 +45,16 @@ public class BuildRepository : IBuildRepository
         return build;
     }
 
+    public async Task<Build?> GetBuildForView(string buildId)
+    {
+        var buildCollection = _dbContextProvider.GetCollection<Build>(BuildsCollectionName);
+        var filter = Builders<Build>.Filter.Eq(b => b.ItemId, buildId);
+        // Masked: View column (property) rules clear what the caller may not see. Never save it back.
+        var scope = await _access.ReadAsync(ReleaseSchemas.Build, filter, "BuildRepository.GetBuildForView");
+        if (!scope.Granted) return null;
+        return scope.ForView(await scope.Apply(buildCollection).FirstOrDefaultAsync());
+    }
+
     /// <summary>
     /// Builds of one repository, read from the named tenant's database. The tenant is explicit rather
     /// than ambient because the queue-driven teardown runs in the worker off any request: there the
@@ -73,6 +83,7 @@ public class BuildRepository : IBuildRepository
         var collection = _dbContextProvider.GetCollection<Build>(BuildsCollectionName);
         try
         {
+            await _access.PrepareWriteAsync(ReleaseSchemas.Build, build, isInsert: true, "BuildRepository.SaveBuild");
             await collection.InsertOneAsync(build);
         }
         catch (MongoWriteException e)
@@ -85,6 +96,7 @@ public class BuildRepository : IBuildRepository
     {
         if (!await _access.InsertAllowedAsync(ReleaseSchemas.Build, "BuildRepository.SaveBuildByTenant", tenantId))
             throw new UnauthorizedAccessException("Data access policy denies creating a build.");
+        await _access.PrepareWriteAsync(ReleaseSchemas.Build, build, isInsert: true, "BuildRepository.SaveBuildByTenant", tenantId);
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
         var collection = _dbContext.GetCollection<Build>(BuildsCollectionName);
         await collection.InsertOneAsync(build);
@@ -190,6 +202,7 @@ public class BuildRepository : IBuildRepository
     {
         if (!await _access.InsertAllowedAsync(ReleaseSchemas.RepositoryWebhook, "BuildRepository.SaveWebhook", tenantId))
             return false;
+        await _access.PrepareWriteAsync(ReleaseSchemas.RepositoryWebhook, webhook, isInsert: true, "BuildRepository.SaveWebhook", tenantId);
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
         var collection = _dbContext.GetCollection<RepositoryWebhook>("RepositoryWebhooks");
         await collection.InsertOneAsync(webhook);

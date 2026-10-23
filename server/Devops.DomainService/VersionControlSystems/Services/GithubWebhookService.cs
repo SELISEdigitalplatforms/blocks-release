@@ -14,6 +14,7 @@ using System.Net;
 using Devops.DomainService.Shared.Services;
 using Devops.DomainService.Deployment.Models.Dtos;
 using Devops.DomainService.Deployment.Interfaces;
+using Devops.DomainService.Deployment.Services;
 
 namespace Devops.DomainService.VersionControlSystems.Services;
 
@@ -25,6 +26,7 @@ public class GithubWebhookService : IGithubWebhookService
     private readonly ITokenRepository _tokenRepository;
     private readonly IRepoRepository _repoRepository;
     private readonly ICloudBuildSecret _cloudBuildSecret;
+    private readonly INotificationService? _notificationService;
 
     public GithubWebhookService(
                                 ILogger<GithubWebhookService> logger,
@@ -32,7 +34,8 @@ public class GithubWebhookService : IGithubWebhookService
                                 IHttpHelperServices httpHelperService,
                                 ITokenRepository tokenRepository,
                                 IRepoRepository repoRepository,
-                                ICloudBuildSecret cloudBuildSecret
+                                ICloudBuildSecret cloudBuildSecret,
+                                INotificationService? notificationService = null
                                 )
 
     {
@@ -42,14 +45,33 @@ public class GithubWebhookService : IGithubWebhookService
         _tokenRepository = tokenRepository;
         _repoRepository = repoRepository;
         _cloudBuildSecret = cloudBuildSecret;
+        _notificationService = notificationService;
     }
 
     public Task<GithubWebhook> CreateWebhook(Repo? repo) =>
-        CreateWebhookCore(repo, BlocksContext.GetContext()?.TenantId,
+        CreateWebhookAndReportAsync(repo, BlocksContext.GetContext()?.TenantId, BlocksContext.GetContext()?.UserId,
             async () => (await _tokenRepository.getToken())?.AccessToken);
 
     public Task<GithubWebhook> CreateWebhook(Repo? repo, string tenantId, string userId) =>
-        CreateWebhookCore(repo, tenantId, () => _tokenRepository.getToken(userId));
+        CreateWebhookAndReportAsync(repo, tenantId, userId, () => _tokenRepository.getToken(userId));
+
+    /// <summary>
+    /// Creates the webhook; when none could be created, tells the acting user (best effort).
+    /// The project admins are not looked up here, so the acting user is the only recipient.
+    /// </summary>
+    private async Task<GithubWebhook> CreateWebhookAndReportAsync(
+        Repo? repo, string? tenantId, string? userId, Func<Task<string?>> resolveToken)
+    {
+        var webhook = await CreateWebhookCore(repo, tenantId, resolveToken);
+        if (webhook is null && repo is not null && !string.IsNullOrWhiteSpace(tenantId))
+        {
+            await NotificationService.SafeSendAsync(_notificationService, _logger, tenantId, "release-github-access-failed", new[] { userId },
+                NotificationService.BuildPayload("release-github-access-failed", "Repository webhook not created",
+                    "The repository webhook could not be created. Check the GitHub authorization.", false,
+                    ("repoId", repo.ItemId), ("projectId", tenantId)));
+        }
+        return webhook;
+    }
 
     private async Task<GithubWebhook> CreateWebhookCore(
         Repo? repo, string? tenantId, Func<Task<string?>> resolveToken)
@@ -90,6 +112,13 @@ public class GithubWebhookService : IGithubWebhookService
             if( response.StatusCode == HttpStatusCode.Created)
             {
                 GithubWebhook repoWebhook = MapService.Map<GithubWebhookSuccessResponse, GithubWebhook>(data);
+                // GitHub names these content_type and insecure_ssl, which the name-based mapper does not match.
+                if (repoWebhook is not null && data?.config is not null)
+                {
+                    repoWebhook.Config ??= new Config { Url = data.config.url };
+                    repoWebhook.Config.ContentType = data.config.content_type;
+                    repoWebhook.Config.InsecureSsl = data.config.insecure_ssl;
+                }
                 _logger.LogInformation($"Successfully created webhook for repo {repo.RepoUrl}");
                 return repoWebhook;
             }
@@ -113,6 +142,11 @@ public class GithubWebhookService : IGithubWebhookService
             if (repo.GithubWebhook is null)
             {
                 await CreateNewWebhook(repo);
+                if (repo.GithubWebhook is null)
+                {
+                    _logger.LogWarning("No webhook could be created for repo {RepoUrl}; its status was not updated.", repo.RepoUrl);
+                    return false;
+                }
             }
             var token = await _tokenRepository.getToken();
             if (token == null)
@@ -141,14 +175,24 @@ public class GithubWebhookService : IGithubWebhookService
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                _logger.LogInformation($"Successfully updated webhook status for repo {repo.RepoUrl}");
-                return false;
+                // GitHub answers with the hook as it now stands: trust that when it is this hook, otherwise
+                // store the state that was asked for, which GitHub has just accepted.
+                var active = data is not null && data.id == webhookId ? data.active : activationStatus;
+                repo.GithubWebhook.Active = active;
+                var saved = await _repoRepository.UpdateRepoGithubWebhookActive(repo.ItemId, active);
+                if (saved)
+                    _logger.LogInformation("Successfully updated webhook status for repo {RepoUrl}", repo.RepoUrl);
+                else
+                    _logger.LogWarning("Webhook status of repo {RepoUrl} changed on GitHub but could not be saved.", repo.RepoUrl);
+                return saved;
             }
             else if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                await CreateNewWebhook(repo);
-                _logger.LogInformation($"Successfully updated webhook status for repo {repo.RepoUrl}");
-                return false;
+                // The hook is gone on GitHub: a new one is created, and saved, in the state the
+                // repository's deployment type asks for.
+                var recreated = await CreateNewWebhook(repo);
+                _logger.LogInformation("Webhook of repo {RepoUrl} was missing on GitHub; recreated: {Recreated}", repo.RepoUrl, recreated);
+                return recreated;
             }
             else
             {

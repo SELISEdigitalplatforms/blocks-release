@@ -90,6 +90,47 @@ public class ReleaseWriteRulesTests : IDisposable
     }
 
     [Fact]
+    public async Task Insert_AddsTheRequesterToReadUpdateAndDeleteUserIds_KeepingIdsAlreadyThere()
+    {
+        Resolves();
+        var record = new Repo { ItemId = "r1", RepoName = "web" };
+        record.Read = new OperationAccess { UserIds = ["user-9"], Roles = ["admin"] };
+        record.Update = new OperationAccess { UserIds = ["user-1"] };
+
+        await _sut.PrepareWriteAsync(ReleaseSchemas.Repo, record, isInsert: true, "test");
+
+        record.Read!.UserIds.Should().Equal("user-9", "user-1");
+        record.Read.Roles.Should().Equal("admin");
+        record.Update!.UserIds.Should().Equal("user-1");   // once
+        record.Delete!.UserIds.Should().Equal("user-1");
+        record.Create.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Insert_OnASchemaWithoutRules_StillAddsTheRequester()
+    {
+        var record = new Repo { ItemId = "r1", RepoName = "web" };
+
+        await _sut.PrepareWriteAsync(ReleaseSchemas.Build, record, isInsert: true, "test");
+
+        record.Read!.UserIds.Should().Equal("user-1");
+    }
+
+    [Fact]
+    public async Task AReplace_OrAnInsertWithoutASignedInUser_AddsNoRequester()
+    {
+        Resolves();
+        var replaced = new Repo { ItemId = "r1", RepoName = "web" };
+        await _sut.PrepareWriteAsync(ReleaseSchemas.Repo, replaced, isInsert: false, "test");
+        replaced.Read.Should().BeNull();
+
+        SetContext(authenticated: false);
+        var anonymous = new Repo { ItemId = "r1", RepoName = "web" };
+        await _sut.PrepareWriteAsync(ReleaseSchemas.Repo, anonymous, isInsert: true, "test");
+        anonymous.Read.Should().BeNull();
+    }
+
+    [Fact]
     public async Task ABrokenRule_Throws_WithThePropertyAndMessage()
     {
         Resolves(validation: Failed("Branch", "Branch must be main or release/*"));
@@ -212,15 +253,16 @@ public class ReleaseWriteRulesTests : IDisposable
         access.Setup(a => a.EditFilterAsync(ReleaseSchemas.Repo, It.IsAny<FilterDefinition<Repo>>(), It.IsAny<string>(), null))
             .ReturnsAsync(policy);
         var repo = new Repo { ItemId = "r1" };
-        access.Setup(a => a.PrepareWriteAsync(ReleaseSchemas.Repo, repo, false, It.IsAny<string>(), null)).ReturnsAsync(repo);
         var collection = new Mock<IMongoCollection<Repo>>();
+        // The replace keeps values hidden from the caller, then runs the rules.
+        access.Setup(a => a.PrepareReplaceAsync(ReleaseSchemas.Repo, repo, collection.Object, policy, It.IsAny<string>(), null)).ReturnsAsync(repo);
         collection.Setup(c => c.ReplaceOneAsync(policy, repo, It.IsAny<ReplaceOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ReplaceOneResult.Acknowledged(1, 1, null));
 
         var updated = await RepositoryOver(collection.Object, access.Object).UpdateRepo(repo);
 
         updated.Should().BeTrue();
-        access.Verify(a => a.PrepareWriteAsync(ReleaseSchemas.Repo, repo, false, It.IsAny<string>(), null), Times.Once);
+        access.Verify(a => a.PrepareReplaceAsync(ReleaseSchemas.Repo, repo, collection.Object, policy, It.IsAny<string>(), null), Times.Once);
     }
 
     [Fact]

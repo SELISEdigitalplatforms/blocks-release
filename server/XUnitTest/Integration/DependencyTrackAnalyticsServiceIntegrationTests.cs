@@ -32,8 +32,9 @@ namespace XUnitTest.Integration
 
         private DependencyTrackAnalyticsService CreateService() =>
             new(new Mock<ILogger<DependencyTrackAnalyticsService>>().Object,
-                new Mock<IHttpHelperServices>().Object, new Mock<IBuildRepository>().Object,
-                new Mock<IRepoRepository>().Object, CreateRepoService(), new Mock<ICloudBuildSecret>().Object,
+                new Mock<IHttpHelperServices>().Object,
+                new BuildAndRepoRepositories(new Mock<IBuildRepository>().Object, new Mock<IRepoRepository>().Object),
+                CreateRepoService(), new Mock<ICloudBuildSecret>().Object,
                 new ConfigurationBuilder().Build());
 
         private static void SetTenant(string tenantId) =>

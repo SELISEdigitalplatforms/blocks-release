@@ -22,6 +22,8 @@ namespace Devops.DomainService.Deployment.Services;
 
 public class BuildService : IBuildService
 {
+    private const string CustomDomainFailedNotification = "release-custom-domain-failed";
+
     private readonly ILogger<BuildService> _logger;
     private readonly IBuildRepository _buildRepository;
     private readonly IRepoRepository _repoRepository;
@@ -31,6 +33,7 @@ public class BuildService : IBuildService
     private readonly IValidator<RepoDomainUpdateRequest> _repoDomainUpdateRequestValidator;
     private readonly IMessageClient _messageClient;
     private readonly IMonitorProvisioningService _monitorProvisioningService;
+    private readonly INotificationService? _notificationService;
 
     public BuildService(
                         ILogger<BuildService> logger,
@@ -41,8 +44,10 @@ public class BuildService : IBuildService
                         IGithubWebhookService githubWebhookService,
                         IValidator<RepoDomainUpdateRequest> repoDomainUpdateRequestValidator,
                         IMessageClient messageClient,
-                        IMonitorProvisioningService monitorProvisioningService)
+                        IMonitorProvisioningService monitorProvisioningService,
+                        INotificationService? notificationService = null)
     {
+        _notificationService = notificationService;
         _monitorProvisioningService = monitorProvisioningService;
         _logger = logger;
         _buildRepository = buildRepository;
@@ -279,6 +284,15 @@ public class BuildService : IBuildService
             };
         }
 
+        // Only the user-driven delete tells people; the project teardown reports its own failures.
+        if (project is null)
+        {
+            var deletedRecipients = await NotificationService.ResolveRecipientsAsync(_repoRepository, _logger, tenantId, blocksUserId);
+            await NotificationService.SafeSendAsync(_notificationService, _logger, tenantId, "release-deployment-deleted", deletedRecipients,
+                NotificationService.BuildPayload("release-deployment-deleted", "Deployment deleted",
+                    "A deployment was deleted.", true, ("repoId", repoId), ("projectId", tenantId)));
+        }
+
         _logger.LogInformation(
             "Delete deployment succeeded. user={BlocksUserId} tenant={TenantId} repo={RepoId} namespace={NamespaceName} alreadyGone={AlreadyGone} cancelledBuilds={CancelledBuilds}",
             blocksUserId, tenantId, repoId, namespaceName, alreadyGone, string.Join(",", cancelledBuilds));
@@ -424,7 +438,7 @@ public class BuildService : IBuildService
 
     public async Task<Build?> GetBuildWithRepo(string buildId)
     {
-        var builds = await _buildRepository.GetBuild(buildId);
+        var builds = await _buildRepository.GetBuildForView(buildId);
         if (builds != null)
             return builds;
         return null;
@@ -545,6 +559,11 @@ public class BuildService : IBuildService
                 var buildResponse = await Build(buildRequest, repo);
                 if (buildResponse.IsSuccess && request.viewInBlocksMonitor)
                     buildResponse.monitorError = await _monitorProvisioningService.CreateMonitorForRepoAsync(repo);
+                if (!string.IsNullOrWhiteSpace(buildResponse.monitorError))
+                    await NotificationService.SafeSendAsync(_notificationService, _logger, repo.ProjectId ?? BlocksContext.GetContext()?.TenantId, CustomDomainFailedNotification,
+                        new[] { BlocksContext.GetContext()?.UserId },
+                        NotificationService.BuildPayload(CustomDomainFailedNotification, "Monitor entry not created",
+                            "The monitor entry of the deployment could not be created.", false, ("repoId", repo.ItemId)));
                 return buildResponse;
             }
             return new BuildResponse
@@ -607,6 +626,7 @@ public class BuildService : IBuildService
                     StatusCode = HttpStatusCode.OK
                 };
             }
+            await NotifyCustomDomainFailedAsync();
             return new BuildResponse
             {
                 IsSuccess = false,
@@ -620,6 +640,7 @@ public class BuildService : IBuildService
         }
         catch (Exception ex)
         {
+            await NotifyCustomDomainFailedAsync();
             return new BuildResponse
             {
                 IsSuccess = false,
@@ -627,6 +648,15 @@ public class BuildService : IBuildService
                 StatusCode = HttpStatusCode.BadRequest
             };
         }
+    }
+
+    private Task NotifyCustomDomainFailedAsync()
+    {
+        var context = BlocksContext.GetContext();
+        return NotificationService.SafeSendAsync(_notificationService, _logger, context?.TenantId, CustomDomainFailedNotification,
+            new[] { context?.UserId },
+            NotificationService.BuildPayload(CustomDomainFailedNotification, "Custom domain update failed",
+                "Updating the custom domain of the deployment failed.", false, ("projectId", context?.TenantId)));
     }
 
     /// <summary>A save a validation rule refused: 400, with the rule's message per property.</summary>
@@ -739,7 +769,15 @@ public class BuildService : IBuildService
                     };
                     _logger.LogInformation($"{pushEvent.commits?.Count ?? 0} commit(s) pushed to {pushEvent.Ref} in {pushEvent.repository.fullName} by {pushEvent.pusher.name}");
                     await SaveWbhook(rawJson, repo, tenantId);
-                    return await Build(buildRequest, repo, tenantId);
+                    var autoResponse = await Build(buildRequest, repo, tenantId);
+                    var autoRecipients = await NotificationService.ResolveRecipientsAsync(_repoRepository, _logger, tenantId, repo.CreatedBy);
+                    await NotificationService.SafeSendAsync(_notificationService, _logger, tenantId, "release-auto-deploy-status", autoRecipients,
+                        NotificationService.BuildPayload("release-auto-deploy-status",
+                            autoResponse.IsSuccess ? "Automatic deployment started" : "Automatic deployment could not start",
+                            autoResponse.IsSuccess ? "A push to the repository started a deployment." : "A push to the repository could not start a deployment.",
+                            autoResponse.IsSuccess,
+                            ("repoId", repo.ItemId), ("buildId", autoResponse.buildId), ("branch", repo.Branch), ("projectId", tenantId)));
+                    return autoResponse;
                 }
                 break;
 

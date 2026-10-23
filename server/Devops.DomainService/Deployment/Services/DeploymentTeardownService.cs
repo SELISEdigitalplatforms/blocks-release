@@ -33,14 +33,17 @@ public class DeploymentTeardownService : IDeploymentTeardownService
     private readonly IRepoRepository _repoRepository;
     private readonly BuildService _buildService;
     private readonly ISecretService _secretService;
+    private readonly INotificationService? _notificationService;
 
     public DeploymentTeardownService(
         ILogger<DeploymentTeardownService> logger,
         ITenantLookupRepository tenantLookupRepository,
         IRepoRepository repoRepository,
         BuildService buildService,
-        ISecretService secretService)
+        ISecretService secretService,
+        INotificationService? notificationService = null)
     {
+        _notificationService = notificationService;
         _logger = logger;
         _tenantLookupRepository = tenantLookupRepository;
         _repoRepository = repoRepository;
@@ -68,6 +71,7 @@ public class DeploymentTeardownService : IDeploymentTeardownService
         foreach (var project in projects)
         {
             summary.ProjectsVisited++;
+            var failuresBefore = summary.Failures.Count;
             try
             {
                 await TearDownProjectAsync(project, resourceId, summary);
@@ -77,6 +81,9 @@ public class DeploymentTeardownService : IDeploymentTeardownService
                 summary.Failures.Add($"{project.TenantId}: project teardown failed - {ex.Message}");
                 _logger.LogError(ex, "Failed to read or tear down project {ProjectId}; continuing with its siblings.", project.TenantId);
             }
+
+            if (summary.Failures.Count > failuresBefore)
+                await NotifyTeardownFailedAsync(project, summary.Failures.Count - failuresBefore);
         }
 
         _logger.LogInformation(
@@ -85,6 +92,16 @@ public class DeploymentTeardownService : IDeploymentTeardownService
             summary.DeploymentsDeleted, summary.ReposArchived, summary.Failures.Count);
 
         return summary;
+    }
+
+    /// <summary>Tells the project people once per project. Counts only: failure texts stay in the log.</summary>
+    private async Task NotifyTeardownFailedAsync(Tenant project, int failureCount)
+    {
+        var recipients = await NotificationService.ResolveRecipientsAsync(_repoRepository, _logger, project.TenantId);
+        await NotificationService.SafeSendAsync(_notificationService, _logger, project.TenantId, "release-project-teardown-failed", recipients,
+            NotificationService.BuildPayload("release-project-teardown-failed", "Project teardown failed",
+                "Removing the deployed resources of the project failed.", false,
+                ("projectId", project.TenantId), ("failureCount", failureCount)));
     }
 
     /// <summary>

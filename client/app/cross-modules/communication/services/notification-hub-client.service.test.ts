@@ -13,13 +13,15 @@ const conn = {
 };
 
 const getNotifications = vi.fn();
+const withUrl = vi.fn();
 vi.mock("./notification.service", () => ({
   notificationService: { getNotifications },
 }));
 
 vi.mock("@microsoft/signalr", () => {
   class HubConnectionBuilder {
-    withUrl() {
+    withUrl(...args: unknown[]) {
+      withUrl(...args);
       return this;
     }
     withAutomaticReconnect() {
@@ -67,6 +69,14 @@ describe("notification-hub-client.service", () => {
     (globalThis.window as MutableWindow).__BLOCKS_ENV__ = {
       BLOCKS_LOGIC_BASE_URL: "https://dev-logic.blocksdevelopers.com",
     };
+  });
+
+  it("opens the socket in one request, without negotiate", async () => {
+    await mod.connectNotificationHub();
+    expect(withUrl).toHaveBeenCalledWith(
+      expect.stringContaining("x-blocks-key=key-123"),
+      expect.objectContaining({ transport: 1, skipNegotiation: true }),
+    );
   });
 
   it("starts a connection and wires the reconnect handlers", async () => {

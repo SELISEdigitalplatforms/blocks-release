@@ -102,7 +102,8 @@ const buildConnection = (): HubConnection => {
   const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
   const url = `${hubBaseUrl()}${HUB_PATH}?x-blocks-key=${encodeURIComponent(blocksKey)}`;
   const conn = new HubConnectionBuilder()
-    .withUrl(url, { transport: HttpTransportType.WebSockets })
+    // One request opens the socket, so it cannot split across Api pods without sticky sessions.
+    .withUrl(url, { transport: HttpTransportType.WebSockets, skipNegotiation: true })
     .withAutomaticReconnect()
     .build();
 

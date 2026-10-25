@@ -74,10 +74,10 @@ namespace XUnitTest.Devops.Deployment
 
         public DependencyTrackAnalyticsService ScaAnalyticsService()
         {
-            var repoService = new DependencyTrackRepositoryService(DbProvider.Object, new Mock<ILogger<DependencyTrackRepositoryService>>().Object);
+            var repoService = new DependencyTrackRepositoryService(DbProvider.Object, new Mock<IKeyValueStore>().Object, new Mock<ILogger<DependencyTrackRepositoryService>>().Object);
             return new DependencyTrackAnalyticsService(
                 new Mock<ILogger<DependencyTrackAnalyticsService>>().Object,
-                Http.Object, BuildRepo.Object, RepoRepo.Object, repoService, Secret.Object, Config);
+                Http.Object, new BuildAndRepoRepositories(BuildRepo.Object, RepoRepo.Object), repoService, Secret.Object, Config, Notification.Object);
         }
 
         public TestReportService TestReportService() =>
@@ -87,19 +87,19 @@ namespace XUnitTest.Devops.Deployment
                 new DASTStrategy());
 
         public LogRetrievalService LogRetrievalService() =>
-            new(BuildRepo.Object, RepoRepo.Object, PipelineRunService(), TestReportService(),
+            new(BuildRepo.Object, RepoRepo.Object, PipelineRunService(),
                 MessageClient.Object, Notification.Object, DataGatewayRepo.Object);
 
         public BuildService BuildService() =>
             new(new Mock<ILogger<BuildService>>().Object,
                 BuildRepo.Object, RepoRepo.Object, Vcs.Object,
                 PipelineRunService(), Webhook.Object,
-                DomainValidator.Object, MessageClient.Object, MonitorProvisioning.Object);
+                DomainValidator.Object, MessageClient.Object, MonitorProvisioning.Object, Notification.Object);
 
         public Mock<ISecretService> SecretService { get; } = new();
 
         public DeploymentTeardownService DeploymentTeardownService() =>
             new(new Mock<ILogger<DeploymentTeardownService>>().Object,
-                TenantLookup.Object, RepoRepo.Object, BuildService(), SecretService.Object);
+                TenantLookup.Object, RepoRepo.Object, BuildService(), SecretService.Object, Notification.Object);
     }
 }

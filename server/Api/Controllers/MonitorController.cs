@@ -1,7 +1,6 @@
 using System.Net;
 using Blocks.Genesis;
 using Devops.DomainService.Shared.Entities;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers;
@@ -25,7 +24,7 @@ public class MonitorController : ControllerBase
     }
 
     [HttpGet("GetMonitorListByRepoId")]
-    [Authorize]
+    [ProtectedEndPoint("blocks-release::monitor::get-list-by-repo-id")]
     public async Task<IActionResult> GetMonitorListByRepoId(
         [FromQuery] string ProjectKey,
         [FromQuery] string repoId,

@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;

@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -41,7 +42,7 @@ namespace XUnitTest.Api.Controllers
         [Fact]
         public async Task GetById_Found_ReturnsOk()
         {
-            _f.BuildRepo.Setup(b => b.GetBuild("b1")).ReturnsAsync(new Build { RepoName = "r" });
+            _f.BuildRepo.Setup(b => b.GetBuildForView("b1")).ReturnsAsync(new Build { RepoName = "r" });
             (await CreateController().GetById("b1")).Should().BeOfType<OkObjectResult>();
         }
 
@@ -71,7 +72,7 @@ namespace XUnitTest.Api.Controllers
         {
             _f.RepoRepo.Setup(r => r.GetRepoBuildList("id", It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
                        .ReturnsAsync(new List<Build>());
-            _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(new Repo());
+            _f.RepoRepo.Setup(r => r.GetRepoForView("id")).ReturnsAsync(new Repo());
             (await CreateController().GetRepoDetails("id")).Should().BeOfType<OkObjectResult>();
         }
 
@@ -155,7 +156,7 @@ namespace XUnitTest.Api.Controllers
         {
             _f.RepoRepo.Setup(r => r.GetRepoBuildList("repo-1", It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
                        .ReturnsAsync([new Build { ItemId = "build-1" }]);
-            _f.RepoRepo.Setup(r => r.GetRepo("repo-1"))
+            _f.RepoRepo.Setup(r => r.GetRepoForView("repo-1"))
                        .ReturnsAsync(new Repo { ItemId = "repo-1", RepoName = "web" });
 
             var result = await CreateController().GetRepoDetails("repo-1");
@@ -197,7 +198,7 @@ namespace XUnitTest.Api.Controllers
         {
             _f.RepoRepo.Setup(r => r.GetRepoBuildList(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
                        .ReturnsAsync([]);
-            _f.RepoRepo.Setup(r => r.GetRepo("repo-1"))
+            _f.RepoRepo.Setup(r => r.GetRepoForView("repo-1"))
                        .ReturnsAsync(new Repo { ItemId = "repo-1", RepoName = "org/web" });
 
             var result = await CreateController().GetRepoDetails("repo-1");
@@ -218,7 +219,7 @@ namespace XUnitTest.Api.Controllers
         {
             _f.RepoRepo.Setup(r => r.GetRepoBuildList(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
                        .ReturnsAsync([]);
-            _f.RepoRepo.Setup(r => r.GetRepo("repo-1")).ReturnsAsync(new Repo { ItemId = "repo-1" });
+            _f.RepoRepo.Setup(r => r.GetRepoForView("repo-1")).ReturnsAsync(new Repo { ItemId = "repo-1" });
 
             await CreateController().GetRepoDetails("repo-1");
 
@@ -230,7 +231,7 @@ namespace XUnitTest.Api.Controllers
         {
             _f.RepoRepo.Setup(r => r.GetRepoBuildList(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
                        .ReturnsAsync([]);
-            _f.RepoRepo.Setup(r => r.GetRepo("repo-1")).ReturnsAsync(new Repo { ItemId = "repo-1" });
+            _f.RepoRepo.Setup(r => r.GetRepoForView("repo-1")).ReturnsAsync(new Repo { ItemId = "repo-1" });
 
             await CreateController().GetRepoDetails("repo-1", "develop", 3, 5);
 
@@ -261,7 +262,7 @@ namespace XUnitTest.Api.Controllers
                        .ReturnsAsync([new Build { ItemId = "build-1" }]);
             _f.RepoRepo.Setup(r => r.GetRepoBuildCount("repo-1", It.IsAny<string>()))
                        .ReturnsAsync(42);
-            _f.RepoRepo.Setup(r => r.GetRepo("repo-1")).ReturnsAsync(new Repo { ItemId = "repo-1" });
+            _f.RepoRepo.Setup(r => r.GetRepoForView("repo-1")).ReturnsAsync(new Repo { ItemId = "repo-1" });
 
             var result = await CreateController().GetRepoDetails("repo-1", pageNumber: 1, pageSize: 5);
 
@@ -278,7 +279,7 @@ namespace XUnitTest.Api.Controllers
                        .ReturnsAsync([]);
             _f.RepoRepo.Setup(r => r.GetRepoBuildCount(It.IsAny<string>(), It.IsAny<string>()))
                        .ReturnsAsync(0);
-            _f.RepoRepo.Setup(r => r.GetRepo("repo-1")).ReturnsAsync(new Repo { ItemId = "repo-1" });
+            _f.RepoRepo.Setup(r => r.GetRepoForView("repo-1")).ReturnsAsync(new Repo { ItemId = "repo-1" });
 
             await CreateController().GetRepoDetails("repo-1", "develop", 3, 5);
 
@@ -291,7 +292,7 @@ namespace XUnitTest.Api.Controllers
             // The repo is resolved first now, so this has to succeed for the build query
             // to be reached at all - otherwise the test would pass on the not-found path
             // and prove nothing about failure handling.
-            _f.RepoRepo.Setup(r => r.GetRepo(It.IsAny<string>()))
+            _f.RepoRepo.Setup(r => r.GetRepoForView(It.IsAny<string>()))
                        .ReturnsAsync(new Repo { ItemId = "repo-1" });
             _f.RepoRepo.Setup(r => r.GetRepoBuildList(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
                        .ThrowsAsync(new TimeoutException("mongo unreachable"));

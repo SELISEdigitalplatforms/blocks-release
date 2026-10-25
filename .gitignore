@@ -230,3 +230,5 @@ scripts/deploy.ps1
 scripts/th_transform.py
 scripts/secrets.local.ps1
 deploy.log
+
+/server/Directory.Build.local.props

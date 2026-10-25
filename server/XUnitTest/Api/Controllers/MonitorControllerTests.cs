@@ -315,6 +315,15 @@ public class MonitorControllerTests
     }
 
     [Fact]
+    public void Action_IsProtectedBySeededReleasePermission()
+    {
+        // Restored 2026-10-14 (owner): a42efe5 had swapped it for plain [Authorize]. The row exists in the release seed.
+        var guard = GetAction().GetCustomAttribute<Blocks.Genesis.ProtectedEndPointAttribute>();
+        guard.Should().NotBeNull();
+        guard!.ResourceName.Should().Be("blocks-release::monitor::get-list-by-repo-id");
+    }
+
+    [Fact]
     public void Endpoint_DoesNotAllowAnonymous()
     {
         GetAction().GetCustomAttributes<AllowAnonymousAttribute>(inherit: true).Should().BeEmpty();

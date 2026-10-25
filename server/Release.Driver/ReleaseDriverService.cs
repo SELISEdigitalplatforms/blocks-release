@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using Blocks.Genesis;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Interfaces;
@@ -83,7 +84,7 @@ namespace ReleaseDriver
         {
             try
             {
-                var repo = await _repoRepository.GetRepo(repoId);
+                var repo = await _repoRepository.GetRepoForView(repoId);
                 if (repo is null)
                 {
                     return new BaseApiResponse

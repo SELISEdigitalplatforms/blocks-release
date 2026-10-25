@@ -436,8 +436,8 @@
     /* Also read by the font-sans utility and the base font. The tail is Tailwind's default
        sans stack, which v3 appended through the JS config. */
     --font-sans:
-      'DM Sans', system-ui, -apple-system, sans-serif, ui-sans-serif, system-ui, sans-serif,
-      "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+      system-ui, -apple-system, "Segoe UI", Roboto, sans-serif, ui-sans-serif, system-ui,
+      sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;

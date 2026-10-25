@@ -8,7 +8,7 @@ using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Interfaces;
 using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.Shared.Interfaces;
-using Devops.DomainService.TestingTools.Entity;
+using Blocks.Genesis.Entities.Release;
 using Devops.DomainService.TestingTools.Models;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
@@ -28,12 +28,13 @@ namespace XUnitTest.Integration
         public void Dispose() => BlocksContext.ClearContext();
 
         private DependencyTrackRepositoryService CreateRepoService() =>
-            new(_fixture.DbContextProvider, new Mock<ILogger<DependencyTrackRepositoryService>>().Object);
+            new(_fixture.DbContextProvider, _fixture.KeyValueStore, new Mock<ILogger<DependencyTrackRepositoryService>>().Object);
 
         private DependencyTrackAnalyticsService CreateService() =>
             new(new Mock<ILogger<DependencyTrackAnalyticsService>>().Object,
-                new Mock<IHttpHelperServices>().Object, new Mock<IBuildRepository>().Object,
-                new Mock<IRepoRepository>().Object, CreateRepoService(), new Mock<ICloudBuildSecret>().Object,
+                new Mock<IHttpHelperServices>().Object,
+                new BuildAndRepoRepositories(new Mock<IBuildRepository>().Object, new Mock<IRepoRepository>().Object),
+                CreateRepoService(), new Mock<ICloudBuildSecret>().Object,
                 new ConfigurationBuilder().Build());
 
         private static void SetTenant(string tenantId) =>

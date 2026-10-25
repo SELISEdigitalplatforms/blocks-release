@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,7 +32,7 @@ namespace XUnitTest.Integration
         }
 
         private RepoRepository CreateRepo() =>
-            new(_fixture.DbContextProvider, _config, new Mock<ILogger<RepoRepository>>().Object, new Mock<IBlocksSecret>().Object);
+            new(_fixture.DbContextProvider, _config, new Mock<ILogger<RepoRepository>>().Object, new Mock<IBlocksSecret>().Object, new XUnitTest.TestDoubles.PassThroughReleaseDataAccess());
 
         private static Repo NewRepo(string projectId = null, string userId = null) => new()
         {
@@ -349,6 +350,58 @@ namespace XUnitTest.Integration
             var ok = await sut.UpdateRepoDependencyTrackProjectUuid(repo.ItemId, "uuid-123", "tenant");
             ok.Should().BeTrue();
             (await sut.GetRepo(repo.ItemId)).DependencyTrackProjectUuid.Should().Be("uuid-123");
+        }
+
+        [Fact]
+        public async Task UpdateRepoGithubWebhookActive_SetsOnlyActive()
+        {
+            var repo = NewRepo();
+            repo.GithubWebhook = new GithubWebhook
+            {
+                Id = 701708552,
+                Name = "web",
+                Active = false,
+                Events = new List<string> { "push" },
+                Config = new Config { Url = "https://hook/tenant", ContentType = "json", InsecureSsl = "0" }
+            };
+            var sut = CreateRepo();
+            await sut.SaveRepo(repo);
+
+            (await sut.UpdateRepoGithubWebhookActive(repo.ItemId, true)).Should().BeTrue();
+
+            var fetched = await sut.GetRepo(repo.ItemId);
+            fetched.GithubWebhook.Active.Should().BeTrue();
+            fetched.GithubWebhook.Should().BeEquivalentTo(repo.GithubWebhook, o => o.Excluding(w => w.Active));
+            fetched.DeploymentType.Should().Be(repo.DeploymentType);
+            fetched.Branch.Should().Be(repo.Branch);
+        }
+
+        [Fact]
+        public async Task UpdateRepoGithubWebhookActive_SameStateAgain_StillSucceeds()
+        {
+            var repo = NewRepo();
+            repo.GithubWebhook = new GithubWebhook { Id = 1, Active = true };
+            var sut = CreateRepo();
+            await sut.SaveRepo(repo);
+
+            (await sut.UpdateRepoGithubWebhookActive(repo.ItemId, true)).Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task UpdateRepoGithubWebhookActive_RepoWithoutAHook_ReturnsFalseAndLeavesItAlone()
+        {
+            var repo = NewRepo();
+            var sut = CreateRepo();
+            await sut.SaveRepo(repo);
+
+            (await sut.UpdateRepoGithubWebhookActive(repo.ItemId, true)).Should().BeFalse();
+            (await sut.GetRepo(repo.ItemId)).GithubWebhook.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task UpdateRepoGithubWebhookActive_UnknownRepo_ReturnsFalse()
+        {
+            (await CreateRepo().UpdateRepoGithubWebhookActive(Guid.NewGuid().ToString("N"), true)).Should().BeFalse();
         }
 
         [Fact]

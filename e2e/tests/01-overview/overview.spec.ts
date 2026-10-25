@@ -20,28 +20,31 @@ test.describe("Console & Project Overview", () => {
     // user menu)
     // -------------------------------------------------------------------------
     await openReleaseConsole(page);
-    const themeTablist = page.getByRole("tablist").first();
-
-    const autoTab = themeTablist.locator('[aria-controls$="-content-system"]');
-    const lightTab = themeTablist.locator('[aria-controls$="-content-light"]');
-    const darkTab = themeTablist.locator('[aria-controls$="-content-dark"]');
-
-    const activeTab = themeTablist.locator('[role="tab"][data-state="active"]');
+    // The topbar theme switcher is a "Change theme" dropdown of Auto/Light/Dark radio items.
+    const themeButton = page.getByRole("button", { name: "Change theme" });
+    const autoItem = page.getByRole("menuitemradio", { name: "Auto" });
+    const lightItem = page.getByRole("menuitemradio", { name: "Light" });
+    const darkItem = page.getByRole("menuitemradio", { name: "Dark" });
+    const checkedItem = page.locator('[role="menuitemradio"][aria-checked="true"]');
 
     await test.step("[Positive] theme switcher offers Auto/Light/Dark and has an active theme", async () => {
-      await expect(themeTablist).toBeVisible({ timeout: 30_000 });
-      await expect(autoTab).toBeVisible({ timeout: 30_000 });
-      await expect(lightTab).toBeVisible({ timeout: 30_000 });
-      await expect(darkTab).toBeVisible({ timeout: 30_000 });
-      await expect(activeTab).toHaveCount(1);
+      await expect(themeButton).toBeVisible({ timeout: 30_000 });
+      await themeButton.click();
+      await expect(autoItem).toBeVisible({ timeout: 30_000 });
+      await expect(lightItem).toBeVisible();
+      await expect(darkItem).toBeVisible();
+      await expect(checkedItem).toHaveCount(1);
+      await page.keyboard.press("Escape");
     });
 
     await test.step("[Positive] switching to Dark applies the dark theme", async () => {
-      await darkTab.click();
-      await expect(darkTab).toHaveAttribute("data-state", "active");
+      await themeButton.click();
+      await darkItem.click();
       await expect(page.locator("html")).toHaveClass(/dark/);
-      await lightTab.click();
-      await expect(lightTab).toHaveAttribute("data-state", "active");
+      await themeButton.click();
+      await expect(darkItem).toHaveAttribute("aria-checked", "true");
+      await lightItem.click();
+      await expect(page.locator("html")).not.toHaveClass(/dark/);
     });
 
     await test.step("[Positive] language selector shows EN and lists English/German/French", async () => {
@@ -154,11 +157,11 @@ test.describe("Console & Project Overview", () => {
       await expect(page.getByText("Add Project", { exact: true })).toBeVisible();
     });
 
-    await test.step("[Positive] Resources section (Docs/Code/Cloud) is visible", async () => {
+    await test.step("[Positive] Resources section (Read Docs/Install CLI/Bootstrap) is visible", async () => {
       await expect(page.getByText("Resources", { exact: true })).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Docs", exact: true })).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Code", exact: true })).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Cloud", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Read Docs", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Install CLI", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Bootstrap", exact: true })).toBeVisible();
     });
 
     // -------------------------------------------------------------------------

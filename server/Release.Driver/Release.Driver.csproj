@@ -2,12 +2,12 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Version>4.0.3</Version>
+    <Version>4.0.5</Version>
     <PackageId>SeliseBlocks.ReleaseDriver.OS</PackageId>
     <Authors>SeliseBlocks</Authors>
     <Company>SeliseBlocks</Company>
     <Description>Blocks Release Driver</Description>
-    <PackageReleaseNotes>Rebuilt against Genesis 4.2.2 for the three-connection database architecture. The bundled Devops.DomainService assembly was last published on 2026-08-13, before tenant placement landed, so it shipped without the routing work: BuildRepository no longer resolves an unused ambient collection in its constructor, GetHostingProviders reads HostingProviders from the root database it already resolved instead of the caller's tenant, and RepoRepository, BuildService, DeploymentTeardownService and PipelineRunService carry the explicit tenant overloads added for multi-database routing. No API removals; the Tenant-taking overloads on IRepoRepository and IBuildRepository are additive.</PackageReleaseNotes>
+    <PackageReleaseNotes>Requires SeliseBlocks.Genesis.OS 4.3.11 or later. The release entity classes (Repo, Build, RepositoryWebhook, DependencyTrackProjects, HostingProvider, Region, MachineConfig, DeploySettings, BuildEventResponse, GithubWebhook, Config, RepoProject) now come from Genesis in Blocks.Genesis.Entities.Release; the copies in the bundled Devops.DomainService assembly are removed, so a host that used them must switch to the Genesis namespace. Stored documents keep the same collections and field names. Reads and writes of Repos, Builds and RepositoryWebhooks go through the Genesis data access resolver (row filter, projection, View column rules, Repo schema validation rules and defaults, and on insert the requester added to Read, Update and Delete UserIds); it is skipped without a signed-in user or when the call targets another tenant's database, and a refusing rule surfaces as DataValidationException. RegisterBlocksReleaseServicesAsync now calls AddBlocksDataAccess(), which is not idempotent: a host that also calls it gets the registrations twice (the last one wins; both use the default options). The Dependency-Track project mapping is kept in the Genesis key-value store under dependency-track-project:{tenantId}, falling back to the old DependencyTrackProjects collection on read, so the host must provide IKeyValueStore (ApplicationConfigurations.ConfigureServices registers it). Built-in notifications are sent for build, deployment, repo secret and GitHub events. Switching a repository between Manual and Auto now saves the GitHub webhook's active state and reports whether the switch succeeded; existing repositories are corrected on their next switch.</PackageReleaseNotes>
     <IncludeBuildOutput>true</IncludeBuildOutput>
     <IncludeOutputAssemblies>true</IncludeOutputAssemblies>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -25,6 +25,7 @@
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="SeliseBlocks.Genesis.OS" />
+    <PackageReference Include="SeliseBlocks.Secrets.OS" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 

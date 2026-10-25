@@ -1,3 +1,4 @@
+using Blocks.Genesis.Entities.Release;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;

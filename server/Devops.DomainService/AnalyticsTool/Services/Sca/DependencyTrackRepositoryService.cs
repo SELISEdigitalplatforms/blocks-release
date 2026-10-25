@@ -1,6 +1,6 @@
 ﻿
 using Blocks.Genesis;
-using Devops.DomainService.TestingTools.Entity;
+using Blocks.Genesis.Entities.Release;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
@@ -10,9 +10,13 @@ namespace Devops.DomainService.AnalyticsTool.Services.Sca
     {
         private readonly ILogger<DependencyTrackRepositoryService> _logger;
         private readonly IDbContextProvider _dbContextProvider;
-        public DependencyTrackRepositoryService(IDbContextProvider dbContextProvider, ILogger<DependencyTrackRepositoryService> logger)
+        private readonly IKeyValueStore _keyValueStore;
+        private const string KeyPrefix = "dependency-track-project:";
+
+        public DependencyTrackRepositoryService(IDbContextProvider dbContextProvider, IKeyValueStore keyValueStore, ILogger<DependencyTrackRepositoryService> logger)
         {
             _dbContextProvider = dbContextProvider;
+            _keyValueStore = keyValueStore;
             _logger = logger;
         }
 
@@ -21,33 +25,13 @@ namespace Devops.DomainService.AnalyticsTool.Services.Sca
             try
             {
                 var projectId = BlocksContext.GetContext().TenantId;
-                var dbContext = _dbContextProvider.GetDatabase(projectId);
-                var collection = dbContext.GetCollection<DependencyTrackProjects>("DependencyTrackProjects");
-                var filter = Builders<DependencyTrackProjects>.Filter.Eq(x => x.ProjectId, projectId) & Builders<DependencyTrackProjects>.Filter.Eq(x => x.ItemId, dependencyTrackProjects.ItemId);
-                var options = new ReplaceOptions { IsUpsert = true };
-                var result = await collection.ReplaceOneAsync(filter, dependencyTrackProjects, options);
-                if (result.IsAcknowledged)
-                {
-                    if (result.UpsertedId != null)
-                    {
-                        _logger.LogInformation($"New DependencyTrack project inserted for userid {projectId}");
-                    }
-                    else if (result.ModifiedCount > 0)
-                    {
-                        _logger.LogInformation($"DependencyTrack project updated for userid {projectId}");
-                    }
-                    else
-                    {
-                        _logger.LogInformation($"DependencyTrack project already up-to-date for userid {projectId}");
-                    }
-                    return true;
-                }
-                _logger.LogWarning($"Upsert operation was not acknowledged for userid {projectId}");
-                return false;
+                await _keyValueStore.SetAsync(KeyPrefix + projectId, dependencyTrackProjects);
+                _logger.LogInformation("DependencyTrack project saved for userid {ProjectId}", projectId);
+                return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Failed to save DependencyTrack project: {ex.Message}");
+                _logger.LogError(ex, "Failed to save DependencyTrack project: {Message}", ex.Message);
                 return false;
             }
         }
@@ -57,27 +41,49 @@ namespace Devops.DomainService.AnalyticsTool.Services.Sca
             try
             {
                 projectId = BlocksContext.GetContext().TenantId;
-                var dbContext = _dbContextProvider.GetDatabase(projectId);
-                var collection = dbContext.GetCollection<DependencyTrackProjects>("DependencyTrackProjects");
-                var filter = Builders<DependencyTrackProjects>.Filter.Eq(x => x.ProjectId, projectId);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to get DependencyTrack project: {Message}", ex.Message);
+                return null;
+            }
 
-                var result = await collection.Find(filter).FirstOrDefaultAsync();
+            if (string.IsNullOrWhiteSpace(projectId))
+            {
+                // Same as today: no tenant means no project (C2), never a key value store call.
+                _logger?.LogError("Failed to get DependencyTrack project: tenant id is missing");
+                return null;
+            }
+
+            // A KV read error is not caught here: a null would make the caller create a new team and overwrite
+            // the only KV row, so the error goes up and nothing is written (CL-release-03).
+            var result = await _keyValueStore.GetAsync<DependencyTrackProjects>(KeyPrefix + projectId);
+
+            try
+            {
+                if (result == null)
+                {
+                    // Fallback to the old collection until the migration cleanup drops it.
+                    var dbContext = _dbContextProvider.GetDatabase(projectId);
+                    var collection = dbContext.GetCollection<DependencyTrackProjects>("DependencyTrackProjects");
+                    var filter = Builders<DependencyTrackProjects>.Filter.Eq(x => x.ProjectId, projectId);
+                    result = await collection.Find(filter).FirstOrDefaultAsync();
+                }
                 if (result != null)
                 {
-                    _logger?.LogInformation($"DependencyTrack project found for projectId {projectId}");
+                    _logger?.LogInformation("DependencyTrack project found for projectId {ProjectId}", projectId);
                 }
                 else
                 {
-                    _logger?.LogWarning($"No DependencyTrack project found for projectId {projectId}");
+                    _logger?.LogWarning("No DependencyTrack project found for projectId {ProjectId}", projectId);
                 }
                 return result;
             }
             catch (Exception ex)
             {
-                _logger?.LogError($"Failed to get DependencyTrack project: {ex.Message}");
+                _logger?.LogError(ex, "Failed to get DependencyTrack project: {Message}", ex.Message);
                 return null;
             }
         }
-
     }
 }

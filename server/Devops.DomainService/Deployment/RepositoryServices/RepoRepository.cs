@@ -1,3 +1,5 @@
+using Blocks.Genesis.DataAccess.Rules;
+using Blocks.Genesis.Entities.Release;
 using Blocks.Genesis;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Interfaces;
@@ -15,54 +17,75 @@ namespace Devops.DomainService.Deployment.RepositoryServices;
 
 public class RepoRepository : IRepoRepository
 {
+    private const string ReposCollection = "Repos";
     private readonly ILogger<RepoRepository> _logger;
     private readonly IDbContextProvider _dbContextProvider;
     private readonly IConfiguration _configuration;
     private readonly IBlocksSecret _blocksSecret;
+    private readonly IReleaseDataAccess _access;
 
     private static readonly FilterDefinition<Repo> NotArchived =
         Builders<Repo>.Filter.Ne(r => r.IsArchived, true);
 
-    public RepoRepository(IDbContextProvider dbContextProvider, IConfiguration configuration, ILogger<RepoRepository> logger, IBlocksSecret blocksSecret)
+    public RepoRepository(IDbContextProvider dbContextProvider, IConfiguration configuration, ILogger<RepoRepository> logger, IBlocksSecret blocksSecret, IReleaseDataAccess access)
     {
         _logger = logger;
         _dbContextProvider = dbContextProvider;
         _configuration = configuration;
         _blocksSecret = blocksSecret;
+        _access = access;
     }
 
     public async Task<Repo?> GetRepo(string repoId)
     {
-        var collection = _dbContextProvider.GetCollection<Repo>("Repos");
+        var collection = _dbContextProvider.GetCollection<Repo>(ReposCollection);
         var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId) & NotArchived;
-        var repo = await collection.Find(filter).FirstOrDefaultAsync();
-        return repo;
+        // Whole document on purpose: callers pass this entity back to UpdateRepo(Repo, ...), a whole-doc replace.
+        var scope = await _access.ReadAsync(ReleaseSchemas.Repo, filter, "RepoRepository.GetRepo", useProjection: false);
+        if (!scope.Granted) return null;
+        return await scope.Apply(collection).FirstOrDefaultAsync();
     }
 
     public async Task<Repo?> GetRepo(string repoId, string tenantId)
     {
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-        var collection = _dbContext.GetCollection<Repo>("Repos");
+        var collection = _dbContext.GetCollection<Repo>(ReposCollection);
         var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId) & NotArchived;
-        var repo = await collection.Find(filter).FirstOrDefaultAsync();
-        return repo;
+        var scope = await _access.ReadAsync(ReleaseSchemas.Repo, filter, "RepoRepository.GetRepoByTenant", tenantId);
+        if (!scope.Granted) return null;
+        return await scope.Apply(collection).FirstOrDefaultAsync();
+    }
+
+    public async Task<Repo?> GetRepoForView(string repoId)
+    {
+        var collection = _dbContextProvider.GetCollection<Repo>(ReposCollection);
+        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId) & NotArchived;
+        // Masked: View column (property) rules clear what the caller may not see. Never save it back.
+        var scope = await _access.ReadAsync(ReleaseSchemas.Repo, filter, "RepoRepository.GetRepoForView");
+        if (!scope.Granted) return null;
+        return scope.ForView(await scope.Apply(collection).FirstOrDefaultAsync());
     }
 
     public async Task<Repo?> GetRepoByBranch(string tenantId, string repoFullName, string branch)
     {
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-        var collection = _dbContext.GetCollection<Repo>("Repos");
+        var collection = _dbContext.GetCollection<Repo>(ReposCollection);
         var filter = Builders<Repo>.Filter.Eq(r => r.RepoName, repoFullName) &
                      Builders<Repo>.Filter.Eq(r => r.Branch, branch) &
                      NotArchived;
-        var repo = await collection.Find(filter).FirstOrDefaultAsync();
-        return repo;
+        // Whole document: the webhook build passes this entity to UpdateRepo(Repo, tenantId), a whole-doc replace.
+        var scope = await _access.ReadAsync(ReleaseSchemas.Repo, filter, "RepoRepository.GetRepoByBranch", tenantId, useProjection: false);
+        if (!scope.Granted) return null;
+        return await scope.Apply(collection).FirstOrDefaultAsync();
     }
 
     public async Task<List<Repo>?> GetRepos()
     {
-        var collection = _dbContextProvider.GetCollection<Repo>("Repos");
-        return await collection.Find(NotArchived).ToListAsync();
+        var collection = _dbContextProvider.GetCollection<Repo>(ReposCollection);
+        var scope = await _access.ReadAsync(ReleaseSchemas.Repo, NotArchived, "RepoRepository.GetRepos");
+        if (!scope.Granted) return new List<Repo>();
+        // Only the API lists these: View column (property) rules clear what the caller may not see.
+        return scope.ForView(await scope.Apply(collection).ToListAsync());
     }
 
     // Page bounds live here rather than in the controller so that no caller, present or
@@ -78,7 +101,8 @@ public class RepoRepository : IRepoRepository
     {
         var collection = _dbContextProvider.GetCollection<Build>("Builds");
 
-        var filter = BuildListFilter(RepoId, branch);
+        var scope = await _access.ReadAsync(ReleaseSchemas.Build, BuildListFilter(RepoId, branch), "RepoRepository.GetRepoBuildList");
+        if (!scope.Granted) return new List<Build>();
 
         var safePageNumber = Math.Max(1, pageNumber);
         var safePageSize = Math.Clamp(pageSize, MinPageSize, MaxPageSize);
@@ -98,12 +122,12 @@ public class RepoRepository : IRepoRepository
             .Descending(b => b.CreatedDate)
             .Descending("_id");
 
-        return await collection
-            .Find(filter)
+        // Only the API lists these: View column (property) rules clear what the caller may not see.
+        return scope.ForView(await scope.Apply(collection)
             .Sort(sort)
             .Skip(safeSkip)
             .Limit(safePageSize)
-            .ToListAsync();
+            .ToListAsync());
     }
 
     public async Task<long> GetRepoBuildCount(string RepoId, string? branch)
@@ -113,7 +137,9 @@ public class RepoRepository : IRepoRepository
         // Deliberately the same filter the list uses. A count built from its own copy of the
         // predicate is the classic way for a total to drift out of step with the rows it is
         // meant to describe, and a client would page into an empty tail because of it.
-        return await collection.CountDocumentsAsync(BuildListFilter(RepoId, branch));
+        var scope = await _access.ReadAsync(ReleaseSchemas.Build, BuildListFilter(RepoId, branch), "RepoRepository.GetRepoBuildCount");
+        if (!scope.Granted) return 0;
+        return await collection.CountDocumentsAsync(scope.Filter);
     }
 
     private static FilterDefinition<Build> BuildListFilter(string RepoId, string? branch)
@@ -131,7 +157,7 @@ public class RepoRepository : IRepoRepository
     {
         CancellationToken ct = default;
         var blocksUserId = BlocksContext.GetContext().UserId;
-        var repoCollection = _dbContextProvider.GetCollection<Repo>("Repos");
+        var repoCollection = _dbContextProvider.GetCollection<Repo>(ReposCollection);
         var buildsCollection = _dbContextProvider.GetCollection<Build>("Builds");
         var repoFilter = Builders<Repo>.Filter.Eq(r => r.BlocksUserId, blocksUserId) &
                          Builders<Repo>.Filter.Eq(r => r.ProjectId, projectId) &
@@ -162,7 +188,7 @@ public class RepoRepository : IRepoRepository
 
     public async Task SaveRepo(Repo repo)
     {
-        var collection = _dbContextProvider.GetCollection<Repo>("Repos");
+        var collection = _dbContextProvider.GetCollection<Repo>(ReposCollection);
         try
         {
             var filter = Builders<Repo>.Filter.Eq(r => r.ProjectId, repo.ProjectId) &
@@ -171,7 +197,10 @@ public class RepoRepository : IRepoRepository
             bool exists = await collection.Find(filter).AnyAsync();
 
             if (!exists)
+            {
+                await _access.PrepareWriteAsync(ReleaseSchemas.Repo, repo, isInsert: true, "RepoRepository.SaveRepo");
                 await collection.InsertOneAsync(repo);
+            }
         }
         catch (MongoWriteException e)
         {
@@ -179,44 +208,43 @@ public class RepoRepository : IRepoRepository
         }
     }
 
+    /// <summary>The fields a repo update request sets: only the ones it carries. Null when it carries none.</summary>
+    private static UpdateDefinition<Repo>? BuildRepoUpdate(RepoUpdateRequest request)
+    {
+        var update = Builders<Repo>.Update;
+        var sets = new List<UpdateDefinition<Repo>>();
+        if (request.deploySettings is not null)
+            sets.Add(update.Set(r => r.DeploySettings, request.deploySettings));
+        if (!string.IsNullOrWhiteSpace(request.DeploymentType))
+            sets.Add(update.Set(r => r.DeploymentType, request.DeploymentType));
+        if (!string.IsNullOrWhiteSpace(request.CustomDomain))
+            sets.Add(update.Set(r => r.CustomDeploymentUrl, request.CustomDomain));
+        if (!string.IsNullOrWhiteSpace(request.LastDeploymentStatus))
+            sets.Add(update.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus));
+        if (request.LastDeploymentDate is not null)
+            sets.Add(update.Set(r => r.LastDeploymentDate, request.LastDeploymentDate));
+        return sets.Count == 0 ? null : update.Combine(sets);
+    }
+
     public async Task<bool> UpdateRepo(RepoUpdateRequest request)
     {
         try
         {
-            var collection = _dbContextProvider.GetCollection<Repo>("Repos");
+            var collection = _dbContextProvider.GetCollection<Repo>(ReposCollection);
 
-            var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, request.RepoId);
-            var updateBuilder = Builders<Repo>.Update;
-            UpdateDefinition<Repo>? update = null;
-
-            // Dynamically build update only for non-null values
-            if (request.deploySettings is not null)
-                update = (update == null ? updateBuilder.Set(r => r.DeploySettings, request.deploySettings)
-                                         : update.Set(r => r.DeploySettings, request.deploySettings));
-
-            if (!string.IsNullOrWhiteSpace(request.DeploymentType))
-                update = (update == null ? updateBuilder.Set(r => r.DeploymentType, request.DeploymentType)
-                                         : update.Set(r => r.DeploymentType, request.DeploymentType));
-
-            if (!string.IsNullOrWhiteSpace(request.CustomDomain))
-                update = (update == null ? updateBuilder.Set(r => r.CustomDeploymentUrl, request.CustomDomain)
-                                         : update.Set(r => r.CustomDeploymentUrl, request.CustomDomain));
-
-            if (!string.IsNullOrWhiteSpace(request.LastDeploymentStatus))
-                update = (update == null ? updateBuilder.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus)
-                                         : update.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus));
-
-            if (request.LastDeploymentDate is not null)
-                update = (update == null ? updateBuilder.Set(r => r.LastDeploymentDate, request.LastDeploymentDate)
-                                         : update.Set(r => r.LastDeploymentDate, request.LastDeploymentDate));
-
+            var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
+                Builders<Repo>.Filter.Eq(r => r.ItemId, request.RepoId), "RepoRepository.UpdateRepo");
+            if (filter is null) return false;
+            var update = BuildRepoUpdate(request);
             if (update == null)
                 return false;
 
+            await _access.CheckUpdateAsync(ReleaseSchemas.Repo, update, "RepoRepository.UpdateRepo");
             var result = await collection.UpdateOneAsync(filter, update);
             return true;
         }
-        catch(Exception ex)
+        // A rule refusing the update reaches the caller with its message, not as a quiet "false".
+        catch (Exception ex) when (ex is not DataValidationException)
         {
             _logger.LogError($"Failed to update repo {ex.Message}");
             return false;
@@ -229,39 +257,21 @@ public class RepoRepository : IRepoRepository
         try
         {
             var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-            var collection = _dbContext.GetCollection<Repo>("Repos");
+            var collection = _dbContext.GetCollection<Repo>(ReposCollection);
 
-            var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, request.RepoId);
-            var updateBuilder = Builders<Repo>.Update;
-            UpdateDefinition<Repo>? update = null;
-
-            // Dynamically build update only for non-null values
-            if (request.deploySettings is not null)
-                update = (update == null ? updateBuilder.Set(r => r.DeploySettings, request.deploySettings)
-                                         : update.Set(r => r.DeploySettings, request.deploySettings));
-
-            if (!string.IsNullOrWhiteSpace(request.DeploymentType))
-                update = (update == null ? updateBuilder.Set(r => r.DeploymentType, request.DeploymentType)
-                                         : update.Set(r => r.DeploymentType, request.DeploymentType));
-
-            if (!string.IsNullOrWhiteSpace(request.CustomDomain))
-                update = (update == null ? updateBuilder.Set(r => r.CustomDeploymentUrl, request.CustomDomain)
-                                         : update.Set(r => r.CustomDeploymentUrl, request.CustomDomain));
-
-            if (!string.IsNullOrWhiteSpace(request.LastDeploymentStatus))
-                update = (update == null ? updateBuilder.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus)
-                                         : update.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus));
-            if (request.LastDeploymentDate is not null)
-                update = (update == null ? updateBuilder.Set(r => r.LastDeploymentDate, request.LastDeploymentDate)
-                                         : update.Set(r => r.LastDeploymentDate, request.LastDeploymentDate));
-
+            var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
+                Builders<Repo>.Filter.Eq(r => r.ItemId, request.RepoId), "RepoRepository.UpdateRepoByTenant", tenantId);
+            if (filter is null) return false;
+            var update = BuildRepoUpdate(request);
             if (update == null)
                 return false;
 
+            await _access.CheckUpdateAsync(ReleaseSchemas.Repo, update, "RepoRepository.UpdateRepoByTenant", tenantId);
             var result = await collection.UpdateOneAsync(filter, update);
             return result.MatchedCount == 1 && result.ModifiedCount == 1;
         }
-        catch (Exception ex)
+        // A rule refusing the update reaches the caller with its message, not as a quiet "false".
+        catch (Exception ex) when (ex is not DataValidationException)
         {
             _logger.LogError($"Failed to update repo {ex.Message}");
             return false;
@@ -269,21 +279,29 @@ public class RepoRepository : IRepoRepository
 
     }
 
-    public async Task<bool> UpdateRepo(Repo repo)
-    {
-        var collection = _dbContextProvider.GetCollection<Repo>("Repos");
-        return await ReplaceRepoAsync(collection, repo);
-    }
+    public Task<bool> UpdateRepo(Repo repo) =>
+        ReplaceRepoAsync(repo, _dbContextProvider.GetCollection<Repo>(ReposCollection), null, "RepoRepository.UpdateRepoWhole");
 
     public Task<bool> UpdateRepo(Repo repo, string tenantId) =>
-        ReplaceRepoAsync(_dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>("Repos"), repo);
+        ReplaceRepoAsync(repo, _dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>(ReposCollection), tenantId, "RepoRepository.ReplaceRepo");
 
-    private static async Task<bool> ReplaceRepoAsync(IMongoCollection<Repo> collection, Repo repo)
+    /// <summary>
+    /// Replaces the whole repo when the edit policy allows it (false when it doesn't), after its validation rules.
+    /// Row gate only: the repo was read whole (GetRepo/GetRepoByBranch use no projection), so no masked value is written back.
+    /// </summary>
+    private async Task<bool> ReplaceRepoAsync(Repo repo, IMongoCollection<Repo> collection, string? tenantId, string callSite)
     {
-        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repo.ItemId);
+        var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
+            Builders<Repo>.Filter.Eq(r => r.ItemId, repo.ItemId), callSite, tenantId);
+        if (filter is null) return false;
+
+        await _access.PrepareReplaceAsync(ReleaseSchemas.Repo, repo, collection, filter, callSite, tenantId);
         var result = await collection.ReplaceOneAsync(filter, repo, cancellationToken: default);
         return result.MatchedCount == 1;
     }
+
+    public Task CheckRepoAsync(Repo repo, string tenantId) =>
+        _access.PrepareWriteAsync(ReleaseSchemas.Repo, repo, isInsert: false, "RepoRepository.CheckRepo", tenantId);
 
     /// <summary>
     /// Clears the recorded deployment namespace and stamps the display status, in one atomic update against
@@ -295,7 +313,7 @@ public class RepoRepository : IRepoRepository
         try
         {
             return await ClearDeployedNamespaceAsync(
-                _dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>("Repos"), repoId, lastDeploymentStatus);
+                _dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>(ReposCollection), repoId, lastDeploymentStatus, tenantId);
         }
         catch (Exception ex)
         {
@@ -305,12 +323,14 @@ public class RepoRepository : IRepoRepository
     }
 
     public Task<bool> ClearDeployedNamespace(string repoId, Tenant project, string lastDeploymentStatus) =>
-        ClearDeployedNamespaceAsync(ProjectCollection(project), repoId, lastDeploymentStatus);
+        ClearDeployedNamespaceAsync(ProjectCollection(project), repoId, lastDeploymentStatus, project.TenantId);
 
-    private static async Task<bool> ClearDeployedNamespaceAsync(
-        IMongoCollection<Repo> collection, string repoId, string lastDeploymentStatus)
+    private async Task<bool> ClearDeployedNamespaceAsync(
+        IMongoCollection<Repo> collection, string repoId, string lastDeploymentStatus, string tenantId)
     {
-        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+        var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
+            Builders<Repo>.Filter.Eq(r => r.ItemId, repoId), "RepoRepository.ClearDeployedNamespace", tenantId);
+        if (filter is null) return false;
         var update = Builders<Repo>.Update
             .Set(r => r.DeployedNamespace, null)
             .Set(r => r.LastDeploymentStatus, lastDeploymentStatus);
@@ -333,20 +353,22 @@ public class RepoRepository : IRepoRepository
     public async Task<List<Repo>> GetProjectRepos(string tenantId, string? resourceId = null)
     {
         return await GetProjectReposAsync(
-            _dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>("Repos"), tenantId, resourceId);
+            _dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>(ReposCollection), tenantId, resourceId);
     }
 
     public Task<List<Repo>> GetProjectRepos(Tenant project, string? resourceId = null) =>
         GetProjectReposAsync(ProjectCollection(project), project.TenantId, resourceId);
 
-    private static Task<List<Repo>> GetProjectReposAsync(
+    private async Task<List<Repo>> GetProjectReposAsync(
         IMongoCollection<Repo> collection, string tenantId, string? resourceId)
     {
         var filter = Builders<Repo>.Filter.Eq(r => r.ProjectId, tenantId);
         if (!string.IsNullOrWhiteSpace(resourceId))
             filter &= Builders<Repo>.Filter.Eq(r => r.SourceRepoId, resourceId);
 
-        return collection.Find(filter).ToListAsync();
+        var scope = await _access.ReadAsync(ReleaseSchemas.Repo, filter, "RepoRepository.GetProjectRepos", tenantId);
+        if (!scope.Granted) return new List<Repo>();
+        return await scope.Apply(collection).ToListAsync();
     }
 
     /// <summary>
@@ -358,7 +380,7 @@ public class RepoRepository : IRepoRepository
     {
         try
         {
-            return await ArchiveRepoAsync(_dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>("Repos"), repoId);
+            return await ArchiveRepoAsync(_dbContextProvider.GetDatabase(tenantId).GetCollection<Repo>(ReposCollection), repoId, tenantId);
         }
         catch (Exception ex)
         {
@@ -368,11 +390,13 @@ public class RepoRepository : IRepoRepository
     }
 
     public Task<bool> ArchiveRepo(string repoId, Tenant project) =>
-        ArchiveRepoAsync(ProjectCollection(project), repoId);
+        ArchiveRepoAsync(ProjectCollection(project), repoId, project.TenantId);
 
-    private static async Task<bool> ArchiveRepoAsync(IMongoCollection<Repo> collection, string repoId)
+    private async Task<bool> ArchiveRepoAsync(IMongoCollection<Repo> collection, string repoId, string tenantId)
     {
-        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+        var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
+            Builders<Repo>.Filter.Eq(r => r.ItemId, repoId), "RepoRepository.ArchiveRepo", tenantId);
+        if (filter is null) return false;
         var update = Builders<Repo>.Update
             .Set(r => r.IsArchived, true)
             .Set(r => r.LastUpdatedDate, DateTime.UtcNow);
@@ -390,19 +414,41 @@ public class RepoRepository : IRepoRepository
             throw new InvalidOperationException("Project tenant has no database placement.");
 
         return _dbContextProvider.GetDatabase(project.DbConnectionString, project.DBName)
-            .GetCollection<Repo>("Repos");
+            .GetCollection<Repo>(ReposCollection);
+    }
+
+    /// <summary>
+    /// Checks each requested domain against CustomDeploymentUrl's validation rules, before anything is written;
+    /// throws <see cref="DataValidationException"/> on the first refused one. Returns the domains to apply.
+    /// </summary>
+    public async Task<List<RepoWithDomain>> CheckRepoDomainsAsync(RepoDomainUpdateRequest request)
+    {
+        var requested = request.repoWithDomains
+            .Where(rd => !string.IsNullOrWhiteSpace(rd.RepoId) && !string.IsNullOrWhiteSpace(rd.CustomDeploymentDomain))
+            .ToList();
+        foreach (var rd in requested)
+            await _access.CheckUpdateAsync(ReleaseSchemas.Repo, Builders<Repo>.Update.Set(r => r.CustomDeploymentUrl, rd.CustomDeploymentDomain), "RepoRepository.UpdateRepoDomain");
+        return requested;
     }
 
     public async Task<BulkOperationSummary> UpdateRepoDomain(RepoDomainUpdateRequest request)
     {
-        var collection = _dbContextProvider.GetCollection<Repo>("Repos");
+        var collection = _dbContextProvider.GetCollection<Repo>(ReposCollection);
         var projectId = BlocksContext.GetContext()?.TenantId;
 
-        var bulkOps = request.repoWithDomains
-            .Where(rd => !string.IsNullOrWhiteSpace(rd.RepoId) && !string.IsNullOrWhiteSpace(rd.CustomDeploymentDomain))
+        // One resolver call for the whole batch: the policy filter of an empty base is ANDed into every model.
+        var policy = await _access.EditFilterAsync(ReleaseSchemas.Repo,
+            FilterDefinition<Repo>.Empty, "RepoRepository.UpdateRepoDomain");
+        if (policy is null)
+            return new BulkOperationSummary { RequestedCount = 0, MatchedCount = 0, ModifiedCount = 0, IsAcknowledged = true };
+
+        var requested = await CheckRepoDomainsAsync(request);
+
+        var bulkOps = requested
             .Select(rd => new UpdateOneModel<Repo>(
                 Builders<Repo>.Filter.Eq(r => r.ItemId, rd.RepoId) &
-                Builders<Repo>.Filter.Eq(r => r.ProjectId, projectId),
+                Builders<Repo>.Filter.Eq(r => r.ProjectId, projectId) &
+                policy,
                 Builders<Repo>.Update.Set(r => r.CustomDeploymentUrl, rd.CustomDeploymentDomain)))
             .ToList();
 
@@ -561,8 +607,10 @@ public class RepoRepository : IRepoRepository
     public async Task<bool> UpdateRepoDependencyTrackProjectUuid(string repoId, string dependencyTrackProjectUuid, string tenantId)
     {
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-        var collection = _dbContext.GetCollection<Repo>("Repos");
-        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+        var collection = _dbContext.GetCollection<Repo>(ReposCollection);
+        var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
+            Builders<Repo>.Filter.Eq(r => r.ItemId, repoId), "RepoRepository.UpdateRepoDependencyTrackProjectUuid", tenantId);
+        if (filter is null) return false;
         var update = Builders<Repo>.Update.Set(r => r.DependencyTrackProjectUuid, dependencyTrackProjectUuid);
 
         var result = await collection.UpdateOneAsync(filter, update);
@@ -572,14 +620,32 @@ public class RepoRepository : IRepoRepository
     public async Task<bool> UpdateRepoSecretStoreItemId(string repoId, string secretStoreItemId, string tenantId)
     {
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);
-        var collection = _dbContext.GetCollection<Repo>("Repos");
-        var filter = Builders<Repo>.Filter.Eq(r => r.ItemId, repoId);
+        var collection = _dbContext.GetCollection<Repo>(ReposCollection);
+        var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
+            Builders<Repo>.Filter.Eq(r => r.ItemId, repoId), "RepoRepository.UpdateRepoSecretStoreItemId", tenantId);
+        if (filter is null) return false;
         var update = Builders<Repo>.Update.Set(r => r.SecretStoreItemId, secretStoreItemId);
 
         // MatchedCount only: re-pointing a repository at the id it already holds is a no-op in
         // Mongo (ModifiedCount 0) but is still a success from the caller's point of view. The
         // DependencyTrack sibling above checks both because it is only ever called with a value
         // that differs; this one is reached on the create path where a retry can repeat the id.
+        var result = await collection.UpdateOneAsync(filter, update);
+        return result.MatchedCount == 1;
+    }
+
+    // Keeps the stored hook in step with GitHub after a Manual/Auto switch. Sets GithubWebhook.Active
+    // only; a repository with no stored hook has no field to set and is left alone.
+    public async Task<bool> UpdateRepoGithubWebhookActive(string repoId, bool active)
+    {
+        var collection = _dbContextProvider.GetCollection<Repo>(ReposCollection);
+        var filter = await _access.EditFilterAsync(ReleaseSchemas.Repo,
+            Builders<Repo>.Filter.Eq(r => r.ItemId, repoId) & Builders<Repo>.Filter.Ne(r => r.GithubWebhook, null),
+            "RepoRepository.UpdateRepoGithubWebhookActive");
+        if (filter is null) return false;
+        var update = Builders<Repo>.Update.Set(r => r.GithubWebhook.Active, active);
+
+        // MatchedCount only: saving the state the hook already holds is still a success.
         var result = await collection.UpdateOneAsync(filter, update);
         return result.MatchedCount == 1;
     }

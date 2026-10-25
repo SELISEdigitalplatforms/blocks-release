@@ -4,11 +4,14 @@ import {
   REPO_SECRET_KEY_PATTERN,
 } from "@blocks-deployment/models/repo-secrets.model";
 import {
+  dropBlankRows,
   exceedsSizeLimit,
   findDuplicateKey,
+  isBlankRow,
   parseSecretEnv,
   parseSecretJson,
   rowsToMap,
+  type ParseResult,
 } from "@blocks-deployment/utils/repo-secrets.util";
 
 export type SecretEntryMode = "kv" | "json" | "env";
@@ -89,57 +92,76 @@ const refinePasteMode = (
   });
 };
 
-const refineKvMode = (
-  values: ISecretFormValues,
-  ctx: z.RefinementCtx,
-): void => {
-  let hasInvalidKey = false;
+type KvIssue = { path: (string | number)[]; message: string };
 
-  for (let index = 0; index < values.rows.length; index++) {
-    const result = keyField.safeParse(values.rows[index].key);
+/**
+ * The key/value rules, in the order they are reported. Shared by the schema (which puts every
+ * issue on its row) and `activeTabResult` (which only needs the first), so Save enablement and
+ * the on-screen messages cannot disagree.
+ *
+ * Fully blank rows are skipped rather than reported: "Add more" leaves one behind, and it must
+ * neither block the save nor be carried into another tab. Indexes stay those of the full list so
+ * a message still lands on the row the user sees.
+ */
+const kvIssues = (rows: ISecretFormValues["rows"]): KvIssue[] => {
+  const issues: KvIssue[] = [];
+
+  rows.forEach((row, index) => {
+    if (isBlankRow(row)) return;
+
+    const result = keyField.safeParse(row.key);
 
     if (!result.success) {
-      hasInvalidKey = true;
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+      issues.push({
         path: ["rows", index, "key"],
         message: result.error.issues[0]?.message ?? "Invalid key.",
       });
     }
+  });
+
+  if (issues.length > 0) return issues;
+
+  const filled = dropBlankRows(rows);
+
+  if (filled.length === 0) {
+    return [{ path: ["rows"], message: "Add at least one variable." }];
   }
 
-  if (hasInvalidKey) return;
-
-  if (values.rows.length === 0) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["rows"],
-      message: "Add at least one variable.",
-    });
-    return;
-  }
-
-  const duplicate = findDuplicateKey(values.rows);
+  const duplicate = findDuplicateKey(filled);
 
   if (duplicate) {
-    const secondIndex = indexOfDuplicate(values.rows, duplicate);
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["rows", secondIndex, "key"],
-      message: "Each key may appear only once.",
-    });
-    return;
+    return [
+      {
+        path: ["rows", indexOfDuplicate(rows, duplicate), "key"],
+        message: "Each key may appear only once.",
+      },
+    ];
   }
 
-  const tooLarge = exceedsSizeLimit(rowsToMap(values.rows));
+  const tooLarge = exceedsSizeLimit(rowsToMap(filled));
 
-  if (tooLarge) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["rows"],
-      message: tooLarge,
-    });
+  return tooLarge ? [{ path: ["rows"], message: tooLarge }] : [];
+};
+
+const refineKvMode = (values: ISecretFormValues, ctx: z.RefinementCtx): void => {
+  for (const issue of kvIssues(values.rows)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, ...issue });
   }
+};
+
+/**
+ * Parses whichever tab is on screen into the set Save would send. The single source for Save
+ * enablement, the submit payload and the conversion on a tab switch.
+ */
+export const activeTabResult = (values: ISecretFormValues): ParseResult => {
+  if (values.mode === "env") return parseSecretEnv(values.env);
+  if (values.mode === "json") return parseSecretJson(values.json);
+
+  const [first] = kvIssues(values.rows);
+
+  return first
+    ? { ok: false, message: first.message }
+    : { ok: true, value: rowsToMap(dropBlankRows(values.rows)) };
 };
 
 /** Index of the second row that repeats `key`, or 0 as a safe fallback. */

@@ -280,6 +280,7 @@ namespace XUnitTest.Devops.Deployment
                 RepoUrl = "https://github.com/org/web",
                 DefaultDeploymentUrl = "https://web.example.com",
                 CustomDeploymentUrl = "https://custom.example.com",
+                IsCustomDomainOnly = true,
                 ProjectId = "proj-1",
                 ProjectName = "Demo",
             };
@@ -294,6 +295,7 @@ namespace XUnitTest.Devops.Deployment
             saved.RepoUrl.Should().Be("https://github.com/org/web");
             saved.DefaultDeploymentUrl.Should().Be("https://web.example.com");
             saved.CustomDeploymentUrl.Should().Be("https://custom.example.com");
+            saved.IsCustomDomainOnly.Should().BeTrue();
             saved.ProjectId.Should().Be("proj-1");
             saved.ProjectName.Should().Be("Demo");
         }

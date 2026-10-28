@@ -5,6 +5,8 @@ import { IDeploymentPageData } from "@blocks-deployment/pages/deployment-details
 import NotificationListener from "./notification-listener";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
+import { isCustomDomainOnly } from "@blocks-deployment/utils/custom-domain.utils";
+import { CustomDomainOnlyTarget } from "./custom-domain-only-target";
 
 interface DeploymentGeneralInfoProps {
   buildId?: string;
@@ -123,18 +125,22 @@ const DeploymentGeneralInfo = ({
             <p className="mb-2 text-sm font-medium text-medium-emphasis">
               Deploys To
             </p>
-            <CopyToClipboardButton
-              textToCopy={defaultDeploymentURL}
-              isHoverable={false}>
-              <a
-                href={defaultDeploymentURL || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block truncate text-sm text-blue-600 hover:underline"
-                onClick={(e) => e.stopPropagation()}>
-                {defaultDeploymentURL || "N/A"}
-              </a>
-            </CopyToClipboardButton>
+            {isCustomDomainOnly(cardData) ? (
+              <CustomDomainOnlyTarget url={defaultDeploymentURL} />
+            ) : (
+              <CopyToClipboardButton
+                textToCopy={defaultDeploymentURL}
+                isHoverable={false}>
+                <a
+                  href={defaultDeploymentURL || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block truncate text-sm text-blue-600 hover:underline"
+                  onClick={(e) => e.stopPropagation()}>
+                  {defaultDeploymentURL || "N/A"}
+                </a>
+              </CopyToClipboardButton>
+            )}
           </div>
 
           <div>

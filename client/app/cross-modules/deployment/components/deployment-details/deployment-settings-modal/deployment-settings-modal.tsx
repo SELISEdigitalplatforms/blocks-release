@@ -24,7 +24,11 @@ import {
   useGetSpecs,
 } from "@/cross-modules/deployment/hooks/use-github-info";
 import { toast } from "@/hooks/use-toast";
-import { DEPLOYMENT_OPTIONS } from "@blocks-deployment/models/deployment-settings";
+import {
+  DEPLOYMENT_OPTIONS,
+  DOMAIN_OPTIONS,
+} from "@blocks-deployment/models/deployment-settings";
+import { hasCustomDomain } from "@blocks-deployment/utils/custom-domain.utils";
 import useIsMobile from "@/hooks/use-is-mobile";
 import { useProjectStore } from "@/store/project.store";
 import { useNavigate } from "react-router";
@@ -75,6 +79,7 @@ const DeploymentSettingsModal = ({
     providerId: "",
     regionId: "",
     machineConfigId: "",
+    isCustomDomainOnly: false,
   });
   const [isInitialized, setIsInitialized] = useState(false);
   const [viewInBlocksMonitor, setViewInBlocksMonitor] = useState(true);
@@ -111,6 +116,10 @@ const DeploymentSettingsModal = ({
     },
   });
   const specsData = specs?.data;
+  // Settings only: the first-deployment flow starts a build without saving settings. The choice
+  // means nothing until the repository has a custom domain.
+  const showDomainOption =
+    !isDeploymentFlow && hasCustomDomain(repoDetails?.data?.repo);
 
   useEffect(() => {
     if (isError && error && typeof error === "object" && "errors" in error) {
@@ -181,6 +190,7 @@ const DeploymentSettingsModal = ({
       customDomain: preselectedDeploySettings?.customDomain || "",
       lastDeploymentStatus:
         preselectedDeploySettings?.lastDeploymentStatus || "",
+      isCustomDomainOnly: Boolean(repo.isCustomDomainOnly),
     });
 
     setIsInitialized(true);
@@ -218,6 +228,10 @@ const DeploymentSettingsModal = ({
         deploymentType: deploymentData.deploymentType,
         projectEnv: projectEnvironment,
         projectName: projectName,
+        // Sent only while offered: left out, the server keeps the stored value.
+        isCustomDomainOnly: showDomainOption
+          ? Boolean(deploymentData.isCustomDomainOnly)
+          : undefined,
       };
 
       updateRepoSettings(payload);
@@ -236,6 +250,7 @@ const DeploymentSettingsModal = ({
       machineConfigId: "",
       customDomain: "",
       lastDeploymentStatus: "",
+      isCustomDomainOnly: false,
     });
     setIsInitialized(false);
     setViewInBlocksMonitor(true);
@@ -307,6 +322,42 @@ const DeploymentSettingsModal = ({
               ))}
             </RadioGroup>
           </div>
+
+          {showDomainOption && (
+            <div className="w-full">
+              <label className="mb-3 block text-sm font-medium">Domains</label>
+              <RadioGroup
+                aria-label="Domains"
+                value={deploymentData.isCustomDomainOnly ? "custom" : "both"}
+                onValueChange={(value) =>
+                  updateFormData("isCustomDomainOnly", value === "custom")
+                }
+                className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {DOMAIN_OPTIONS.map((option) => (
+                  <div
+                    key={option.value}
+                    className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value={option.value}
+                      id={`domains-${option.value}`}
+                      checked={
+                        (deploymentData.isCustomDomainOnly ? "custom" : "both") ===
+                        option.value
+                      }
+                    />
+                    <label
+                      htmlFor={`domains-${option.value}`}
+                      className="text-sm">
+                      {option.label}
+                    </label>
+                  </div>
+                ))}
+              </RadioGroup>
+              <p className="mt-2 text-xs text-low-emphasis">
+                Applies from the next deployment.
+              </p>
+            </div>
+          )}
 
           {/* Only the first deployment (the deployment flow) offers this; the monitor is
               created once, right after the build is triggered. */}

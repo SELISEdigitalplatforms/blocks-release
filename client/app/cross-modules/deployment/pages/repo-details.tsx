@@ -37,6 +37,8 @@ import {
   useInitialRepoDeployment,
 } from "@/cross-modules/deployment/hooks/use-github-info";
 import { DEPLOYMENT_OPTIONS_DETAILS } from "@blocks-deployment/models/deployment-settings";
+import { CustomDomainOnlyTarget } from "@blocks-deployment/components/deployment-details/shared/custom-domain-only-target";
+import { isCustomDomainOnly } from "@blocks-deployment/utils/custom-domain.utils";
 import {
   DeploymentFormData,
   IHttpError,
@@ -93,6 +95,9 @@ export interface IPipeline {
   tags: string[];
   defaultDeploymentUrl: string;
   customDeploymentURL?: string;
+  customDeploymentUrl?: string | null;
+  /** The repository's setting when this build started. Absent on older builds, which deployed to both. */
+  isCustomDomainOnly?: boolean;
 }
 
 // Details shows a single build, History one page of five. Named so each page size is one
@@ -466,6 +471,13 @@ export default function RepoDetails() {
     repoDetails?.data?.repo?.defaultDeploymentUrl ||
     "";
 
+  // The latest build is what is live; before the first build, the repository's own setting.
+  const domainTarget = latestBuild ?? repoDetails?.data?.repo;
+  const customDomainOnly = isCustomDomainOnly(domainTarget);
+  const liveDeploymentUrl = customDomainOnly
+    ? domainTarget?.customDeploymentUrl || ""
+    : deploymentUrl;
+
   const repoDisplayName =
     latestBuild?.repoName.split("/").pop() || latestBuild?.repoName;
 
@@ -732,7 +744,7 @@ export default function RepoDetails() {
                     <DeleteDeploymentButton
                       hasLiveDeployment={hasLiveDeployment}
                       repoName={repoDisplayName}
-                      deploymentUrl={deploymentUrl}
+                      deploymentUrl={liveDeploymentUrl}
                       isDeleting={isDeleting}
                       isDisabled={isDeploying}
                       isModalOpen={isDeleteModalOpen}
@@ -762,10 +774,14 @@ export default function RepoDetails() {
                         <p className="text-sm text-low-emphasis">
                           Deploys To
                         </p>
-                        <DeploymentTargetLink
-                          isLive={hasLiveDeployment}
-                          url={deploymentUrl}
-                        />
+                        {customDomainOnly ? (
+                          <CustomDomainOnlyTarget url={deploymentUrl} />
+                        ) : (
+                          <DeploymentTargetLink
+                            isLive={hasLiveDeployment}
+                            url={deploymentUrl}
+                          />
+                        )}
                       </div>
 
                       <div className="space-y-2">

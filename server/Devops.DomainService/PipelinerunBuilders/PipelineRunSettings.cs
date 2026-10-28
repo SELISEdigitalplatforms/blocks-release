@@ -130,11 +130,18 @@ public class PipelineRunSettings
         return this;
     }
 
-    public PipelineRunSettings setDomain(string defaultDomain, string customDomain)
+    /// <summary>
+    /// The hosts the app is served on: the default domain, plus the custom one when set. With
+    /// <paramref name="customDomainOnly"/> the custom domain is used alone - but only while one is set,
+    /// so the run is never left with no host.
+    /// </summary>
+    public PipelineRunSettings setDomain(string defaultDomain, string customDomain, bool customDomainOnly = false)
     {
         defaultDomain = Regex.Replace(defaultDomain, @"^https?://", "", RegexOptions.IgnoreCase, RegexTimeout).ToLower();
         customDomain = string.IsNullOrWhiteSpace(customDomain) ? null : Regex.Replace(customDomain, @"^https?://", "", RegexOptions.IgnoreCase, RegexTimeout).ToLower();
-        domains = string.Join(",", new[] { defaultDomain, customDomain }.Where(domain => !string.IsNullOrWhiteSpace(domain)));
+        domains = customDomainOnly && customDomain != null
+            ? customDomain
+            : string.Join(",", new[] { defaultDomain, customDomain }.Where(domain => !string.IsNullOrWhiteSpace(domain)));
         return this;
     }
 

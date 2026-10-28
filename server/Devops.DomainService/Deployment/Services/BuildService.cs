@@ -425,6 +425,7 @@ public class BuildService : IBuildService
             CreatedBy = blocksUserId,
             DefaultDeploymentUrl = repo.DefaultDeploymentUrl,
             CustomDeploymentUrl = repo.CustomDeploymentUrl,
+            IsCustomDomainOnly = repo.IsCustomDomainOnly,
             ProjectId = repo.ProjectId,
             ProjectName = repo.ProjectName
         };

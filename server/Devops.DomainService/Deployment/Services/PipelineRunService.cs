@@ -218,7 +218,7 @@ namespace Devops.DomainService.Deployment.Services
                     .setImageReference(buildImageName)
                     .setAppName($"{formattedProjectName}-{formattedBranchName}-{formattedRepoName}")
                     .setParamNamespace(blocksUserId, repo.RepoUrl)
-                    .setDomain(repo.DefaultDeploymentUrl, repo.CustomDeploymentUrl)
+                    .setDomain(repo.DefaultDeploymentUrl, repo.CustomDeploymentUrl, repo.IsCustomDomainOnly)
                     .setRepoUrl(repo.RepoUrl)
                     .setBranchName(repo.Branch)
                     .setAccessToken(accessToken)

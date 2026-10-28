@@ -186,6 +186,88 @@ describe("DeploymentSettingsModal", () => {
     expect(navigateMock).toHaveBeenCalled();
   });
 
+  // ─── Custom domain only ─────────────────────────────────────────────────────
+
+  const withRepo = (repo: Record<string, unknown>) =>
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: { data: { repo: { ...repoDetails.data.repo, ...repo } } },
+      isError: false,
+      error: null,
+    } as never);
+
+  it("does not offer the domain choice while the repository has no custom domain", () => {
+    renderWithProviders(
+      <DeploymentSettingsModal isOpen onClose={vi.fn()} repoId="r1" />,
+    );
+    expect(
+      screen.queryByRole("radiogroup", { name: "Domains" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Settings" }));
+    expect(updateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ isCustomDomainOnly: undefined }),
+    );
+  });
+
+  it("does not offer the domain choice in the first-deployment flow", () => {
+    withRepo({ customDeploymentUrl: "app.example.com" });
+    renderWithProviders(
+      <DeploymentSettingsModal
+        isOpen
+        onClose={vi.fn()}
+        repoId="r1"
+        isDeploymentFlow
+        onDeploy={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole("radiogroup", { name: "Domains" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("deploys to both domains by default and saves that choice", () => {
+    withRepo({ customDeploymentUrl: "app.example.com" });
+    renderWithProviders(
+      <DeploymentSettingsModal isOpen onClose={vi.fn()} repoId="r1" />,
+    );
+    expect(
+      screen.getByRole("radio", { name: "Default and custom domain" }),
+    ).toBeChecked();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Settings" }));
+    expect(updateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ repoId: "r1", isCustomDomainOnly: false }),
+    );
+  });
+
+  it("saves custom domain only when the user picks it", () => {
+    withRepo({ customDeploymentUrl: "app.example.com" });
+    renderWithProviders(
+      <DeploymentSettingsModal isOpen onClose={vi.fn()} repoId="r1" />,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "Custom domain only" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save Settings" }));
+    expect(updateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ isCustomDomainOnly: true }),
+    );
+  });
+
+  it("prefills the stored choice and lets the user switch back to both domains", () => {
+    withRepo({ customDeploymentUrl: "app.example.com", isCustomDomainOnly: true });
+    renderWithProviders(
+      <DeploymentSettingsModal isOpen onClose={vi.fn()} repoId="r1" />,
+    );
+    expect(screen.getByRole("radio", { name: "Custom domain only" })).toBeChecked();
+
+    fireEvent.click(
+      screen.getByRole("radio", { name: "Default and custom domain" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save Settings" }));
+    expect(updateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ isCustomDomainOnly: false }),
+    );
+  });
+
   // ─── Pagination (#175) ──────────────────────────────────────────────────────
 
   // This modal is mounted even while closed and always calls useGetRepoDetails, so once

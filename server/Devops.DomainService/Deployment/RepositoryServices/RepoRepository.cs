@@ -219,6 +219,8 @@ public class RepoRepository : IRepoRepository
             sets.Add(update.Set(r => r.DeploymentType, request.DeploymentType));
         if (!string.IsNullOrWhiteSpace(request.CustomDomain))
             sets.Add(update.Set(r => r.CustomDeploymentUrl, request.CustomDomain));
+        if (request.IsCustomDomainOnly is not null)
+            sets.Add(update.Set(r => r.IsCustomDomainOnly, request.IsCustomDomainOnly.Value));
         if (!string.IsNullOrWhiteSpace(request.LastDeploymentStatus))
             sets.Add(update.Set(r => r.LastDeploymentStatus, request.LastDeploymentStatus));
         if (request.LastDeploymentDate is not null)

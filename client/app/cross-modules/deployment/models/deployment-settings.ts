@@ -25,6 +25,12 @@ export const DEPLOYMENT_OPTIONS = [
   { value: "manual", label: "Blocks Cloud based deployment" },
 ];
 
+/** Where a repository with a custom domain is deployed. Offered only once a custom domain is set. */
+export const DOMAIN_OPTIONS = [
+  { value: "both", label: "Default and custom domain" },
+  { value: "custom", label: "Custom domain only" },
+];
+
 export const DEPLOYMENT_OPTIONS_DETAILS = [
   { value: "auto", label: "Git based deployment" },
   { value: "manual", label: "Blocks Cloud based deployment" },

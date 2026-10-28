@@ -13,7 +13,9 @@ import {
   useValidateAuthorization,
 } from "@/cross-modules/deployment/hooks/use-github-info";
 import BranchVerificationModal from "@blocks-deployment/components/deployment-details/shared/unmatched-branch-modal";
+import { CustomDomainOnlyTarget } from "@blocks-deployment/components/deployment-details/shared/custom-domain-only-target";
 import { DEPLOYMENT_OPTIONS_DETAILS } from "@blocks-deployment/models/deployment-settings";
+import { isCustomDomainOnly } from "@blocks-deployment/utils/custom-domain.utils";
 import { RepositoryAccessModal } from "./repository-access-modal";
 
 export interface IRepoResponse {
@@ -26,6 +28,8 @@ export interface IRepoResponse {
   repoUrl: string;
   defaultDeploymentUrl: string;
   customDeploymentUrl: string | null;
+  /** Deploys to the custom domain alone. Absent on older repositories, which deploy to both. */
+  isCustomDomainOnly?: boolean;
   branch: string | null;
   commit: string | null;
   lastDeploymentDate: string | null;
@@ -174,18 +178,22 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
 
               <div className="space-y-2">
                 <p className="text-sm text-low-emphasis">Deploys To</p>
-                <CopyToClipboardButton
-                  textToCopy={repo.defaultDeploymentUrl}
-                  isHoverable={false}>
-                  <a
-                    href={repo.defaultDeploymentUrl || "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block truncate text-sm text-blue-600 hover:underline"
-                    onClick={(e) => e.stopPropagation()}>
-                    {repo.defaultDeploymentUrl ?? "N/A"}
-                  </a>
-                </CopyToClipboardButton>
+                {isCustomDomainOnly(repo) ? (
+                  <CustomDomainOnlyTarget url={repo.defaultDeploymentUrl} />
+                ) : (
+                  <CopyToClipboardButton
+                    textToCopy={repo.defaultDeploymentUrl}
+                    isHoverable={false}>
+                    <a
+                      href={repo.defaultDeploymentUrl || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block truncate text-sm text-blue-600 hover:underline"
+                      onClick={(e) => e.stopPropagation()}>
+                      {repo.defaultDeploymentUrl ?? "N/A"}
+                    </a>
+                  </CopyToClipboardButton>
+                )}
               </div>
 
               <div className="space-y-2">

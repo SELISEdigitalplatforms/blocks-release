@@ -325,9 +325,13 @@ const DeploymentSettingsModal = ({
 
           {showDomainOption && (
             <div className="w-full">
-              <label className="mb-3 block text-sm font-medium">Domains</label>
+              <p
+                id="domains-heading"
+                className="mb-3 block text-sm font-medium">
+                Domains
+              </p>
               <RadioGroup
-                aria-label="Domains"
+                aria-labelledby="domains-heading"
                 value={deploymentData.isCustomDomainOnly ? "custom" : "both"}
                 onValueChange={(value) =>
                   updateFormData("isCustomDomainOnly", value === "custom")

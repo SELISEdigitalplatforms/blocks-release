@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 using Blocks.Genesis.DataAccess;
+using Blocks.Genesis.Notifications;
 using Blocks.Secrets;
 using Devops.DomainService.Deployment.Interfaces;
 using Devops.DomainService.Deployment.Models.Request;
@@ -39,6 +40,7 @@ public static class ServiceRegistry
         // Genesis data access resolver (row filter + projection). ReleaseDataAccess is the only door to it.
         // Registered here so Api, Worker and the in-process Release.Driver all get it.
         services.AddBlocksDataAccess();
+        services.AddBlocksNotifications();
         services.AddSingleton<IAccessPrincipalAccessor, BlocksContextPrincipalAccessor>();
         services.AddSingleton<IReleaseDataAccess, ReleaseDataAccess>();
 

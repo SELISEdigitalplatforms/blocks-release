@@ -37,7 +37,7 @@ namespace XUnitTest.Devops.Deployment
         }
 
         private NotificationService CreateService() =>
-            new(new Mock<ILogger<NotificationService>>().Object, _crypto.Object, _tenants.Object, _config, _http.Object, _hub.Object);
+            new(new Mock<ILogger<NotificationService>>().Object, _crypto.Object, _tenants.Object, _config, _http.Object, _hub.Object, new Mock<Blocks.Genesis.Notifications.INotificationPublisher>().Object);
 
         private void SetupPost(bool success) =>
             _http.Setup(h => h.MakeHttpPostRequest<NotificationResponse>(It.IsAny<object>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<string>()))

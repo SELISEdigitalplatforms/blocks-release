@@ -21,7 +21,6 @@ public class AuthService : IAuthService
     private readonly IHttpHelperServices _httpHelperServices;
     private readonly IConfiguration _configuration;
     private readonly IVersionControlService _versionControlService;
-    private readonly INotificationService? _notificationService;
 
     private string clientId;
     private string clientSecret;
@@ -31,10 +30,8 @@ public class AuthService : IAuthService
         IVersionControlService versionControlService,
         IHttpHelperServices httpHelperServices,
         ILogger<AuthService> logger,
-        ICloudBuildSecret cloudBuildSecret,
-        INotificationService? notificationService = null)
+        ICloudBuildSecret cloudBuildSecret)
     {
-        _notificationService = notificationService;
         _logger = logger;
         _tokenRepository = tokenRepository;
         _httpHelperServices = httpHelperServices;
@@ -296,15 +293,6 @@ public class AuthService : IAuthService
 
             // The stored token is removed whether or not GitHub accepted the revoke.
             var deleted = await DeleteToken();
-            if (deleted.IsSuccess && result is not null)
-            {
-                // Project admins are not looked up here; the acting user is the only recipient.
-                var context = BlocksContext.GetContext();
-                await NotificationService.SafeSendAsync(_notificationService, _logger, context?.TenantId, "release-github-access-failed", new[] { context?.UserId },
-                    NotificationService.BuildPayload("release-github-access-failed", "GitHub authorization removed",
-                        "The GitHub authorization of this account was removed. Authorize again to build and deploy.", false,
-                        ("projectId", context?.TenantId), ("revokedAtProvider", revoked)));
-            }
             if (revoked && deleted.IsSuccess)
             {
                 return new BaseApiResponse

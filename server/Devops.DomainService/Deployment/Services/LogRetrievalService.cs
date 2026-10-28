@@ -53,24 +53,6 @@ public class LogRetrievalService
         catch (Exception ex) { _logger.LogWarning(ex, "Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", configurationName, tenantId, ex.GetType().Name); }
     }
 
-    public Task NotifyMonitoringTimedOutAsync(Build build) =>
-        SendBuiltInAsync(build.ProjectId, "release-build-monitoring-timed-out", new[] { build.CreatedBy },
-            NotificationService.BuildPayload("release-build-monitoring-timed-out", "Build monitoring timed out",
-                "Watching the pipeline timed out, so the build was marked failed.", false,
-                ("buildId", build.ItemId), ("repoId", build.RepoId), ("projectId", build.ProjectId)));
-
-    /// <remarks>The requester is not stored on the instance; the project people are told instead.</remarks>
-    public async Task NotifyDataGatewayFinishedAsync(string tenantId, string pipelineRunName, string status)
-    {
-        var ok = string.Equals(status, "Succeeded", StringComparison.OrdinalIgnoreCase);
-        var recipients = await NotificationService.ResolveRecipientsAsync(_repoRepository, _logger, tenantId);
-        await SendBuiltInAsync(tenantId, "release-data-gateway-instance-finished", recipients,
-            NotificationService.BuildPayload("release-data-gateway-instance-finished",
-                ok ? "Data gateway instance ready" : "Data gateway instance failed",
-                ok ? "Creating the data gateway instance finished." : "Creating the data gateway instance failed.", ok,
-                ("projectId", tenantId), ("pipelineRunName", pipelineRunName)));
-    }
-
     public async Task CheckPodLogsAsync(Build build)
     {
         var pipelineRunName = build.PipelineRunName;
@@ -158,7 +140,6 @@ public class LogRetrievalService
             try
             {
                 await UpdateDeploymentStatus(pipelineRunName, tenantId, "Timeout");
-                await NotifyMonitoringTimedOutAsync(build);
                 try
                 {
                     PostBuildQueue postBuildQueue = new PostBuildQueue
@@ -630,9 +611,7 @@ public class LogRetrievalService
                     eventFinishedCount++;
                     if (eventFinishedCount > 10)
                     {
-                        var gatewayUpdated = await _dataGatewayDeploymentRepository.UpdatePipelineStatusAsync(tenantId,pipelineRunName, pipeLineStatus.Status);
-                        if (gatewayUpdated)
-                            await NotifyDataGatewayFinishedAsync(tenantId, pipelineRunName, pipeLineStatus.Status);
+                        await _dataGatewayDeploymentRepository.UpdatePipelineStatusAsync(tenantId,pipelineRunName, pipeLineStatus.Status);
                         Console.WriteLine($"All tasks reached a terminal state for pipeline {pipelineRunName}. Count {eventFinishedCount} Stopping polling.");
                         break;
                     }

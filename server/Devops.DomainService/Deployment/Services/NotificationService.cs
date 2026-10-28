@@ -1,5 +1,6 @@
 using Blocks.Genesis.Entities.Release;
 using Blocks.Genesis;
+using Blocks.Genesis.Notifications;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using Devops.DomainService.Shared.Interfaces;
@@ -17,6 +18,7 @@ namespace Devops.DomainService.Deployment.Services
         private readonly IConfiguration _configuration;
         private readonly IHttpHelperServices _httpHelperServices;
         private readonly IDeploymentHubService _deploymentHubService;
+        private readonly INotificationPublisher _publisher;
 
         public NotificationService(
                                    ILogger<NotificationService> logger,
@@ -24,7 +26,8 @@ namespace Devops.DomainService.Deployment.Services
                                    ITenants tenants,
                                    IConfiguration configuration,
                                    IHttpHelperServices httpHelperServices,
-                                   IDeploymentHubService deploymentHubService)
+                                   IDeploymentHubService deploymentHubService,
+                                   INotificationPublisher publisher)
         {
             _logger = logger;
             _cryptoService = cryptoService;
@@ -32,9 +35,8 @@ namespace Devops.DomainService.Deployment.Services
             _configuration = configuration;
             _httpHelperServices = httpHelperServices;
             _deploymentHubService = deploymentHubService;
+            _publisher = publisher;
         }
-
-        private static readonly TimeSpan BuiltInSendTimeout = TimeSpan.FromSeconds(5);
 
         /// <summary>Distinct, non-empty user ids.</summary>
         public static List<string> BuildRecipients(IEnumerable<string?>? people, params string?[] extra) =>
@@ -73,60 +75,35 @@ namespace Devops.DomainService.Deployment.Services
             catch (Exception ex) { logger.LogWarning(ex, "Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", configurationName, tenantId, ex.GetType().Name); }
         }
 
-        public async Task<bool> SendBuiltInAsync(string tenantId, string configurationName, IEnumerable<string?> userIds, IDictionary<string, object?> payload)
+        /// <summary>
+        /// The named users of a send: the given users plus, when a root user acts inside a project (impersonated),
+        /// the acting user, so console users get the notification too.
+        /// </summary>
+        public static List<string> NamedUsers(IEnumerable<string?>? userIds, BlocksContext? context)
         {
-            try
+            var named = BuildRecipients(userIds);
+            if (context is { Impersonated: true } && !string.IsNullOrWhiteSpace(context.UserId) && !named.Contains(context.UserId))
+                named.Add(context.UserId);
+            return named;
+        }
+
+        public Task<bool> SendBuiltInAsync(string tenantId, string configurationName, IEnumerable<string?> userIds, IDictionary<string, object?> payload)
+        {
+            if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(configurationName))
+                return Task.FromResult(false);
+
+            var context = BlocksContext.GetContext();
+
+            // Publish returns at once and never throws; who receives it is decided by the notification config.
+            _publisher.Publish(new NotificationRequest
             {
-                var recipients = BuildRecipients(userIds);
-                if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(configurationName))
-                    return false;
-                if (recipients.Count == 0)
-                {
-                    _logger.LogDebug("Built-in notification skipped, no recipient. config={ConfigurationName} tenant={TenantId}", configurationName, tenantId);
-                    return false;
-                }
-
-                var salt = _tenants.GetTenantByID(tenantId)?.TenantSalt;
-                var url = _configuration["NotificationServiceUrl"];
-                if (salt is null || string.IsNullOrWhiteSpace(url))
-                {
-                    _logger.LogWarning("Built-in notification not sent, tenant or notifier url unknown. config={ConfigurationName} tenant={TenantId}", configurationName, tenantId);
-                    return false;
-                }
-
-                var requestData = new
-                {
-                    ConnectionId = "",
-                    Roles = new List<string>(),
-                    UserIds = recipients,
-                    DenormalizedPayload = JsonSerializer.Serialize(payload),
-                    SaveDenormalizedPayloadAsAnObject = false,
-                    ConfigurationName = configurationName,
-                    ContentAvailable = true,
-                    ResponseKey = "status",
-                    ResponseValue = "sent"
-                };
-                var headers = new Dictionary<string, string>
-                {
-                    { "x-blocks-key", tenantId },
-                    { "Secret", _cryptoService.Hash(tenantId, salt) }
-                };
-
-                var (response, _) = await _httpHelperServices
-                    .MakeHttpPostRequest<NotificationResponse>(requestData, url, headers)
-                    .WaitAsync(BuiltInSendTimeout);
-
-                if (response is { isSuccess: true })
-                    return true;
-
-                _logger.LogWarning("Built-in notification was not accepted. config={ConfigurationName} tenant={TenantId} status=rejected", configurationName, tenantId);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", configurationName, tenantId, ex.GetType().Name);
-                return false;
-            }
+                Name = configurationName,
+                TenantId = tenantId,
+                NamedUserIds = NamedUsers(userIds, context),
+                OrganizationId = context?.OrganizationId,
+                Payload = payload
+            });
+            return Task.FromResult(true);
         }
 
         public async Task<bool> NotifyPipeLineLogData(BuildEventResponse logData, List<string> UserIds, string TenantId, string RepoId, string BuildStatus)

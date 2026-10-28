@@ -49,15 +49,12 @@ public sealed partial class RepoSecretService : IRepoSecretService
     private readonly IRepoRepository _repoRepository;
     private readonly ISecretService _secretService;
     private readonly ILogger<RepoSecretService> _logger;
-    private readonly INotificationService? _notificationService;
 
     public RepoSecretService(
         IRepoRepository repoRepository,
         ISecretService secretService,
-        ILogger<RepoSecretService> logger,
-        INotificationService? notificationService = null)
+        ILogger<RepoSecretService> logger)
     {
-        _notificationService = notificationService;
         _repoRepository = repoRepository;
         _secretService = secretService;
         _logger = logger;
@@ -140,10 +137,10 @@ public sealed partial class RepoSecretService : IRepoSecretService
     }
 
     public Task LockAsync(string repoId, CancellationToken cancellationToken = default) =>
-        ChangeAndNotifyAsync(repoId, "locked", (secretId) => _secretService.LockAsync(secretId, cancellationToken));
+        ChangeAsync(repoId, (secretId) => _secretService.LockAsync(secretId, cancellationToken));
 
     public Task UnlockAsync(string repoId, CancellationToken cancellationToken = default) =>
-        ChangeAndNotifyAsync(repoId, "unlocked", (secretId) => _secretService.UnlockAsync(secretId, cancellationToken));
+        ChangeAsync(repoId, (secretId) => _secretService.UnlockAsync(secretId, cancellationToken));
 
     /// <remarks>
     /// The repository keeps pointing at the deleted secret on purpose. The package's delete is
@@ -151,10 +148,10 @@ public sealed partial class RepoSecretService : IRepoSecretService
     /// strand a secret that is still restorable.
     /// </remarks>
     public Task DeleteAsync(string repoId, CancellationToken cancellationToken = default) =>
-        ChangeAndNotifyAsync(repoId, "deleted", (secretId) => _secretService.DeleteAsync(secretId, cancellationToken));
+        ChangeAsync(repoId, (secretId) => _secretService.DeleteAsync(secretId, cancellationToken));
 
     public Task RestoreAsync(string repoId, CancellationToken cancellationToken = default) =>
-        ChangeAndNotifyAsync(repoId, "restored", (secretId) => _secretService.RestoreAsync(secretId, cancellationToken));
+        ChangeAsync(repoId, (secretId) => _secretService.RestoreAsync(secretId, cancellationToken));
 
     public async Task<SecretAuditListResult> GetAuditLogsAsync(
         string repoId,
@@ -269,26 +266,13 @@ public sealed partial class RepoSecretService : IRepoSecretService
 
     #endregion
 
-    #region Notification
+    #region Change
 
-    /// <summary>
-    /// Runs one secret state change, then tells the other project members. Best effort: the
-    /// notification can never fail or undo the change. Only ids and the action name are sent.
-    /// </summary>
-    private async Task ChangeAndNotifyAsync(string repoId, string action, Func<string, Task> change)
+    /// <summary>Loads the repository's secret and runs one state change on it.</summary>
+    private async Task ChangeAsync(string repoId, Func<string, Task> change)
     {
         var repo = await LoadRepoAsync(RequireRepoId(repoId)).ConfigureAwait(false);
         await change(RequireSecretId(repo)).ConfigureAwait(false);
-
-        var context = BlocksContext.GetContext();
-        var tenantId = context?.TenantId;
-        var actor = context?.UserId;
-        var recipients = (await NotificationService.ResolveRecipientsAsync(_repoRepository, _logger, tenantId ?? string.Empty).ConfigureAwait(false))
-            .Where(u => !string.Equals(u, actor, StringComparison.Ordinal)).ToList();
-        await NotificationService.SafeSendAsync(_notificationService, _logger, tenantId, "release-repo-secret-changed", recipients,
-            NotificationService.BuildPayload("release-repo-secret-changed", $"Repository secret {action}",
-                $"A repository secret was {action} by another member.", null,
-                ("repoId", repo.ItemId), ("action", action), ("changedBy", actor), ("projectId", tenantId))).ConfigureAwait(false);
     }
 
     #endregion

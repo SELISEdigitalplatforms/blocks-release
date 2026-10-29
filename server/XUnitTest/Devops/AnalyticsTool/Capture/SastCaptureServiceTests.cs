@@ -387,6 +387,74 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
             VerifyNothingScheduled();
         }
 
+        // ---- empty measures: "no data", as on the live path ----
+
+        public static TheoryData<string> EmptyMeasures => new() { "no component", "no measures", "only empty values" };
+
+        private static SASTResponse EmptyMeasuresResponse(string kind) => kind switch
+        {
+            "no component" => new SASTResponse { Component = null },
+            "no measures" => new SASTResponse { Component = new Component { Measures = new List<Measure>() } },
+            _ => new SASTResponse
+            {
+                Component = new Component
+                {
+                    Measures = new List<Measure>
+                    {
+                        new() { Metric = "bugs", Value = "" },
+                        new() { Metric = "new_violations", Value = null, Period = new Period { value = null } },
+                    }
+                }
+            },
+        };
+
+        [Theory]
+        [MemberData(nameof(EmptyMeasures))]
+        public async Task EmptyMeasures_Attempt1_SavesPendingAndSchedulesTheNextAttemptInsteadOfReady(string kind)
+        {
+            SetupBranches(_http, ("dev", "2026-10-28T10:06:12+0000"));
+            SetupFourQueries(_http, measures: EmptyMeasuresResponse(kind));
+            SetupAnalysis(_http, new SonarProjectAnalysis { Key = "AZ-key-1", Date = "2026-10-28T10:06:12+0000", Revision = "abc" });
+
+            await Create().CaptureAsync(NewBuild(), 1);
+
+            var (expected, report) = _saved.Should().ContainSingle().Subject;
+            expected.Should().Be(0);
+            report.Status.Should().Be(AnalysisReportStatus.Pending);
+            report.Attempts.Should().Be(1);
+            report.Message.Should().BeNull();
+            report.Metrics.Should().BeNullOrEmpty();
+            report.CapturedAt.Should().BeNull();
+            _saved.Should().NotContain(s => s.Report.Status == AnalysisReportStatus.Ready);
+
+            var message = _sent.Should().ContainSingle().Subject;
+            message.Payload.PipelineEventType.Should().Be(PipelineEventTypes.CaptureSastReport);
+            message.Payload.Attempt.Should().Be(2);
+            message.ScheduledEnqueueTimeUtc.Should().Be(Now + TimeSpan.FromMinutes(2));
+            _notified.Should().BeEmpty();
+            _logger.Entries.Should().Contain(e => e.Message.Contains("returned no measures"));
+        }
+
+        [Fact]
+        public async Task EmptyMeasures_Attempt4_SavesFailedWithTheSonarQubeMessage()
+        {
+            SetupBranches(_http, ("dev", "2026-10-28T10:06:12+0000"));
+            SetupFourQueries(_http, measures: EmptyMeasuresResponse("no measures"));
+
+            await Create().CaptureAsync(NewBuild(attempts: 3), 4);
+
+            var (expected, report) = _saved.Should().ContainSingle().Subject;
+            expected.Should().Be(3);
+            report.Status.Should().Be(AnalysisReportStatus.Failed);
+            report.Attempts.Should().Be(4);
+            report.Message.Should().Be("SonarQube results were not available after 4 attempts.");
+            report.Metrics.Should().BeNullOrEmpty();
+            VerifyNothingScheduled();
+            var n = _notified.Should().ContainSingle().Subject;
+            n.Payload["isSuccess"].Should().Be(false);
+            n.Payload["description"].Should().Be("SonarQube results were not available after 4 attempts.");
+        }
+
         // ---- H14 ----
 
         [Fact]
@@ -579,6 +647,35 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
             _strategyLogger.AllText.Should().NotContain(Token);
             foreach (var (_, report) in _saved)
                 JsonSerializer.Serialize(report).Should().NotContain(Token);
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(4)]
+        public async Task C17_HelperThrowsWithTheRequestUrlInItsMessage_TheTokenSentAsBearerIsNeverLoggedOrSaved(int attempt)
+        {
+            var headersSent = new List<Dictionary<string, string>>();
+            _http.Setup(h => h.MakeHttpGetRequest<SonarProjectBranchesResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                .Callback<string, string, Dictionary<string, string>>((_, _, headers) => headersSent.Add(headers))
+                .Returns((string url, string _, Dictionary<string, string> _) =>
+                    Task.FromException<(SonarProjectBranchesResponse, string)>(new System.Net.Http.HttpRequestException($"Request to {url} failed: connection reset")));
+
+            await Create().CaptureAsync(NewBuild(attempts: attempt - 1), attempt);
+
+            // The secret is in play: the request carried it as a bearer token.
+            var headers = headersSent.Should().ContainSingle().Subject;
+            headers.Should().ContainKey("Authorization").WhoseValue.Should().Be($"Bearer {Token}");
+
+            // The URL from the exception message did reach the log, the token did not.
+            _strategyLogger.AllText.Should().Contain("https://sonar.example.com/api/project_branches/list?project=org-repo");
+            _logger.Entries.Should().NotBeEmpty();
+            _logger.AllText.Should().NotContain(Token);
+            _strategyLogger.AllText.Should().NotContain(Token);
+            _saved.Should().ContainSingle().Which.Report.Status.Should().Be(attempt == 4 ? AnalysisReportStatus.Failed : AnalysisReportStatus.Pending);
+            foreach (var (_, report) in _saved)
+                JsonSerializer.Serialize(report).Should().NotContain(Token);
+            foreach (var m in _sent)
+                JsonSerializer.Serialize(m).Should().NotContain(Token);
         }
     }
 }

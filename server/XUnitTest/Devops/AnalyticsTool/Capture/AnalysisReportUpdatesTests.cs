@@ -173,14 +173,18 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
         {
             var notifications = new Mock<INotificationService>();
             IDictionary<string, object> payload = null;
+            string[] recipients = null;
             notifications.Setup(n => n.SendBuiltInAsync("t1", "release-code-analysis-finished", It.IsAny<IEnumerable<string>>(), It.IsAny<IDictionary<string, object>>()))
-                .Callback<string, string, IEnumerable<string>, IDictionary<string, object>>((_, _, users, p) => { users.Should().Equal("creator"); payload = p; })
+                .Callback<string, string, IEnumerable<string>, IDictionary<string, object>>((_, _, users, p) => { recipients = users?.ToArray(); payload = p; })
                 .ReturnsAsync(true);
+            var logger = new ListLogger<AnalysisReportUpdatesTests>();
 
-            await AnalysisReportUpdates.NotifyAsync(notifications.Object, new ListLogger<AnalysisReportUpdatesTests>(),
+            await AnalysisReportUpdates.NotifyAsync(notifications.Object, logger,
                 new Build { ItemId = "b1", RepoId = "r1", ProjectId = "t1", CreatedBy = "creator" }, kind, ok, message);
 
             notifications.Verify(n => n.SendBuiltInAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<IDictionary<string, object>>()), Times.Once);
+            logger.Entries.Should().NotContain(e => e.Level >= LogLevel.Warning, "the notification was sent without an error");
+            recipients.Should().Equal("creator");
             payload["event"].Should().Be("release-code-analysis-finished");
             payload["title"].Should().Be(title);
             payload["description"].Should().Be(description);

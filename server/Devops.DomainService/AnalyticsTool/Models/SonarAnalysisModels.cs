@@ -14,7 +14,7 @@ public class SonarProjectBranch
     [JsonPropertyName("name")]
     public string? Name { get; set; }
 
-    /// <summary>Kept as SonarQube's string (for example <c>2026-10-28T10:06:12+0000</c>); see <c>SonarDates</c>.</summary>
+    /// <summary>Kept as SonarQube's string (for example <c>2026-10-28T10:06:12+0000</c>); parsed by <c>AnalysisReportUpdates.ParseSonarDate</c>.</summary>
     [JsonPropertyName("analysisDate")]
     public string? AnalysisDate { get; set; }
 }

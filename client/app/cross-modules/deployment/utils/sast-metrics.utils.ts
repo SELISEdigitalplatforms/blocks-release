@@ -446,8 +446,6 @@ export function getQualityGateLabel(
   return "Not computed";
 }
 
-// --- #255: report saved on the build ---
-
 /** `data` of GET /reports?type=sast. `status` is absent on builds without a saved report. */
 export interface SastReportData {
   type?: string;

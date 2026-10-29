@@ -190,24 +190,25 @@ public class LogRetrievalService
                     PipelineType = PipelineTypes.RepoDeployment,
                     PipelineEventType = PipelineEventTypes.RetrieveDependencyTrackId
                 };
-                await _messageClient.SendToConsumerAsync(new ConsumerMessage<PostBuildQueue> { ConsumerName = CloudBuildConstants.POST_BUILD_LISTENER, Payload = postBuildQueue, SccheduledEnqueueTimeUtc = DateTimeOffset.UtcNow.AddMinutes(10) });
+                await _messageClient.SendToConsumerAsync(new ConsumerMessage<PostBuildQueue> { ConsumerName = CloudBuildConstants.POST_BUILD_LISTENER, Payload = postBuildQueue, ScheduledEnqueueTimeUtc = DateTimeOffset.UtcNow.AddMinutes(10) });
             }
-            catch(Exception ex){
-                Console.WriteLine($"Failed to push data to queue for pipeline {build.PipelineRunName}: {ex.Message}");
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to queue RetrieveDependencyTrackId for pipeline {PipelineRunName}.", build.PipelineRunName);
             }
         }
         else
         {
-            await StartReportCaptureAsync(build, AnalysisReportKind.Sca, "sca-scan", AnalysisReportUpdates.ScaFirstAttemptDelay, pipelineStatus, taskLogs);
+            await StartReportCaptureForKindAsync(build, AnalysisReportKind.Sca, "sca-scan", AnalysisReportUpdates.ScaFirstAttemptDelay, pipelineStatus, taskLogs);
         }
 
         if (build.SastReport is not null)
         {
-            await StartReportCaptureAsync(build, AnalysisReportKind.Sast, "sonar-scan", AnalysisReportUpdates.SastFirstAttemptDelay, pipelineStatus, taskLogs);
+            await StartReportCaptureForKindAsync(build, AnalysisReportKind.Sast, "sonar-scan", AnalysisReportUpdates.SastFirstAttemptDelay, pipelineStatus, taskLogs);
         }
     }
 
-    private async Task StartReportCaptureAsync(
+    private async Task StartReportCaptureForKindAsync(
         Build build, AnalysisReportKind kind, string step, TimeSpan firstAttemptDelay,
         PipelineRunStatus pipelineStatus, IReadOnlyDictionary<string, TaskLogs> taskLogs)
     {

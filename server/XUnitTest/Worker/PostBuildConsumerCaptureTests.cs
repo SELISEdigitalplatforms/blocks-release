@@ -97,6 +97,14 @@ namespace XUnitTest.Worker
             _f.Http.Verify(h => h.MakeHttpGetRequest<SonarProjectBranchesResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()), Times.Never);
         }
 
+        /// <summary>The build was only read: no other build call and no repo call at all.</summary>
+        private void VerifyOnlyTheBuildWasRead()
+        {
+            _f.BuildRepo.Invocations.Should().NotBeEmpty()
+                .And.OnlyContain(i => i.Method.Name == nameof(IBuildRepository.GetBuildByPipelineRunName));
+            _f.RepoRepo.Invocations.Should().BeEmpty();
+        }
+
         private void VerifyNoReportWrite()
         {
             _f.BuildRepo.Verify(b => b.TrySaveSastReport(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<SastReport>(), It.IsAny<string>()), Times.Never);
@@ -119,6 +127,7 @@ namespace XUnitTest.Worker
             _f.BuildRepo.Verify(b => b.TrySaveScaReport(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<ScaReport>(), It.IsAny<string>()), Times.Never);
             _sent.Should().ContainSingle().Which.Payload.Should().Match<PostBuildQueue>(p =>
                 p.PipelineEventType == PipelineEventTypes.CaptureSastReport && p.Attempt == 3);
+            _sent[0].ScheduledEnqueueTimeUtc.Should().Be(_clock.Now + TimeSpan.FromMinutes(5), "attempt 3 follows attempt 2 after 5 minutes");
         }
 
         [Fact]
@@ -133,6 +142,7 @@ namespace XUnitTest.Worker
             _f.BuildRepo.Verify(b => b.TrySaveSastReport(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<SastReport>(), It.IsAny<string>()), Times.Never);
             _sent.Should().ContainSingle().Which.Payload.Should().Match<PostBuildQueue>(p =>
                 p.PipelineEventType == PipelineEventTypes.CaptureScaReport && p.Attempt == 4);
+            _sent[0].ScheduledEnqueueTimeUtc.Should().Be(_clock.Now + TimeSpan.FromMinutes(10), "attempt 4 follows attempt 3 after 10 minutes");
         }
 
         [Fact]
@@ -163,6 +173,7 @@ namespace XUnitTest.Worker
             _f.BuildRepo.Verify(b => b.TrySaveScaReport("build-1", 2,
                 It.Is<ScaReport>(r => r.Status == AnalysisReportStatus.Pending && r.Attempts == 3), "tenant-1"), Times.Once);
             _sent.Should().ContainSingle().Which.Payload.Attempt.Should().Be(4);
+            _sent[0].ScheduledEnqueueTimeUtc.Should().Be(_clock.Now + TimeSpan.FromMinutes(10), "attempt 4 follows attempt 3 after 10 minutes");
             // Not today's lookup-and-notify.
             _f.Notification.Invocations.Should().BeEmpty();
         }
@@ -211,6 +222,7 @@ namespace XUnitTest.Worker
             await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("Build does not belong to the message target tenant.");
             VerifyNoToolCall();
             VerifyNoReportWrite();
+            VerifyOnlyTheBuildWasRead();
             _sent.Should().BeEmpty();
         }
 
@@ -226,6 +238,8 @@ namespace XUnitTest.Worker
             await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*No build found for pipeline run-1*");
             VerifyNoToolCall();
             VerifyNoReportWrite();
+            VerifyOnlyTheBuildWasRead();
+            _sent.Should().BeEmpty();
         }
 
         [Fact]

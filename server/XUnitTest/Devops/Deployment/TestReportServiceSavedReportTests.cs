@@ -427,8 +427,13 @@ namespace XUnitTest.Devops.Deployment
             GivenBuild(NewBuild(sast: saved));
             var fromSaved = ToJson(await Create().GetReport("b1", "sast"));
 
+            // The live read has data, so the comparison below never passes as null against null.
+            live["details"].Should().NotBeNull();
+            live["details"]!.AsObject().Count.Should().BePositive();
+            live["qualityGate"].Should().NotBeNull();
+            live["issueBreakdown"].Should().NotBeNull();
             foreach (var key in TodaysKeys)
-                fromSaved[key]?.ToJsonString().Should().Be(live[key]?.ToJsonString(), key);
+                (fromSaved[key]?.ToJsonString()).Should().Be(live[key]?.ToJsonString(), key);
             fromSaved["status"]!.GetValue<string>().Should().Be("Ready");
             fromSaved["revision"]!.GetValue<string>().Should().Be("abc1234");
         }

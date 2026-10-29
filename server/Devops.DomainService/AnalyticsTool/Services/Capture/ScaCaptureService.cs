@@ -193,7 +193,7 @@ public class ScaCaptureService
             }
 
             if (added == 0 || items.Length < FindingsPageSize || (total is { } t && findings.Count >= t))
-                return (findings, false);
+                return (findings, total is { } reported && reported > findings.Count);
         }
 
         return (findings, total is null || total > findings.Count);

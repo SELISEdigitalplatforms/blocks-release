@@ -260,6 +260,7 @@ public class BuildRepository : IBuildRepository
         await collection.InsertOneAsync(webhook);
         return true;
     }
+
     public Task<bool> TrySaveSastReport(string buildId, int expectedAttempts, SastReport report, string tenantId) =>
         TryUpdateOneAsync(
             Builders<Build>.Filter.Eq(b => b.ItemId, buildId)

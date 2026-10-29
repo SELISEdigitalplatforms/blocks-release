@@ -56,6 +56,7 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
         private readonly List<ConsumerMessage<PostBuildQueue>> _sent = new();
         private readonly List<IDictionary<string, object>> _notified = new();
         private readonly List<string> _findingUrls = new();
+        private readonly List<string> _metricsUrls = new();
         private bool _saveResult = true;
 
         public ScaCaptureServiceTests()
@@ -145,6 +146,7 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
         private void GivenMetrics(DependencyTrackProjectMetrics metrics = null, HttpStatusCode code = HttpStatusCode.OK) =>
             _http.Setup(h => h.MakeHttpRequest<DependencyTrackProjectMetrics>(It.IsAny<string>(), It.Is<string>(u => u.EndsWith("/current")), HttpMethod.Get,
                     It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                .Callback<string, string, HttpMethod, object, Dictionary<string, string>, string>((_, u, _, _, _, _) => _metricsUrls.Add(u))
                 .ReturnsAsync((code == HttpStatusCode.OK ? metrics ?? Metrics() : null, Response(code)));
 
         /// <summary>Serves findings pages from <paramref name="page"/> (page number to items and optional total).</summary>
@@ -199,11 +201,11 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
 
         private (int Expected, ScaReport Report) SingleSave() => _saved.Should().ContainSingle().Subject;
 
-        private void ShouldBePendingAndScheduled(int attempt, int delayMinutes)
+        private void ShouldBePendingAndScheduled(int attempt, int delayMinutes, string because = "")
         {
             var (expected, report) = SingleSave();
             expected.Should().Be(attempt - 1);
-            report.Status.Should().Be(AnalysisReportStatus.Pending);
+            report.Status.Should().Be(AnalysisReportStatus.Pending, because);
             report.Attempts.Should().Be(attempt);
             report.Findings.Should().BeNullOrEmpty();
             var message = _sent.Should().ContainSingle().Subject;
@@ -253,6 +255,7 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
             report.Metrics.LastOccurrence.Should().Be(1761646000000);
 
             // The capture reads only this project (uuid) and never refreshes again.
+            _metricsUrls.Should().Equal($"https://dt.example.com/api/v1/metrics/project/{Uuid}/current");
             _findingUrls.Should().OnlyContain(u => u.Contains($"/api/v1/finding/project/{Uuid}?suppressed=false&pageSize=100&pageNumber="));
             VerifyNoBookkeeping();
             _sent.Should().BeEmpty();
@@ -448,10 +451,9 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
 
             await Create().CaptureAsync(NewBuild(refreshed: false), 1);
 
-            ShouldBePendingAndScheduled(1, 2);
+            ShouldBePendingAndScheduled(1, 2, because);
             VerifyNoBookkeeping();
             VerifyNoCaptureCalls();
-            because.Should().NotBeNull();
         }
 
         [Fact]
@@ -527,6 +529,29 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
         }
 
         [Fact]
+        public async Task H13_BuildPointsAtAStaleProject_RecordsTheProjectRequestsARefreshAndSchedulesTheNextAttempt()
+        {
+            GivenReadyProject();
+            GivenRefresh(HttpStatusCode.OK);
+            GivenFindings(Finding("CVE-1"));
+            _repos.Setup(r => r.UpdateRepoDependencyTrackProjectUuid("repo-1", Uuid, "tenant-1")).ReturnsAsync(true);
+            _builds.Setup(b => b.UpdateBuildDependencyTrackProjectId("build-1", Uuid, "tenant-1")).ReturnsAsync(true);
+            var build = NewBuild(attempts: 1);
+            build.DependencyTrackProjectId = "other-uuid";
+
+            await Create().CaptureAsync(build, 2);
+
+            _repos.Verify(r => r.UpdateRepoDependencyTrackProjectUuid("repo-1", Uuid, "tenant-1"), Times.Once);
+            _builds.Verify(b => b.UpdateBuildDependencyTrackProjectId("build-1", Uuid, "tenant-1"), Times.Once);
+            _http.Verify(h => h.MakeHttpRequest<object>(It.IsAny<string>(), $"https://dt.example.com/api/v1/metrics/project/{Uuid}/refresh", HttpMethod.Get,
+                It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()), Times.Once);
+            ShouldBePendingAndScheduled(2, 5);
+            VerifyNoCaptureCalls();
+            _metricsUrls.Should().BeEmpty();
+            _findingUrls.Should().BeEmpty();
+        }
+
+        [Fact]
         public async Task H13_RefreshAccepted_SchedulingFails_DoesNotThrow()
         {
             GivenReadyProject();
@@ -582,6 +607,8 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
             warnings[0].Message.Should().Contain(((int)refused).ToString()).And.Contain("PORTFOLIO_MANAGEMENT");
             _logger.AllText.Should().NotContain(ApiKey);
             _dtLogger.AllText.Should().NotContain(ApiKey);
+            _dtLogger.Entries.Should().NotContain(e => e.Level >= LogLevel.Warning, "the refused refresh is reported once, by the capture");
+            _logger.Entries.Count(e => e.Level >= LogLevel.Warning).Should().Be(1, "exactly one warning overall");
         }
 
         [Fact]
@@ -639,6 +666,38 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
 
             _findingUrls.Should().HaveCount(2);
             SingleSave().Report.Findings.Should().HaveCount(100, "a repeated page adds nothing");
+        }
+
+        [Theory]
+        [InlineData(500L, true)]
+        [InlineData(null, false)]
+        [InlineData(100L, false)]
+        public async Task Paging_ServerRepeatsAPage_FlagsTheTruncationOnlyWhenTheTotalCountIsLarger(long? total, bool truncated)
+        {
+            GivenReadyProject();
+            GivenFindings(_ => (Page(1, 100), total, HttpStatusCode.OK));
+
+            await Create().CaptureAsync(NewBuild(attempts: 1), 2);
+
+            _findingUrls.Should().HaveCount(total == 100 ? 1 : 2);
+            var report = SingleSave().Report;
+            report.Status.Should().Be(AnalysisReportStatus.Ready);
+            report.Findings.Should().HaveCount(100);
+            report.FindingsTruncated.Should().Be(truncated);
+        }
+
+        [Fact]
+        public async Task Paging_ShortPageWithALargerTotalCount_FlagsTheTruncation()
+        {
+            GivenReadyProject();
+            GivenFindings(n => (n switch { 1 => Page(1, 100), 2 => Page(2, 30), _ => throw new InvalidOperationException("read past the short page") }, 400, HttpStatusCode.OK));
+
+            await Create().CaptureAsync(NewBuild(attempts: 1), 2);
+
+            _findingUrls.Should().HaveCount(2);
+            var report = SingleSave().Report;
+            report.Findings.Should().HaveCount(130);
+            report.FindingsTruncated.Should().BeTrue();
         }
 
         [Fact]
@@ -941,6 +1000,55 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
             _dtLogger.AllText.Should().NotContain(ApiKey);
             foreach (var (_, report) in _saved)
                 JsonSerializer.Serialize(report).Should().NotContain(ApiKey);
+        }
+
+        [Theory]
+        [InlineData("lookup", 1)]
+        [InlineData("findings", 2)]
+        [InlineData("findings", 4)]
+        public async Task C17_HelperThrowsWithTheRequestUrlInItsMessage_TheKeySentInTheHeaderIsNeverLoggedOrSaved(string failing, int attempt)
+        {
+            var headersSent = new List<Dictionary<string, string>>();
+            string failedUrl = null;
+            if (failing == "lookup")
+            {
+                _http.Setup(h => h.MakeHttpRequest<ScaLookupResponse>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HttpMethod>(),
+                        It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                    .Returns((string _, string url, HttpMethod _, object _, Dictionary<string, string> headers, string _) =>
+                    {
+                        headersSent.Add(headers);
+                        failedUrl = url;
+                        return Task.FromException<(ScaLookupResponse, HttpResponseMessage)>(new HttpRequestException($"Request to {url} failed: connection reset"));
+                    });
+            }
+            else
+            {
+                GivenReadyProject();
+                _http.Setup(h => h.MakeHttpRequest<SCAVulnerability[]>(It.IsAny<string>(), It.Is<string>(u => u.Contains("/api/v1/finding/project/")), HttpMethod.Get,
+                        It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
+                    .Returns((string _, string url, HttpMethod _, object _, Dictionary<string, string> headers, string _) =>
+                    {
+                        headersSent.Add(headers);
+                        failedUrl = url;
+                        return Task.FromException<(SCAVulnerability[], HttpResponseMessage)>(new HttpRequestException($"Request to {url} failed: connection reset"));
+                    });
+            }
+
+            await Create().CaptureAsync(NewBuild(attempts: attempt - 1), attempt);
+
+            // The secret is in play: the failing request carried it.
+            headersSent.Should().ContainSingle().Which.Should().ContainKey("X-Api-Key").WhoseValue.Should().Be(ApiKey);
+            failedUrl.Should().NotBeNull();
+            // The exception (and its URL) reached the log; the key did not.
+            _logger.Entries.Should().Contain(e => e.Level == LogLevel.Warning && e.Exception is HttpRequestException
+                && e.Exception.Message.Contains(failedUrl));
+            _logger.AllText.Should().NotContain(ApiKey);
+            _dtLogger.AllText.Should().NotContain(ApiKey);
+            _saved.Should().ContainSingle().Which.Report.Status.Should().Be(attempt == 4 ? AnalysisReportStatus.Failed : AnalysisReportStatus.Pending);
+            foreach (var (_, report) in _saved)
+                JsonSerializer.Serialize(report).Should().NotContain(ApiKey);
+            foreach (var m in _sent)
+                JsonSerializer.Serialize(m).Should().NotContain(ApiKey);
         }
     }
 }

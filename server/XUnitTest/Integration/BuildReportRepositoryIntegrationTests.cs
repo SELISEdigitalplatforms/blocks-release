@@ -419,7 +419,7 @@ namespace XUnitTest.Integration
         }
 
         [Fact]
-        public async Task C19_GetBuildForView_PreReleaseBuild_IsByteIdenticalToTheUnprojectedRead()
+        public async Task C19_GetBuildForView_PreReleaseBuild_MatchesTheUnprojectedRead()
         {
             var build = await Insert(NewBuild(withReports: false));
 

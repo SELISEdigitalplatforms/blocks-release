@@ -90,9 +90,11 @@ public class SastCaptureService
         }
 
         var data = await _sast.QueryAsync(projectKey, build.Branch);
-        if (!data.AllSucceeded)
+        var metrics = SASTStrategy.MapMeasures(data.Measures);
+        // No measures is "no data" on the live path too; saving it as Ready would show an empty report for good.
+        if (!data.AllSucceeded || metrics.Count == 0)
         {
-            _logger.LogInformation("SAST capture attempt {Attempt} for build {BuildId}: a SonarQube query failed.", attempt, build.ItemId);
+            _logger.LogInformation("SAST capture attempt {Attempt} for build {BuildId}: a SonarQube query failed or returned no measures.", attempt, build.ItemId);
             return null;
         }
 
@@ -109,7 +111,7 @@ public class SastCaptureService
             AnalysisKey = analysis?.Key,
             AnalysisDate = AnalysisReportUpdates.ParseSonarDate(analysis?.Date)?.UtcDateTime,
             Revision = analysis?.Revision,
-            Metrics = SASTStrategy.MapMeasures(data.Measures),
+            Metrics = metrics,
             QualityGate = AnalysisReportMapper.ToGenesis(SASTStrategy.MapQualityGate(data.Gate)),
             IssueBreakdown = AnalysisReportMapper.ToGenesis(SASTStrategy.MapIssueBreakdown(data.NewIssues, data.AllIssues)),
         };

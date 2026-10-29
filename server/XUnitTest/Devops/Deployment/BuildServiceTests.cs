@@ -636,18 +636,58 @@ namespace XUnitTest.Devops.Deployment
             result.Message.Should().Be("Repo not found.");
         }
 
-        // #255 H1: a new build starts with both saved reports Pending and no attempts.
-        [Fact]
-        public async Task SaveBuild_H1_StartsBothAnalysisReportsPendingWithNoAttempts()
+        // #255 H1: a new build starts with both saved reports Pending and no attempts, through either SaveBuild
+        // overload: the public one (no tenant) and the tenant one that Build() reaches.
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task SaveBuild_H1_StartsBothAnalysisReportsPendingWithNoAttempts(bool throughTheTenantOverload)
         {
             Build saved = null;
             _f.BuildRepo.Setup(b => b.SaveBuild(It.IsAny<Build>()))
                 .Callback<Build>(b => saved = b)
                 .Returns(Task.CompletedTask);
+            _f.BuildRepo.Setup(b => b.SaveBuild(It.IsAny<Build>(), It.IsAny<string>()))
+                .Callback<Build, string>((b, _) => saved = b)
+                .Returns(Task.CompletedTask);
 
-            var result = await _f.BuildService().SaveBuild(new Repo { ItemId = "repo-1" }, new BuildRequest { branch = "dev" }, "img", "user-1", "run-1");
+            if (throughTheTenantOverload)
+            {
+                SetContext("tenant-1");
+                _f.TokenRepo.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+                _f.CustomObjects
+                    .Setup(c => c.CreateNamespacedCustomObjectWithHttpMessagesAsync(
+                        It.IsAny<object>(), It.IsAny<string>(), It.IsAny<string>(),
+                        It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                        It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+                        It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                        It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new k8s.Autorest.HttpOperationResponse<object>
+                    {
+                        Body = new Dictionary<string, object> { ["metadata"] = "created" },
+                        Request = new System.Net.Http.HttpRequestMessage(),
+                        Response = new System.Net.Http.HttpResponseMessage(),
+                    });
 
-            saved.Should().BeSameAs(result);
+                var response = await _f.BuildService().Build(new BuildRequest { branch = "dev" },
+                    new Repo { ItemId = "repo-1", ProjectId = "tenant-1", ProjectName = "p", RepoName = "web", RepoUrl = "https://github.com/org/web.git", Branch = "dev", CreatedBy = "user-1",
+                        DefaultDeploymentUrl = "web.example.com", CustomDeploymentUrl = "custom.example.com" });
+
+                response.IsSuccess.Should().BeTrue(response.Message);
+                _f.BuildRepo.Verify(b => b.SaveBuild(It.IsAny<Build>(), "tenant-1"), Times.Once);
+                _f.BuildRepo.Verify(b => b.SaveBuild(It.IsAny<Build>()), Times.Never);
+                saved.Should().NotBeNull();
+                response.buildId.Should().Be(saved.ItemId);
+            }
+            else
+            {
+                var result = await _f.BuildService().SaveBuild(new Repo { ItemId = "repo-1" }, new BuildRequest { branch = "dev" }, "img", "user-1", "run-1");
+
+                saved.Should().BeSameAs(result);
+                _f.BuildRepo.Verify(b => b.SaveBuild(It.IsAny<Build>()), Times.Once);
+                _f.BuildRepo.Verify(b => b.SaveBuild(It.IsAny<Build>(), It.IsAny<string>()), Times.Never);
+            }
+
             saved.SastReport.Should().NotBeNull();
             saved.SastReport.Status.Should().Be(AnalysisReportStatus.Pending);
             saved.SastReport.Attempts.Should().Be(0);

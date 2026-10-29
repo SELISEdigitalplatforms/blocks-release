@@ -41,6 +41,7 @@ import { useParams } from "react-router";
 import { Button } from "@/components/ui-kits/button/button";
 import { ErrorDisplay } from "@/components/error-display";
 import type {
+  IScaLibraryReportResponse,
   IScaReportDetails,
   IScaVulnerability,
 } from "@blocks-deployment/models/sca-report";
@@ -932,6 +933,98 @@ const SCACard: React.FC<SCACardProps> = ({
   );
 };
 
+const toLibraryPackageSummary = (details: IScaReportDetails): SCASummary => ({
+  critical: details.critical,
+  high: details.high,
+  medium: details.medium,
+  low: details.low,
+  unassigned: details.unassigned,
+  riskScore: details.inheritedRiskScore,
+  vulnerabilities: details.vulnerabilities,
+  vulnerableComponents: details.vulnerableComponents,
+  components: details.components,
+});
+
+const ScaTabSkeleton: React.FC = () => (
+  <div className="overflow-hidden rounded-lg border bg-background">
+    <div className="border-b px-6 py-4">
+      <div className="flex items-center justify-between">
+        <Skeleton className="mb-2 h-6 w-48" />
+        <Skeleton className="h-8 w-40" />
+      </div>
+      <div className="mt-3 flex items-center gap-6 text-xs text-low-emphasis">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+    </div>
+    <div className="p-6">
+      <div className="mb-4 flex gap-4">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} className="h-16 w-24 rounded-lg" />
+        ))}
+      </div>
+      <Skeleton className="mb-4 h-8 w-64" />
+      <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-lg" />
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const SCA_LOAD_ERROR = "Error loading SCA data";
+
+const ScaLoadError: React.FC<Readonly<{ text: string }>> = ({ text }) => (
+  <Card>
+    <CardContent className="p-2">
+      <ErrorDisplay text={text} className="w-full" />
+    </CardContent>
+  </Card>
+);
+
+type ScaReport = NonNullable<IScaLibraryReportResponse["data"]>;
+
+/** The loaded report: waiting, unavailable, the findings, or the load error. */
+const ScaReportContent: React.FC<
+  Readonly<{
+    report: ScaReport | undefined;
+    error: Error | null;
+    dependencies: Dependency[];
+    findingsCount: number;
+  }>
+> = ({ report, error, dependencies, findingsCount }) => {
+  const status = report?.status;
+  const scaDetails = report?.details;
+  if (error) return <ScaLoadError text={error.message || SCA_LOAD_ERROR} />;
+  if (status === "Pending") return <ContainerWaiting type="overall" />;
+  if (status === "NotRun" || status === "Failed") {
+    return (
+      <ReportUnavailableCard
+        title="Software Composition Analysis"
+        status={status}
+        message={report?.message}
+        action={<DependencyTrackButton />}
+      />
+    );
+  }
+  if (!scaDetails) return <ScaLoadError text={SCA_LOAD_ERROR} />;
+
+  const isReady = status === "Ready";
+  const analyzedAt = report?.analyzedAt ?? report?.capturedAt;
+  const caption = isReady && analyzedAt ? `Analyzed ${formatFullDate(new Date(analyzedAt))}` : null;
+  return (
+    <SCACard
+      title="Software library package"
+      summary={toLibraryPackageSummary(scaDetails)}
+      dependencies={dependencies}
+      caption={caption}
+      truncatedCount={isReady && report?.findingsTruncated ? findingsCount : null}
+    />
+  );
+};
+
 const SCATab: React.FC = () => {
   const params = useParams();
   const buildId = params?.buildId as string;
@@ -941,25 +1034,8 @@ const SCATab: React.FC = () => {
     error,
   } = useGetSCALibraryData(buildId);
   const report = scaData?.data;
-  const status = report?.status;
-  const scaDetails = report?.details;
   const rawVulnerabilities = report?.vulnerabilities;
-  const analyzedAt = report?.analyzedAt ?? report?.capturedAt;
-  const caption =
-    status === "Ready" && analyzedAt ? `Analyzed ${formatFullDate(new Date(analyzedAt))}` : null;
   const vulnerabilities = useMemo(() => rawVulnerabilities || [], [rawVulnerabilities]);
-
-  const toLibraryPackageSummary = (details: IScaReportDetails): SCASummary => ({
-    critical: details.critical,
-    high: details.high,
-    medium: details.medium,
-    low: details.low,
-    unassigned: details.unassigned,
-    riskScore: details.inheritedRiskScore,
-    vulnerabilities: details.vulnerabilities,
-    vulnerableComponents: details.vulnerableComponents,
-    components: details.components,
-  });
 
   const transformVulnerabilities = (
     vulnerabilities: IScaVulnerability[],
@@ -1037,65 +1113,14 @@ const SCATab: React.FC = () => {
   return (
     <div className="w-full space-y-6">
       {isLoading ? (
-        <>
-          {/* Skeleton for Software library package */}
-          <div className="overflow-hidden rounded-lg border bg-background">
-            <div className="border-b px-6 py-4">
-              <div className="flex items-center justify-between">
-                <Skeleton className="mb-2 h-6 w-48" />
-                <Skeleton className="h-8 w-40" />
-              </div>
-              <div className="mt-3 flex items-center gap-6 text-xs text-low-emphasis">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-4 w-40" />
-              </div>
-            </div>
-            <div className="p-6">
-              <div className="mb-4 flex gap-4">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Skeleton key={i} className="h-16 w-24 rounded-lg" />
-                ))}
-              </div>
-              <Skeleton className="mb-4 h-8 w-64" />
-              <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Skeleton key={i} className="h-12 w-full rounded-lg" />
-                ))}
-              </div>
-            </div>
-          </div>
-        </>
-      ) : !error && status === "Pending" ? (
-        <ContainerWaiting type="overall" />
-      ) : !error && (status === "NotRun" || status === "Failed") ? (
-        <ReportUnavailableCard
-          title="Software Composition Analysis"
-          status={status}
-          message={report?.message}
-          action={<DependencyTrackButton />}
-        />
-      ) : !error && scaDetails ? (
-        <>
-          <SCACard
-            title="Software library package"
-            summary={toLibraryPackageSummary(scaDetails)}
-            dependencies={libraryPackageDependencies}
-            caption={caption}
-            truncatedCount={
-              status === "Ready" && report?.findingsTruncated ? vulnerabilities.length : null
-            }
-          />
-        </>
+        <ScaTabSkeleton />
       ) : (
-        <Card>
-          <CardContent className="p-2">
-            <ErrorDisplay
-              text={error?.message || "Error loading SCA data"}
-              className="w-full"
-            />
-          </CardContent>
-        </Card>
+        <ScaReportContent
+          report={report}
+          error={error}
+          dependencies={libraryPackageDependencies}
+          findingsCount={vulnerabilities.length}
+        />
       )}
     </div>
   );

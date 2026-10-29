@@ -15,7 +15,8 @@ import { readReleaseProject } from "../../support/release-project";
 const FAKE_REPO_ID = "e2e-live-logs-repo";
 const FAKE_BUILD_ID = "e2e-live-logs-build";
 const FOREIGN_BUILD_ID = "e2e-live-logs-other-build";
-const STEP_NAMES = /^(Clone|Build|Sast|Sca|Deploy)/;
+// Step header names may start with the status glyph, as in stepHeader below.
+const STEP_NAMES = /^(?:[✓✕○]\s*)?(Clone|Build|Sast|Sca|Deploy)\b/;
 
 function okEnvelope<T>(data: T) {
   return {

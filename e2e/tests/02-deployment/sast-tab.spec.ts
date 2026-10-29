@@ -377,10 +377,14 @@ test.describe("SAST tab saved report states (#255)", () => {
 
     await test.step("[Positive] the report is refetched every 30 s while Pending (H10)", async () => {
       const before = requests;
-      await page.clock.fastForward(29_000);
+      // Jump 29 s and pause there: the clock keeps running in real time otherwise, so the
+      // one-second settle would itself carry it past the 30 s mark.
+      const now = await page.evaluate(() => Date.now());
+      await page.clock.pauseAt(now + 29_000);
       await settle(page);
       expect(requests, "no refetch before 30 s").toBe(before);
       await page.clock.fastForward(1_000);
+      await page.clock.resume();
       await expect.poll(() => requests, { timeout: 10_000 }).toBe(before + 1);
     });
 

@@ -43,6 +43,14 @@ public class ScaLookupResponse
 {
     public string name { get; set; }
     public string uuid { get; set; }
+    public string version { get; set; }
+
+    /// <summary>Epoch milliseconds of the project's last BOM upload.</summary>
+    public long? lastBomImport { get; set; }
+
+    /// <summary>Epoch milliseconds of the project's last vulnerability analysis.</summary>
+    public long? lastVulnerabilityAnalysis { get; set; }
+
     public Metrics metrics { get; set; }
     public List<VersionInfo> versions { get; set; }
 }
@@ -54,4 +62,11 @@ public class VersionInfo
     public bool active { get; set; }
 }
 
-
+/// <summary>
+/// <c>GET /api/v1/metrics/project/{uuid}/current</c>. A separate type so that <c>kev</c> stays out of the
+/// live report's <c>details</c>, which are built from the properties of <see cref="Metrics"/> alone.
+/// </summary>
+public class DependencyTrackProjectMetrics : Metrics
+{
+    public int kev { get; set; }
+}

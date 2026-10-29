@@ -18,6 +18,10 @@ import { readReleaseProject } from "../../support/release-project";
  * on the preview API host so the Release UI under test still exercises Env
  * paste end-to-end against the deployed client bundle.
  *
+ * Since #234 Save variables is disabled while the active tab is invalid and
+ * the message shows inline, so the negative steps assert both instead of
+ * clicking Save.
+ *
  * Never clicks Deploy. When secrets already exist on a real repo, validation /
  * mode-switch steps Cancel without Save so pre-existing values are not replaced.
  */
@@ -342,39 +346,39 @@ test.describe("Env paste mode (#199)", () => {
     await test.step("[Negative] malformed Env line blocks save (C2)", async () => {
       await envRadio.click();
       await envTextarea.fill("E2E_APP_URL=https://a.test\nNOT_A_VARIABLE");
-      await saveButton.click();
       await expect(
         dialog.getByText("Line 2: expected KEY=VALUE."),
       ).toBeVisible();
+      await expect(saveButton).toBeDisabled();
       await expect(dialog).toBeVisible();
     });
 
     await test.step("[Negative] invalid Env key blocks save (C3)", async () => {
       await envTextarea.fill("1BAD=x");
-      await saveButton.click();
       await expect(
         dialog.getByText(
           'Line 1, key "1BAD": Start with a letter or underscore; letters, digits and underscore only.',
         ),
       ).toBeVisible();
+      await expect(saveButton).toBeDisabled();
       await expect(dialog).toBeVisible();
     });
 
     await test.step("[Negative] duplicate Env keys block save (C3)", async () => {
       await envTextarea.fill("A=1\nA=2");
-      await saveButton.click();
       await expect(
         dialog.getByText('Line 2: key "A" was already set on line 1.'),
       ).toBeVisible();
+      await expect(saveButton).toBeDisabled();
       await expect(dialog).toBeVisible();
     });
 
     await test.step("[Negative] empty Env paste blocks save (C1)", async () => {
       await envTextarea.fill("");
-      await saveButton.click();
       await expect(
         dialog.getByText("Paste .env-formatted text, e.g. KEY=value."),
       ).toBeVisible();
+      await expect(saveButton).toBeDisabled();
       await expect(dialog).toBeVisible();
     });
 

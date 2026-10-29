@@ -1,6 +1,7 @@
 import { fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
+import { formatFullDate } from "@/utils/date.util";
 import {
   useGetSCALibraryData,
   useSCARedirectLink,
@@ -260,5 +261,183 @@ describe("SCATab", () => {
     const search = screen.getByPlaceholderText("Search dependencies...");
     fireEvent.change(search, { target: { value: "nomatch" } });
     expect(search).toHaveValue("nomatch");
+  });
+});
+
+describe("SCATab saved report (#255)", () => {
+  const analyzedAt = "2026-10-28T20:58:00Z";
+  const capturedAt = "2026-10-28T21:10:00Z";
+  const details = {
+    critical: 1,
+    high: 1,
+    medium: 0,
+    low: 0,
+    unassigned: 0,
+    inheritedRiskScore: 15,
+    vulnerabilities: "2",
+    vulnerableComponents: "2",
+    components: "40",
+    kev: "0",
+  };
+  const vulnerabilities = [
+    {
+      name: "left-pad",
+      group: "npm",
+      version: "1.0.0",
+      id: "CVE-1",
+      score: "9.8",
+      severity: "CRITICAL",
+    },
+    { name: "lodash", group: "npm", version: "4.0.0", id: "CVE-2", score: "7.5", severity: "HIGH" },
+  ];
+
+  const mockReport = (data: Record<string, unknown> | undefined, error: unknown = null) =>
+    vi.mocked(useGetSCALibraryData).mockReturnValue({
+      data: data === undefined ? undefined : { data },
+      isLoading: false,
+      error,
+    } as never);
+
+  let redirect: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    redirect = vi.fn().mockResolvedValue({
+      isError: false,
+      data: { isSuccess: true, data: { projectUuid: "5f1c2a9e-0b7d-4e44-9b1e-2d3c4f5a6b7c" } },
+    });
+    vi.mocked(useSCARedirectLink).mockReturnValue({ isLoading: false, refetch: redirect } as never);
+  });
+
+  it("H9 — a legacy report without status renders today's results with no caption", () => {
+    mockReport({ details, vulnerabilities });
+    renderWithProviders(<SCATab />);
+    expect(screen.getByText("Software library package")).toBeInTheDocument();
+    expect(screen.getByText("left-pad")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Dependency Track/i })).toHaveLength(1);
+    expect(screen.queryByText(/^Analyzed /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/most severe findings/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("H9 — a legacy report without details keeps today's error display", () => {
+    mockReport({ details: null, vulnerabilities: null });
+    renderWithProviders(<SCATab />);
+    expect(screen.getByText("Error loading SCA data")).toBeInTheDocument();
+  });
+
+  it("H10 — Pending shows the SCA Data Processing card announced as a status", () => {
+    mockReport({ type: "Sca", status: "Pending", details: null, vulnerabilities: null });
+    renderWithProviders(<SCATab />);
+    const card = screen.getByRole("status");
+    expect(card).toHaveTextContent("Software Composition Analysis");
+    expect(card).toHaveTextContent("Data Processing");
+    expect(card).toHaveTextContent("Analysis in progress");
+    expect(screen.queryByText("Error loading SCA data")).not.toBeInTheDocument();
+  });
+
+  it("H11 — Pending then Ready swaps to the results with the Analyzed caption", () => {
+    mockReport({ type: "Sca", status: "Pending", details: null });
+    const { rerender } = renderWithProviders(<SCATab />);
+    expect(screen.getByRole("status")).toBeInTheDocument();
+
+    mockReport({
+      type: "Sca",
+      status: "Ready",
+      capturedAt,
+      analyzedAt,
+      findingsTruncated: false,
+      details,
+      vulnerabilities,
+    });
+    rerender(<SCATab />);
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByText("left-pad")).toBeInTheDocument();
+    const caption = screen.getByText(`Analyzed ${formatFullDate(new Date(analyzedAt))}`);
+    expect(caption).toHaveClass("text-xs", "text-medium-emphasis");
+    expect(screen.queryByText(/most severe findings/)).not.toBeInTheDocument();
+  });
+
+  it("H11 — Ready without analyzedAt falls back to capturedAt", () => {
+    mockReport({
+      type: "Sca",
+      status: "Ready",
+      capturedAt,
+      findingsTruncated: false,
+      details,
+      vulnerabilities: [],
+    });
+    renderWithProviders(<SCATab />);
+    expect(
+      screen.getByText(`Analyzed ${formatFullDate(new Date(capturedAt))}`),
+    ).toBeInTheDocument();
+  });
+
+  it("C12 — truncated findings show the count line with the Dependency-Track button", async () => {
+    const tab = { opener: {}, location: { href: "about:blank" } } as unknown as Window;
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(tab);
+    mockReport({
+      type: "Sca",
+      status: "Ready",
+      capturedAt,
+      analyzedAt,
+      findingsTruncated: true,
+      details,
+      vulnerabilities,
+    });
+    renderWithProviders(<SCATab />);
+
+    const line = screen.getByText(
+      "Showing the 2 most severe findings. Open Dependency-Track for the full list.",
+    );
+    expect(line).toHaveClass("text-xs", "text-medium-emphasis");
+    const buttons = screen.getAllByRole("button", { name: /Dependency Track/i });
+    expect(buttons).toHaveLength(2);
+    expect(line.parentElement).toContainElement(buttons[1]);
+
+    fireEvent.click(buttons[1]);
+    expect(redirect).toHaveBeenCalled();
+    await vi.waitFor(() =>
+      expect(tab.location.href).toBe(
+        "https://sca.seliseblocks.com/projects/5f1c2a9e-0b7d-4e44-9b1e-2d3c4f5a6b7c",
+      ),
+    );
+    openSpy.mockRestore();
+  });
+
+  it("C14 — NotRun shows Scan did not run with the message, an amber icon and the Dependency-Track button", () => {
+    mockReport({ type: "Sca", status: "NotRun", message: "The sca-scan step did not run." });
+    renderWithProviders(<SCATab />);
+    expect(screen.getByText("Software Composition Analysis")).toBeInTheDocument();
+    expect(screen.getByText("Scan did not run")).toBeInTheDocument();
+    expect(screen.getByText("The sca-scan step did not run.")).toBeInTheDocument();
+    expect(screen.getByTestId("report-unavailable-icon")).toHaveClass("text-amber-600");
+    expect(screen.getByRole("button", { name: /Dependency Track/i })).toBeEnabled();
+    expect(screen.queryByText("Software library package")).not.toBeInTheDocument();
+  });
+
+  it("C14 — Failed shows Results not captured with the message, a red icon and the Dependency-Track button", async () => {
+    const tab = { opener: {}, location: { href: "about:blank" } } as unknown as Window;
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(tab);
+    mockReport({ type: "Sca", status: "Failed", message: "Results were not captured." });
+    renderWithProviders(<SCATab />);
+    expect(screen.getByText("Results not captured")).toBeInTheDocument();
+    expect(screen.getByText("Results were not captured.")).toBeInTheDocument();
+    expect(screen.getByTestId("report-unavailable-icon")).toHaveClass("text-red-600");
+
+    fireEvent.click(screen.getByRole("button", { name: /Dependency Track/i }));
+    expect(redirect).toHaveBeenCalled();
+    await vi.waitFor(() =>
+      expect(tab.location.href).toBe(
+        "https://sca.seliseblocks.com/projects/5f1c2a9e-0b7d-4e44-9b1e-2d3c4f5a6b7c",
+      ),
+    );
+    openSpy.mockRestore();
+  });
+
+  it("a request error keeps today's ErrorDisplay", () => {
+    mockReport(undefined, { message: "boom" });
+    renderWithProviders(<SCATab />);
+    expect(screen.getByText("boom")).toBeInTheDocument();
+    expect(screen.queryByText("Scan did not run")).not.toBeInTheDocument();
   });
 });

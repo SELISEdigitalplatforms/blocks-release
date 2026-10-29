@@ -35,14 +35,15 @@ import {
   getNewCodeStats,
   getOverallCodeStats,
   getQualityGateLabel,
+  getSastScanCaption,
   getSeverityRows,
   hasNewCode,
   type RatingLetter,
   type SastDetails,
-  type SastIssueBreakdown,
   type SastQualityGate,
   type SastStat,
 } from "@blocks-deployment/utils/sast-metrics.utils";
+import { ReportUnavailableCard } from "./sca-waiting-card";
 
 const RATING_BADGE_CLASS: Record<RatingLetter, string> = {
   A: "bg-green-100 text-green-700",
@@ -183,24 +184,12 @@ const SastTab = () => {
   const { isLoading: isSASTLoading, refetch: triggerSASTRedirect } =
     useSASTRedirectLink(buildId);
 
-  let details: SastDetails | null | undefined = undefined;
-  let qualityGate: SastQualityGate | null = null;
-  let issueBreakdown: SastIssueBreakdown | null = null;
-  const envelope = sastData as
-    | { data?: { details?: SastDetails | null } }
-    | undefined
-    | null;
-  if (
-    envelope &&
-    typeof envelope === "object" &&
-    envelope.data &&
-    typeof envelope.data === "object" &&
-    "details" in envelope.data
-  ) {
-    details = envelope.data.details;
-    qualityGate = (envelope.data as { qualityGate?: SastQualityGate | null }).qualityGate ?? null;
-    issueBreakdown = (envelope.data as { issueBreakdown?: SastIssueBreakdown | null }).issueBreakdown ?? null;
-  }
+  const report = sastData?.data;
+  const status = report?.status;
+  const details = report?.details;
+  const qualityGate = report?.qualityGate ?? null;
+  const issueBreakdown = report?.issueBreakdown ?? null;
+  const scanCaption = report && status === "Ready" ? getSastScanCaption(report) : null;
 
   const overviewData = useMemo(
     () => (details ? getOverviewData(details, qualityGate) : []),
@@ -225,6 +214,13 @@ const SastTab = () => {
       const result = await triggerSASTRedirect();
       return getSonarQubeDashboardUrl(result.isError ? undefined : result.data);
     });
+
+  const sonarQubeButton = (
+    <Button variant="outline" size="sm" onClick={handleSASTRedirect} disabled={isSASTLoading}>
+      <ExternalLink className="mr-2 h-4 w-4" />
+      View in SonarQube
+    </Button>
+  );
 
   let body: React.ReactNode;
   if (isLoading) {
@@ -251,20 +247,22 @@ const SastTab = () => {
         </div>
       </Card>
     );
+  } else if (!error && (status === "NotRun" || status === "Failed")) {
+    body = (
+      <ReportUnavailableCard
+        title="Static Application Security Testing"
+        status={status}
+        message={report?.message}
+        action={sonarQubeButton}
+      />
+    );
   } else if (!error && details) {
     body = (
       <Card>
         <CardHeader className="mb-0 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <CardTitle>Overview</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSASTRedirect}
-              disabled={isSASTLoading}>
-              <ExternalLink className="mr-2 h-4 w-4" />
-              View in SonarQube
-            </Button>
+            {sonarQubeButton}
           </div>
 
           <div className="flex gap-2 text-xs">
@@ -282,6 +280,7 @@ const SastTab = () => {
               </div>
             ))}
           </div>
+          {scanCaption && <p className="text-xs text-medium-emphasis">{scanCaption}</p>}
         </CardHeader>
         <CardContent>
           <Separator orientation="horizontal" className="my-4 w-full" />
@@ -393,7 +392,10 @@ const SastTab = () => {
     );
   } else if (!error && !details) {
     body = (
-      <Card className="w-full">
+      <Card
+        className="w-full"
+        // Announces the "Analysis in progress" pill while the report is being captured.
+        role={status === "Pending" ? "status" : undefined}>
         <CardHeader className="pb-4 text-center">
           <div className="mb-4 flex justify-center">
             <div className="relative">

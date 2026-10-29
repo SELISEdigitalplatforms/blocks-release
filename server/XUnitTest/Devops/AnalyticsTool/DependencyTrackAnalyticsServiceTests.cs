@@ -69,7 +69,8 @@ namespace XUnitTest.Devops.AnalyticsTool
                 metrics = new Metrics { critical = 3, high = 4 },
                 versions = new List<VersionInfo>
                 {
-                    new() { uuid = "v-uuid", version = "1.0.0", active = true }
+                    // The version must equal the requested branch exactly (#255 C10); it was "1.0.0" under the old substring match.
+                    new() { uuid = "v-uuid", version = "1.0", active = true }
                 }
             };
             var vulns = new[]

@@ -28,14 +28,36 @@ public class SASTStrategy : IStrategy
 
     public async Task<TestReport> getInfo(string repoName, string branchName)
     {
-        var sastToolsApiBaseUri = _configuration["SastToolsApiBaseUri"]?.TrimEnd('/');
-        var key = Uri.EscapeDataString(repoName);
-        var branch = Uri.EscapeDataString(branchName);
-        var headers = new Dictionary<string, string>
+        var data = await QueryAsync(repoName, branchName);
+        var metrics = MapMeasures(data.Measures);
+
+        if (data.Measures == null || metrics.Count == 0)
         {
-            { "Accept", "application/json" },
-            { "Authorization", $"Bearer {_cloudBuildSecret.SastBasicAuthToken}" },
+            return new TestReport
+            {
+                Type = "SAST",
+                Details = null,
+                QualityGate = null,
+                IssueBreakdown = null
+            };
+        }
+
+        return new TestReport
+        {
+            Type = "SAST",
+            Details = metrics,
+            QualityGate = MapQualityGate(data.Gate),
+            IssueBreakdown = MapIssueBreakdown(data.NewIssues, data.AllIssues)
         };
+    }
+
+    /// <summary>The four SonarQube queries behind a SAST report, run in parallel. A failed one is null.</summary>
+    internal async Task<SastQueryResult> QueryAsync(string projectKey, string branchName)
+    {
+        var sastToolsApiBaseUri = BaseUri();
+        var key = Uri.EscapeDataString(projectKey);
+        var branch = Uri.EscapeDataString(branchName);
+        var headers = Headers();
 
         string metricKeys = string.Join(",", CloudBuildConstants.SAST_METRIC_KEYS);
         var measuresUrl =
@@ -54,28 +76,33 @@ public class SASTStrategy : IStrategy
 
         await Task.WhenAll(measuresTask, gateTask, newIssuesTask, allIssuesTask);
 
-        var apiCallResult = await measuresTask;
-        var metrics = MapMeasures(apiCallResult);
-
-        if (apiCallResult == null || metrics.Count == 0)
-        {
-            return new TestReport
-            {
-                Type = "SAST",
-                Details = null,
-                QualityGate = null,
-                IssueBreakdown = null
-            };
-        }
-
-        return new TestReport
-        {
-            Type = "SAST",
-            Details = metrics,
-            QualityGate = MapQualityGate(await gateTask),
-            IssueBreakdown = MapIssueBreakdown(await newIssuesTask, await allIssuesTask)
-        };
+        return new SastQueryResult(await measuresTask, await gateTask, await newIssuesTask, await allIssuesTask);
     }
+
+    /// <summary>The project's branches with their last analysis date (<c>api/project_branches/list</c>).</summary>
+    internal Task<SonarProjectBranchesResponse?> GetBranchesAsync(string projectKey) =>
+        SafeGetAsync<SonarProjectBranchesResponse>(
+            $"{BaseUri()}/project_branches/list?project={Uri.EscapeDataString(projectKey)}", Headers());
+
+    /// <summary>
+    /// The branch's newest analysis (<c>api/project_analyses/search</c>). Its <c>branch</c> parameter is internal
+    /// to SonarQube, so callers treat the result as optional metadata.
+    /// </summary>
+    internal async Task<SonarProjectAnalysis?> GetLatestAnalysisAsync(string projectKey, string branchName)
+    {
+        var response = await SafeGetAsync<SonarProjectAnalysesResponse>(
+            $"{BaseUri()}/project_analyses/search?project={Uri.EscapeDataString(projectKey)}&branch={Uri.EscapeDataString(branchName)}&ps=1",
+            Headers());
+        return response?.Analyses?.FirstOrDefault();
+    }
+
+    private string? BaseUri() => _configuration["SastToolsApiBaseUri"]?.TrimEnd('/');
+
+    private Dictionary<string, string> Headers() => new()
+    {
+        { "Accept", "application/json" },
+        { "Authorization", $"Bearer {_cloudBuildSecret.SastBasicAuthToken}" },
+    };
 
     private async Task<T?> SafeGetAsync<T>(string url, Dictionary<string, string> headers) where T : class
     {
@@ -97,7 +124,7 @@ public class SASTStrategy : IStrategy
         return url;
     }
 
-    private static Dictionary<string, string> MapMeasures(SASTResponse? apiCallResult)
+    internal static Dictionary<string, string> MapMeasures(SASTResponse? apiCallResult)
     {
         Dictionary<string, string> metrics = new();
         if (apiCallResult?.Component?.Measures != null)
@@ -128,7 +155,7 @@ public class SASTStrategy : IStrategy
         return metrics;
     }
 
-    private static SastQualityGate? MapQualityGate(SonarProjectStatusResponse? response)
+    internal static SastQualityGate? MapQualityGate(SonarProjectStatusResponse? response)
     {
         var status = response?.ProjectStatus;
         if (status == null)
@@ -161,7 +188,7 @@ public class SASTStrategy : IStrategy
         return new SastQualityGate { Status = normalized, Conditions = conditions };
     }
 
-    private static SastIssueBreakdown? MapIssueBreakdown(
+    internal static SastIssueBreakdown? MapIssueBreakdown(
         SonarIssuesSearchResponse? newCode,
         SonarIssuesSearchResponse? overall)
     {
@@ -203,4 +230,14 @@ public class SASTStrategy : IStrategy
 
         return counts;
     }
+}
+
+/// <summary>The raw responses of <see cref="SASTStrategy.QueryAsync"/>; null where a query failed.</summary>
+internal sealed record SastQueryResult(
+    SASTResponse? Measures,
+    SonarProjectStatusResponse? Gate,
+    SonarIssuesSearchResponse? NewIssues,
+    SonarIssuesSearchResponse? AllIssues)
+{
+    public bool AllSucceeded => Measures != null && Gate != null && NewIssues != null && AllIssues != null;
 }

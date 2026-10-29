@@ -15,7 +15,8 @@ import { readReleaseProject } from "../../support/release-project";
 const FAKE_REPO_ID = "e2e-live-logs-repo";
 const FAKE_BUILD_ID = "e2e-live-logs-build";
 const FOREIGN_BUILD_ID = "e2e-live-logs-other-build";
-const STEP_NAMES = /^(Clone|Build|Sast|Sca|Deploy)/;
+// Step header names may start with the status glyph, as in stepHeader below.
+const STEP_NAMES = /^(?:[✓✕○]\s*)?(Clone|Build|Sast|Sca|Deploy)\b/;
 
 function okEnvelope<T>(data: T) {
   return {
@@ -150,8 +151,10 @@ const logsCard = (page: Page) =>
     .getByRole("heading", { name: "Deployment logs" })
     .locator("xpath=ancestor::div[contains(@class, 'rounded-lg')][1]");
 
+// The header's accessible name starts with its status icon's glyph (✓, ✕ or ○; none while running),
+// e.g. "✓ Clone ~6.0s", so the step name may follow one glyph.
 const stepHeader = (page: Page, name: string) =>
-  logsCard(page).getByRole("button", { name: new RegExp(`^${name}`) });
+  logsCard(page).getByRole("button", { name: new RegExp(`^(?:[✓✕○]\\s*)?${name}\\b`) });
 
 const expectExpanded = async (page: Page, name: string) => {
   await expect(stepHeader(page, name).locator("svg.lucide-chevron-down")).toBeVisible();

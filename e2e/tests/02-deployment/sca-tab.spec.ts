@@ -16,6 +16,13 @@ const FAKE_BUILD_ID = "e2e-sca-build";
 
 type ScaReport = Record<string, unknown>;
 
+/**
+ * Waits a bounded real second, so a request the page would have sent has reached the
+ * route handler. Only used before asserting that NO request was sent, which no
+ * condition can be awaited for.
+ */
+const settle = (page: Page) => page.waitForTimeout(1_000);
+
 const okEnvelope = <T>(data: T) => ({
   isSuccess: true,
   statusCode: 200,
@@ -84,7 +91,7 @@ const pendingSca = { type: "Sca", status: "Pending", details: null, vulnerabilit
 const readySca = (extra: ScaReport = {}) => ({
   type: "Sca",
   status: "Ready",
-  capturedAt: "2026-10-28T10:20:00Z",
+  capturedAt: "2026-10-29T10:20:00Z", // another day, so the caption proves analyzedAt wins
   analyzedAt: "2026-10-28T10:15:00Z",
   findingsTruncated: false,
   details,
@@ -163,21 +170,26 @@ test.describe("SCA tab saved report states (#255)", () => {
 
     await test.step("[Positive] the report is refetched every 30 s while Pending (H10)", async () => {
       const before = requests;
-      await page.clock.fastForward(30_000);
-      await expect.poll(() => requests, { timeout: 10_000 }).toBeGreaterThan(before);
+      await page.clock.fastForward(29_000);
+      await settle(page);
+      expect(requests, "no refetch before 30 s").toBe(before);
+      await page.clock.fastForward(1_000);
+      await expect.poll(() => requests, { timeout: 10_000 }).toBe(before + 1);
     });
 
     await test.step("[Positive] Pending → Ready shows findings and the caption, polling stops (H11)", async () => {
       report = readySca();
       await page.clock.fastForward(30_000);
-      await expect(page.getByText(/^Analyzed .+/)).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByText(/^Analyzed Oct 28, 2026 at \d{2}:\d{2}$/)).toBeVisible({
+        timeout: 10_000,
+      });
       await expect(page.getByText("lib-CVE-2026-0001").first()).toBeVisible();
       await expect(page.getByRole("status").filter({ hasText: "Data Processing" })).toHaveCount(0);
       await expect(page.getByText(/most severe findings/)).toHaveCount(0);
 
       const afterReady = requests;
       await page.clock.fastForward(90_000);
-      await page.waitForTimeout(1_000);
+      await settle(page);
       expect(requests).toBe(afterReady);
     });
   });
@@ -193,7 +205,10 @@ test.describe("SCA tab saved report states (#255)", () => {
         ),
       ).toBeVisible({ timeout: 30_000 });
       await expect(
-        page.getByRole("button", { name: /View in Dependency Track/ }).first(),
+        page
+          .getByText("Showing the 2 most severe findings. Open Dependency-Track for the full list.")
+          .locator("..")
+          .getByRole("button", { name: /View in Dependency Track/ }),
       ).toBeVisible();
     });
 

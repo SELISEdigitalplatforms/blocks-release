@@ -5,13 +5,16 @@ import { readReleaseProject } from "../../support/release-project";
 
 /**
  * Live, read-only checks of the per-build SAST/SCA reports (#255) against the
- * environment under test. Nothing is mocked, deployed or deleted.
+ * environment under test. Nothing is deployed or deleted. The only mocks are the
+ * SonarQube / Dependency-Track user provisioning calls the SAST and SCA tabs make
+ * on mount (ProcessSonarQubeUser / ProcessDependencyTrackUser), which would
+ * otherwise create users, groups and permissions in those tools.
  *
  * - H15/C19: build-returning reads (`repo-details`, `build?buildId`) carry no
  *   report data: `sastReport`/`scaReport` are null or absent on every build.
  * - H9: a build without a saved report renders its SAST tab as before.
- * - C7: a cancelled build's saved reports are no longer Pending, and a NotRun
- *   one says why.
+ * - C7: a cancelled build's saved reports were ended when it was cancelled:
+ *   never Pending, and never the read-time "Results were not captured."
  */
 
 type Json = unknown;
@@ -59,6 +62,19 @@ test.describe("Saved build reports on the live environment (#255)", () => {
   }) => {
     test.setTimeout(240_000);
 
+    await page.route("**/AnalyticsTool/Process*User**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          isSuccess: true,
+          statusCode: 200,
+          message: null,
+          errors: null,
+          data: null,
+        }),
+      }),
+    );
     await openReleaseDeployment(page);
     test.skip(!readReleaseProject()?.itemId, "No shared Release project fixture");
 
@@ -100,12 +116,10 @@ test.describe("Saved build reports on the live environment (#255)", () => {
       const oldest = builds[builds.length - 1].itemId as string;
       const report = await openBuildTab(page, repoPath, oldest, "sast");
       if (report && "status" in report && report.status != null) {
-        test
-          .info()
-          .annotations.push({
-            type: "H9",
-            description: `build ${oldest} has a saved report; legacy view not exercised`,
-          });
+        test.info().annotations.push({
+          type: "H9",
+          description: `build ${oldest} has a saved report; legacy view not exercised`,
+        });
         return;
       }
       await expect(page.getByRole("button", { name: "SAST" })).toBeVisible({ timeout: 30_000 });
@@ -125,17 +139,22 @@ test.describe("Saved build reports on the live environment (#255)", () => {
       for (const tab of ["sast", "sca"] as const) {
         const report = await openBuildTab(page, repoPath, cancelled.itemId as string, tab);
         if (!report || report.status == null) {
-          test
-            .info()
-            .annotations.push({
-              type: "C7",
-              description: `${tab}: cancelled build predates the saved reports`,
-            });
+          test.info().annotations.push({
+            type: "C7",
+            description: `${tab}: cancelled build predates the saved reports`,
+          });
           continue;
         }
         expect(report.status, `${tab} report of the cancelled build`).not.toBe("Pending");
+        // The stale-Pending read: the cancel left the report Pending (C7 not applied).
+        expect(report.message, `${tab} report of the cancelled build`).not.toBe(
+          "Results were not captured.",
+        );
         if (report.status === "NotRun") {
-          expect(report.message).toBe("The build was cancelled.");
+          // The cancel, or the log poller if it saw the cancelled step first, ended the report.
+          expect(report.message).toMatch(
+            /^(The build was cancelled\.|The (sonar|sca)-scan step did not (succeed|run)\.)$/,
+          );
           await expect(page.getByText("Scan did not run")).toBeVisible({ timeout: 30_000 });
         }
       }

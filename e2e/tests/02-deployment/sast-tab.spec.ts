@@ -311,6 +311,13 @@ test.describe("SAST tab Quality Gate conditions (#210 Phase 2)", () => {
 
 type SavedSastReport = Record<string, unknown>;
 
+/**
+ * Waits a bounded real second, so a request the page would have sent has reached the
+ * route handler. Only used before asserting that NO request was sent, which no
+ * condition can be awaited for.
+ */
+const settle = (page: Page) => page.waitForTimeout(1_000);
+
 /** Serves `reports?type=sast` from `current()`, so a test can change it between refetches. */
 async function openSastTabWithSavedReport(
   page: Page,
@@ -345,7 +352,7 @@ const pendingSast = { type: "SAST", status: "Pending", details: null, qualityGat
 const readySast = {
   type: "SAST",
   status: "Ready",
-  capturedAt: "2026-10-28T10:09:00Z",
+  capturedAt: "2026-10-29T10:09:00Z", // another day, so the caption proves analysisDate wins
   analysisDate: "2026-10-28T10:06:12Z",
   revision: "0123456789abcdef",
   details: sastDetailsHappy,
@@ -370,20 +377,23 @@ test.describe("SAST tab saved report states (#255)", () => {
 
     await test.step("[Positive] the report is refetched every 30 s while Pending (H10)", async () => {
       const before = requests;
-      await page.clock.fastForward(30_000);
-      await expect.poll(() => requests, { timeout: 10_000 }).toBeGreaterThan(before);
+      await page.clock.fastForward(29_000);
+      await settle(page);
+      expect(requests, "no refetch before 30 s").toBe(before);
+      await page.clock.fastForward(1_000);
+      await expect.poll(() => requests, { timeout: 10_000 }).toBe(before + 1);
     });
 
     await test.step("[Positive] Pending → Ready shows results and the caption, polling stops (H11)", async () => {
       report = readySast;
       await page.clock.fastForward(30_000);
-      await expect(page.getByText(/^Scanned .+ · commit 0123456$/)).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByText(/^Scanned Oct 28, 2026 at \d{2}:\d{2} · commit 0123456$/)).toBeVisible({ timeout: 10_000 });
       await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
       await expect(page.getByRole("status").filter({ hasText: "Data Processing" })).toHaveCount(0);
 
       const afterReady = requests;
       await page.clock.fastForward(90_000);
-      await page.waitForTimeout(1_000);
+      await settle(page);
       expect(requests).toBe(afterReady);
     });
   });

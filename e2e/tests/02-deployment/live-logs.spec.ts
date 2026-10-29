@@ -150,8 +150,10 @@ const logsCard = (page: Page) =>
     .getByRole("heading", { name: "Deployment logs" })
     .locator("xpath=ancestor::div[contains(@class, 'rounded-lg')][1]");
 
+// The header's accessible name starts with its status icon's glyph (✓, ✕ or ○; none while running),
+// e.g. "✓ Clone ~6.0s", so the step name may follow one glyph.
 const stepHeader = (page: Page, name: string) =>
-  logsCard(page).getByRole("button", { name: new RegExp(`^${name}`) });
+  logsCard(page).getByRole("button", { name: new RegExp(`^(?:[✓✕○]\\s*)?${name}\\b`) });
 
 const expectExpanded = async (page: Page, name: string) => {
   await expect(stepHeader(page, name).locator("svg.lucide-chevron-down")).toBeVisible();

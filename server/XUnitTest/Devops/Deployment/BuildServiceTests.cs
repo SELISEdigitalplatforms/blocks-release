@@ -635,5 +635,29 @@ namespace XUnitTest.Devops.Deployment
             result.StatusCode.Should().Be(HttpStatusCode.BadRequest);
             result.Message.Should().Be("Repo not found.");
         }
+
+        // #255 H1: a new build starts with both saved reports Pending and no attempts.
+        [Fact]
+        public async Task SaveBuild_H1_StartsBothAnalysisReportsPendingWithNoAttempts()
+        {
+            Build saved = null;
+            _f.BuildRepo.Setup(b => b.SaveBuild(It.IsAny<Build>()))
+                .Callback<Build>(b => saved = b)
+                .Returns(Task.CompletedTask);
+
+            var result = await _f.BuildService().SaveBuild(new Repo { ItemId = "repo-1" }, new BuildRequest { branch = "dev" }, "img", "user-1", "run-1");
+
+            saved.Should().BeSameAs(result);
+            saved.SastReport.Should().NotBeNull();
+            saved.SastReport.Status.Should().Be(AnalysisReportStatus.Pending);
+            saved.SastReport.Attempts.Should().Be(0);
+            saved.SastReport.Message.Should().BeNull();
+            saved.SastReport.Metrics.Should().BeNullOrEmpty();
+            saved.ScaReport.Should().NotBeNull();
+            saved.ScaReport.Status.Should().Be(AnalysisReportStatus.Pending);
+            saved.ScaReport.Attempts.Should().Be(0);
+            saved.ScaReport.Message.Should().BeNull();
+            saved.ScaReport.Findings.Should().BeNullOrEmpty();
+        }
 }
 }

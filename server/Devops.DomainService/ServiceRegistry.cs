@@ -68,6 +68,8 @@ public static class ServiceRegistry
         services.AddScoped<DASTStrategy>();
         services.AddTransient<BuildAndRepoRepositories>();
         services.AddScoped<DependencyTrackAnalyticsService>();
+        services.AddScoped<AnalyticsTool.Services.Capture.SastCaptureService>();
+        services.AddScoped<AnalyticsTool.Services.Capture.ScaCaptureService>();
         
 
         services.AddSingleton<INotificationService,NotificationService>();

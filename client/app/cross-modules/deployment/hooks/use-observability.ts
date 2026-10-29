@@ -1,5 +1,14 @@
 import { observabilityService } from "@blocks-deployment/services/observability.service";
+import type { ReportStatus } from "@blocks-deployment/models/sca-report";
 import { useQuery } from "@tanstack/react-query";
+
+export const REPORT_POLL_INTERVAL_MS = 30_000;
+
+/** Re-polls a saved report every 30 s while the build is still capturing it. */
+export const getReportRefetchInterval = (query: {
+  state: { data?: { data?: { status?: ReportStatus | null } | null } };
+}): number | false =>
+  query.state.data?.data?.status === "Pending" ? REPORT_POLL_INTERVAL_MS : false;
 
 export const useGetSASTData = (buildId: string) => {
   return useQuery({
@@ -8,6 +17,8 @@ export const useGetSASTData = (buildId: string) => {
     enabled: !!buildId,
     retry: 2,
     staleTime: 5 * 60 * 1000,
+    refetchInterval: getReportRefetchInterval,
+    refetchIntervalInBackground: false,
   });
 };
 export const useGetSCALibraryData = (buildId: string) => {
@@ -17,6 +28,8 @@ export const useGetSCALibraryData = (buildId: string) => {
     enabled: !!buildId,
     retry: 2,
     staleTime: 5 * 60 * 1000,
+    refetchInterval: getReportRefetchInterval,
+    refetchIntervalInBackground: false,
   });
 };
 export const useSCARedirectLink = (buildId: string) => {

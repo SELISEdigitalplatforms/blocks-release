@@ -1,10 +1,13 @@
 using Blocks.Genesis.Entities.Release;
 using Blocks.Genesis;
+using Devops.DomainService.AnalyticsTool.Models;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Interfaces;
 using Devops.DomainService.Deployment.Models.Response;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Devops.DomainService.Deployment.RepositoryServices;
@@ -52,7 +55,56 @@ public class BuildRepository : IBuildRepository
         // Masked: View column (property) rules clear what the caller may not see. Never save it back.
         var scope = await _access.ReadAsync(ReleaseSchemas.Build, filter, "BuildRepository.GetBuildForView");
         if (!scope.Granted) return null;
-        return scope.ForView(await scope.Apply(buildCollection).FirstOrDefaultAsync());
+        return scope.ForView(await FindWithoutReports(scope, buildCollection).FirstOrDefaultAsync());
+    }
+
+    /// <summary>The element names of <c>Build.SastReport</c> and <c>Build.ScaReport</c>.</summary>
+    internal static readonly string[] ReportFields = RenderReportFields();
+
+    /// <summary>
+    /// The scope's find, minus the saved SAST and SCA reports. Only <c>/build/reports</c> returns report data; build
+    /// reads leave it in the database, and the properties stay null in what they return.
+    /// </summary>
+    internal static IFindFluent<Build, Build> FindWithoutReports(ReadScope<Build> scope, IMongoCollection<Build> collection) =>
+        collection.Find(scope.Filter).Project<Build>(WithoutReports(scope.Projection));
+
+    /// <summary>The resolver's projection (if any) with the report fields removed; see <see cref="FindWithoutReports"/>.</summary>
+    internal static ProjectionDefinition<Build> WithoutReports(ProjectionDefinition<Build>? projection)
+    {
+        if (projection is not BsonDocumentProjectionDefinition<Build> resolved)
+        {
+            return projection is null
+                ? new BsonDocument(ReportFields.Select(f => new BsonElement(f, 0)))
+                : projection; // An unknown projection shape is kept as the resolver built it.
+        }
+
+        var document = resolved.Document.DeepClone().AsBsonDocument;
+        // MongoDB cannot mix inclusion and exclusion. An inclusion projection already leaves out every field it
+        // does not list, so only an explicit inclusion of a report (or a path inside one) has to go.
+        var isInclusion = document.Elements.Any(e =>
+            e.Name != "_id" && ((e.Value.IsNumeric && e.Value.ToDouble() != 0) || e.Value is BsonBoolean { Value: true }));
+        if (isInclusion)
+        {
+            foreach (var name in document.Names.Where(IsReportPath).ToList())
+                document.Remove(name);
+        }
+        else
+        {
+            foreach (var field in ReportFields)
+                document[field] = 0;
+        }
+        return new BsonDocumentProjectionDefinition<Build>(document);
+    }
+
+    private static bool IsReportPath(string name) =>
+        ReportFields.Any(f => name == f || name.StartsWith(f + ".", StringComparison.Ordinal));
+
+    private static string[] RenderReportFields()
+    {
+        var serializer = BsonSerializer.SerializerRegistry.GetSerializer<Build>();
+        var args = new RenderArgs<Build>(serializer, BsonSerializer.SerializerRegistry);
+        return Builders<Build>.Projection.Exclude(b => b.SastReport).Exclude(b => b.ScaReport)
+            .Render(args).Names.ToArray();
     }
 
     /// <summary>
@@ -208,6 +260,63 @@ public class BuildRepository : IBuildRepository
         await collection.InsertOneAsync(webhook);
         return true;
     }
+    public Task<bool> TrySaveSastReport(string buildId, int expectedAttempts, SastReport report, string tenantId) =>
+        TryUpdateOneAsync(
+            Builders<Build>.Filter.Eq(b => b.ItemId, buildId)
+            & Builders<Build>.Filter.Eq(b => b.SastReport!.Status, AnalysisReportStatus.Pending)
+            & Builders<Build>.Filter.Eq(b => b.SastReport!.Attempts, expectedAttempts),
+            Builders<Build>.Update.Set(b => b.SastReport, report),
+            "BuildRepository.TrySaveSastReport", tenantId);
+
+    public Task<bool> TrySaveScaReport(string buildId, int expectedAttempts, ScaReport report, string tenantId) =>
+        TryUpdateOneAsync(
+            Builders<Build>.Filter.Eq(b => b.ItemId, buildId)
+            & Builders<Build>.Filter.Eq(b => b.ScaReport!.Status, AnalysisReportStatus.Pending)
+            & Builders<Build>.Filter.Eq(b => b.ScaReport!.Attempts, expectedAttempts),
+            Builders<Build>.Update.Set(b => b.ScaReport, report),
+            "BuildRepository.TrySaveScaReport", tenantId);
+
+    private async Task<bool> TryUpdateOneAsync(
+        FilterDefinition<Build> filter, UpdateDefinition<Build> update, string callSite, string tenantId)
+    {
+        var scoped = await _access.EditFilterAsync(ReleaseSchemas.Build, filter, callSite, tenantId);
+        if (scoped is null) return false;
+        var result = await _dbContextProvider.GetDatabase(tenantId).GetCollection<Build>(BuildsCollectionName)
+            .UpdateOneAsync(scoped, update, new UpdateOptions { IsUpsert = false });
+        return result.ModifiedCount == 1;
+    }
+
+    public Task<Build?> TryEndPendingReport(string pipelineRunName, AnalysisReportKind kind, string status, string message, string tenantId) =>
+        TryEndPendingReportAsync(_dbContextProvider.GetDatabase(tenantId).GetCollection<Build>(BuildsCollectionName),
+            pipelineRunName, kind, status, message, tenantId);
+
+    public Task<Build?> TryEndPendingReport(string pipelineRunName, AnalysisReportKind kind, string status, string message, Tenant project) =>
+        TryEndPendingReportAsync(ProjectBuilds(project), pipelineRunName, kind, status, message, project.TenantId);
+
+    private async Task<Build?> TryEndPendingReportAsync(
+        IMongoCollection<Build> collection, string pipelineRunName, AnalysisReportKind kind, string status, string message, string tenantId)
+    {
+        var byRun = Builders<Build>.Filter.Eq(b => b.PipelineRunName, pipelineRunName);
+        var (filter, update) = kind == AnalysisReportKind.Sast
+            ? (byRun & Builders<Build>.Filter.Eq(b => b.SastReport!.Status, AnalysisReportStatus.Pending),
+               Builders<Build>.Update.Set(b => b.SastReport!.Status, status).Set(b => b.SastReport!.Message, message))
+            : (byRun & Builders<Build>.Filter.Eq(b => b.ScaReport!.Status, AnalysisReportStatus.Pending),
+               Builders<Build>.Update.Set(b => b.ScaReport!.Status, status).Set(b => b.ScaReport!.Message, message));
+
+        var scoped = await _access.EditFilterAsync(ReleaseSchemas.Build, filter, "BuildRepository.TryEndPendingReport", tenantId);
+        if (scoped is null) return null;
+
+        // Only what the caller's notification needs comes back, never the reports.
+        var options = new FindOneAndUpdateOptions<Build>
+        {
+            IsUpsert = false,
+            ReturnDocument = ReturnDocument.After,
+            Projection = Builders<Build>.Projection
+                .Include(b => b.ItemId).Include(b => b.CreatedBy).Include(b => b.RepoId).Include(b => b.ProjectId)
+        };
+        return await collection.FindOneAndUpdateAsync(scoped, update, options);
+    }
+
     public async Task<bool> UpdateBuildDependencyTrackProjectId(string buildId, string dependencyTrackProjectId, string tenantId)
     {
         var _dbContext = _dbContextProvider.GetDatabase(tenantId);

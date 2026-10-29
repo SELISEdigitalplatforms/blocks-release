@@ -10,6 +10,8 @@ using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.Shared.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using Pipelines.Sockets.Unofficial.Arenas;
 
@@ -123,7 +125,7 @@ public class RepoRepository : IRepoRepository
             .Descending("_id");
 
         // Only the API lists these: View column (property) rules clear what the caller may not see.
-        return scope.ForView(await scope.Apply(collection)
+        return scope.ForView(await BuildRepository.FindWithoutReports(scope, collection)
             .Sort(sort)
             .Skip(safeSkip)
             .Limit(safePageSize)
@@ -170,6 +172,8 @@ public class RepoRepository : IRepoRepository
                 localField: r => r.ItemId,
                 foreignField: b => b.RepoId,
                 @as: rw => rw.Builds)
+            // The joined builds come without their saved SAST/SCA reports; only /build/reports returns those.
+            .AppendStage<RepoWithBuildsResponse>(BuildsWithoutReportsStage())
             .Project(rw => new RepoWithBuildsResponse()
             {
                 ItemId = rw.ItemId,
@@ -184,6 +188,17 @@ public class RepoRepository : IRepoRepository
             });
 
         return await pipeline.ToListAsync(ct);
+    }
+
+    /// <summary><c>$project</c> stage that drops the saved reports from every joined build.</summary>
+    private static BsonDocument BuildsWithoutReportsStage()
+    {
+        var registry = BsonSerializer.SerializerRegistry;
+        var buildsField = Builders<RepoWithBuildsResponse>.Projection.Include(r => r.Builds)
+            .Render(new RenderArgs<RepoWithBuildsResponse>(registry.GetSerializer<RepoWithBuildsResponse>(), registry))
+            .Names.Single(n => n != "_id");
+        var exclusions = new BsonDocument(BuildRepository.ReportFields.Select(f => new BsonElement($"{buildsField}.{f}", 0)));
+        return new BsonDocument("$project", exclusions);
     }
 
     public async Task SaveRepo(Repo repo)

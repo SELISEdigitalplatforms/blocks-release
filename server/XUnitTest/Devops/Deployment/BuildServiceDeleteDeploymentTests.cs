@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Genesis;
+using Devops.DomainService.AnalyticsTool.Models;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Shared.Utilities;
 using FluentAssertions;
@@ -431,6 +432,141 @@ namespace XUnitTest.Devops.Deployment
 
             result.IsSuccess.Should().BeFalse();
             result.Message.Should().Contain("could not be updated");
+        }
+
+        // ---- #255 C7: a cancelled build's still-Pending SAST/SCA reports become NotRun ----
+
+        private static Build Ended(string runName) => new() { ItemId = "build-live", ProjectId = TenantId, CreatedBy = "creator-1", RepoId = RepoId, PipelineRunName = runName };
+
+        private void GivenInFlightBuildIsCancelled()
+        {
+            GivenRepo();
+            GivenBuilds(
+                new Build { PipelineRunName = "run-done", Status = EventStatus.SUCCEEDED },
+                new Build { PipelineRunName = "run-live", Status = EventStatus.RUNNING });
+            GivenPipelineRunIsRunning();
+            GivenCancelSucceeds();
+            GivenNamespaceDeleteSucceeds();
+            GivenClearSucceeds();
+        }
+
+        [Fact]
+        public async Task C7_CancelledBuild_EndsBothPendingReportsNotRunAndNotifiesEachOnce()
+        {
+            GivenInFlightBuildIsCancelled();
+            _f.BuildRepo.Setup(b => b.TryEndPendingReport("run-live", It.IsAny<AnalysisReportKind>(), AnalysisReportStatus.NotRun, "The build was cancelled.", TenantId))
+                .ReturnsAsync(Ended("run-live"));
+
+            var result = await _f.BuildService().DeleteDeployment(RepoId);
+
+            result.IsSuccess.Should().BeTrue();
+            _f.BuildRepo.Verify(b => b.TryEndPendingReport("run-live", AnalysisReportKind.Sast, AnalysisReportStatus.NotRun, "The build was cancelled.", TenantId), Times.Once);
+            _f.BuildRepo.Verify(b => b.TryEndPendingReport("run-live", AnalysisReportKind.Sca, AnalysisReportStatus.NotRun, "The build was cancelled.", TenantId), Times.Once);
+            _f.BuildRepo.Verify(b => b.TryEndPendingReport("run-done", It.IsAny<AnalysisReportKind>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _f.BuildRepo.Verify(b => b.TryEndPendingReport(It.IsAny<string>(), It.IsAny<AnalysisReportKind>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Tenant>()), Times.Never);
+
+            foreach (var analysisType in new[] { "SAST", "SCA" })
+            {
+                _f.Notification.Verify(n => n.SendBuiltInAsync(TenantId, "release-code-analysis-finished",
+                    It.Is<IEnumerable<string>>(u => System.Linq.Enumerable.SequenceEqual(u, new[] { "creator-1" })),
+                    It.Is<IDictionary<string, object>>(p => (string)p["analysisType"] == analysisType && (bool)p["isSuccess"] == false
+                        && (string)p["description"] == "The build was cancelled." && (string)p["buildId"] == "build-live")), Times.Once);
+            }
+        }
+
+        [Fact]
+        public async Task C7_ReportsAlreadyEnded_AreNotNotifiedAgain()
+        {
+            GivenInFlightBuildIsCancelled();
+            _f.BuildRepo.Setup(b => b.TryEndPendingReport(It.IsAny<string>(), It.IsAny<AnalysisReportKind>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync((Build)null);
+
+            var result = await _f.BuildService().DeleteDeployment(RepoId);
+
+            result.IsSuccess.Should().BeTrue();
+            _f.BuildRepo.Verify(b => b.TryEndPendingReport("run-live", It.IsAny<AnalysisReportKind>(), AnalysisReportStatus.NotRun, "The build was cancelled.", TenantId), Times.Exactly(2));
+            _f.Notification.Verify(n => n.SendBuiltInAsync(It.IsAny<string>(), "release-code-analysis-finished", It.IsAny<IEnumerable<string>>(), It.IsAny<IDictionary<string, object>>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task C7_ThrowingReportUpdate_DoesNotStopTheDelete()
+        {
+            GivenInFlightBuildIsCancelled();
+            _f.BuildRepo.Setup(b => b.TryEndPendingReport(It.IsAny<string>(), It.IsAny<AnalysisReportKind>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ThrowsAsync(new TimeoutException("mongo timeout"));
+
+            var result = await _f.BuildService().DeleteDeployment(RepoId);
+
+            result.IsSuccess.Should().BeTrue();
+            result.Message.Should().Be("In-progress build cancelled. Deployment deletion started.");
+            _f.BuildRepo.Verify(b => b.TryEndPendingReport("run-live", It.IsAny<AnalysisReportKind>(), It.IsAny<string>(), It.IsAny<string>(), TenantId), Times.Exactly(2),
+                "the SCA report is still tried after the SAST one failed");
+            _f.RepoRepo.Verify(r => r.ClearDeployedNamespace(RepoId, TenantId, EventStatus.DELETED), Times.Once);
+        }
+
+        [Fact]
+        public async Task C7_NothingCancelled_LeavesTheReportsAlone()
+        {
+            GivenRepo();
+            GivenBuilds(new Build { PipelineRunName = "run-finished", Status = EventStatus.RUNNING });
+            GivenPipelineRunConditionStatus("True");
+            GivenNamespaceDeleteSucceeds();
+            GivenClearSucceeds();
+
+            await _f.BuildService().DeleteDeployment(RepoId);
+
+            _f.BuildRepo.Verify(b => b.TryEndPendingReport(It.IsAny<string>(), It.IsAny<AnalysisReportKind>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task C7_ProjectTeardown_EndsThePendingReportsInTheProjectsPlacement()
+        {
+            var project = new Tenant
+            {
+                TenantId = TenantId, TenantGroupId = "group-1", Name = "proj", Environment = "dev",
+                DbConnectionString = "mongodb://placement", DBName = "db-tenant-b",
+                JwtTokenParameters = new JwtTokenParameters { PrivateCertificatePassword = "p", IssueDate = DateTime.UtcNow }
+            };
+            var repo = new Repo { ItemId = RepoId, DeployedNamespace = Namespace };
+            _f.BuildRepo.Setup(b => b.GetBuilds(RepoId, project)).ReturnsAsync(new List<Build> { new() { PipelineRunName = "run-live", Status = EventStatus.RUNNING } });
+            GivenPipelineRunIsRunning();
+            GivenCancelSucceeds();
+            GivenNamespaceDeleteSucceeds();
+            _f.RepoRepo.Setup(r => r.ClearDeployedNamespace(RepoId, project, EventStatus.DELETED)).ReturnsAsync(true);
+            _f.BuildRepo.Setup(b => b.TryEndPendingReport("run-live", It.IsAny<AnalysisReportKind>(), AnalysisReportStatus.NotRun, "The build was cancelled.", project))
+                .ReturnsAsync(Ended("run-live"));
+
+            var result = await _f.BuildService().DeleteDeployment(repo, project);
+
+            result.IsSuccess.Should().BeTrue();
+            _f.BuildRepo.Verify(b => b.UpdateBuildStatus("run-live", EventStatus.CANCELLED, project), Times.Once);
+            _f.BuildRepo.Verify(b => b.TryEndPendingReport("run-live", AnalysisReportKind.Sast, AnalysisReportStatus.NotRun, "The build was cancelled.", project), Times.Once);
+            _f.BuildRepo.Verify(b => b.TryEndPendingReport("run-live", AnalysisReportKind.Sca, AnalysisReportStatus.NotRun, "The build was cancelled.", project), Times.Once);
+            _f.BuildRepo.Verify(b => b.TryEndPendingReport(It.IsAny<string>(), It.IsAny<AnalysisReportKind>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _f.Notification.Verify(n => n.SendBuiltInAsync(TenantId, "release-code-analysis-finished", It.IsAny<IEnumerable<string>>(), It.IsAny<IDictionary<string, object>>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task C7_ProjectTeardown_ThrowingReportUpdate_DoesNotStopTheTeardown()
+        {
+            var project = new Tenant
+            {
+                TenantId = TenantId, TenantGroupId = "group-1", Name = "proj", Environment = "dev",
+                DbConnectionString = "mongodb://placement", DBName = "db-tenant-b",
+                JwtTokenParameters = new JwtTokenParameters { PrivateCertificatePassword = "p", IssueDate = DateTime.UtcNow }
+            };
+            _f.BuildRepo.Setup(b => b.GetBuilds(RepoId, project)).ReturnsAsync(new List<Build> { new() { PipelineRunName = "run-live", Status = EventStatus.RUNNING } });
+            GivenPipelineRunIsRunning();
+            GivenCancelSucceeds();
+            GivenNamespaceDeleteSucceeds();
+            _f.RepoRepo.Setup(r => r.ClearDeployedNamespace(RepoId, project, EventStatus.DELETED)).ReturnsAsync(true);
+            _f.BuildRepo.Setup(b => b.TryEndPendingReport(It.IsAny<string>(), It.IsAny<AnalysisReportKind>(), It.IsAny<string>(), It.IsAny<string>(), project))
+                .ThrowsAsync(new InvalidOperationException("Project tenant has no database placement."));
+
+            var result = await _f.BuildService().DeleteDeployment(new Repo { ItemId = RepoId, DeployedNamespace = Namespace }, project);
+
+            result.IsSuccess.Should().BeTrue();
+            _f.RepoRepo.Verify(r => r.ClearDeployedNamespace(RepoId, project, EventStatus.DELETED), Times.Once);
         }
     }
 }

@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using Devops.DomainService.VersionControlSystems.Models.Dtos;
 using System.Text.Json;
 using Devops.DomainService.AnalyticsTool.Models;
+using Devops.DomainService.AnalyticsTool.Services.Capture;
 using Devops.DomainService.Shared.Utilities;
 
 namespace Devops.DomainService.Deployment.Services;
@@ -400,7 +401,28 @@ public class BuildService : IBuildService
             await _buildRepository.UpdateBuildStatus(pipelineRunName, EventStatus.CANCELLED, tenantId);
         else
             await _buildRepository.UpdateBuildStatus(pipelineRunName, EventStatus.CANCELLED, project);
+        await EndPendingReportsOfCancelledBuild(pipelineRunName, tenantId, project);
         return (true, null);
+    }
+
+    /// <summary>
+    /// A cancelled build's scans will not finish, so its still-Pending SAST/SCA reports become NotRun. Best effort:
+    /// a report left Pending reads as Failed two hours after the build started, and the delete goes on either way.
+    /// </summary>
+    private async Task EndPendingReportsOfCancelledBuild(string pipelineRunName, string tenantId, Tenant? project)
+    {
+        foreach (var kind in new[] { AnalysisReportKind.Sast, AnalysisReportKind.Sca })
+        {
+            try
+            {
+                await AnalysisReportUpdates.EndPendingAsync(_buildRepository, _notificationService, _logger, pipelineRunName, kind,
+                    AnalysisReportStatus.NotRun, AnalysisReportUpdates.CancelledMessage, project?.TenantId ?? tenantId, project);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not end the {Kind} report of cancelled build {PipelineRunName}.", kind, pipelineRunName);
+            }
+        }
     }
 
     public async Task<Build?> SaveBuild(Repo repo, BuildRequest request, string buildImageName, string blocksUserId, string pipelineRunNameGuid)
@@ -427,7 +449,10 @@ public class BuildService : IBuildService
             CustomDeploymentUrl = repo.CustomDeploymentUrl,
             IsCustomDomainOnly = repo.IsCustomDomainOnly,
             ProjectId = repo.ProjectId,
-            ProjectName = repo.ProjectName
+            ProjectName = repo.ProjectName,
+            // The Worker fills these in from the build's own scans once the pipeline finishes.
+            SastReport = new SastReport { Status = AnalysisReportStatus.Pending, Attempts = 0 },
+            ScaReport = new ScaReport { Status = AnalysisReportStatus.Pending, Attempts = 0 },
         };
         if (string.IsNullOrWhiteSpace(tenantId))
             await _buildRepository.SaveBuild(build);

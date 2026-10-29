@@ -48,6 +48,8 @@ import {
   getDependencyTrackProjectUrl,
   openResolvedUrlInNewTab,
 } from "@blocks-deployment/utils/observability-links.utils";
+import { formatFullDate } from "@/utils/date.util";
+import ContainerWaiting, { ReportUnavailableCard } from "./sca-waiting-card";
 
 interface Dependency {
   id: string;
@@ -85,6 +87,10 @@ interface SCACardProps {
   lastBOMImport?: string;
   lastVulnAnalysis?: string;
   lastMeasurement?: string;
+  /** "Analyzed {date}" line of a saved report. */
+  caption?: string | null;
+  /** Number of findings kept when the saved report was truncated. */
+  truncatedCount?: number | null;
 }
 
 interface FilterState {
@@ -761,13 +767,41 @@ const DependencyPaginationComponent = ({
   );
 };
 
-const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
+const DependencyTrackButton: React.FC = () => {
   const params = useParams();
   const buildId = params?.buildId as string;
 
   const { isLoading: isSCALoading, refetch: triggerSCARedirect } =
     useSCARedirectLink(buildId);
 
+  // The call grants the user access to the Dependency-Track project and resolves its UUID. It is a
+  // background step: a failure shows nothing and the tab opens on the portal root instead.
+  const handleSCARedirect = () =>
+    openResolvedUrlInNewTab(async () => {
+      const result = await triggerSCARedirect();
+      return getDependencyTrackProjectUrl(result.isError ? undefined : result.data);
+    });
+
+  return (
+    <Button
+      variant={"outline"}
+      onClick={handleSCARedirect}
+      disabled={isSCALoading}
+      className="flex gap-2">
+      <ExternalLink className="h-4 w-4" />
+      <span className="hidden sm:inline">View in Dependency Track</span>
+      <span className="sm:hidden">Dependency Track</span>
+    </Button>
+  );
+};
+
+const SCACard: React.FC<SCACardProps> = ({
+  title,
+  summary,
+  dependencies,
+  caption,
+  truncatedCount,
+}) => {
   const [filterState, setFilterState] = useState<FilterState>({
     page: 0,
     pageSize: 5,
@@ -828,14 +862,6 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
     });
   };
 
-  // The call grants the user access to the Dependency-Track project and resolves its UUID. It is a
-  // background step: a failure shows nothing and the tab opens on the portal root instead.
-  const handleSCARedirect = () =>
-    openResolvedUrlInNewTab(async () => {
-      const result = await triggerSCARedirect();
-      return getDependencyTrackProjectUrl(result.isError ? undefined : result.data);
-    });
-
   return (
     <Card>
       {/* Header Section */}
@@ -843,15 +869,7 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
       <CardHeader className="flex flex-col gap-5">
         <div className="flex justify-between">
           <CardTitle className="flex items-center">{title}</CardTitle>
-          <Button
-            variant={"outline"}
-            onClick={handleSCARedirect}
-            disabled={isSCALoading}
-            className="flex gap-2">
-            <ExternalLink className="h-4 w-4" />
-            <span className="hidden sm:inline">View in Dependency Track</span>
-            <span className="sm:hidden">Dependency Track</span>
-          </Button>
+          <DependencyTrackButton />
         </div>
 
         <div className="flex flex-col gap-3 text-xs font-medium sm:flex-row">
@@ -870,6 +888,7 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
             <span className="font-semibold">{summary?.riskScore}</span>
           </div>
         </div>
+        {caption && <p className="text-xs text-medium-emphasis">{caption}</p>}
       </CardHeader>
 
       <CardContent>
@@ -878,6 +897,16 @@ const SCACard: React.FC<SCACardProps> = ({ title, summary, dependencies }) => {
           onSeverityClick={handleSeverityClick}
           activeSeverityFilter={filterState.severityFilter}
         />
+
+        {truncatedCount != null && (
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <p className="text-xs text-medium-emphasis">
+              Showing the {truncatedCount} most severe findings. Open Dependency-Track for the full
+              list.
+            </p>
+            <DependencyTrackButton />
+          </div>
+        )}
 
         <DependencyFilterToolbar
           filterState={filterState}
@@ -911,8 +940,13 @@ const SCATab: React.FC = () => {
     isLoading,
     error,
   } = useGetSCALibraryData(buildId);
-  const scaDetails = scaData?.data?.details;
-  const rawVulnerabilities = scaData?.data?.vulnerabilities;
+  const report = scaData?.data;
+  const status = report?.status;
+  const scaDetails = report?.details;
+  const rawVulnerabilities = report?.vulnerabilities;
+  const analyzedAt = report?.analyzedAt ?? report?.capturedAt;
+  const caption =
+    status === "Ready" && analyzedAt ? `Analyzed ${formatFullDate(new Date(analyzedAt))}` : null;
   const vulnerabilities = useMemo(() => rawVulnerabilities || [], [rawVulnerabilities]);
 
   const toLibraryPackageSummary = (details: IScaReportDetails): SCASummary => ({
@@ -1032,12 +1066,25 @@ const SCATab: React.FC = () => {
             </div>
           </div>
         </>
+      ) : !error && status === "Pending" ? (
+        <ContainerWaiting type="overall" />
+      ) : !error && (status === "NotRun" || status === "Failed") ? (
+        <ReportUnavailableCard
+          title="Software Composition Analysis"
+          status={status}
+          message={report?.message}
+          action={<DependencyTrackButton />}
+        />
       ) : !error && scaDetails ? (
         <>
           <SCACard
             title="Software library package"
             summary={toLibraryPackageSummary(scaDetails)}
             dependencies={libraryPackageDependencies}
+            caption={caption}
+            truncatedCount={
+              status === "Ready" && report?.findingsTruncated ? vulnerabilities.length : null
+            }
           />
         </>
       ) : (

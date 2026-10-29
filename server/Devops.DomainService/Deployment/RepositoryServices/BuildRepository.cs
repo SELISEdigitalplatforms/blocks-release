@@ -81,8 +81,7 @@ public class BuildRepository : IBuildRepository
         var document = resolved.Document.DeepClone().AsBsonDocument;
         // MongoDB cannot mix inclusion and exclusion. An inclusion projection already leaves out every field it
         // does not list, so only an explicit inclusion of a report (or a path inside one) has to go.
-        var isInclusion = document.Elements.Any(e =>
-            e.Name != "_id" && ((e.Value.IsNumeric && e.Value.ToDouble() != 0) || e.Value is BsonBoolean { Value: true }));
+        var isInclusion = document.Elements.Any(e => e.Name != "_id" && IsInclusionValue(e.Value));
         if (isInclusion)
         {
             foreach (var name in document.Names.Where(IsReportPath).ToList())
@@ -95,6 +94,18 @@ public class BuildRepository : IBuildRepository
         }
         return new BsonDocumentProjectionDefinition<Build>(document);
     }
+
+    /// <summary>
+    /// Whether a projection value includes its field: <c>true</c>, or any number other than zero. MongoDB reads the
+    /// number as a flag, so only an exact zero (either sign) excludes and NaN counts as non-zero.
+    /// </summary>
+    private static bool IsInclusionValue(BsonValue value) =>
+        value is BsonBoolean { Value: true } || (value.IsNumeric && !IsZero(value.ToDouble()));
+
+    /// <summary>
+    /// <c>value == 0</c> for every double, NaN included: no positive double is smaller than <see cref="double.Epsilon"/>.
+    /// </summary>
+    private static bool IsZero(double value) => Math.Abs(value) < double.Epsilon;
 
     private static bool IsReportPath(string name) =>
         ReportFields.Any(f => name == f || name.StartsWith(f + ".", StringComparison.Ordinal));

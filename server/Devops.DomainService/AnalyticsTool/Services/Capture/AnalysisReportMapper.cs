@@ -11,25 +11,12 @@ namespace Devops.DomainService.AnalyticsTool.Services.Capture;
 /// </summary>
 internal static class AnalysisReportMapper
 {
-    // ---- SAST ----
+    // ---- Tool responses to the Genesis entities saved on the build ----
 
     public static Genesis.SastQualityGate? ToGenesis(Local.SastQualityGate? gate) => gate is null ? null : new()
     {
         Status = gate.Status,
         Conditions = gate.Conditions.ConvertAll(c => new Genesis.SastGateCondition
-        {
-            MetricKey = c.MetricKey,
-            Comparator = c.Comparator,
-            ErrorThreshold = c.ErrorThreshold,
-            ActualValue = c.ActualValue,
-            Status = c.Status,
-        }),
-    };
-
-    public static Local.SastQualityGate? ToLocal(Genesis.SastQualityGate? gate) => gate is null ? null : new()
-    {
-        Status = gate.Status,
-        Conditions = (gate.Conditions ?? []).ConvertAll(c => new Local.SastGateCondition
         {
             MetricKey = c.MetricKey,
             Comparator = c.Comparator,
@@ -45,23 +32,10 @@ internal static class AnalysisReportMapper
         Overall = ToGenesis(breakdown.Overall),
     };
 
-    public static Local.SastIssueBreakdown? ToLocal(Genesis.SastIssueBreakdown? breakdown) => breakdown is null ? null : new()
-    {
-        NewCode = ToLocal(breakdown.NewCode),
-        Overall = ToLocal(breakdown.Overall),
-    };
-
     private static Genesis.SastSeverityCounts? ToGenesis(Local.SastSeverityCounts? c) => c is null ? null : new()
     {
         Total = c.Total, Blocker = c.Blocker, High = c.High, Medium = c.Medium, Low = c.Low, Info = c.Info,
     };
-
-    private static Local.SastSeverityCounts? ToLocal(Genesis.SastSeverityCounts? c) => c is null ? null : new()
-    {
-        Total = c.Total, Blocker = c.Blocker, High = c.High, Medium = c.Medium, Low = c.Low, Info = c.Info,
-    };
-
-    // ---- SCA ----
 
     public static Genesis.ScaMetrics ToGenesis(Local.DependencyTrackProjectMetrics m) => new()
     {
@@ -98,6 +72,32 @@ internal static class AnalysisReportMapper
         CollectionLogicChanged = m.collectionLogicChanged,
         FirstOccurrence = ToEpochMilliseconds(m.firstOccurrence),
         LastOccurrence = ToEpochMilliseconds(m.lastOccurrence),
+    };
+
+    // ---- Saved SAST entities to the /build/reports shapes ----
+
+    public static Local.SastQualityGate? ToLocal(Genesis.SastQualityGate? gate) => gate is null ? null : new()
+    {
+        Status = gate.Status,
+        Conditions = (gate.Conditions ?? []).ConvertAll(c => new Local.SastGateCondition
+        {
+            MetricKey = c.MetricKey,
+            Comparator = c.Comparator,
+            ErrorThreshold = c.ErrorThreshold,
+            ActualValue = c.ActualValue,
+            Status = c.Status,
+        }),
+    };
+
+    public static Local.SastIssueBreakdown? ToLocal(Genesis.SastIssueBreakdown? breakdown) => breakdown is null ? null : new()
+    {
+        NewCode = ToLocal(breakdown.NewCode),
+        Overall = ToLocal(breakdown.Overall),
+    };
+
+    private static Local.SastSeverityCounts? ToLocal(Genesis.SastSeverityCounts? c) => c is null ? null : new()
+    {
+        Total = c.Total, Blocker = c.Blocker, High = c.High, Medium = c.Medium, Low = c.Low, Info = c.Info,
     };
 
     /// <summary>

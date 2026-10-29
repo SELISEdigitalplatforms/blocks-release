@@ -109,7 +109,7 @@ public class ScaCaptureService
     {
         var (project, lookupStatus) = await _dependencyTrack.LookupProjectAsync(build);
         if (project is null || string.IsNullOrEmpty(project.uuid))
-            return Outcome.NotReady(lookupStatus == HttpStatusCode.NotFound ? "no project for the branch yet" : $"lookup returned {(int)lookupStatus}");
+            return Outcome.NotReady(LookupFailureReason(lookupStatus));
 
         // The lookup matches name and version itself; this guards against any other version's data being saved.
         if (!string.Equals(project.version, build.Branch, StringComparison.Ordinal))
@@ -123,25 +123,9 @@ public class ScaCaptureService
 
         // The first ready attempt: today's bookkeeping, then a metrics refresh. Build.DependencyTrackProjectId equal to
         // this project marks both as done, so a later attempt goes straight to the capture.
-        if (build.DependencyTrackProjectId != project.uuid)
-        {
-            await _dependencyTrack.RecordProjectAsync(build, project);
-            var refresh = await _dependencyTrack.RequestMetricsRefreshAsync(project.uuid);
-            if (refresh is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-            {
-                _logger.LogWarning("Dependency-Track refused the metrics refresh for project {ProjectUuid} ({Status}); the API key lacks PORTFOLIO_MANAGEMENT. Capturing the metrics as reported.",
-                    project.uuid, (int)refresh);
-            }
-            else if ((int)refresh is < 200 or > 299)
-            {
-                return Outcome.NotReady($"metrics refresh returned {(int)refresh}");
-            }
-            else if (attempt < AnalysisReportUpdates.MaxAttempts)
-            {
-                return Outcome.Refreshing;
-            }
-            // A refresh on the last attempt: capture now with the metrics available rather than fail.
-        }
+        if (build.DependencyTrackProjectId != project.uuid
+            && await RecordAndRefreshAsync(build, project, attempt) is { } refreshOutcome)
+            return refreshOutcome;
 
         var metrics = await _dependencyTrack.GetCurrentMetricsAsync(project.uuid);
         if (metrics is null) return Outcome.NotReady("metrics unavailable");
@@ -164,6 +148,31 @@ public class ScaCaptureService
             Findings = kept,
             FindingsTruncated = truncated || more,
         });
+    }
+
+    private static string LookupFailureReason(HttpStatusCode lookupStatus) =>
+        lookupStatus == HttpStatusCode.NotFound ? "no project for the branch yet" : $"lookup returned {(int)lookupStatus}";
+
+    /// <summary>
+    /// The first ready attempt's bookkeeping and metrics refresh. Returns the attempt's outcome when it ends here, or
+    /// null when the capture should go on now: the refresh was refused, or it was accepted on the last attempt.
+    /// </summary>
+    private async Task<Outcome?> RecordAndRefreshAsync(Build build, ScaLookupResponse project, int attempt)
+    {
+        await _dependencyTrack.RecordProjectAsync(build, project);
+        var refresh = await _dependencyTrack.RequestMetricsRefreshAsync(project.uuid);
+        if (refresh is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            _logger.LogWarning("Dependency-Track refused the metrics refresh for project {ProjectUuid} ({Status}); the API key lacks PORTFOLIO_MANAGEMENT. Capturing the metrics as reported.",
+                project.uuid, (int)refresh);
+            return null;
+        }
+
+        if ((int)refresh is < 200 or > 299)
+            return Outcome.NotReady($"metrics refresh returned {(int)refresh}");
+
+        // A refresh on the last attempt: capture now with the metrics available rather than fail.
+        return attempt < AnalysisReportUpdates.MaxAttempts ? Outcome.Refreshing : null;
     }
 
     /// <summary>

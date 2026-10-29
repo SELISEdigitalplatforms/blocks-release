@@ -218,7 +218,7 @@ public class LogRetrievalService
             if (notRun is not null)
             {
                 await AnalysisReportUpdates.EndPendingAsync(_buildRepository, _notificationService, _logger,
-                    build.PipelineRunName, kind, AnalysisReportStatus.NotRun, notRun, build.ProjectId);
+                    new AnalysisReportUpdates.PendingReportEnd(build.PipelineRunName, kind, AnalysisReportStatus.NotRun, notRun, build.ProjectId));
                 return;
             }
 
@@ -265,7 +265,7 @@ public class LogRetrievalService
             try
             {
                 await AnalysisReportUpdates.EndPendingAsync(_buildRepository, _notificationService, _logger,
-                    build.PipelineRunName, kind, status, message, build.ProjectId);
+                    new AnalysisReportUpdates.PendingReportEnd(build.PipelineRunName, kind, status, message, build.ProjectId));
             }
             catch (Exception ex)
             {

@@ -222,7 +222,7 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
                 .ReturnsAsync(new Build { ItemId = "b1", ProjectId = "t1", CreatedBy = "creator", RepoId = "r1" });
 
             await AnalysisReportUpdates.EndPendingAsync(builds.Object, notifications.Object, new ListLogger<AnalysisReportUpdatesTests>(),
-                "run-1", AnalysisReportKind.Sca, AnalysisReportStatus.NotRun, "The build was cancelled.", "t1");
+                new AnalysisReportUpdates.PendingReportEnd("run-1", AnalysisReportKind.Sca, AnalysisReportStatus.NotRun, "The build was cancelled.", "t1"));
 
             notifications.Verify(n => n.SendBuiltInAsync("t1", "release-code-analysis-finished", It.IsAny<IEnumerable<string>>(),
                 It.Is<IDictionary<string, object>>(p => (bool)p["isSuccess"] == false && (string)p["description"] == "The build was cancelled." && (string)p["analysisType"] == "SCA")), Times.Once);
@@ -237,7 +237,7 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
                 .ReturnsAsync((Build)null);
 
             await AnalysisReportUpdates.EndPendingAsync(builds.Object, notifications.Object, new ListLogger<AnalysisReportUpdatesTests>(),
-                "run-1", AnalysisReportKind.Sast, AnalysisReportStatus.Failed, "x", "t1");
+                new AnalysisReportUpdates.PendingReportEnd("run-1", AnalysisReportKind.Sast, AnalysisReportStatus.Failed, "x", "t1"));
 
             notifications.Invocations.Should().BeEmpty();
         }
@@ -252,7 +252,7 @@ namespace XUnitTest.Devops.AnalyticsTool.Capture
             var notifications = new Mock<INotificationService>();
 
             await AnalysisReportUpdates.EndPendingAsync(builds.Object, notifications.Object, new ListLogger<AnalysisReportUpdatesTests>(),
-                "run-1", AnalysisReportKind.Sast, AnalysisReportStatus.NotRun, "m", "t1", project);
+                new AnalysisReportUpdates.PendingReportEnd("run-1", AnalysisReportKind.Sast, AnalysisReportStatus.NotRun, "m", "t1", project));
 
             builds.Verify(b => b.TryEndPendingReport(It.IsAny<string>(), It.IsAny<AnalysisReportKind>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
             notifications.Verify(n => n.SendBuiltInAsync("t1", It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<IDictionary<string, object>>()), Times.Once);

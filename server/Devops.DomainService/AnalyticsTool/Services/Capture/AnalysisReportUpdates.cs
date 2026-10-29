@@ -69,13 +69,20 @@ internal static class AnalysisReportUpdates
     }
 
     /// <summary>
+    /// Which report to end and how: the build's pipeline run, the report kind, the terminal status and its message,
+    /// and where the build lives (the tenant, or the project placement when there is one).
+    /// </summary>
+    public sealed record PendingReportEnd(
+        string PipelineRunName, AnalysisReportKind Kind, string Status, string Message, string TenantId, Tenant? Project = null);
+
+    /// <summary>
     /// Ends the report if it is still <c>Pending</c> and, only when this call ended it, notifies the build's creator.
     /// A report another writer already ended is left as it is.
     /// </summary>
     public static async Task EndPendingAsync(
-        IBuildRepository builds, INotificationService? notifications, ILogger logger,
-        string pipelineRunName, AnalysisReportKind kind, string status, string message, string tenantId, Tenant? project = null)
+        IBuildRepository builds, INotificationService? notifications, ILogger logger, PendingReportEnd end)
     {
+        var (pipelineRunName, kind, status, message, tenantId, project) = end;
         var ended = project is null
             ? await builds.TryEndPendingReport(pipelineRunName, kind, status, message, tenantId)
             : await builds.TryEndPendingReport(pipelineRunName, kind, status, message, project);

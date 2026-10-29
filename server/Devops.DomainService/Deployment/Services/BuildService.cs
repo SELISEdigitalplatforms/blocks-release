@@ -415,8 +415,9 @@ public class BuildService : IBuildService
         {
             try
             {
-                await AnalysisReportUpdates.EndPendingAsync(_buildRepository, _notificationService, _logger, pipelineRunName, kind,
-                    AnalysisReportStatus.NotRun, AnalysisReportUpdates.CancelledMessage, project?.TenantId ?? tenantId, project);
+                await AnalysisReportUpdates.EndPendingAsync(_buildRepository, _notificationService, _logger,
+                    new AnalysisReportUpdates.PendingReportEnd(pipelineRunName, kind,
+                        AnalysisReportStatus.NotRun, AnalysisReportUpdates.CancelledMessage, project?.TenantId ?? tenantId, project));
             }
             catch (Exception ex)
             {

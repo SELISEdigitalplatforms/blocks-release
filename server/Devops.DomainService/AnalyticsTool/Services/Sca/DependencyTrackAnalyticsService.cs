@@ -17,6 +17,8 @@ namespace Devops.DomainService.AnalyticsTool.Services.Sca;
 public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
 {
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
+    private const string ScaToolsApiBaseUriKey = "ScaToolsApiBaseUri";
+    private const string ApiKeyHeader = "X-Api-Key";
     private readonly ILogger<DependencyTrackAnalyticsService> _logger;
     private readonly IHttpHelperServices _httpHelperServices;
     private readonly IBuildRepository _buildRepository;
@@ -51,11 +53,11 @@ public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
 
         try
         {
-            var url = $"{_configuration["ScaToolsApiBaseUri"]}/api/v1/project/lookup?name={formattedRepoName}&version={version}";
+            var url = $"{_configuration[ScaToolsApiBaseUriKey]}/api/v1/project/lookup?name={formattedRepoName}&version={version}";
 
             var headers = new Dictionary<string, string>
             {
-                { "X-Api-Key", _cloudBuildSecret.DependencyTrackApiKey }
+                { ApiKeyHeader, _cloudBuildSecret.DependencyTrackApiKey }
             };
 
             var (apiCallResult, _) = await _httpHelperServices.MakeHttpGetRequest<ScaLookupResponse>(url, null, headers);
@@ -73,7 +75,7 @@ public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
             foreach (var project in filtered)
             {
                 var vulnerabilitiesUrl =
-                    $"{_configuration["ScaToolsApiBaseUri"]}/api/v1/finding/project/{project.uuid}?suppressed=false";
+                    $"{_configuration[ScaToolsApiBaseUriKey]}/api/v1/finding/project/{project.uuid}?suppressed=false";
                 var (scaVulnerabilitiesResponse, _) = await _httpHelperServices.MakeHttpGetRequest<SCAVulnerability[]>(vulnerabilitiesUrl, null, headers);
 
 
@@ -146,14 +148,14 @@ public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
 
         try
         {
-            var url = $"{_configuration["ScaToolsApiBaseUri"]}/api/v1/project/lookup?name={formattedRepoName}&version={build.Branch}";
+            var url = $"{_configuration[ScaToolsApiBaseUriKey]}/api/v1/project/lookup?name={formattedRepoName}&version={build.Branch}";
 
             var headers = new Dictionary<string, string>
             {
-                { "X-Api-Key", _cloudBuildSecret.DependencyTrackApiKey }
+                { ApiKeyHeader, _cloudBuildSecret.DependencyTrackApiKey }
             };
 
-            var (apiCallResult, response) = await _httpHelperServices.MakeHttpRequest<ScaLookupResponse>(_configuration["ScaToolsApiBaseUri"], url, HttpMethod.Get, null, headers);
+            var (apiCallResult, response) = await _httpHelperServices.MakeHttpRequest<ScaLookupResponse>(_configuration[ScaToolsApiBaseUriKey], url, HttpMethod.Get, null, headers);
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation("Successfully fetched sca data for build {RepoName}", build.RepoName);
@@ -284,9 +286,9 @@ public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
         return (findings, total);
     }
 
-    private string ScaBaseUri() => _configuration["ScaToolsApiBaseUri"] ?? string.Empty;
+    private string ScaBaseUri() => _configuration[ScaToolsApiBaseUriKey] ?? string.Empty;
 
-    private Dictionary<string, string> ScaHeaders() => new() { { "X-Api-Key", _cloudBuildSecret.DependencyTrackApiKey } };
+    private Dictionary<string, string> ScaHeaders() => new() { { ApiKeyHeader, _cloudBuildSecret.DependencyTrackApiKey } };
 
     public async Task<bool> EnsureRepoProjectEntry(Build build, ScaLookupResponse apiCallResult)
     {

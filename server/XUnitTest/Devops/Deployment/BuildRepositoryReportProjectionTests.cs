@@ -63,6 +63,32 @@ namespace XUnitTest.Devops.Deployment
             Render(BuildRepository.WithoutReports(new BsonDocumentProjectionDefinition<Build>(resolver))).Should().Equal(resolver);
         }
 
+        [Theory]
+        [InlineData(0, false)]
+        [InlineData(0L, false)]
+        [InlineData(0.0, false)]
+        [InlineData(-0.0, false)]
+        [InlineData(false, false)]
+        [InlineData(1, true)]
+        [InlineData(2L, true)]
+        [InlineData(-1.0, true)]
+        [InlineData(0.5, true)]
+        [InlineData(double.Epsilon, true)]
+        [InlineData(double.NaN, true)]
+        [InlineData(true, true)]
+        public void ProjectionValue_IncludesItsFieldOnlyWhenTrueOrNonZero(object value, bool inclusion)
+        {
+            var resolver = new BsonDocument { { "RepoName", BsonValue.Create(value) } };
+
+            var rendered = Render(BuildRepository.WithoutReports(new BsonDocumentProjectionDefinition<Build>(resolver)));
+
+            // Names only: NaN never equals itself, so the documents cannot be compared value by value.
+            if (inclusion)
+                rendered.Names.Should().Equal("RepoName");
+            else
+                rendered.Names.Should().Equal("RepoName", "SastReport", "ScaReport");
+        }
+
         [Fact]
         public void UnknownProjectionShape_IsKeptAsTheResolverBuiltIt()
         {

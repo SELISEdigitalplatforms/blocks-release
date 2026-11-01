@@ -1,3 +1,4 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import { showErrorToast } from "@/hooks/use-toast";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import {
@@ -104,7 +105,7 @@ export const refreshAccessToken = async (projectKey: string): Promise<string | n
     return newTokens.access_token || null;
   } catch (error) {
     console.error("[Refresh Token] Error:", error);
-    showErrorToast({ errors: "Failed to refresh token. Please try again from the start." });
+    showErrorToast({ errors: tStatic("release.idp", "OIDC_FLOW.REFRESH_FAILED") });
     setTimeout(() => {
       window.history.go(-2);
     }, 2000);
@@ -163,7 +164,7 @@ export const getOidcCredential = async (
     }
 
     if (!response.ok) {
-      showErrorToast({ errors: "Failed to fetch OIDC credential. Please try again." });
+      showErrorToast({ errors: tStatic("release.idp", "OIDC_FLOW.CREDENTIAL_FAILED") });
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
@@ -210,7 +211,7 @@ export const userAcknowledgement = async (
     return await response.json();
   } catch (error) {
     console.error("[User Acknowledgement] Error:", error);
-    showErrorToast({ errors: "Failed to process permission. Please try again." });
+    showErrorToast({ errors: tStatic("release.idp", "OIDC_FLOW.PERMISSION_FAILED") });
     throw error;
   }
 };

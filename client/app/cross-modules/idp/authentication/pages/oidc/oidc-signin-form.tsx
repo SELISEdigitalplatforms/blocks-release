@@ -11,12 +11,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui-kits/input/input";
 import { Link } from "react-router";
 import { Button } from "@/components/ui-kits/button/button";
-import { z } from "zod";
 import { useAuthStore } from "@/store/auth.store";
 import { showErrorToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router";
 import { useState } from "react";
-import { signinFormDefaultValue, signinFormSchema } from "./schema";
+import { useT } from "@seliseblocks/genesis-os";
+import {
+  signinFormDefaultValue,
+  createSigninFormSchema,
+  type SigninFormValues,
+} from "./schema";
 import { useOIDCContext } from "@/layouts/oidc-layout/oidc-layout";
 import {
   ISigninByEmailPayload,
@@ -99,16 +103,18 @@ export const OidcSigninForm = () => {
   const navigate = useNavigate();
   const { setAuthenticated } = useAuthStore();
   const [isPending, setIsPending] = useState(false);
+  const { t } = useT("release.idp");
 
-  const form = useForm({
+  const form = useForm<SigninFormValues>({
     defaultValues: signinFormDefaultValue,
-    resolver: zodResolver(signinFormSchema),
+    resolver: (values, context, options) =>
+      zodResolver(createSigninFormSchema(t))(values, context, options),
   });
 
-  const onSubmitHandler = async (values: z.infer<typeof signinFormSchema>) => {
+  const onSubmitHandler = async (values: SigninFormValues) => {
     try {
       if (!projectKey) {
-        showErrorToast({ errors: "Project key is required" });
+        showErrorToast({ errors: t("OIDC_SIGNIN_FORM.PROJECT_KEY_REQUIRED") });
         return;
       }
 
@@ -171,9 +177,9 @@ export const OidcSigninForm = () => {
           name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>{t("common:EMAIL")}</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your email" {...field} />
+                <Input placeholder={t("OIDC_SIGNIN_FORM.EMAIL_PLACEHOLDER")} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -184,9 +190,9 @@ export const OidcSigninForm = () => {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>{t("OIDC_SIGNIN_FORM.PASSWORD")}</FormLabel>
               <FormControl>
-                <PasswordInput placeholder="Enter your password" {...field} />
+                <PasswordInput placeholder={t("OIDC_SIGNIN_FORM.PASSWORD_PLACEHOLDER")} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -197,7 +203,7 @@ export const OidcSigninForm = () => {
           to={buildOIDCNavigationUrl("/oidc/forgot-password")}
           className="ml-auto inline-block text-sm hover:underline"
           style={{ color: themeColor }}>
-          Forgot password?
+          {t("OIDC_SIGNIN_FORM.FORGOT_PASSWORD")}
         </Link>
 
         <Button
@@ -207,7 +213,7 @@ export const OidcSigninForm = () => {
             backgroundColor: themeColor,
           }}
           disabled={isPending}>
-          Log in
+          {t("OIDC_SIGNIN_FORM.LOG_IN")}
         </Button>
       </form>
     </Form>

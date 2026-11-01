@@ -34,6 +34,8 @@ export interface IDeploymentPageData {
   repoUrl: string;
   defaultDeploymentUrl: string;
   customDeploymentUrl: string | null;
+  /** The repository's setting when this build started. Absent on older builds, which deployed to both. */
+  isCustomDomainOnly?: boolean;
   commit: string | null;
   branch: string;
   imageName: string;

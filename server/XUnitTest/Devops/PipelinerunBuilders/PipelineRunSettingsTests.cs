@@ -145,6 +145,30 @@ namespace XUnitTest.Devops.PipelinerunBuilders
         }
 
         [Fact]
+        public void SetDomain_CustomDomainOnly_DeploysToTheCustomDomainAlone()
+        {
+            var root = BuildRoot();
+            var settings = new PipelineRunSettings(root)
+                .setDomain("https://Default.com", "http://Custom.com", customDomainOnly: true);
+
+            var result = settings.build();
+
+            GetParamValue(result, "domains").Should().Be("custom.com");
+        }
+
+        [Fact]
+        public void SetDomain_CustomDomainOnly_WithoutACustomDomain_KeepsTheDefault()
+        {
+            var root = BuildRoot();
+            var settings = new PipelineRunSettings(root)
+                .setDomain("https://only.com", "   ", customDomainOnly: true);
+
+            var result = settings.build();
+
+            GetParamValue(result, "domains").Should().Be("only.com");
+        }
+
+        [Fact]
         public void SetParamNamespace_UsesRepoLastSegmentAndSetsSonarKey()
         {
             var root = BuildRoot();

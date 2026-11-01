@@ -32,6 +32,8 @@ export interface DeploymentFormData {
   machineConfigId?: string;
   /** First deployment only: also add the repository to Blocks Monitor. */
   viewInBlocksMonitor?: boolean;
+  /** Deploy to the custom domain alone. Only offered once the repository has a custom domain. */
+  isCustomDomainOnly?: boolean;
 }
 
 export interface IRepository {

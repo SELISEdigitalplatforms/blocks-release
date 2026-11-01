@@ -26,10 +26,22 @@ export interface IScaReportDetails {
   components: string;
 }
 
+/**
+ * State of a report saved on the build. Absent on builds created before reports were saved
+ * (the endpoint then returns today's live result).
+ */
+export type ReportStatus = "Pending" | "Ready" | "NotRun" | "Failed";
+
 /** Response of GET /reports?type=sca-libraries. */
 export interface IScaLibraryReportResponse {
   data?: {
-    details?: IScaReportDetails;
-    vulnerabilities?: IScaVulnerability[];
+    type?: string;
+    status?: ReportStatus | null;
+    message?: string | null;
+    capturedAt?: string | null;
+    analyzedAt?: string | null;
+    findingsTruncated?: boolean | null;
+    details?: IScaReportDetails | null;
+    vulnerabilities?: IScaVulnerability[] | null;
   };
 }

@@ -171,6 +171,29 @@ namespace XUnitTest.Devops.Deployment
             // Nothing else was supplied, so nothing else may be overwritten.
             rendered.Should().NotContain("CustomDeploymentUrl");
             rendered.Should().NotContain("DeploySettings");
+            rendered.Should().NotContain("IsCustomDomainOnly");
+        }
+
+        [Fact]
+        public async Task UpdateRepo_WritesIsCustomDomainOnly_WhenTheRequestCarriesIt_EvenFalse()
+        {
+            UpdateDefinition<Repo> applied = null;
+            _repos.Setup(c => c.UpdateOneAsync(
+                      It.IsAny<FilterDefinition<Repo>>(),
+                      It.IsAny<UpdateDefinition<Repo>>(),
+                      It.IsAny<UpdateOptions>(),
+                      It.IsAny<CancellationToken>()))
+                  .Callback<FilterDefinition<Repo>, UpdateDefinition<Repo>, UpdateOptions, CancellationToken>(
+                      (_, u, _, _) => applied = u)
+                  .ReturnsAsync(new UpdateResult.Acknowledged(1, 1, null));
+
+            var result = await _sut.UpdateRepo(new RepoUpdateRequest { RepoId = "repo-1", IsCustomDomainOnly = false });
+
+            result.Should().BeTrue();
+            var rendered = applied.Render(new RenderArgs<Repo>(
+                MongoDB.Bson.Serialization.BsonSerializer.SerializerRegistry.GetSerializer<Repo>(),
+                MongoDB.Bson.Serialization.BsonSerializer.SerializerRegistry)).ToString();
+            rendered.Should().Contain("\"IsCustomDomainOnly\" : false");
         }
 
         [Fact]

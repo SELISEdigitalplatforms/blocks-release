@@ -21,6 +21,21 @@ describe("ObservabilityService", () => {
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockResponse);
     });
+
+    it("returns the saved-report envelope unchanged (#255)", async () => {
+      const mockResponse = {
+        data: {
+          type: "SAST",
+          status: "Ready",
+          capturedAt: "2026-10-28T21:10:00Z",
+          revision: "a1b2c3d4e5",
+          details: { ncloc: "10" },
+        },
+      };
+      vi.mocked(http.get).mockResolvedValue(mockResponse);
+
+      await expect(observabilityService.SASTData(MOCK_BUILD_ID)).resolves.toEqual(mockResponse);
+    });
   });
 
   // ─── SCAData ───────────────────────────────────────────────────────────────
@@ -36,6 +51,17 @@ describe("ObservabilityService", () => {
       const expectedUrl = `${CLOUD_BUILD_ENDPOINTS.REPORTS}?buildId=${encodeURIComponent(MOCK_BUILD_ID)}&type=sca-${encodeURIComponent(type)}`;
       expect(http.get).toHaveBeenCalledWith(expectedUrl);
       expect(result).toEqual(mockResponse);
+    });
+
+    it("returns the saved-report envelope unchanged (#255)", async () => {
+      const mockResponse = {
+        data: { type: "Sca", status: "NotRun", message: "The sca-scan step did not run." },
+      };
+      vi.mocked(http.get).mockResolvedValue(mockResponse);
+
+      await expect(observabilityService.SCAData(MOCK_BUILD_ID, "libraries")).resolves.toEqual(
+        mockResponse,
+      );
     });
   });
 

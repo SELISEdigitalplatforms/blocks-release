@@ -9,6 +9,7 @@ using Devops.DomainService.Shared.Utilities;
 using Devops.DomainService.Deployment.Models.Request;
 using Blocks.Genesis;
 using Devops.DomainService.AnalyticsTool.Models;
+using Devops.DomainService.AnalyticsTool.Services.Capture;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Devops.DomainService.DataGatewayDeployment.Services;
@@ -51,24 +52,6 @@ public class LogRetrievalService
     {
         try { await _notificationService.SendBuiltInAsync(tenantId, configurationName, userIds, payload); }
         catch (Exception ex) { _logger.LogWarning(ex, "Built-in notification failed. config={ConfigurationName} tenant={TenantId} status={ErrorType}", configurationName, tenantId, ex.GetType().Name); }
-    }
-
-    public Task NotifyMonitoringTimedOutAsync(Build build) =>
-        SendBuiltInAsync(build.ProjectId, "release-build-monitoring-timed-out", new[] { build.CreatedBy },
-            NotificationService.BuildPayload("release-build-monitoring-timed-out", "Build monitoring timed out",
-                "Watching the pipeline timed out, so the build was marked failed.", false,
-                ("buildId", build.ItemId), ("repoId", build.RepoId), ("projectId", build.ProjectId)));
-
-    /// <remarks>The requester is not stored on the instance; the project people are told instead.</remarks>
-    public async Task NotifyDataGatewayFinishedAsync(string tenantId, string pipelineRunName, string status)
-    {
-        var ok = string.Equals(status, "Succeeded", StringComparison.OrdinalIgnoreCase);
-        var recipients = await NotificationService.ResolveRecipientsAsync(_repoRepository, _logger, tenantId);
-        await SendBuiltInAsync(tenantId, "release-data-gateway-instance-finished", recipients,
-            NotificationService.BuildPayload("release-data-gateway-instance-finished",
-                ok ? "Data gateway instance ready" : "Data gateway instance failed",
-                ok ? "Creating the data gateway instance finished." : "Creating the data gateway instance failed.", ok,
-                ("projectId", tenantId), ("pipelineRunName", pipelineRunName)));
     }
 
     public async Task CheckPodLogsAsync(Build build)
@@ -124,20 +107,7 @@ public class LogRetrievalService
                     eventFinishedCount++;
                     if (eventFinishedCount > 10)
                     {
-                        try
-                        {
-                            PostBuildQueue postBuildQueue = new PostBuildQueue
-                            {
-                                ProjectKey = build.ProjectId,
-                                PipelineRunName = build.PipelineRunName,
-                                PipelineType = PipelineTypes.RepoDeployment,
-                                PipelineEventType = PipelineEventTypes.RetrieveDependencyTrackId
-                            };
-                            await _messageClient.SendToConsumerAsync(new ConsumerMessage<PostBuildQueue> { ConsumerName = CloudBuildConstants.POST_BUILD_LISTENER, Payload = postBuildQueue, SccheduledEnqueueTimeUtc = DateTimeOffset.UtcNow.AddMinutes(10) });
-                        }
-                        catch(Exception ex){
-                            Console.WriteLine($"Failed to push data to queue for pipeline {pipelineRunName}: {ex.Message}");
-                        }
+                        await StartReportCaptureAsync(build, pipeLineStatus, allTaskLogs);
                         Console.WriteLine($"All tasks reached a terminal state for pipeline {pipelineRunName}. Count {eventFinishedCount} Stopping polling.");
                         break;
                     }
@@ -158,7 +128,7 @@ public class LogRetrievalService
             try
             {
                 await UpdateDeploymentStatus(pipelineRunName, tenantId, "Timeout");
-                await NotifyMonitoringTimedOutAsync(build);
+                await EndPendingReportsAsync(build, AnalysisReportStatus.Failed, AnalysisReportUpdates.TimedOutMessage);
                 try
                 {
                     PostBuildQueue postBuildQueue = new PostBuildQueue
@@ -201,6 +171,108 @@ public class LogRetrievalService
         }
     }
 
+
+    /// <summary>
+    /// Run once when the poller stops on a finished pipeline: decides each saved report from its scan step
+    /// (<c>sca-scan</c> for SCA, <c>sonar-scan</c> for SAST). A build without a <c>ScaReport</c> predates the saved
+    /// reports and keeps today's single <c>RetrieveDependencyTrackId</c> message instead.
+    /// </summary>
+    internal async Task StartReportCaptureAsync(Build build, PipelineRunStatus pipelineStatus, IReadOnlyDictionary<string, TaskLogs> taskLogs)
+    {
+        if (build.ScaReport is null)
+        {
+            try
+            {
+                PostBuildQueue postBuildQueue = new PostBuildQueue
+                {
+                    ProjectKey = build.ProjectId,
+                    PipelineRunName = build.PipelineRunName,
+                    PipelineType = PipelineTypes.RepoDeployment,
+                    PipelineEventType = PipelineEventTypes.RetrieveDependencyTrackId
+                };
+                await _messageClient.SendToConsumerAsync(new ConsumerMessage<PostBuildQueue> { ConsumerName = CloudBuildConstants.POST_BUILD_LISTENER, Payload = postBuildQueue, ScheduledEnqueueTimeUtc = DateTimeOffset.UtcNow.AddMinutes(10) });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to queue RetrieveDependencyTrackId for pipeline {PipelineRunName}.", build.PipelineRunName);
+            }
+        }
+        else
+        {
+            await StartReportCaptureForKindAsync(build, AnalysisReportKind.Sca, "sca-scan", AnalysisReportUpdates.ScaFirstAttemptDelay, pipelineStatus, taskLogs);
+        }
+
+        if (build.SastReport is not null)
+        {
+            await StartReportCaptureForKindAsync(build, AnalysisReportKind.Sast, "sonar-scan", AnalysisReportUpdates.SastFirstAttemptDelay, pipelineStatus, taskLogs);
+        }
+    }
+
+    private async Task StartReportCaptureForKindAsync(
+        Build build, AnalysisReportKind kind, string step, TimeSpan firstAttemptDelay,
+        PipelineRunStatus pipelineStatus, IReadOnlyDictionary<string, TaskLogs> taskLogs)
+    {
+        try
+        {
+            var notRun = ScanStepNotRunMessage(step, pipelineStatus, taskLogs);
+            if (notRun is not null)
+            {
+                await AnalysisReportUpdates.EndPendingAsync(_buildRepository, _notificationService, _logger,
+                    new AnalysisReportUpdates.PendingReportEnd(build.PipelineRunName, kind, AnalysisReportStatus.NotRun, notRun, build.ProjectId));
+                return;
+            }
+
+            // Succeeded, still running, or not started on a running pipeline: the capture's readiness checks wait for the scan.
+            await AnalysisReportUpdates.ScheduleCaptureAsync(_messageClient, build, kind, attempt: 1, DateTimeOffset.UtcNow + firstAttemptDelay);
+        }
+        catch (Exception ex)
+        {
+            // The report stays Pending and reads as Failed two hours after the build started.
+            _logger.LogError(ex, "Could not start the {Kind} capture for pipeline {PipelineRunName}.", kind, build.PipelineRunName);
+        }
+    }
+
+    /// <summary>
+    /// The <c>NotRun</c> message for a scan step when the poller stops, or null when its capture should start. The step's
+    /// state is its TaskRun status mapped through <see cref="PipeLineTaskConstants.StatusEventMapping"/>.
+    /// </summary>
+    internal static string? ScanStepNotRunMessage(string step, PipelineRunStatus pipelineStatus, IReadOnlyDictionary<string, TaskLogs> taskLogs)
+    {
+        if (taskLogs.TryGetValue(step, out var taskLog) && taskLog is not null)
+        {
+            var eventType = taskLog.Status is not null && PipeLineTaskConstants.StatusEventMapping.TryGetValue(taskLog.Status, out var mapped)
+                ? mapped
+                : null;
+            return eventType is EventTypes.EventFailed or EventTypes.EventCancelled
+                ? AnalysisReportUpdates.StepDidNotSucceed(step)
+                : null;
+        }
+
+        return PipeLineTaskConstants.TermialStatus.Contains(pipelineStatus.Status)
+            ? AnalysisReportUpdates.StepDidNotRun(step)
+            : null;
+    }
+
+    /// <summary>Ends whichever saved reports of the build are still Pending (log poller timeout).</summary>
+    internal async Task EndPendingReportsAsync(Build build, string status, string message)
+    {
+        var kinds = new List<AnalysisReportKind>();
+        if (build.SastReport is not null) kinds.Add(AnalysisReportKind.Sast);
+        if (build.ScaReport is not null) kinds.Add(AnalysisReportKind.Sca);
+
+        foreach (var kind in kinds)
+        {
+            try
+            {
+                await AnalysisReportUpdates.EndPendingAsync(_buildRepository, _notificationService, _logger,
+                    new AnalysisReportUpdates.PendingReportEnd(build.PipelineRunName, kind, status, message, build.ProjectId));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Could not end the {Kind} report of pipeline {PipelineRunName}.", kind, build.PipelineRunName);
+            }
+        }
+    }
 
     public async Task<bool> MergeStepsPerTaskAsync(Dictionary<string, TaskLogs> allTaskLogs, string pipelineRunName, string userId, string tenantId)
     {
@@ -630,9 +702,7 @@ public class LogRetrievalService
                     eventFinishedCount++;
                     if (eventFinishedCount > 10)
                     {
-                        var gatewayUpdated = await _dataGatewayDeploymentRepository.UpdatePipelineStatusAsync(tenantId,pipelineRunName, pipeLineStatus.Status);
-                        if (gatewayUpdated)
-                            await NotifyDataGatewayFinishedAsync(tenantId, pipelineRunName, pipeLineStatus.Status);
+                        await _dataGatewayDeploymentRepository.UpdatePipelineStatusAsync(tenantId,pipelineRunName, pipeLineStatus.Status);
                         Console.WriteLine($"All tasks reached a terminal state for pipeline {pipelineRunName}. Count {eventFinishedCount} Stopping polling.");
                         break;
                     }

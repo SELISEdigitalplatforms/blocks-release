@@ -1,5 +1,6 @@
 ﻿using Blocks.Genesis;
 using Devops.DomainService.AnalyticsTool.Models;
+using Devops.DomainService.AnalyticsTool.Services.Capture;
 using Devops.DomainService.AnalyticsTool.Services.Sca;
 using Devops.DomainService.Deployment.Interfaces;
 using Devops.DomainService.Deployment.Services;
@@ -76,8 +77,21 @@ namespace Worker.Consumers
                     await logRetrievalService.CheckPodLogsAsync(build);
                     break;
 
+                case PipelineEventTypes.RetrieveDependencyTrackId when build.ScaReport is { } scaReport:
+                    // Queued by a Worker from before the saved reports, for a build that has one: the next capture attempt.
+                    await services.GetRequiredService<ScaCaptureService>().CaptureAsync(build, scaReport.Attempts + 1);
+                    break;
+
                 case PipelineEventTypes.RetrieveDependencyTrackId:
                     await dependencyTrackAnalyticsService.RetrieveScaProjectUuid(build);
+                    break;
+
+                case PipelineEventTypes.CaptureSastReport:
+                    await services.GetRequiredService<SastCaptureService>().CaptureAsync(build, task.Attempt);
+                    break;
+
+                case PipelineEventTypes.CaptureScaReport:
+                    await services.GetRequiredService<ScaCaptureService>().CaptureAsync(build, task.Attempt);
                     break;
 
                 case PipelineEventTypes.DeletePipeLine:

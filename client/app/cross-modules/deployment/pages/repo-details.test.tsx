@@ -791,6 +791,46 @@ describe("RepoDetails page", () => {
     });
   });
 
+  describe("custom domain only", () => {
+    const renderWithBuild = (buildOverrides = {}) => {
+      vi.mocked(useGetRepoDetails).mockReturnValue({
+        data: {
+          data: {
+            repo: { ...baseRepo, customDeploymentUrl: "https://app.custom" },
+            build: [makeBuild({ customDeploymentUrl: "https://app.custom", ...buildOverrides })],
+          },
+          isSuccess: true,
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as never);
+      return renderWithProviders(<RepoDetails />, {
+        route: "/app/deployment/repo/r1?tab=details",
+        nuqs: true,
+      });
+    };
+
+    it("shows the default domain as not deployed and names the custom domain in the delete dialog", () => {
+      const { container } = renderWithBuild({ isCustomDomainOnly: true });
+
+      expect(screen.getByText("Not deployed: custom domain only")).toBeInTheDocument();
+      expect(container.querySelector('a[href="https://app.dev"]')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId("delete-deployment-button"));
+      const dialog = screen.getByRole("dialog");
+      expect(dialog).toHaveTextContent("https://app.custom");
+      expect(dialog).not.toHaveTextContent("https://app.dev");
+    });
+
+    it("keeps the default domain live for a build that deployed to both", () => {
+      const { container } = renderWithBuild();
+
+      expect(screen.queryByText("Not deployed: custom domain only")).not.toBeInTheDocument();
+      expect(container.querySelector('a[href="https://app.dev"]')).toBeInTheDocument();
+    });
+  });
+
   it("shows the missing parameters view when no project is selected", () => {
     useProjectStore.getState().resetSelectedProject();
     vi.mocked(useGetRepoDetails).mockReturnValue({

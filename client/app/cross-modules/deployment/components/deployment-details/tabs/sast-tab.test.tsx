@@ -2,6 +2,7 @@ import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
+import { formatFullDate } from "@/utils/date.util";
 import {
   useGetSASTData,
   useSASTRedirectLink,
@@ -402,3 +403,136 @@ describe("SastTab Phase 2", () => {
   });
 });
 
+describe("SastTab saved report (#255)", () => {
+  const analysisDate = "2026-10-28T20:54:00Z";
+  const capturedAt = "2026-10-28T21:10:00Z";
+
+  const mockReport = (data: Record<string, unknown> | undefined, error: unknown = null) =>
+    vi.mocked(useGetSASTData).mockReturnValue({
+      data: data === undefined ? undefined : { data },
+      isLoading: false,
+      error,
+    } as never);
+
+  let redirect: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    redirect = vi.fn().mockResolvedValue({
+      isError: false,
+      data: { isSuccess: true, data: { projectKey: "org-repo", branch: "main" } },
+    });
+    vi.mocked(useSASTRedirectLink).mockReturnValue({
+      isLoading: false,
+      refetch: redirect,
+    } as never);
+  });
+
+  it("H9 — a legacy report without status renders today's results with no caption", () => {
+    mockReport({ type: "SAST", details: exampleDetails });
+    renderWithProviders(<SastTab />);
+    expect(screen.getByText("Overview")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /View in SonarQube/i })).toBeInTheDocument();
+    expect(screen.queryByText(/^Scanned /)).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("H9 — a legacy report without details keeps the Data Processing card without a status role", () => {
+    mockReport({ type: "SAST", details: null });
+    renderWithProviders(<SastTab />);
+    expect(screen.getByText("Data Processing")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("H10 — Pending shows the Data Processing card announced as a status", () => {
+    mockReport({ type: "SAST", status: "Pending", details: null, qualityGate: null });
+    renderWithProviders(<SastTab />);
+    const card = screen.getByRole("status");
+    expect(card).toHaveTextContent("Static Application Security Testing");
+    expect(card).toHaveTextContent("Data Processing");
+    expect(card).toHaveTextContent("Analysis in progress");
+    expect(screen.queryByText("Overview")).not.toBeInTheDocument();
+  });
+
+  it("H11 — Pending then Ready swaps to the results with the scan caption", () => {
+    mockReport({ type: "SAST", status: "Pending", details: null });
+    const { rerender } = renderWithProviders(<SastTab />);
+    expect(screen.getByRole("status")).toBeInTheDocument();
+
+    mockReport({
+      type: "SAST",
+      status: "Ready",
+      capturedAt,
+      analysisDate,
+      revision: "a1b2c3d4e5f60718",
+      details: exampleDetails,
+      qualityGate: exampleGate,
+      issueBreakdown: exampleBreakdown,
+    });
+    rerender(<SastTab />);
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByText("Overview")).toBeInTheDocument();
+    const caption = screen.getByText(
+      `Scanned ${formatFullDate(new Date(analysisDate))} · commit a1b2c3d`,
+    );
+    expect(caption).toHaveClass("text-xs", "text-medium-emphasis");
+    expect(screen.getByText("3 conditions failed")).toBeInTheDocument();
+  });
+
+  it("H11 — Ready without a revision omits the commit part and falls back to capturedAt", () => {
+    mockReport({ type: "SAST", status: "Ready", capturedAt, details: exampleDetails });
+    renderWithProviders(<SastTab />);
+    expect(screen.getByText(`Scanned ${formatFullDate(new Date(capturedAt))}`)).toBeInTheDocument();
+    expect(screen.queryByText(/· commit/)).not.toBeInTheDocument();
+  });
+
+  it("Ready with no SonarQube measures renders today's null-details card", () => {
+    mockReport({ type: "SAST", status: "Ready", capturedAt, details: null });
+    renderWithProviders(<SastTab />);
+    expect(screen.getByText("Data Processing")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("C14 — NotRun shows Scan did not run with the message, an amber icon and the SonarQube button", async () => {
+    const tab = { opener: {}, location: { href: "about:blank" } } as unknown as Window;
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(tab);
+    mockReport({
+      type: "SAST",
+      status: "NotRun",
+      message: "The sonar-scan step did not run.",
+      details: null,
+    });
+    renderWithProviders(<SastTab />);
+
+    expect(screen.getByText("Static Application Security Testing")).toBeInTheDocument();
+    expect(screen.getByText("Scan did not run")).toBeInTheDocument();
+    expect(screen.getByText("The sonar-scan step did not run.")).toBeInTheDocument();
+    expect(screen.getByTestId("report-unavailable-icon")).toHaveClass("text-amber-600");
+    expect(screen.queryByTestId("sast-stat-new-issues")).not.toBeInTheDocument();
+    expect(screen.queryByText("Data Processing")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /View in SonarQube/i }));
+    expect(redirect).toHaveBeenCalled();
+    await vi.waitFor(() =>
+      expect(tab.location.href).toBe("https://code.selise.biz/dashboard?id=org-repo&branch=main"),
+    );
+    openSpy.mockRestore();
+  });
+
+  it("C14 — Failed shows Results not captured with the message, a red icon and the SonarQube button", () => {
+    mockReport({ type: "SAST", status: "Failed", message: "Results were not captured." });
+    renderWithProviders(<SastTab />);
+
+    expect(screen.getByText("Results not captured")).toBeInTheDocument();
+    expect(screen.getByText("Results were not captured.")).toBeInTheDocument();
+    expect(screen.getByTestId("report-unavailable-icon")).toHaveClass("text-red-600");
+    expect(screen.getByRole("button", { name: /View in SonarQube/i })).toBeEnabled();
+    expect(screen.queryByText("Overview")).not.toBeInTheDocument();
+  });
+
+  it("a request error keeps today's error card", () => {
+    mockReport(undefined, { message: "failed" });
+    renderWithProviders(<SastTab />);
+    expect(screen.getByText("Error Loading Data")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /View in SonarQube/i })).not.toBeInTheDocument();
+  });
+});

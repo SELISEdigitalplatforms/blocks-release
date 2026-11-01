@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "../../support/test-base";
+import type { Route } from "@playwright/test";
 import { openReleaseDeployment } from "../../support/release-helpers";
 import { readReleaseProject } from "../../support/release-project";
 
@@ -298,6 +299,141 @@ test.describe("SAST tab Quality Gate conditions (#210 Phase 2)", () => {
       await expect(page.getByText("Data Processing")).toBeVisible({
         timeout: 30_000,
       });
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Per-build saved report states (#255). The reports response gains `status`
+// (and `message`, `capturedAt`, `analysisDate`, `revision`); a legacy build's
+// response has none of them and renders as above.
+// ---------------------------------------------------------------------------
+
+type SavedSastReport = Record<string, unknown>;
+
+/**
+ * Waits a bounded real second, so a request the page would have sent has reached the
+ * route handler. Only used before asserting that NO request was sent, which no
+ * condition can be awaited for.
+ */
+const settle = (page: Page) => page.waitForTimeout(1_000);
+
+/** Serves `reports?type=sast` from `current()`, so a test can change it between refetches. */
+async function openSastTabWithSavedReport(
+  page: Page,
+  current: () => SavedSastReport,
+  onReportRequest: () => void = () => {},
+) {
+  await openReleaseDeployment(page);
+  const itemId = readReleaseProject()?.itemId;
+  test.skip(!itemId, "No shared Release project fixture");
+
+  await installSastMocks(page, null);
+  await page.route("**/build/reports**", async (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    if (new URL(route.request().url()).searchParams.get("type") !== "sast") return route.fallback();
+    onReportRequest();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(okEnvelope({ vulnerabilities: null, ...current() })),
+    });
+  });
+
+  const target = new URL(page.url());
+  target.pathname = `/app/${itemId}/deployment/repo/${FAKE_REPO_ID}/deployment-logs/${FAKE_BUILD_ID}`;
+  target.search = "tab=sast";
+  await page.goto(target.toString(), { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: "SAST" })).toBeVisible({ timeout: 30_000 });
+}
+
+const pendingSast = { type: "SAST", status: "Pending", details: null, qualityGate: null, issueBreakdown: null };
+
+const readySast = {
+  type: "SAST",
+  status: "Ready",
+  capturedAt: "2026-10-29T10:09:00Z", // another day, so the caption proves analysisDate wins
+  analysisDate: "2026-10-28T10:06:12Z",
+  revision: "0123456789abcdef",
+  details: sastDetailsHappy,
+  qualityGate: null,
+  issueBreakdown: null,
+};
+
+test.describe("SAST tab saved report states (#255)", () => {
+  test("Pending polls every 30 s until Ready, then shows the scan caption", async ({ page }) => {
+    test.setTimeout(180_000);
+    let report: SavedSastReport = pendingSast;
+    let requests = 0;
+
+    await page.clock.install();
+    await openSastTabWithSavedReport(page, () => report, () => requests++);
+
+    await test.step("[Positive] Pending shows the Data Processing card as a status (H10)", async () => {
+      const card = page.getByRole("status").filter({ hasText: "Data Processing" });
+      await expect(card).toBeVisible({ timeout: 30_000 });
+      await expect(card).toContainText("Analysis in progress");
+    });
+
+    await test.step("[Positive] the report is refetched every 30 s while Pending (H10)", async () => {
+      const before = requests;
+      // Jump 29 s and pause there: the clock keeps running in real time otherwise, so the
+      // one-second settle would itself carry it past the 30 s mark.
+      const now = await page.evaluate(() => Date.now());
+      await page.clock.pauseAt(now + 29_000);
+      await settle(page);
+      expect(requests, "no refetch before 30 s").toBe(before);
+      await page.clock.fastForward(1_000);
+      await page.clock.resume();
+      await expect.poll(() => requests, { timeout: 10_000 }).toBe(before + 1);
+    });
+
+    await test.step("[Positive] Pending → Ready shows results and the caption, polling stops (H11)", async () => {
+      report = readySast;
+      await page.clock.fastForward(30_000);
+      await expect(page.getByText(/^Scanned Oct 28, 2026 at \d{2}:\d{2} · commit 0123456$/)).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+      await expect(page.getByRole("status").filter({ hasText: "Data Processing" })).toHaveCount(0);
+
+      const afterReady = requests;
+      await page.clock.fastForward(90_000);
+      await settle(page);
+      expect(requests).toBe(afterReady);
+    });
+  });
+
+  test("NotRun and Failed cards show the reason and the SonarQube button", async ({ page }) => {
+    test.setTimeout(180_000);
+
+    await test.step("[Critical] NotRun: Scan did not run, amber icon, message, tool button (C14)", async () => {
+      await openSastTabWithSavedReport(page, () => ({
+        type: "SAST",
+        status: "NotRun",
+        message: "The sonar-scan step did not run.",
+        details: null,
+        qualityGate: null,
+        issueBreakdown: null,
+      }));
+      await expect(page.getByText("Scan did not run")).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText("The sonar-scan step did not run.")).toBeVisible();
+      await expect(page.getByTestId("report-unavailable-icon")).toHaveClass(/text-amber-600/);
+      await expect(page.getByRole("button", { name: /View in SonarQube/ })).toBeVisible();
+      await expect(page.getByText("Passed")).toHaveCount(0);
+    });
+
+    await test.step("[Critical] Failed: Results not captured, red icon, message, tool button (C14)", async () => {
+      await openSastTabWithSavedReport(page, () => ({
+        type: "SAST",
+        status: "Failed",
+        message: "SonarQube results were not available after 4 attempts.",
+        details: null,
+        qualityGate: null,
+        issueBreakdown: null,
+      }));
+      await expect(page.getByText("Results not captured")).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText("SonarQube results were not available after 4 attempts.")).toBeVisible();
+      await expect(page.getByTestId("report-unavailable-icon")).toHaveClass(/text-red-600/);
+      await expect(page.getByRole("button", { name: /View in SonarQube/ })).toBeVisible();
     });
   });
 });

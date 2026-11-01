@@ -5,10 +5,11 @@ import type {
   ISCARedirectResponse,
 } from "@blocks-deployment/utils/observability-links.utils";
 import type { IScaLibraryReportResponse } from "@blocks-deployment/models/sca-report";
+import type { SastReportResponse } from "@blocks-deployment/utils/sast-metrics.utils";
 
 class ObservabilityService {
   private readonly httpClient = serviceInstances.deploymentService;
-  async SASTData(buildId: string): Promise<string> {
+  async SASTData(buildId: string): Promise<SastReportResponse> {
     const url = `${CLOUD_BUILD_ENDPOINTS.REPORTS}?buildId=${encodeURIComponent(buildId)}&type=sast`;
     return this.httpClient.get(url);
   }

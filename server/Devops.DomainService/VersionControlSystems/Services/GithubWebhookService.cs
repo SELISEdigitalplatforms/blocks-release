@@ -26,7 +26,6 @@ public class GithubWebhookService : IGithubWebhookService
     private readonly ITokenRepository _tokenRepository;
     private readonly IRepoRepository _repoRepository;
     private readonly ICloudBuildSecret _cloudBuildSecret;
-    private readonly INotificationService? _notificationService;
 
     public GithubWebhookService(
                                 ILogger<GithubWebhookService> logger,
@@ -34,8 +33,7 @@ public class GithubWebhookService : IGithubWebhookService
                                 IHttpHelperServices httpHelperService,
                                 ITokenRepository tokenRepository,
                                 IRepoRepository repoRepository,
-                                ICloudBuildSecret cloudBuildSecret,
-                                INotificationService? notificationService = null
+                                ICloudBuildSecret cloudBuildSecret
                                 )
 
     {
@@ -45,33 +43,14 @@ public class GithubWebhookService : IGithubWebhookService
         _tokenRepository = tokenRepository;
         _repoRepository = repoRepository;
         _cloudBuildSecret = cloudBuildSecret;
-        _notificationService = notificationService;
     }
 
     public Task<GithubWebhook> CreateWebhook(Repo? repo) =>
-        CreateWebhookAndReportAsync(repo, BlocksContext.GetContext()?.TenantId, BlocksContext.GetContext()?.UserId,
+        CreateWebhookCore(repo, BlocksContext.GetContext()?.TenantId,
             async () => (await _tokenRepository.getToken())?.AccessToken);
 
     public Task<GithubWebhook> CreateWebhook(Repo? repo, string tenantId, string userId) =>
-        CreateWebhookAndReportAsync(repo, tenantId, userId, () => _tokenRepository.getToken(userId));
-
-    /// <summary>
-    /// Creates the webhook; when none could be created, tells the acting user (best effort).
-    /// The project admins are not looked up here, so the acting user is the only recipient.
-    /// </summary>
-    private async Task<GithubWebhook> CreateWebhookAndReportAsync(
-        Repo? repo, string? tenantId, string? userId, Func<Task<string?>> resolveToken)
-    {
-        var webhook = await CreateWebhookCore(repo, tenantId, resolveToken);
-        if (webhook is null && repo is not null && !string.IsNullOrWhiteSpace(tenantId))
-        {
-            await NotificationService.SafeSendAsync(_notificationService, _logger, tenantId, "release-github-access-failed", new[] { userId },
-                NotificationService.BuildPayload("release-github-access-failed", "Repository webhook not created",
-                    "The repository webhook could not be created. Check the GitHub authorization.", false,
-                    ("repoId", repo.ItemId), ("projectId", tenantId)));
-        }
-        return webhook;
-    }
+        CreateWebhookCore(repo, tenantId, () => _tokenRepository.getToken(userId));
 
     private async Task<GithubWebhook> CreateWebhookCore(
         Repo? repo, string? tenantId, Func<Task<string?>> resolveToken)

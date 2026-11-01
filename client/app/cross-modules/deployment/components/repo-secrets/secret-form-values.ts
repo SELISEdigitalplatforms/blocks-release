@@ -86,7 +86,7 @@ const refinePasteMode = (
   if (parsed.ok) return;
 
   ctx.addIssue({
-    code: z.ZodIssueCode.custom,
+    code: "custom",
     path: [field],
     message: parsed.message,
   });
@@ -145,7 +145,7 @@ const kvIssues = (rows: ISecretFormValues["rows"]): KvIssue[] => {
 
 const refineKvMode = (values: ISecretFormValues, ctx: z.RefinementCtx): void => {
   for (const issue of kvIssues(values.rows)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, ...issue });
+    ctx.addIssue({ code: "custom", ...issue });
   }
 };
 

@@ -73,6 +73,8 @@ export interface IUpdateRepoSettingsPayload {
   hostingProviderId?: string;
   machineConfigId?: string;
   regionId?: string;
+  /** Left out, the stored value is kept. */
+  isCustomDomainOnly?: boolean;
 }
 export interface IChangeRepoSpecs {
   repoId: string;

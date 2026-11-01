@@ -104,6 +104,36 @@ describe("RepoCards", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the default domain as not deployed when the repository deploys to its custom domain only", () => {
+    renderWithProviders(
+      <RepoCards
+        repo={{
+          ...repo,
+          customDeploymentUrl: "https://custom.example.com",
+          isCustomDomainOnly: true,
+        }}
+      />,
+      { route: "/app/deployment" },
+    );
+    expect(screen.getByTestId("custom-domain-only-target")).toHaveTextContent(
+      "https://app.dev",
+    );
+    expect(screen.getByText("Not deployed: custom domain only")).toBeInTheDocument();
+    expect(screen.getByText("https://app.dev").closest("a")).toBeNull();
+  });
+
+  it("keeps the default domain live when the flag is set but no custom domain exists", () => {
+    renderWithProviders(
+      <RepoCards repo={{ ...repo, isCustomDomainOnly: true }} />,
+      { route: "/app/deployment" },
+    );
+    expect(screen.queryByTestId("custom-domain-only-target")).not.toBeInTheDocument();
+    expect(screen.getByText("https://app.dev").closest("a")).toHaveAttribute(
+      "href",
+      "https://app.dev",
+    );
+  });
+
   it("proceeds to branch verification after a successful retry", async () => {
     const refetch = vi
       .fn()

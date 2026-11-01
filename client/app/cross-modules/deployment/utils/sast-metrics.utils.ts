@@ -1,3 +1,6 @@
+import { formatFullDate } from "@/utils/date.util";
+import type { ReportStatus } from "@blocks-deployment/models/sca-report";
+
 export type SastDetails = Record<string, string | undefined>;
 export type RatingLetter = "A" | "B" | "C" | "D" | "E";
 
@@ -441,4 +444,28 @@ export function getQualityGateLabel(
   if (d.alert_status === "OK") return "Passed";
   if (d.alert_status === "ERROR") return "Failed";
   return "Not computed";
+}
+
+/** `data` of GET /reports?type=sast. `status` is absent on builds without a saved report. */
+export interface SastReportData {
+  type?: string;
+  status?: ReportStatus | null;
+  message?: string | null;
+  capturedAt?: string | null;
+  analysisDate?: string | null;
+  revision?: string | null;
+  details?: SastDetails | null;
+  qualityGate?: SastQualityGate | null;
+  issueBreakdown?: SastIssueBreakdown | null;
+}
+export interface SastReportResponse {
+  data?: SastReportData | null;
+}
+
+/** "Scanned {date} · commit {7 chars}"; the commit part only when the revision is known. */
+export function getSastScanCaption(report: SastReportData): string | null {
+  const scannedAt = report.analysisDate ?? report.capturedAt;
+  if (!scannedAt) return null;
+  const scanned = `Scanned ${formatFullDate(new Date(scannedAt))}`;
+  return report.revision ? `${scanned} · commit ${report.revision.slice(0, 7)}` : scanned;
 }

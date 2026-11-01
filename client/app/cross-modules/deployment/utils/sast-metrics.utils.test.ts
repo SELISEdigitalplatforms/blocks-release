@@ -1,3 +1,4 @@
+import { formatFullDate } from "@/utils/date.util";
 import {
   MISSING,
   formatCondition,
@@ -11,6 +12,7 @@ import {
   getNewCodeStats,
   getOverallCodeStats,
   getQualityGateLabel,
+  getSastScanCaption,
   getSeverityRows,
   hasNewCode,
   toRatingLetter,
@@ -354,5 +356,31 @@ describe("Phase 2 quality gate helpers", () => {
         info: 6,
       }).map((r) => `${r.label} ${r.count}`),
     ).toEqual(["Blocker 0", "High 3", "Medium 40", "Low 20", "Info 6"]);
+  });
+});
+
+describe("getSastScanCaption (#255 H11)", () => {
+  const analysisDate = "2026-10-28T20:54:00Z";
+  const capturedAt = "2026-10-28T21:10:00Z";
+  const scanned = (iso: string) => `Scanned ${formatFullDate(new Date(iso))}`;
+
+  it("shows the analysis date and the first 7 characters of the revision", () => {
+    expect(
+      getSastScanCaption({ status: "Ready", analysisDate, capturedAt, revision: "a1b2c3d4e5f6" }),
+    ).toBe(`${scanned(analysisDate)} · commit a1b2c3d`);
+  });
+
+  it("omits the commit part when the revision is unknown", () => {
+    expect(getSastScanCaption({ status: "Ready", analysisDate, revision: null })).toBe(
+      scanned(analysisDate),
+    );
+  });
+
+  it("falls back to the capture time when SonarQube gave no analysis date", () => {
+    expect(getSastScanCaption({ status: "Ready", capturedAt })).toBe(scanned(capturedAt));
+  });
+
+  it("returns null when no date is known", () => {
+    expect(getSastScanCaption({ status: "Ready", revision: "a1b2c3d4" })).toBeNull();
   });
 });

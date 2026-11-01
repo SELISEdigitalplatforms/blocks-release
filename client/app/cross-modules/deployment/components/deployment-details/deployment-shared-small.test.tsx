@@ -23,6 +23,26 @@ describe("DeploymentGeneralInfo", () => {
     );
     expect(screen.getByText("General information")).toBeInTheDocument();
     expect(screen.getByText("https://github.com/acme/app")).toBeInTheDocument();
+    expect(screen.getByText("https://app.dev").closest("a")).toHaveAttribute(
+      "href",
+      "https://app.dev",
+    );
+  });
+
+  it("shows the default domain as not deployed for a build that went to its custom domain only", () => {
+    renderWithProviders(
+      <DeploymentGeneralInfo
+        cardData={{ ...(cardData as object), isCustomDomainOnly: true } as never}
+        isSuccess
+        buildId="b1"
+      />,
+    );
+    expect(screen.getByText("Not deployed: custom domain only")).toBeInTheDocument();
+    expect(screen.getByText("https://app.dev").closest("a")).toBeNull();
+    expect(screen.getByText("https://app.custom").closest("a")).toHaveAttribute(
+      "href",
+      "https://app.custom",
+    );
   });
 
   it("renders the loading skeleton", () => {

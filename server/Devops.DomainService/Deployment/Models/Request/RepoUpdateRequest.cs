@@ -11,6 +11,8 @@ public class RepoUpdateRequest
     public string MachineConfigId { get; set; }
     public string DeploymentType { get; set; }
     public string CustomDomain { get; set; }
+    // Null leaves the stored value alone, so a caller that does not send it never resets it.
+    public bool? IsCustomDomainOnly { get; set; }
     public DateTime? LastDeploymentDate { get; set; }
     public string LastDeploymentStatus { get; set; }
     public DeploySettings? deploySettings { get; set; }

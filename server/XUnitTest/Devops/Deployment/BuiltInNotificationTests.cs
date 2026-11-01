@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Blocks.Genesis;
+using Blocks.Genesis.Notifications;
 using Blocks.Secrets;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Interfaces;
@@ -31,83 +32,79 @@ using Xunit;
 
 namespace XUnitTest.Devops.Deployment
 {
-    public class BuiltInNotificationSenderTests
+    public class BuiltInNotificationSenderTests : IDisposable
     {
         private readonly Mock<ICryptoService> _crypto = new();
         private readonly Mock<ITenants> _tenants = new();
         private readonly Mock<IHttpHelperServices> _http = new();
+        private readonly Mock<INotificationPublisher> _publisher = new();
+        private readonly List<NotificationRequest> _published = new();
         private readonly IConfiguration _config = new ConfigurationBuilder().AddInMemoryCollection(
             new Dictionary<string, string> { ["RootTenantId"] = "root", ["NotificationServiceUrl"] = "https://notify.example.com" }).Build();
 
         public BuiltInNotificationSenderTests()
         {
-            _crypto.Setup(c => c.Hash(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Returns("hashed-secret");
-            _tenants.Setup(t => t.GetTenantByID("t1")).Returns(new Tenant { TenantId = "t1", TenantSalt = "salt", DbConnectionString = "x", JwtTokenParameters = null! });
+            _publisher.Setup(p => p.Publish(It.IsAny<NotificationRequest>())).Callback<NotificationRequest>(_published.Add);
         }
 
+        public void Dispose() => BlocksContext.ClearContext();
+
         private NotificationService Create() =>
-            new(NullLogger<NotificationService>.Instance, _crypto.Object, _tenants.Object, _config, _http.Object, new Mock<IDeploymentHubService>().Object);
+            new(NullLogger<NotificationService>.Instance, _crypto.Object, _tenants.Object, _config, _http.Object,
+                new Mock<IDeploymentHubService>().Object, _publisher.Object);
 
         private static Dictionary<string, object> Payload() => NotificationService.BuildPayload("e", "T", "D", true, ("repoId", "r1"))!;
 
+        private static void SetContext(bool impersonated, string userId = "root-user", string orgId = "org-1") =>
+            BlocksContext.SetContext(BlocksContext.Create(
+                tenantId: "t1", roles: null, userId: userId, impersonated: impersonated,
+                isAuthenticated: true, requestUri: "https://test", organizationId: orgId,
+                permissions: null, expireOn: DateTime.UtcNow.AddHours(1), email: "a@b.com",
+                userName: "root", phoneNumber: null, displayName: "R", oauthToken: null,
+                originalTenantId: "root", impersonationSessionId: null, applicationDomain: "test"));
+
         [Fact]
-        public async Task SendsConfigNameRecipientsAndTenantHeaders()
+        public async Task Publishes_ConfigName_TenantOrganization_AndCleanNamedUsers()
         {
-            object body = null; Dictionary<string, string> sentHeaders = null;
-            _http.Setup(h => h.MakeHttpPostRequest<NotificationResponse>(It.IsAny<object>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<string>()))
-                .Callback<object, string, Dictionary<string, string>, string, string>((b, _, h, _, _) => { body = b; sentHeaders = h; })
-                .ReturnsAsync((new NotificationResponse { isSuccess = true }, "ok"));
+            SetContext(impersonated: false);
 
             var ok = await Create().SendBuiltInAsync("t1", "release-build-finished", new[] { "u1", "u1", null, " " }, Payload());
 
             ok.Should().BeTrue();
-            sentHeaders["x-blocks-key"].Should().Be("t1");
-            sentHeaders["Secret"].Should().Be("hashed-secret");
-            var json = JsonSerializer.Serialize(body);
-            json.Should().Contain("release-build-finished").And.Contain("\"u1\"");
-            json.Should().NotContain("hashed-secret").And.NotContain("salt");
-            ((IEnumerable<string>)body.GetType().GetProperty("UserIds")!.GetValue(body)!).Should().Equal("u1");
-        }
-
-        [Fact]
-        public async Task NoRecipient_SendsNothing()
-        {
-            (await Create().SendBuiltInAsync("t1", "c", new string[] { null }, Payload())).Should().BeFalse();
+            var request = _published.Should().ContainSingle().Subject;
+            request.Name.Should().Be("release-build-finished");
+            request.TenantId.Should().Be("t1");
+            request.OrganizationId.Should().Be("org-1");
+            request.NamedUserIds.Should().Equal("u1");
             _http.VerifyNoOtherCalls();
         }
 
         [Fact]
-        public async Task UnknownTenant_SendsNothing()
+        public async Task ImpersonatedRootUser_IsAddedAsNamedUser_SoConsoleUsersGetIt()
         {
-            (await Create().SendBuiltInAsync("nope", "c", new[] { "u" }, Payload())).Should().BeFalse();
-            _http.VerifyNoOtherCalls();
+            SetContext(impersonated: true);
+
+            await Create().SendBuiltInAsync("t1", "release-build-finished", new[] { "u1", "root-user" }, Payload());
+
+            _published.Single().NamedUserIds.Should().Equal("u1", "root-user");
         }
 
         [Fact]
-        public async Task HttpFailure_IsSwallowed()
+        public async Task NotImpersonated_ActingUserIsNotAdded()
         {
-            _http.Setup(h => h.MakeHttpPostRequest<NotificationResponse>(It.IsAny<object>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<string>()))
-                .ThrowsAsync(new InvalidOperationException("boom"));
-            (await Create().SendBuiltInAsync("t1", "c", new[] { "u" }, Payload())).Should().BeFalse();
+            SetContext(impersonated: false);
+
+            await Create().SendBuiltInAsync("t1", "release-build-finished", new[] { "u1" }, Payload());
+
+            _published.Single().NamedUserIds.Should().Equal("u1");
         }
 
         [Fact]
-        public async Task NullResponse_IsSwallowed()
+        public async Task NoTenantOrName_PublishesNothing()
         {
-            _http.Setup(h => h.MakeHttpPostRequest<NotificationResponse>(It.IsAny<object>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync(((NotificationResponse)null, "Operation Failed."));
-            (await Create().SendBuiltInAsync("t1", "c", new[] { "u" }, Payload())).Should().BeFalse();
-        }
-
-        [Fact]
-        public async Task Timeout_ReturnsFalseWithinAboutFiveSeconds()
-        {
-            var never = new TaskCompletionSource<(NotificationResponse, string)>();
-            _http.Setup(h => h.MakeHttpPostRequest<NotificationResponse>(It.IsAny<object>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<string>()))
-                .Returns(never.Task);
-            var watch = System.Diagnostics.Stopwatch.StartNew();
-            (await Create().SendBuiltInAsync("t1", "c", new[] { "u" }, Payload())).Should().BeFalse();
-            watch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(8));
+            (await Create().SendBuiltInAsync("", "c", new[] { "u" }, Payload())).Should().BeFalse();
+            (await Create().SendBuiltInAsync("t1", " ", new[] { "u" }, Payload())).Should().BeFalse();
+            _published.Should().BeEmpty();
         }
 
         [Fact]
@@ -208,28 +205,6 @@ namespace XUnitTest.Devops.Deployment
             _sent.Should().BeEmpty();
         }
 
-        // ---- 11 monitoring timed out ----
-
-        [Fact]
-        public async Task MonitoringTimedOut_SendsToStarterOnly()
-        {
-            await _f.LogRetrievalService().NotifyMonitoringTimedOutAsync(new Build { ItemId = "b1", RepoId = "r1", CreatedBy = "starter", ProjectId = Tenant });
-            var s = _sent.Single();
-            s.Config.Should().Be("release-build-monitoring-timed-out");
-            s.Users.Should().Equal("starter");
-            s.Tenant.Should().Be(Tenant);
-            s.Payload["isSuccess"].Should().Be(false);
-        }
-
-        [Fact]
-        public async Task MonitoringTimedOut_NotifierFailure_Swallowed()
-        {
-            NotifierThrows();
-            var act = () => _f.LogRetrievalService().NotifyMonitoringTimedOutAsync(new Build { ItemId = "b1", CreatedBy = "starter", ProjectId = Tenant });
-            await act.Should().NotThrowAsync();
-            _f.Notification.Verify(n => n.SendBuiltInAsync(Tenant, "release-build-monitoring-timed-out", It.IsAny<IEnumerable<string>>(), It.IsAny<IDictionary<string, object>>()), Times.Once);
-        }
-
         // ---- 12 auto deploy ----
 
         private const string Push = "{\"ref\":\"refs/heads/main\",\"repository\":{\"full_name\":\"org/r\"},\"pusher\":{\"name\":\"p\"}}";
@@ -319,29 +294,6 @@ namespace XUnitTest.Devops.Deployment
             result.Message.Should().Be("Something went wrong.");
         }
 
-        // ---- 33 data gateway ----
-
-        [Theory]
-        [InlineData("Succeeded", true)]
-        [InlineData("Failed", false)]
-        public async Task DataGateway_Finished_SendsToProjectPeople(string status, bool success)
-        {
-            await _f.LogRetrievalService().NotifyDataGatewayFinishedAsync(Tenant, "run-1", status);
-            var s = _sent.Single();
-            s.Config.Should().Be("release-data-gateway-instance-finished");
-            s.Users.Should().BeEquivalentTo("p1", "actor");
-            s.Payload["isSuccess"].Should().Be(success);
-        }
-
-        [Fact]
-        public async Task DataGateway_NotifierFailure_Swallowed()
-        {
-            NotifierThrows();
-            var act = () => _f.LogRetrievalService().NotifyDataGatewayFinishedAsync(Tenant, "run-1", "Failed");
-            await act.Should().NotThrowAsync();
-            _f.Notification.Verify(n => n.SendBuiltInAsync(Tenant, "release-data-gateway-instance-finished", It.IsAny<IEnumerable<string>>(), It.IsAny<IDictionary<string, object>>()), Times.Once);
-        }
-
         // ---- 46 code analysis ----
 
         [Fact]
@@ -381,91 +333,22 @@ namespace XUnitTest.Devops.Deployment
             _sent.Should().BeEmpty();
         }
 
-        // ---- 34 github access ----
-
-        [Fact]
-        public async Task GithubWebhookNotCreated_SendsToActingUser()
-        {
-            var token = new Mock<ITokenRepository>();
-            token.Setup(t => t.getToken("u9")).ReturnsAsync((string)null);
-            var service = new GithubWebhookService(NullLogger<GithubWebhookService>.Instance, new ConfigurationBuilder().Build(),
-                _f.Http.Object, token.Object, _f.RepoRepo.Object, Mock.Of<ICloudBuildSecret>(), _f.Notification.Object);
-
-            (await service.CreateWebhook(new Repo { ItemId = "r1", RepoName = "org/r" }, Tenant, "u9")).Should().BeNull();
-
-            var s = _sent.Single();
-            s.Config.Should().Be("release-github-access-failed");
-            s.Users.Should().Equal("u9");
-            s.Tenant.Should().Be(Tenant);
-            NoSecretIn(s.Payload);
-        }
-
-        [Fact]
-        public async Task GithubAuthorizationRemoved_SendsToActingUser_AndNotifierFailureIsSwallowed()
-        {
-            var tokens = new Mock<ITokenRepository>();
-            var vcs = new Mock<IVersionControlService>();
-            var secret = new Mock<ICloudBuildSecret>();
-            var tok = new RepositoryToken { AccessToken = "abc" };
-            tokens.Setup(t => t.getToken()).ReturnsAsync(tok);
-            tokens.Setup(t => t.DeleteTokenAsync()).ReturnsAsync(true);
-            vcs.Setup(v => v.RevokeOauthAccess(tok)).ReturnsAsync(true);
-            var svc = new AuthService(tokens.Object, new ConfigurationBuilder().Build(), vcs.Object, _f.Http.Object,
-                NullLogger<AuthService>.Instance, secret.Object, _f.Notification.Object);
-
-            (await svc.RevokeOauthAccess()).IsSuccess.Should().BeTrue();
-            var s = _sent.Single();
-            s.Config.Should().Be("release-github-access-failed");
-            s.Users.Should().Equal("actor");
-            JsonSerializer.Serialize(s.Payload).Should().NotContain("abc");
-
-            NotifierThrows();
-            (await svc.RevokeOauthAccess()).IsSuccess.Should().BeTrue();
-        }
-
         // ---- 35 repo secret ----
 
-        [Theory]
-        [InlineData("lock", "locked")]
-        [InlineData("unlock", "unlocked")]
-        [InlineData("delete", "deleted")]
-        [InlineData("restore", "restored")]
-        public async Task RepoSecretChanged_SendsToOtherMembersOnly(string op, string action)
-        {
-            var secrets = new Mock<ISecretService>();
-            _f.RepoRepo.Setup(r => r.GetRepo("r1", Tenant)).ReturnsAsync(new Repo { ItemId = "r1", SecretStoreItemId = "s1" });
-            var service = new RepoSecretService(_f.RepoRepo.Object, secrets.Object, NullLogger<RepoSecretService>.Instance, _f.Notification.Object);
-
-            switch (op)
-            {
-                case "lock": await service.LockAsync("r1"); break;
-                case "unlock": await service.UnlockAsync("r1"); break;
-                case "delete": await service.DeleteAsync("r1"); break;
-                default: await service.RestoreAsync("r1"); break;
-            }
-
-            var s = _sent.Single();
-            s.Config.Should().Be("release-repo-secret-changed");
-            s.Users.Should().Equal("p1");
-            s.Payload["action"].Should().Be(action);
-            s.Tenant.Should().Be(Tenant);
-            NoSecretIn(s.Payload);
-        }
-
         [Fact]
-        public async Task RepoSecretChanged_ChangeFails_SendsNothing_AndNotifierFailureIsSwallowed()
+        public async Task RepoSecretChange_RunsTheChange_AndAFailureIsNotSwallowed()
         {
             var secrets = new Mock<ISecretService>();
             secrets.Setup(s => s.LockAsync("s1", It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("vault"));
             _f.RepoRepo.Setup(r => r.GetRepo("r1", Tenant)).ReturnsAsync(new Repo { ItemId = "r1", SecretStoreItemId = "s1" });
-            var service = new RepoSecretService(_f.RepoRepo.Object, secrets.Object, NullLogger<RepoSecretService>.Instance, _f.Notification.Object);
+            var service = new RepoSecretService(_f.RepoRepo.Object, secrets.Object, NullLogger<RepoSecretService>.Instance);
+
+            await service.UnlockAsync("r1");
+            secrets.Verify(s => s.UnlockAsync("s1", It.IsAny<CancellationToken>()), Times.Once);
 
             var act = () => service.LockAsync("r1");
             await act.Should().ThrowAsync<InvalidOperationException>();
             _sent.Should().BeEmpty();
-
-            NotifierThrows();
-            await service.UnlockAsync("r1");
         }
     }
 }

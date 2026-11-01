@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { Check, ChevronsUpDown, Github, GitBranch } from "lucide-react";
 import { useGithubBranches } from "@/cross-modules/deployment/hooks/use-github-info";
 import WarningBanner from "../import-repo/helpers/warning-banner";
@@ -29,6 +30,7 @@ const RepositorySelector = ({
   onRepoSelect,
   onBranchSelect,
 }: RepositorySelectorProps) => {
+  const { t } = useT("release.deployment.shared");
   const [repoSearchTerm, setRepoSearchTerm] = useState("");
   const [branchSearchTerm, setBranchSearchTerm] = useState("");
   const [, setRepoUrl] = useState("");
@@ -84,14 +86,14 @@ const RepositorySelector = ({
   return (
     <div className="flex h-auto w-full flex-col items-start justify-center gap-5 self-stretch rounded-sm border border-border-default bg-background px-5 pb-6 pt-5">
       <h3 className="text-lg font-semibold">
-        Select your repository and branch
+        {t("RENDER_REPO_SELECTION.TITLE")}
       </h3>
       <WarningBanner />
       {repositories ? (
         <div className="w-full space-y-4">
           {/* Repository Dropdown */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Github repository</label>
+            <label className="text-sm font-medium">{t("RENDER_REPO_SELECTION.GITHUB_REPOSITORY")}</label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -105,7 +107,7 @@ const RepositorySelector = ({
                       </>
                     ) : (
                       <span className="text-low-emphasis">
-                        Select repository
+                        {t("RENDER_REPO_SELECTION.SELECT_REPOSITORY")}
                       </span>
                     )}
                   </div>
@@ -116,7 +118,7 @@ const RepositorySelector = ({
                 <div className="sticky top-0 border-b bg-background p-2">
                   <input
                     type="text"
-                    placeholder="Search repository..."
+                    placeholder={t("RENDER_REPO_SELECTION.SEARCH_REPOSITORY")}
                     className="border-default focus:ring-default w-full rounded-md border px-3 py-2 text-sm focus:outline-hidden focus:ring-2"
                     value={repoSearchTerm}
                     onChange={(e) => setRepoSearchTerm(e.target.value)}
@@ -145,8 +147,8 @@ const RepositorySelector = ({
                   ) : (
                     <div className="px-3 py-2 text-sm text-medium-emphasis">
                       {repoSearchTerm
-                        ? "No repositories found matching your search"
-                        : "No repositories found"}
+                        ? t("RENDER_REPO_SELECTION.NO_REPOSITORIES_MATCH")
+                        : t("RENDER_REPO_SELECTION.NO_REPOSITORIES")}
                     </div>
                   )}
                 </div>
@@ -156,7 +158,7 @@ const RepositorySelector = ({
 
           {/* Branch Dropdown */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Branch</label>
+            <label className="text-sm font-medium">{t("RENDER_REPO_SELECTION.BRANCH")}</label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -176,8 +178,8 @@ const RepositorySelector = ({
                     ) : (
                       <span className="text-low-emphasis">
                         {selectedRepo
-                          ? "Select branch"
-                          : "Select repository first"}
+                          ? t("RENDER_REPO_SELECTION.SELECT_BRANCH")
+                          : t("RENDER_REPO_SELECTION.SELECT_REPOSITORY_FIRST")}
                       </span>
                     )}
                   </div>
@@ -188,7 +190,7 @@ const RepositorySelector = ({
                 <div className="sticky top-0 border-b bg-background p-2">
                   <input
                     type="text"
-                    placeholder="Search branch..."
+                    placeholder={t("RENDER_REPO_SELECTION.SEARCH_BRANCH")}
                     className="focus:ring- w-full rounded-md border border-low-emphasis px-3 py-2 text-sm focus:outline-hidden focus:ring-2"
                     value={branchSearchTerm}
                     onChange={(e) => setBranchSearchTerm(e.target.value)}
@@ -214,8 +216,8 @@ const RepositorySelector = ({
                   ) : (
                     <div className="px-3 py-2 text-sm text-low-emphasis">
                       {branchSearchTerm
-                        ? "No branches found matching your search"
-                        : "No branches found"}
+                        ? t("RENDER_REPO_SELECTION.NO_BRANCHES_MATCH")
+                        : t("RENDER_REPO_SELECTION.NO_BRANCHES")}
                     </div>
                   )}
                 </div>
@@ -225,7 +227,7 @@ const RepositorySelector = ({
 
           <div className="space-y-2">
             <label className="text-sm font-medium leading-5">
-              Your project will be deployed on
+              {t("RENDER_REPO_SELECTION.DEPLOYED_ON")}
             </label>
             <Input
               value={applicationDomain}
@@ -237,7 +239,7 @@ const RepositorySelector = ({
         </div>
       ) : (
         <div className="w-full py-4 text-center text-low-emphasis">
-          No repositories available
+          {t("RENDER_REPO_SELECTION.NO_REPOSITORIES_AVAILABLE")}
         </div>
       )}
     </div>

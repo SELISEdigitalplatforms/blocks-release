@@ -1,5 +1,6 @@
 import { providers } from "@blocks-deployment/models/git-dummy";
 import { useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import {
   authenticateWithGithub,
   authenticateWithGitlab,
@@ -26,6 +27,7 @@ const ProviderButtons = ({
   extraState,
   closeOnProviderSelect,
 }: ProviderButtonsProps) => {
+  const { t } = useT("release.deployment.shared");
   const navigate = useNavigate();
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
 
@@ -104,13 +106,13 @@ const ProviderButtons = ({
                 disabled={!provider.active}>
                 <img
                   src={iconSrc}
-                  alt={`${provider.name} icon`}
+                  alt={t("RENDER_PROVIDER.ICON_ALT", { name: provider.name })}
                   width={18}
                   height={18}
                   className="object-contain"
                 />
                 <span className="text-high-emphasis">
-                  Continue with {provider.name}
+                  {t("RENDER_PROVIDER.CONTINUE_WITH", { name: provider.name })}
                 </span>
               </Button>
             );

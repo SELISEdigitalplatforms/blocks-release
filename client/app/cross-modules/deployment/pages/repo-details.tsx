@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { Button } from "@/components/ui-kits/button/button";
 import { useProjectStore } from "@/store/project.store";
 import DeploymentSettingsModal from "@blocks-deployment/components/deployment-details/deployment-settings-modal/deployment-settings-modal";
@@ -134,6 +135,7 @@ function useSelectedProjectInfo() {
 }
 
 export default function RepoDetails() {
+  const { t } = useT("release.deployment.pages");
   const navigate = useNavigate();
   const params = useParams();
   const repoId = params.repoId as string;
@@ -257,8 +259,10 @@ export default function RepoDetails() {
   useEffect(() => {
     if (isBranchMissing) {
       toast({
-        title: "Branch not found",
-        description: `The ${projectEnvironment} branch doesn't exist on this repository. Please create a branch with the name ${projectEnvironment}.`,
+        title: t("REPO_DETAILS.BRANCH_NOT_FOUND_TITLE"),
+        description: t("REPO_DETAILS.BRANCH_NOT_FOUND_DESCRIPTION", {
+          branch: projectEnvironment,
+        }),
         variant: "default",
       });
 
@@ -268,7 +272,7 @@ export default function RepoDetails() {
 
       return () => clearTimeout(redirectTimer);
     }
-  }, [repoDetails, isBranchMissing, projectEnvironment, navigate, tenantGroupId]);
+  }, [repoDetails, isBranchMissing, projectEnvironment, navigate, tenantGroupId, t]);
 
   const latestBuild = useMemo(() => {
     // Deliberately the RAW, server-sorted list rather than the branch-filtered one. With
@@ -335,15 +339,15 @@ export default function RepoDetails() {
           setIsDeploymentSettingsForDeploy(false);
 
           toast({
-            title: "Deployment Started",
-            description: "Your deployment has been initiated successfully.",
+            title: t("REPO_DETAILS.DEPLOYMENT_STARTED_TITLE"),
+            description: t("REPO_DETAILS.DEPLOYMENT_INITIATED_FULL"),
             variant: "success",
           });
 
           // The deployment itself went through; only the opted-in monitor could not be created.
           if (deployResponse?.monitorError) {
             toast({
-              title: "Blocks Monitor",
+              title: t("REPO_DETAILS.BLOCKS_MONITOR_TITLE"),
               description: deployResponse.monitorError,
               variant: "destructive",
             });
@@ -354,10 +358,10 @@ export default function RepoDetails() {
           const errorMessage =
             error?.errors?.message ||
             error?.message ||
-            "Failed to start deployment. Please try again.";
+            t("REPO_DETAILS.START_DEPLOYMENT_FAILED");
 
           toast({
-            title: "Deployment Failed",
+            title: t("REPO_DETAILS.DEPLOYMENT_FAILED_TITLE"),
             description: errorMessage,
             variant: "destructive",
           });
@@ -386,8 +390,8 @@ export default function RepoDetails() {
           setIsModalOpen(false);
 
           toast({
-            title: "Deployment Started",
-            description: "Deployment has been initiated successfully.",
+            title: t("REPO_DETAILS.DEPLOYMENT_STARTED_TITLE"),
+            description: t("REPO_DETAILS.DEPLOYMENT_INITIATED"),
             variant: "success",
           });
         },
@@ -396,7 +400,7 @@ export default function RepoDetails() {
           setIsDeploying(false);
 
           toast({
-            title: "Deployment Failed",
+            title: t("REPO_DETAILS.DEPLOYMENT_FAILED_TITLE"),
             description: error.errors.message,
             variant: "destructive",
           });
@@ -424,10 +428,10 @@ export default function RepoDetails() {
         setIsDeleteModalOpen(false);
 
         toast({
-          title: "Deletion Started",
+          title: t("REPO_DETAILS.DELETION_STARTED_TITLE"),
           description:
             response?.message ||
-            "The deployment is being removed. This can take up to a minute.",
+            t("REPO_DETAILS.DELETION_STARTED_DESCRIPTION"),
           variant: "success",
         });
       },
@@ -435,10 +439,10 @@ export default function RepoDetails() {
         const errorMessage =
           error?.errors?.message ||
           error?.message ||
-          "Failed to delete the deployment. Please try again.";
+          t("REPO_DETAILS.DELETE_FAILED");
 
         toast({
-          title: "Deletion Failed",
+          title: t("REPO_DETAILS.DELETION_FAILED_TITLE"),
           description: errorMessage,
           variant: "destructive",
         });
@@ -450,16 +454,16 @@ export default function RepoDetails() {
   };
 
   const confirmationData = {
-    dialogTitle: "Confirm Deployment",
+    dialogTitle: t("REPO_DETAILS.CONFIRM_DEPLOYMENT_TITLE"),
     dialogSubtitle: (
       <>
-        Are you sure you want to manually deploy this repository?
+        {t("REPO_DETAILS.CONFIRM_DEPLOYMENT_QUESTION")}
         <br />
         <br />
       </>
     ),
-    confirmButton: "Deploy Now",
-    cancelButton: "Cancel",
+    confirmButton: t("REPO_DETAILS.DEPLOY_NOW"),
+    cancelButton: t("common:CANCEL"),
   };
 
   // The recorded namespace is the only authority on whether something is deployed: absent means
@@ -502,7 +506,7 @@ export default function RepoDetails() {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <div className="mb-4 text-lg text-red-600">
-            Missing required parameters:
+            {t("REPO_DETAILS.MISSING_PARAMETERS")}
           </div>
           <div className="mb-4 text-sm text-low-emphasis">
             repoId: {repoId || "MISSING"}
@@ -513,7 +517,7 @@ export default function RepoDetails() {
             <button
               onClick={() => navigate(-1)}
               className="rounded bg-gray-500 px-4 py-2 text-white">
-              Go Back
+              {t("REPO_DETAILS.GO_BACK")}
             </button>
           </div>
         </div>
@@ -521,7 +525,7 @@ export default function RepoDetails() {
     );
   }
   if (isLoading) {
-    return <LoadingSpinner variant="overlay" label="Loading..." />;
+    return <LoadingSpinner variant="overlay" label={t("common:LOADING")} />;
   }
 
   if (
@@ -536,7 +540,7 @@ export default function RepoDetails() {
           <div className="flex items-center gap-2">
             <BackIconButton onClick={handleGoBack} data-testid="back-button" />
             <div>
-              <h1 className="text-2xl font-semibold">Repository Details</h1>
+              <h1 className="text-2xl font-semibold">{t("REPO_DETAILS.REPOSITORY_DETAILS")}</h1>
               <div className="text-sm text-muted-foreground">
                 {repoDetails?.data?.repo.repoName || ""}
               </div>
@@ -555,9 +559,9 @@ export default function RepoDetails() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="details">Details</SelectItem>
+                    <SelectItem value="details">{t("REPO_DETAILS.TAB_DETAILS")}</SelectItem>
                     <SelectItem value="secrets">
-                      Environment Variables
+                      {t("REPO_DETAILS.TAB_ENVIRONMENT_VARIABLES")}
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -565,10 +569,10 @@ export default function RepoDetails() {
               <div className="hidden md:block">
                 <TabsList>
                   <TabsTrigger value="details" className="w-20">
-                    Details
+                    {t("REPO_DETAILS.TAB_DETAILS")}
                   </TabsTrigger>
                   <TabsTrigger value="secrets" className="px-4">
-                    Environment Variables
+                    {t("REPO_DETAILS.TAB_ENVIRONMENT_VARIABLES")}
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -582,19 +586,18 @@ export default function RepoDetails() {
                   </div>
                   <div className="flex flex-col items-center gap-2">
                     <h3 className="py-4 text-xl font-semibold text-high-emphasis">
-                      No deployments available
+                      {t("REPO_DETAILS.NO_DEPLOYMENTS")}
                     </h3>
 
                     <p className="max-w-md items-center text-center text-sm text-low-emphasis">
-                      This repository has not been deployed yet. Click the
-                      deploy button to create your first deployment.
+                      {t("REPO_DETAILS.NOT_DEPLOYED_YET")}
                     </p>
                   </div>
                   <Button
                     onClick={handleDeploy}
                     disabled={isProcessing}
                     className="mt-4">
-                    Deploy Now
+                    {t("REPO_DETAILS.DEPLOY_NOW")}
                   </Button>
                 </div>
                 <DeploymentSettingsModal
@@ -665,7 +668,9 @@ export default function RepoDetails() {
               <div className="flex h-8 w-8 items-center justify-center">
                 <Settings size={20} />
               </div>
-              <span className="hidden sm:inline">Configure</span>
+              <span className="hidden sm:inline">
+                {t("REPO_DETAILS.CONFIGURE")}
+              </span>
             </Button>
           </div>
         </div>
@@ -687,22 +692,24 @@ export default function RepoDetails() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="details">Details</SelectItem>
-                  <SelectItem value="history">History</SelectItem>
-                  <SelectItem value="secrets">Environment Variables</SelectItem>
+                  <SelectItem value="details">{t("REPO_DETAILS.TAB_DETAILS")}</SelectItem>
+                  <SelectItem value="history">{t("REPO_DETAILS.TAB_HISTORY")}</SelectItem>
+                  <SelectItem value="secrets">
+                    {t("REPO_DETAILS.TAB_ENVIRONMENT_VARIABLES")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="hidden md:block">
               <TabsList>
                 <TabsTrigger value="details" className="w-20">
-                  Details
+                  {t("REPO_DETAILS.TAB_DETAILS")}
                 </TabsTrigger>
                 <TabsTrigger value="history" className="w-20">
-                  History
+                  {t("REPO_DETAILS.TAB_HISTORY")}
                 </TabsTrigger>
                 <TabsTrigger value="secrets" className="px-4">
-                  Environment Variables
+                  {t("REPO_DETAILS.TAB_ENVIRONMENT_VARIABLES")}
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -713,7 +720,7 @@ export default function RepoDetails() {
                 <CardHeader className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   {" "}
                   <h3 className="text-lg font-semibold">
-                    Deployment Information
+                    {t("REPO_DETAILS.DEPLOYMENT_INFORMATION")}
                   </h3>
                   <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                     <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -726,7 +733,9 @@ export default function RepoDetails() {
                           <div className="flex items-center justify-center gap-2">
                             <Rocket size={20} />
                             <span>
-                              {isDeploying ? "Deploying..." : "Deploy"}
+                              {isDeploying
+                                ? t("REPO_DETAILS.DEPLOYING")
+                                : t("REPO_DETAILS.DEPLOY")}
                             </span>
                           </div>
                         </Button>
@@ -759,20 +768,20 @@ export default function RepoDetails() {
                   <div className="my-2 grid w-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <p className="text-sm text-low-emphasis">Repo URL</p>
+                        <p className="text-sm text-low-emphasis">{t("REPO_DETAILS.REPO_URL")}</p>
                         <a
                           href={latestBuild?.repoUrl || "#"}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="block truncate text-sm text-primary hover:underline"
                           onClick={(e) => e.stopPropagation()}>
-                          {latestBuild?.repoUrl || "N/A"}
+                          {latestBuild?.repoUrl || t("REPO_DETAILS.NOT_AVAILABLE")}
                         </a>
                       </div>
 
                       <div className="space-y-2">
                         <p className="text-sm text-low-emphasis">
-                          Deploys To
+                          {t("REPO_DETAILS.DEPLOYS_TO")}
                         </p>
                         {customDomainOnly ? (
                           <CustomDomainOnlyTarget url={deploymentUrl} />
@@ -786,7 +795,7 @@ export default function RepoDetails() {
 
                       <div className="space-y-2">
                         <p className="text-sm text-low-emphasis">
-                          Custom Deployment URL
+                          {t("REPO_DETAILS.CUSTOM_DEPLOYMENT_URL")}
                         </p>
                         {repoDetails?.data?.repo?.customDeploymentUrl &&
                         repoDetails?.data?.repo?.customDeploymentUrl !==
@@ -809,7 +818,7 @@ export default function RepoDetails() {
                           </CopyToClipboardButton>
                         ) : (
                           <span className="block truncate text-sm">
-                            {"N/A"}
+                            {t("REPO_DETAILS.NOT_AVAILABLE")}
                           </span>
                         )}
                       </div>
@@ -819,7 +828,7 @@ export default function RepoDetails() {
                       <div className="space-y-4">
                         <div className="space-y-2" data-testid="deployment-status">
                           <p className="text-sm text-low-emphasis">
-                            Deployment Status
+                            {t("REPO_DETAILS.DEPLOYMENT_STATUS")}
                           </p>
                           <DeploymentStatusIndicator
                             hasLiveDeployment={hasLiveDeployment}
@@ -833,7 +842,7 @@ export default function RepoDetails() {
 
                         <div className="space-y-2">
                           <p className="text-sm text-low-emphasis">
-                            Latest Deployment Date
+                            {t("REPO_DETAILS.LATEST_DEPLOYMENT_DATE")}
                           </p>
                           <span className="text-sm">
                             {latestBuild
@@ -843,13 +852,13 @@ export default function RepoDetails() {
                                       ?.lastDeploymentDate as string,
                                   ),
                                 )
-                              : "N/A"}
+                              : t("REPO_DETAILS.NOT_AVAILABLE")}
                           </span>
                         </div>
 
                         <div className="space-y-2">
                           <p className="text-sm text-low-emphasis">
-                            Deployment Type
+                            {t("REPO_DETAILS.DEPLOYMENT_TYPE")}
                           </p>
                           <span className="text-sm">
                             {(() => {
@@ -858,7 +867,7 @@ export default function RepoDetails() {
                                   (option) =>
                                     option.value.toLowerCase() ===
                                     repoDetails?.data.repo.deploymentType?.toLowerCase(),
-                                )?.label || "N/A";
+                                )?.label || t("REPO_DETAILS.NOT_AVAILABLE");
                               return result;
                             })()}
                           </span>
@@ -874,7 +883,7 @@ export default function RepoDetails() {
 
                     <div className="flex w-full flex-col gap-3 pb-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
                       <h3 className="text-lg font-semibold">
-                        Deployment History
+                        {t("REPO_DETAILS.DEPLOYMENT_HISTORY")}
                       </h3>
                     </div>
                     <DeploymentObservability
@@ -898,7 +907,7 @@ export default function RepoDetails() {
               <div className="flex w-full flex-col gap-3 pb-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-col items-start gap-2">
                   <h3 className="text-lg font-semibold">
-                    Deployment History
+                    {t("REPO_DETAILS.DEPLOYMENT_HISTORY")}
                   </h3>
                 </div>
               </div>

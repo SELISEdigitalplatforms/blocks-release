@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { useNavigate, useSearchParams } from "react-router";
 import DeploymentOverview from "@blocks-deployment/components/deployment-home/deployment-overview";
 import { useGetAllProjects } from "@/cross-modules/deployment/hooks/use-github-info";
@@ -9,6 +10,7 @@ import { useProjectStore } from "@/store/project.store";
 import { useScopedPath } from "@/hooks/use-scoped-path";
 
 const Deployment = () => {
+  const { t } = useT("release.deployment.pages");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   // A string, unlike the function useScopedPath returns, is stable across renders.
@@ -40,14 +42,14 @@ const Deployment = () => {
   if (isError && error) {
     toast({
       variant: "destructive",
-      title: "Error",
+      title: t("common:ERROR"),
       description: error?.errors?.Message,
       duration: 3000,
     });
   }
 
   if (loadingProjects) {
-    return <LoadingSpinner variant="overlay" label="Loading..." />;
+    return <LoadingSpinner variant="overlay" label={t("common:LOADING")} />;
   }
 
   return <DeploymentOverview projects={apiProjects?.data} refetch={refetch} />;

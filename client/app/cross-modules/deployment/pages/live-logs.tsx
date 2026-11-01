@@ -2,6 +2,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useParams, useNavigate } from "react-router";
 import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use-github-info";
 import React, { useEffect, useMemo } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { toast } from "@/hooks/use-toast";
 import LiveDeploymentLogs from "@blocks-deployment/components/deployment-details/live/live-logs-section";
 import DeploymentGeneralInfo from "@blocks-deployment/components/deployment-details/shared/deployment-general-info";
@@ -12,6 +13,7 @@ import { useProjectStore } from "@/store/project.store";
 import { useScopedPath } from "@/hooks/use-scoped-path";
 
 const LiveLogs = () => {
+  const { t } = useT("release.deployment.pages");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   // A string, unlike the function useScopedPath returns, is stable across renders.
@@ -54,11 +56,11 @@ const LiveLogs = () => {
     if (isError) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch deployment data",
+        title: t("common:ERROR"),
+        description: t("LIVE_LOGS.FETCH_FAILED"),
       });
     }
-  }, [isError]);
+  }, [isError, t]);
 
   const handleSubmit = () => {
     navigate(scoped(`deployment/repo/${repoId}?refresh=true`));

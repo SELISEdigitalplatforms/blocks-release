@@ -1,6 +1,8 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useAppSettingsStore } from "@seliseblocks/genesis-os/store";
+import { useI18nStore } from "@seliseblocks/genesis-os";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
 
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
@@ -48,11 +50,27 @@ describe("BlocksAppLauncher", () => {
 });
 
 describe("LanguageSelector", () => {
-  it("shows the current language and opens the menu", async () => {
+  beforeEach(() => {
+    useAppSettingsStore.getState().setSettings({ language: "en" });
+  });
+
+  it("shows the current language and offers English and German only", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderWithProviders(<LanguageSelector />);
+    expect(screen.getByRole("button")).toHaveTextContent("en");
+    await user.click(screen.getByRole("button"));
+    expect(await screen.findByText("English")).toBeInTheDocument();
+    expect(screen.getByText("Deutsch")).toBeInTheDocument();
+    expect(screen.queryByText("French")).not.toBeInTheDocument();
+  });
+
+  it("switches the shared app-settings language to German", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderWithProviders(<LanguageSelector />);
     await user.click(screen.getByRole("button"));
-    expect(await screen.findByText("English")).toBeInTheDocument();
+    await user.click(await screen.findByText("Deutsch"));
+    expect(useAppSettingsStore.getState().settings.language).toBe("de");
+    expect(document.documentElement.lang).toBe("de");
   });
 });
 
@@ -62,6 +80,21 @@ describe("UserDropdownMenu", () => {
     renderWithProviders(<UserDropdownMenu />);
     await user.click(screen.getByRole("button"));
     expect(await screen.findByText("My profile")).toBeInTheDocument();
+  });
+
+  it("shows German once German text is loaded and the language is de", async () => {
+    useI18nStore
+      .getState()
+      .setRemote("de", "release.shared", { "USER_DROPDOWN_MENU.MY_PROFILE": "Mein Profil" });
+    useAppSettingsStore.getState().setSettings({ language: "de" });
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    try {
+      renderWithProviders(<UserDropdownMenu />);
+      await user.click(screen.getByRole("button"));
+      expect(await screen.findByText("Mein Profil")).toBeInTheDocument();
+    } finally {
+      useAppSettingsStore.getState().setSettings({ language: "en" });
+    }
   });
 });
 

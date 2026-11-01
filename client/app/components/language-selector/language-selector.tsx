@@ -1,5 +1,10 @@
-import useLanguage from "@/hooks/use-language-switcher";
+import { useEffect } from "react";
 import { ChevronDown } from "lucide-react";
+import {
+  SUPPORTED_LANGUAGES,
+  resolveLanguage,
+} from "@seliseblocks/genesis-os";
+import { useLanguageSwitcher } from "@seliseblocks/genesis-os/hooks";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,17 +13,16 @@ import {
   DropdownMenuTrigger,
 } from "../ui-kits/dropdown-menu/dropdown-menu";
 
-const languages = [
-  { key: "en", title: "English" },
-  { key: "de", title: "German" },
-  { key: "fr", title: "French" },
-];
-
 export function LanguageSelector() {
-  const { changeLanguage, language } = useLanguage();
+  const { changeLanguage, language: storedLanguage } = useLanguageSwitcher();
+  const language = resolveLanguage(storedLanguage);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   return (
-     <DropdownMenu>
+    <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
@@ -29,16 +33,18 @@ export function LanguageSelector() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {languages.map((lang, index) => (
-          <div key={lang.key}>
+        {SUPPORTED_LANGUAGES.map((lang, index) => (
+          <div key={lang.code}>
             <DropdownMenuItem
-              className={lang.key === language ? "font-semibold" : ""}
-              onClick={() => changeLanguage(lang.key)}
-              disabled={lang.key !== "en"}
+              lang={lang.code}
+              className={lang.code === language ? "font-semibold" : ""}
+              onClick={() => changeLanguage(lang.code)}
             >
               {lang.title}
             </DropdownMenuItem>
-            {index !== languages.length - 1 && <DropdownMenuSeparator />}
+            {index !== SUPPORTED_LANGUAGES.length - 1 && (
+              <DropdownMenuSeparator />
+            )}
           </div>
         ))}
       </DropdownMenuContent>

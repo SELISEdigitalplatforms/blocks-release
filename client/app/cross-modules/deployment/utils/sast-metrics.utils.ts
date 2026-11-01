@@ -2,6 +2,10 @@ import { tStatic } from "@seliseblocks/genesis-os";
 import { formatFullDate } from "@/utils/date.util";
 import type { ReportStatus } from "@blocks-deployment/models/sca-report";
 
+const RELEASE_DEPLOYMENT_SCANS_MODULE = "release.deployment.scans";
+const SAST_METRICS_COVERAGE = "SAST_METRICS.COVERAGE";
+const SAST_METRICS_OPEN_ISSUES = "SAST_METRICS.OPEN_ISSUES";
+
 export type SastDetails = Record<string, string | undefined>;
 export type RatingLetter = "A" | "B" | "C" | "D" | "E";
 
@@ -91,36 +95,36 @@ export function getNewCodeStats(d: SastDetails): SastStat[] {
   return [
     {
       id: "new-issues",
-      title: tStatic("release.deployment.scans", "SAST_METRICS.NEW_ISSUES"),
+      title: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.NEW_ISSUES"),
       value: formatCount(d.new_violations),
       indicator: { kind: "none" },
     },
     {
       id: "new-accepted",
-      title: tStatic("release.deployment.scans", "SAST_METRICS.ACCEPTED_ISSUES"),
+      title: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.ACCEPTED_ISSUES"),
       value: formatCount(d.new_accepted_issues),
-      subtitle: tStatic("release.deployment.scans", "SAST_METRICS.ACCEPTED_ISSUES_SUBTITLE"),
+      subtitle: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.ACCEPTED_ISSUES_SUBTITLE"),
       indicator: { kind: "none" },
     },
     {
       id: "new-coverage",
-      title: tStatic("release.deployment.scans", "SAST_METRICS.COVERAGE"),
+      title: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, SAST_METRICS_COVERAGE),
       value: formatPercent(coverageRaw),
       subtitle: linesToCover
-        ? tStatic("release.deployment.scans", "SAST_METRICS.NEW_LINES_TO_COVER", { count: formatCount(linesToCover) })
+        ? tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.NEW_LINES_TO_COVER", { count: formatCount(linesToCover) })
         : undefined,
       indicator: { kind: "ring", percent: parsePercent(coverageRaw) },
     },
     {
       id: "new-duplications",
-      title: tStatic("release.deployment.scans", "SAST_METRICS.DUPLICATIONS"),
+      title: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.DUPLICATIONS"),
       value: formatPercent(dupRaw),
-      subtitle: newLines ? tStatic("release.deployment.scans", "SAST_METRICS.NEW_LINES", { count: formatCount(newLines) }) : undefined,
+      subtitle: newLines ? tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.NEW_LINES", { count: formatCount(newLines) }) : undefined,
       indicator: { kind: "dot", percent: parsePercent(dupRaw) },
     },
     {
       id: "new-hotspots",
-      title: tStatic("release.deployment.scans", "SAST_METRICS.SECURITY_HOTSPOTS"),
+      title: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.SECURITY_HOTSPOTS"),
       value: formatCount(d.new_security_hotspots),
       indicator: {
         kind: "rating",
@@ -139,9 +143,9 @@ export function getOverallCodeStats(d: SastDetails): SastStat[] {
   return [
     {
       id: "overall-security",
-      title: tStatic("release.deployment.scans", "SAST_METRICS.SECURITY"),
+      title: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.SECURITY"),
       value: formatCount(pick(d, "software_quality_security_issues", "vulnerabilities")),
-      subtitle: tStatic("release.deployment.scans", "SAST_METRICS.OPEN_ISSUES"),
+      subtitle: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, SAST_METRICS_OPEN_ISSUES),
       indicator: {
         kind: "rating",
         letter: toRatingLetter(
@@ -151,9 +155,9 @@ export function getOverallCodeStats(d: SastDetails): SastStat[] {
     },
     {
       id: "overall-reliability",
-      title: tStatic("release.deployment.scans", "SAST_METRICS.RELIABILITY"),
+      title: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.RELIABILITY"),
       value: formatCount(pick(d, "software_quality_reliability_issues", "bugs")),
-      subtitle: tStatic("release.deployment.scans", "SAST_METRICS.OPEN_ISSUES"),
+      subtitle: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, SAST_METRICS_OPEN_ISSUES),
       indicator: {
         kind: "rating",
         letter: toRatingLetter(
@@ -163,11 +167,11 @@ export function getOverallCodeStats(d: SastDetails): SastStat[] {
     },
     {
       id: "overall-maintainability",
-      title: tStatic("release.deployment.scans", "SAST_METRICS.MAINTAINABILITY"),
+      title: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.MAINTAINABILITY"),
       value: formatCount(
         pick(d, "software_quality_maintainability_issues", "code_smells"),
       ),
-      subtitle: tStatic("release.deployment.scans", "SAST_METRICS.OPEN_ISSUES"),
+      subtitle: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, SAST_METRICS_OPEN_ISSUES),
       indicator: {
         kind: "rating",
         letter: toRatingLetter(
@@ -177,30 +181,30 @@ export function getOverallCodeStats(d: SastDetails): SastStat[] {
     },
     {
       id: "overall-accepted",
-      title: tStatic("release.deployment.scans", "SAST_METRICS.ACCEPTED_ISSUES"),
+      title: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.ACCEPTED_ISSUES"),
       value: formatCount(d.accepted_issues),
-      subtitle: tStatic("release.deployment.scans", "SAST_METRICS.ACCEPTED_ISSUES_SUBTITLE"),
+      subtitle: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.ACCEPTED_ISSUES_SUBTITLE"),
       indicator: { kind: "none" },
     },
     {
       id: "overall-coverage",
-      title: tStatic("release.deployment.scans", "SAST_METRICS.COVERAGE"),
+      title: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, SAST_METRICS_COVERAGE),
       value: formatPercent(coverageRaw),
       subtitle: linesToCover
-        ? tStatic("release.deployment.scans", "SAST_METRICS.LINES_TO_COVER", { count: formatCount(linesToCover) })
+        ? tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.LINES_TO_COVER", { count: formatCount(linesToCover) })
         : undefined,
       indicator: { kind: "ring", percent: parsePercent(coverageRaw) },
     },
     {
       id: "overall-duplications",
-      title: tStatic("release.deployment.scans", "SAST_METRICS.DUPLICATIONS"),
+      title: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.DUPLICATIONS"),
       value: formatPercent(dupRaw),
-      subtitle: lines ? tStatic("release.deployment.scans", "SAST_METRICS.LINES", { count: formatCount(lines) }) : undefined,
+      subtitle: lines ? tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.LINES", { count: formatCount(lines) }) : undefined,
       indicator: { kind: "dot", percent: parsePercent(dupRaw) },
     },
     {
       id: "overall-hotspots",
-      title: tStatic("release.deployment.scans", "SAST_METRICS.SECURITY_HOTSPOTS"),
+      title: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.SECURITY_HOTSPOTS"),
       value: formatCount(d.security_hotspots),
       indicator: {
         kind: "rating",
@@ -209,7 +213,7 @@ export function getOverallCodeStats(d: SastDetails): SastStat[] {
     },
     {
       id: "overall-debt",
-      title: tStatic("release.deployment.scans", "SAST_METRICS.TECHNICAL_DEBT"),
+      title: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.TECHNICAL_DEBT"),
       value: formatEffort(
         pick(
           d,
@@ -241,7 +245,7 @@ export function getNewCodePeriodLabel(d: SastDetails): string | null {
     day: "numeric",
     timeZone: "UTC",
   });
-  return tStatic("release.deployment.scans", "SAST_METRICS.SINCE_DATE", { date: formatted });
+  return tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.SINCE_DATE", { date: formatted });
 }
 
 
@@ -311,21 +315,21 @@ const CONDITION_GROUPS: Record<string, ConditionGroup> = {
 function getConditionLabel(metricKey: string): string {
   switch (CONDITION_GROUPS[metricKey]) {
     case "ISSUES":
-      return tStatic("release.deployment.scans", "SAST_METRICS.CONDITION_ISSUES");
+      return tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.CONDITION_ISSUES");
     case "COVERAGE":
-      return tStatic("release.deployment.scans", "SAST_METRICS.COVERAGE");
+      return tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, SAST_METRICS_COVERAGE);
     case "DUPLICATED_LINES":
-      return tStatic("release.deployment.scans", "SAST_METRICS.CONDITION_DUPLICATED_LINES");
+      return tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.CONDITION_DUPLICATED_LINES");
     case "HOTSPOTS_REVIEWED":
-      return tStatic("release.deployment.scans", "SAST_METRICS.CONDITION_HOTSPOTS_REVIEWED");
+      return tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.CONDITION_HOTSPOTS_REVIEWED");
     case "RELIABILITY_RATING":
-      return tStatic("release.deployment.scans", "SAST_METRICS.CONDITION_RELIABILITY_RATING");
+      return tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.CONDITION_RELIABILITY_RATING");
     case "SECURITY_RATING":
-      return tStatic("release.deployment.scans", "SAST_METRICS.CONDITION_SECURITY_RATING");
+      return tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.CONDITION_SECURITY_RATING");
     case "MAINTAINABILITY_RATING":
-      return tStatic("release.deployment.scans", "SAST_METRICS.CONDITION_MAINTAINABILITY_RATING");
+      return tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.CONDITION_MAINTAINABILITY_RATING");
     case "SECURITY_REVIEW_RATING":
-      return tStatic("release.deployment.scans", "SAST_METRICS.CONDITION_SECURITY_REVIEW_RATING");
+      return tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.CONDITION_SECURITY_REVIEW_RATING");
     default:
       return metricKey;
   }
@@ -408,13 +412,13 @@ export function formatCondition(c: SastGateCondition): {
   if (isRating) {
     requirement =
       c.comparator === "GT"
-        ? tStatic("release.deployment.scans", "SAST_METRICS.REQUIREMENT_WORSE_THAN", { value: thresholdDisplay })
-        : tStatic("release.deployment.scans", "SAST_METRICS.REQUIREMENT_BETTER_THAN", { value: thresholdDisplay });
+        ? tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.REQUIREMENT_WORSE_THAN", { value: thresholdDisplay })
+        : tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.REQUIREMENT_BETTER_THAN", { value: thresholdDisplay });
   } else {
     requirement =
       c.comparator === "GT"
-        ? tStatic("release.deployment.scans", "SAST_METRICS.REQUIREMENT_GREATER_THAN", { value: thresholdDisplay })
-        : tStatic("release.deployment.scans", "SAST_METRICS.REQUIREMENT_LESS_THAN", { value: thresholdDisplay });
+        ? tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.REQUIREMENT_GREATER_THAN", { value: thresholdDisplay })
+        : tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.REQUIREMENT_LESS_THAN", { value: thresholdDisplay });
   }
   return { value, label, requirement };
 }
@@ -432,15 +436,15 @@ export function formatRequired(c: SastGateCondition): string {
   if (isRating) {
     // GT = worse-than threshold → Required ≥ letter; LT = better-than → Required ≤ letter
     return c.comparator === "GT"
-      ? tStatic("release.deployment.scans", "SAST_METRICS.REQUIRED_AT_LEAST", { value: thresholdDisplay })
-      : tStatic("release.deployment.scans", "SAST_METRICS.REQUIRED_AT_MOST", { value: thresholdDisplay });
+      ? tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.REQUIRED_AT_LEAST", { value: thresholdDisplay })
+      : tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.REQUIRED_AT_MOST", { value: thresholdDisplay });
   }
   if (c.comparator === "GT") {
     const n = Number(c.errorThreshold);
-    if (Number.isFinite(n) && n === 0) return tStatic("release.deployment.scans", "SAST_METRICS.REQUIRED_ZERO");
-    return tStatic("release.deployment.scans", "SAST_METRICS.REQUIRED_AT_MOST", { value: thresholdDisplay });
+    if (Number.isFinite(n) && n === 0) return tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.REQUIRED_ZERO");
+    return tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.REQUIRED_AT_MOST", { value: thresholdDisplay });
   }
-  return tStatic("release.deployment.scans", "SAST_METRICS.REQUIRED_AT_LEAST", { value: thresholdDisplay });
+  return tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.REQUIRED_AT_LEAST", { value: thresholdDisplay });
 }
 
 export function getFailedConditionForStat(
@@ -461,11 +465,11 @@ export function getSeverityRows(
   counts: SastSeverityCounts,
 ): { key: string; label: string; count: number }[] {
   return [
-    { key: "blocker", label: tStatic("release.deployment.scans", "SAST_METRICS.SEVERITY_BLOCKER"), count: counts.blocker },
-    { key: "high", label: tStatic("release.deployment.scans", "SAST_METRICS.SEVERITY_HIGH"), count: counts.high },
-    { key: "medium", label: tStatic("release.deployment.scans", "SAST_METRICS.SEVERITY_MEDIUM"), count: counts.medium },
-    { key: "low", label: tStatic("release.deployment.scans", "SAST_METRICS.SEVERITY_LOW"), count: counts.low },
-    { key: "info", label: tStatic("release.deployment.scans", "SAST_METRICS.SEVERITY_INFO"), count: counts.info },
+    { key: "blocker", label: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.SEVERITY_BLOCKER"), count: counts.blocker },
+    { key: "high", label: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.SEVERITY_HIGH"), count: counts.high },
+    { key: "medium", label: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.SEVERITY_MEDIUM"), count: counts.medium },
+    { key: "low", label: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.SEVERITY_LOW"), count: counts.low },
+    { key: "info", label: tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.SEVERITY_INFO"), count: counts.info },
   ];
 }
 
@@ -503,9 +507,9 @@ export function getSastScanCaption(report: SastReportData): string | null {
   if (!scannedAt) return null;
   const date = formatFullDate(new Date(scannedAt));
   return report.revision
-    ? tStatic("release.deployment.scans", "SAST_METRICS.SCAN_CAPTION_COMMIT", {
+    ? tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.SCAN_CAPTION_COMMIT", {
         date,
         commit: report.revision.slice(0, 7),
       })
-    : tStatic("release.deployment.scans", "SAST_METRICS.SCAN_CAPTION", { date });
+    : tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SAST_METRICS.SCAN_CAPTION", { date });
 }

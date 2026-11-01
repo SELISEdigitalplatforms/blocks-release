@@ -46,6 +46,8 @@ import {
 import { useT, type TFunction } from "@seliseblocks/genesis-os";
 import { ReportUnavailableCard } from "./sca-waiting-card";
 
+const SAST_TAB_TITLE = "SAST_TAB.TITLE";
+
 const RATING_BADGE_CLASS: Record<RatingLetter, string> = {
   A: "bg-green-100 text-green-700",
   B: "bg-lime-100 text-lime-700",
@@ -275,7 +277,7 @@ const SastTab = () => {
   } else if (!error && (status === "NotRun" || status === "Failed")) {
     body = (
       <ReportUnavailableCard
-        title={t("SAST_TAB.TITLE")}
+        title={t(SAST_TAB_TITLE)}
         status={status}
         message={report?.message}
         action={sonarQubeButton}
@@ -428,7 +430,7 @@ const SastTab = () => {
             </div>
           </div>
           <CardTitle className="text-2xl">
-            {t("SAST_TAB.TITLE")}
+            {t(SAST_TAB_TITLE)}
           </CardTitle>
           <CardDescription className="text-lg">
             {t("SAST_TAB.PROCESSING_SUBTITLE")}
@@ -459,7 +461,7 @@ const SastTab = () => {
             </div>
           </div>
           <CardTitle className="text-2xl">
-            {t("SAST_TAB.TITLE")}
+            {t(SAST_TAB_TITLE)}
           </CardTitle>
           <CardDescription className="text-lg">
             {t("SAST_TAB.ERROR_SUBTITLE")}

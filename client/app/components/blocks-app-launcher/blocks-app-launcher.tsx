@@ -15,6 +15,8 @@ import { showErrorToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { tStatic, useT } from "@seliseblocks/genesis-os";
 
+const RELEASE_LAUNCHER_MODULE = "release.launcher";
+
 interface BlocksApp {
   key: string;
   label: string;
@@ -256,23 +258,23 @@ const SELISE_APPS: BlocksApp[] = [
 const getAppDescription = (key: string): string => {
   switch (key) {
     case "iam":
-      return tStatic("release.launcher", "BLOCKS_APP_LAUNCHER.DESC_IAM");
+      return tStatic(RELEASE_LAUNCHER_MODULE, "BLOCKS_APP_LAUNCHER.DESC_IAM");
     case "localization":
-      return tStatic("release.launcher", "BLOCKS_APP_LAUNCHER.DESC_LOCALIZATION");
+      return tStatic(RELEASE_LAUNCHER_MODULE, "BLOCKS_APP_LAUNCHER.DESC_LOCALIZATION");
     case "agents":
-      return tStatic("release.launcher", "BLOCKS_APP_LAUNCHER.DESC_AGENTS");
+      return tStatic(RELEASE_LAUNCHER_MODULE, "BLOCKS_APP_LAUNCHER.DESC_AGENTS");
     case "data":
-      return tStatic("release.launcher", "BLOCKS_APP_LAUNCHER.DESC_DATA");
+      return tStatic(RELEASE_LAUNCHER_MODULE, "BLOCKS_APP_LAUNCHER.DESC_DATA");
     case "os":
-      return tStatic("release.launcher", "BLOCKS_APP_LAUNCHER.DESC_OS");
+      return tStatic(RELEASE_LAUNCHER_MODULE, "BLOCKS_APP_LAUNCHER.DESC_OS");
     case "utilities":
-      return tStatic("release.launcher", "BLOCKS_APP_LAUNCHER.DESC_UTILITIES");
+      return tStatic(RELEASE_LAUNCHER_MODULE, "BLOCKS_APP_LAUNCHER.DESC_UTILITIES");
     case "logic":
-      return tStatic("release.launcher", "BLOCKS_APP_LAUNCHER.DESC_LOGIC");
+      return tStatic(RELEASE_LAUNCHER_MODULE, "BLOCKS_APP_LAUNCHER.DESC_LOGIC");
     case "monitor":
-      return tStatic("release.launcher", "BLOCKS_APP_LAUNCHER.DESC_MONITOR");
+      return tStatic(RELEASE_LAUNCHER_MODULE, "BLOCKS_APP_LAUNCHER.DESC_MONITOR");
     default:
-      return tStatic("release.launcher", "BLOCKS_APP_LAUNCHER.DESC_RELEASE");
+      return tStatic(RELEASE_LAUNCHER_MODULE, "BLOCKS_APP_LAUNCHER.DESC_RELEASE");
   }
 };
 
@@ -283,7 +285,7 @@ interface AppTileProps {
 }
 
 function AppTile({ app, onClick, isLoading }: AppTileProps) {
-  const { t } = useT("release.launcher");
+  const { t } = useT(RELEASE_LAUNCHER_MODULE);
   return (
     <button
       onClick={onClick}
@@ -344,7 +346,7 @@ const redirectTo = (url: string) => {
 };
 
 export function BlocksAppLauncher() {
-  const { t } = useT("release.launcher");
+  const { t } = useT(RELEASE_LAUNCHER_MODULE);
   const [open, setOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   // Favourites are restored from localStorage up front, defaulting to IAM and localization.

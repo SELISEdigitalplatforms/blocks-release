@@ -19,6 +19,8 @@ import SASTLogo from "@blocks-deployment/assets/icons/SAST.svg";
 import SCALogo from "@blocks-deployment/assets/icons/SCA.svg";
 import DASTLogo from "@blocks-deployment/assets/icons/DAST.png";
 
+const DEPLOYMENT_OBSERVABILITY_LOGO_ALT = "DEPLOYMENT_OBSERVABILITY.LOGO_ALT";
+
 interface DeploymentObservabilityProps {
   builds: IPipeline[];
   viewLatestBuild?: boolean;
@@ -167,7 +169,7 @@ const DeploymentObservability = ({
             src={SASTLogo}
             width={16}
             height={16}
-            alt={t("DEPLOYMENT_OBSERVABILITY.LOGO_ALT", { name: "SAST" })}
+            alt={t(DEPLOYMENT_OBSERVABILITY_LOGO_ALT, { name: "SAST" })}
             className="mr-2 h-4 w-4"
           />
         );
@@ -177,7 +179,7 @@ const DeploymentObservability = ({
             src={SCALogo}
             width={16}
             height={16}
-            alt={t("DEPLOYMENT_OBSERVABILITY.LOGO_ALT", { name: "SCA" })}
+            alt={t(DEPLOYMENT_OBSERVABILITY_LOGO_ALT, { name: "SCA" })}
             className="mr-2 h-4 w-4"
           />
         );
@@ -187,7 +189,7 @@ const DeploymentObservability = ({
             src={DASTLogo}
             width={12}
             height={12}
-            alt={t("DEPLOYMENT_OBSERVABILITY.LOGO_ALT", { name: "DAST" })}
+            alt={t(DEPLOYMENT_OBSERVABILITY_LOGO_ALT, { name: "DAST" })}
             className="mr-2 h-3 w-3"
           />
         );

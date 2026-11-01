@@ -19,6 +19,8 @@ import { DEPLOYMENT_OPTIONS_DETAILS } from "@blocks-deployment/models/deployment
 import { isCustomDomainOnly } from "@blocks-deployment/utils/custom-domain.utils";
 import { RepositoryAccessModal } from "./repository-access-modal";
 
+const REPO_CARDS_NOT_AVAILABLE = "REPO_CARDS.NOT_AVAILABLE";
+
 export interface IRepoResponse {
   sourceRepoId: string;
   sourceReference: string | null;
@@ -176,7 +178,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
                   rel="noopener noreferrer"
                   className="block truncate text-sm text-blue-600 hover:underline"
                   onClick={(e) => e.stopPropagation()}>
-                  {repo.repoUrl || t("REPO_CARDS.NOT_AVAILABLE")}
+                  {repo.repoUrl || t(REPO_CARDS_NOT_AVAILABLE)}
                 </a>
               </div>
 
@@ -194,7 +196,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
                       rel="noopener noreferrer"
                       className="block truncate text-sm text-blue-600 hover:underline"
                       onClick={(e) => e.stopPropagation()}>
-                      {repo.defaultDeploymentUrl ?? t("REPO_CARDS.NOT_AVAILABLE")}
+                      {repo.defaultDeploymentUrl ?? t(REPO_CARDS_NOT_AVAILABLE)}
                     </a>
                   </CopyToClipboardButton>
                 )}
@@ -219,7 +221,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
                     </a>
                   </CopyToClipboardButton>
                 ) : (
-                  <span className="block truncate text-sm">{t("REPO_CARDS.NOT_AVAILABLE")}</span>
+                  <span className="block truncate text-sm">{t(REPO_CARDS_NOT_AVAILABLE)}</span>
                 )}
               </div>
             </div>
@@ -252,7 +254,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
                   <span className="text-sm">
                     {repo.lastDeploymentDate
                       ? formatFullDate(new Date(repo.lastDeploymentDate))
-                      : t("REPO_CARDS.NOT_AVAILABLE")}
+                      : t(REPO_CARDS_NOT_AVAILABLE)}
                   </span>
                 </div>
                 <div className="space-y-2">
@@ -264,7 +266,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
                         repo.deploymentType == undefined ||
                         repo.deploymentType == ""
                       ) {
-                        return t("REPO_CARDS.NOT_AVAILABLE");
+                        return t(REPO_CARDS_NOT_AVAILABLE);
                       }
 
                       const result =
@@ -272,7 +274,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
                           (option) =>
                             option.value.toLowerCase() ==
                             repo.deploymentType?.toLowerCase(),
-                        )?.label || t("REPO_CARDS.NOT_AVAILABLE");
+                        )?.label || t(REPO_CARDS_NOT_AVAILABLE);
 
                       return result;
                     })()}

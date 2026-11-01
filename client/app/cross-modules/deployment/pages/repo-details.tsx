@@ -48,6 +48,10 @@ import { TabsContent } from "@radix-ui/react-tabs";
 import { useQueryState } from "nuqs";
 import Alert from "../components/alert/alert";
 
+const REPO_DETAILS_TAB_DETAILS = "REPO_DETAILS.TAB_DETAILS";
+const REPO_DETAILS_TAB_ENVIRONMENT_VARIABLES = "REPO_DETAILS.TAB_ENVIRONMENT_VARIABLES";
+const REPO_DETAILS_NOT_AVAILABLE = "REPO_DETAILS.NOT_AVAILABLE";
+
 export interface IRepoDetailsResponse {
   /** totalCount is the build count across every page, used to size the history pager. */
   data: { repo: IRepoResponse; build: IPipeline[]; totalCount?: number };
@@ -272,6 +276,7 @@ export default function RepoDetails() {
 
       return () => clearTimeout(redirectTimer);
     }
+    return undefined;
   }, [repoDetails, isBranchMissing, projectEnvironment, navigate, tenantGroupId, t]);
 
   const latestBuild = useMemo(() => {
@@ -559,9 +564,9 @@ export default function RepoDetails() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="details">{t("REPO_DETAILS.TAB_DETAILS")}</SelectItem>
+                    <SelectItem value="details">{t(REPO_DETAILS_TAB_DETAILS)}</SelectItem>
                     <SelectItem value="secrets">
-                      {t("REPO_DETAILS.TAB_ENVIRONMENT_VARIABLES")}
+                      {t(REPO_DETAILS_TAB_ENVIRONMENT_VARIABLES)}
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -569,10 +574,10 @@ export default function RepoDetails() {
               <div className="hidden md:block">
                 <TabsList>
                   <TabsTrigger value="details" className="w-20">
-                    {t("REPO_DETAILS.TAB_DETAILS")}
+                    {t(REPO_DETAILS_TAB_DETAILS)}
                   </TabsTrigger>
                   <TabsTrigger value="secrets" className="px-4">
-                    {t("REPO_DETAILS.TAB_ENVIRONMENT_VARIABLES")}
+                    {t(REPO_DETAILS_TAB_ENVIRONMENT_VARIABLES)}
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -692,10 +697,10 @@ export default function RepoDetails() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="details">{t("REPO_DETAILS.TAB_DETAILS")}</SelectItem>
+                  <SelectItem value="details">{t(REPO_DETAILS_TAB_DETAILS)}</SelectItem>
                   <SelectItem value="history">{t("REPO_DETAILS.TAB_HISTORY")}</SelectItem>
                   <SelectItem value="secrets">
-                    {t("REPO_DETAILS.TAB_ENVIRONMENT_VARIABLES")}
+                    {t(REPO_DETAILS_TAB_ENVIRONMENT_VARIABLES)}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -703,13 +708,13 @@ export default function RepoDetails() {
             <div className="hidden md:block">
               <TabsList>
                 <TabsTrigger value="details" className="w-20">
-                  {t("REPO_DETAILS.TAB_DETAILS")}
+                  {t(REPO_DETAILS_TAB_DETAILS)}
                 </TabsTrigger>
                 <TabsTrigger value="history" className="w-20">
                   {t("REPO_DETAILS.TAB_HISTORY")}
                 </TabsTrigger>
                 <TabsTrigger value="secrets" className="px-4">
-                  {t("REPO_DETAILS.TAB_ENVIRONMENT_VARIABLES")}
+                  {t(REPO_DETAILS_TAB_ENVIRONMENT_VARIABLES)}
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -775,7 +780,7 @@ export default function RepoDetails() {
                           rel="noopener noreferrer"
                           className="block truncate text-sm text-primary hover:underline"
                           onClick={(e) => e.stopPropagation()}>
-                          {latestBuild?.repoUrl || t("REPO_DETAILS.NOT_AVAILABLE")}
+                          {latestBuild?.repoUrl || t(REPO_DETAILS_NOT_AVAILABLE)}
                         </a>
                       </div>
 
@@ -818,7 +823,7 @@ export default function RepoDetails() {
                           </CopyToClipboardButton>
                         ) : (
                           <span className="block truncate text-sm">
-                            {t("REPO_DETAILS.NOT_AVAILABLE")}
+                            {t(REPO_DETAILS_NOT_AVAILABLE)}
                           </span>
                         )}
                       </div>
@@ -852,7 +857,7 @@ export default function RepoDetails() {
                                       ?.lastDeploymentDate as string,
                                   ),
                                 )
-                              : t("REPO_DETAILS.NOT_AVAILABLE")}
+                              : t(REPO_DETAILS_NOT_AVAILABLE)}
                           </span>
                         </div>
 
@@ -867,7 +872,7 @@ export default function RepoDetails() {
                                   (option) =>
                                     option.value.toLowerCase() ===
                                     repoDetails?.data.repo.deploymentType?.toLowerCase(),
-                                )?.label || t("REPO_DETAILS.NOT_AVAILABLE");
+                                )?.label || t(REPO_DETAILS_NOT_AVAILABLE);
                               return result;
                             })()}
                           </span>

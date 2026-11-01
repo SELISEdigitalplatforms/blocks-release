@@ -19,6 +19,8 @@ import { Trash2 as RemoveIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui-kits/button/button";
 import { showErrorToast } from "@/hooks/use-toast";
 
+const RELEASE_SHARED_MODULE = "release.shared";
+
 type DirectionOptions = "rtl" | "ltr" | undefined;
 
 type FileUploaderContextType = {
@@ -97,7 +99,7 @@ export const FileUploader = forwardRef<
 
     useEffect(() => {
       if (isFileTooBig) {
-        showErrorToast({ errors: tStatic("release.shared", "FILE_UPLOADER.FILE_SIZE_MORE_THAN_LIMIT") });
+        showErrorToast({ errors: tStatic(RELEASE_SHARED_MODULE, "FILE_UPLOADER.FILE_SIZE_MORE_THAN_LIMIT") });
       }
     }, [isFileTooBig]);
 
@@ -106,7 +108,7 @@ export const FileUploader = forwardRef<
         const files = acceptedFiles;
 
         if (!files) {
-          toast.error(tStatic("release.shared", "FILE_UPLOADER.FILE_ERROR"));
+          toast.error(tStatic(RELEASE_SHARED_MODULE, "FILE_UPLOADER.FILE_ERROR"));
           return;
         }
 
@@ -128,7 +130,7 @@ export const FileUploader = forwardRef<
           for (let i = 0; i < rejectedFiles.length; i++) {
             if (rejectedFiles[i].errors[0]?.code === "file-too-large") {
               showErrorToast({
-                errors: tStatic("release.shared", "FILE_UPLOADER.FILE_TOO_LARGE", {
+                errors: tStatic(RELEASE_SHARED_MODULE, "FILE_UPLOADER.FILE_TOO_LARGE", {
                   size: maxSize / 1024 / 1024,
                 })
               });
@@ -136,7 +138,7 @@ export const FileUploader = forwardRef<
             }
             if (rejectedFiles[i].errors[0]?.code === "file-invalid-type") {
               showErrorToast({
-                errors: tStatic("release.shared", "FILE_UPLOADER.INVALID_FILE_TYPE")
+                errors: tStatic(RELEASE_SHARED_MODULE, "FILE_UPLOADER.INVALID_FILE_TYPE")
               });
               break;
             }

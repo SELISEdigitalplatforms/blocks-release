@@ -8,6 +8,8 @@
 
 import { tStatic } from "@seliseblocks/genesis-os";
 
+const RELEASE_DEPLOYMENT_SECRETS_MODULE = "release.deployment.secrets";
+
 /** Wire values. The backend compares these ordinally, so they are sent verbatim. */
 export const REPO_SECRET_STATUS = {
   Active: "active",
@@ -22,11 +24,11 @@ export type RepoSecretStatus =
 export const getRepoSecretStatusLabel = (status: RepoSecretStatus): string => {
   switch (status) {
     case "active":
-      return tStatic("release.deployment.secrets", "REPO_SECRET_MODEL.STATUS_ACTIVE");
+      return tStatic(RELEASE_DEPLOYMENT_SECRETS_MODULE, "REPO_SECRET_MODEL.STATUS_ACTIVE");
     case "locked":
-      return tStatic("release.deployment.secrets", "REPO_SECRET_MODEL.STATUS_LOCKED");
+      return tStatic(RELEASE_DEPLOYMENT_SECRETS_MODULE, "REPO_SECRET_MODEL.STATUS_LOCKED");
     default:
-      return tStatic("release.deployment.secrets", "REPO_SECRET_MODEL.STATUS_DELETED");
+      return tStatic(RELEASE_DEPLOYMENT_SECRETS_MODULE, "REPO_SECRET_MODEL.STATUS_DELETED");
   }
 };
 

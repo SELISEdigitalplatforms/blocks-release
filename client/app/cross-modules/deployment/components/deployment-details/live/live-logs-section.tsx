@@ -21,6 +21,8 @@ import { LogLineText } from "@blocks-deployment/components/deployment-details/sh
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
 import { IDeploymentEvent } from "@blocks-deployment/pages/deployment-details";
 
+const LIVE_LOGS_SECTION_LOADING = "LIVE_LOGS_SECTION.LOADING";
+
 interface LiveDeploymentLogsProps {
   buildId?: string;
   historicalEvents?: IDeploymentEvent[];
@@ -234,9 +236,9 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
           <div className="py-8 text-center text-gray-500">
             <Clock className="mx-auto mb-2 h-8 w-8 animate-spin" />
             <p>
-              {!buildId
-                ? t("LIVE_LOGS_SECTION.WAITING_FOR_BUILD_ID")
-                : t("LIVE_LOGS_SECTION.LOADING")}
+              {buildId
+                ? t(LIVE_LOGS_SECTION_LOADING)
+                : t("LIVE_LOGS_SECTION.WAITING_FOR_BUILD_ID")}
             </p>
           </div>
         </div>
@@ -256,7 +258,7 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
           !hasLoadedHistorical && (
             <div className="py-8 text-center text-gray-500">
               <Clock className="mx-auto mb-2 h-8 w-8 animate-spin" />
-              <p>{t("LIVE_LOGS_SECTION.LOADING")}</p>
+              <p>{t(LIVE_LOGS_SECTION_LOADING)}</p>
             </div>
           )}
 
@@ -264,7 +266,7 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
           (!isLoadingHistorical || hasLoadedHistorical) && (
             <div className="py-8 text-center text-gray-500">
               <Clock className="mx-auto mb-2 h-8 w-8 animate-spin" />
-              <p>{t("LIVE_LOGS_SECTION.LOADING")}</p>
+              <p>{t(LIVE_LOGS_SECTION_LOADING)}</p>
             </div>
           )}
 

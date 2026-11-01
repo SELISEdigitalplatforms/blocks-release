@@ -53,6 +53,10 @@ import {
 import { formatFullDate } from "@/utils/date.util";
 import ContainerWaiting, { ReportUnavailableCard } from "./sca-waiting-card";
 
+const RELEASE_DEPLOYMENT_SCANS_MODULE = "release.deployment.scans";
+const SCA_TAB_NOT_AVAILABLE = "SCA_TAB.NOT_AVAILABLE";
+const SCA_TAB_UNKNOWN = "SCA_TAB.UNKNOWN";
+
 interface Dependency {
   id: string;
   group: string;
@@ -119,7 +123,7 @@ const Badge = ({
   variant?: string;
   className?: string;
 }) => {
-  const { t } = useT("release.deployment.scans");
+  const { t } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   const severityLabels: Record<string, string> = {
     Critical: t("SCA_TAB.SEVERITY_CRITICAL"),
     High: t("SCA_TAB.SEVERITY_HIGH"),
@@ -161,7 +165,7 @@ const DependencyFilterToolbar = ({
   filterState: FilterState;
   setFilterState: React.Dispatch<React.SetStateAction<FilterState>>;
 }) => {
-  const { t } = useT("release.deployment.scans");
+  const { t } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   return (
     <div className="relative my-5 max-w-sm">
       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-low-emphasis" />
@@ -224,7 +228,7 @@ const DependenciesTable = ({
   sortState: SortState;
   setSortState: React.Dispatch<React.SetStateAction<SortState>>;
 }) => {
-  const { t } = useT("release.deployment.scans");
+  const { t } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   const [selectedDependency, setSelectedDependency] =
     useState<Dependency | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -335,7 +339,7 @@ const DependenciesTable = ({
           return (
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-high-emphasis">
-                {cvss !== null ? cvss : t("SCA_TAB.NOT_AVAILABLE")}
+                {cvss === null ? t(SCA_TAB_NOT_AVAILABLE) : cvss}
               </span>
               <Badge variant={variant}>{severity}</Badge>
             </div>
@@ -359,7 +363,7 @@ const DependenciesTable = ({
             <div className="text-sm font-medium text-medium-emphasis">
               {epss !== null && epss !== undefined
                 ? `${epss.toFixed(2)}%`
-                : t("SCA_TAB.NOT_AVAILABLE")}
+                : t(SCA_TAB_NOT_AVAILABLE)}
             </div>
           );
         },
@@ -490,7 +494,7 @@ const DependenciesTable = ({
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-medium text-high-emphasis">
-                        {dep.cvss !== null ? dep.cvss : t("SCA_TAB.NOT_AVAILABLE")}
+                        {dep.cvss === null ? t(SCA_TAB_NOT_AVAILABLE) : dep.cvss}
                       </span>
                       <Badge variant={dep.severity.toLowerCase()}>
                         {dep.severity}
@@ -501,7 +505,7 @@ const DependenciesTable = ({
                     <div className="text-sm font-medium text-medium-emphasis">
                       {dep.epss !== null && dep.epss !== undefined
                         ? `${dep.epss.toFixed(2)}%`
-                        : t("SCA_TAB.NOT_AVAILABLE")}
+                        : t(SCA_TAB_NOT_AVAILABLE)}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -512,10 +516,8 @@ const DependenciesTable = ({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader className="p-2">
-            {/* <DialogTitle>{selectedDependency?.cweName || "Vulnerability details"}</DialogTitle> */}
             <DialogTitle>{t("SCA_TAB.DIALOG_TITLE")}</DialogTitle>
             <DialogDescription className="py-4">
-              {/* {selectedDependency?.description || t("SCA_TAB.NO_DESCRIPTION")} */}
               <div className="text-sm font-bold text-muted-foreground">
                 {t("SCA_TAB.NAME")}
               </div>
@@ -610,7 +612,7 @@ const SummaryCards = ({
     | "Unassigned"
     | null;
 }) => {
-  const { t } = useT("release.deployment.scans");
+  const { t } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   return (
     <div className="border-b pb-5 transition-colors">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-6">
@@ -706,7 +708,7 @@ const DependencyPaginationComponent = ({
   filterState: FilterState;
   setFilterState: React.Dispatch<React.SetStateAction<FilterState>>;
 }) => {
-  const { t } = useT("release.deployment.scans");
+  const { t } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   const handlePageChange = (newPage: number) => {
     setFilterState((prev) => ({ ...prev, page: newPage }));
   };
@@ -786,7 +788,7 @@ const DependencyPaginationComponent = ({
 };
 
 const DependencyTrackButton: React.FC = () => {
-  const { t } = useT("release.deployment.scans");
+  const { t } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   const params = useParams();
   const buildId = params?.buildId as string;
 
@@ -821,7 +823,7 @@ const SCACard: React.FC<SCACardProps> = ({
   caption,
   truncatedCount,
 }) => {
-  const { t } = useT("release.deployment.scans");
+  const { t } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   const [filterState, setFilterState] = useState<FilterState>({
     page: 0,
     pageSize: 5,
@@ -1012,7 +1014,7 @@ const ScaReportContent: React.FC<
     findingsCount: number;
   }>
 > = ({ report, error, dependencies, findingsCount }) => {
-  const { t } = useT("release.deployment.scans");
+  const { t } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   const loadError = t("SCA_TAB.LOAD_ERROR");
   const status = report?.status;
   const scaDetails = report?.details;
@@ -1045,7 +1047,7 @@ const ScaReportContent: React.FC<
 };
 
 const SCATab: React.FC = () => {
-  const { language } = useT("release.deployment.scans");
+  const { language } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   const params = useParams();
   const buildId = params?.buildId as string;
   const {
@@ -1078,18 +1080,18 @@ const SCATab: React.FC = () => {
     // Transform vulnerabilities
     const transformed = vulnerabilities.map((vuln, index) => ({
       id: (index + 1).toString(),
-      component: vuln.name || tStatic("release.deployment.scans", "SCA_TAB.UNKNOWN"),
-      group: vuln.group || tStatic("release.deployment.scans", "SCA_TAB.UNKNOWN"),
-      version: vuln.version || tStatic("release.deployment.scans", "SCA_TAB.UNKNOWN"),
-      vulnerability: vuln.id || tStatic("release.deployment.scans", "SCA_TAB.UNKNOWN"),
+      component: vuln.name || tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, SCA_TAB_UNKNOWN),
+      group: vuln.group || tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, SCA_TAB_UNKNOWN),
+      version: vuln.version || tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, SCA_TAB_UNKNOWN),
+      vulnerability: vuln.id || tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, SCA_TAB_UNKNOWN),
       cvss: vuln.score ? Number.parseFloat(String(vuln.score)) : null,
       severity: severityMap[vuln.severity ?? ""] || "Unassigned",
       source: "NVD",
       epss: Number(vuln.epssPercentile) * 100 || 0,
-      cweName: vuln.cweName || tStatic("release.deployment.scans", "SCA_TAB.UNKNOWN"),
-      description: vuln.description || tStatic("release.deployment.scans", "SCA_TAB.FALLBACK_NO_DESCRIPTION"),
-      name: vuln.name || tStatic("release.deployment.scans", "SCA_TAB.FALLBACK_NO_NAME"),
-      latestVersion: vuln.latestVersion || tStatic("release.deployment.scans", "SCA_TAB.FALLBACK_NO_VERSION"),
+      cweName: vuln.cweName || tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, SCA_TAB_UNKNOWN),
+      description: vuln.description || tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SCA_TAB.FALLBACK_NO_DESCRIPTION"),
+      name: vuln.name || tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SCA_TAB.FALLBACK_NO_NAME"),
+      latestVersion: vuln.latestVersion || tStatic(RELEASE_DEPLOYMENT_SCANS_MODULE, "SCA_TAB.FALLBACK_NO_VERSION"),
       epssScore: vuln.epssScore,
     }));
 

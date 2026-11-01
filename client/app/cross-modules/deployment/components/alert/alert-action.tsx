@@ -26,6 +26,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useT } from "@seliseblocks/genesis-os";
 
+const RELEASE_DEPLOYMENT_ALERTS_MODULE = "release.deployment.alerts";
+
 type AlertActionProps = {
   monitorId: string;
   isActive: boolean;
@@ -45,7 +47,7 @@ const AlertAction = ({
   projectKey,
   monitorSourceType,
 }: AlertActionProps) => {
-  const { t } = useT("release.deployment.alerts");
+  const { t } = useT(RELEASE_DEPLOYMENT_ALERTS_MODULE);
   const activityState = isActive
     ? t("ALERT_ACTION.PAUSE")
     : t("ALERT_ACTION.RESUME");
@@ -128,7 +130,7 @@ const UpdateMonitorDialog = ({
   name,
   projectKey,
 }: UpdateMonitorDialogProps) => {
-  const { t } = useT("release.deployment.alerts");
+  const { t } = useT(RELEASE_DEPLOYMENT_ALERTS_MODULE);
   const updateMutation = useUpdateSingleMonitor();
   const updateHealth = useUpdateHealth();
   const queryClient = useQueryClient();
@@ -226,7 +228,7 @@ const DeleteMonitorDialog = ({
   goBack = true,
   request,
 }: DeleteMonitorDialogProps) => {
-  const { t } = useT("release.deployment.alerts");
+  const { t } = useT(RELEASE_DEPLOYMENT_ALERTS_MODULE);
   const navigate = useNavigate();
   // Only call the hook when the dialog is open
   const deleteMutation = useDeleteMonitor();

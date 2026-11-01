@@ -7,6 +7,8 @@ import {
   OIDC_FLOW_ENDPOINTS,
 } from "../constants/endpoint.constant";
 import { ACCOUNT_ENDPOINTS } from "@blocks-idp/iam/constants/endpoint.constant";
+
+const RELEASE_IDP_MODULE = "release.idp";
 export { redirectToLogin, buildNavigationUrl } from "../utils/oidc-navigation.util";
 
 interface IGetOidcPayload {
@@ -105,7 +107,7 @@ export const refreshAccessToken = async (projectKey: string): Promise<string | n
     return newTokens.access_token || null;
   } catch (error) {
     console.error("[Refresh Token] Error:", error);
-    showErrorToast({ errors: tStatic("release.idp", "OIDC_FLOW.REFRESH_FAILED") });
+    showErrorToast({ errors: tStatic(RELEASE_IDP_MODULE, "OIDC_FLOW.REFRESH_FAILED") });
     setTimeout(() => {
       window.history.go(-2);
     }, 2000);
@@ -164,7 +166,7 @@ export const getOidcCredential = async (
     }
 
     if (!response.ok) {
-      showErrorToast({ errors: tStatic("release.idp", "OIDC_FLOW.CREDENTIAL_FAILED") });
+      showErrorToast({ errors: tStatic(RELEASE_IDP_MODULE, "OIDC_FLOW.CREDENTIAL_FAILED") });
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
@@ -211,7 +213,7 @@ export const userAcknowledgement = async (
     return await response.json();
   } catch (error) {
     console.error("[User Acknowledgement] Error:", error);
-    showErrorToast({ errors: tStatic("release.idp", "OIDC_FLOW.PERMISSION_FAILED") });
+    showErrorToast({ errors: tStatic(RELEASE_IDP_MODULE, "OIDC_FLOW.PERMISSION_FAILED") });
     throw error;
   }
 };

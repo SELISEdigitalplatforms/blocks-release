@@ -24,6 +24,8 @@ import {
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { SortHeader } from "@/components/filter-toolbar/sort-header/sort-header";
 
+const RELEASE_DEPLOYMENT_SCANS_MODULE = "release.deployment.scans";
+
 interface Vulnerability {
   id: string;
   name: string;
@@ -67,7 +69,7 @@ export const useVulnerabilitySortQueryParams = () => {
 };
 
 const VulnerabilityFilterToolbar = () => {
-  const { t } = useT("release.deployment.scans");
+  const { t } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   const { queryParams, setQueryParams } = useVulnerabilityFilterQueryParams();
 
   return (
@@ -143,7 +145,7 @@ const VulnerabilitiesTable = ({
   vulnerabilities: Vulnerability[];
   isLoading: boolean;
 }) => {
-  const { t } = useT("release.deployment.scans");
+  const { t } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   const { queryParams } = useVulnerabilityFilterQueryParams();
   const { sortQueryParams, setSortQueryParams } = useVulnerabilitySortQueryParams();
 
@@ -317,7 +319,7 @@ const VulnerabilitiesTable = ({
 };
 
 const SummaryCards = ({ summary }: { summary: DASTSummary }) => {
-  const { t } = useT("release.deployment.scans");
+  const { t } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   return (
     <div className="border-b border-gray-100 px-6 py-4">
       <div className="grid grid-cols-6 gap-4">
@@ -352,7 +354,7 @@ const SummaryCards = ({ summary }: { summary: DASTSummary }) => {
 
 // Pagination Component for Observability tables
 const PaginationComponent = () => {
-  const { t } = useT("release.deployment.scans");
+  const { t } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   const { queryParams, setQueryParams } = useVulnerabilityFilterQueryParams();
 
   const handlePageChange = (newPage: number) => {
@@ -405,7 +407,7 @@ const PaginationComponent = () => {
 };
 
 const DASTCard: React.FC<DASTCardProps> = ({ title, summary, vulnerabilities }) => {
-  const { t } = useT("release.deployment.scans");
+  const { t } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   const [isLoading] = useState(false);
 
   return (
@@ -448,7 +450,7 @@ const DASTCard: React.FC<DASTCardProps> = ({ title, summary, vulnerabilities }) 
 };
 
 const DASTTab: React.FC = () => {
-  const { t } = useT("release.deployment.scans");
+  const { t } = useT(RELEASE_DEPLOYMENT_SCANS_MODULE);
   const dastSummary = {
     critical: 1,
     high: 18,

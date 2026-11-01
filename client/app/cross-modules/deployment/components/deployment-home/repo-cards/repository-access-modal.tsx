@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 import { AlertTriangle, ExternalLink, Loader, RotateCw } from "lucide-react";
 import {
   Dialog,
@@ -21,12 +22,17 @@ interface RepositoryAccessModalProps {
 }
 
 const formatElapsed = (seconds: number) => {
-  if (seconds < 60) return `${seconds}s ago`;
+  const module = "release.deployment.home";
+  if (seconds < 60)
+    return tStatic(module, "REPOSITORY_ACCESS_MODAL.SECONDS_AGO", { seconds });
   const minutes = Math.floor(seconds / 60);
   const remaining = seconds % 60;
   return remaining === 0
-    ? `${minutes}m ago`
-    : `${minutes}m ${remaining}s ago`;
+    ? tStatic(module, "REPOSITORY_ACCESS_MODAL.MINUTES_AGO", { minutes })
+    : tStatic(module, "REPOSITORY_ACCESS_MODAL.MINUTES_SECONDS_AGO", {
+        minutes,
+        seconds: remaining,
+      });
 };
 
 export function RepositoryAccessModal({
@@ -35,6 +41,7 @@ export function RepositoryAccessModal({
   onAuthorized,
   refetchAuthorization,
 }: RepositoryAccessModalProps) {
+  const { t } = useT("release.deployment.home");
   const [isRetrying, setIsRetrying] = useState(false);
   const [lastFailureAt, setLastFailureAt] = useState<Date | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -93,22 +100,21 @@ export function RepositoryAccessModal({
           <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
             <AlertTriangle className="h-5 w-5 text-error" />
           </div>
-          <DialogTitle>Repository access denied</DialogTitle>
+          <DialogTitle>{t("REPOSITORY_ACCESS_MODAL.TITLE")}</DialogTitle>
           <DialogDescription>
-            You are not authenticated by GitHub or you are not authorized to
-            view this repository. Manage your repository access in Blocks OS
-            and try again.
+            {t("REPOSITORY_ACCESS_MODAL.DESCRIPTION")}
           </DialogDescription>
         </DialogHeader>
 
         {lastFailureAt && (
           <div className="rounded-sm border border-error/40 bg-destructive/5 px-3 py-2">
             <p className="text-sm font-medium text-error">
-              Authorization still denied. Please grant access in Blocks OS
-              before retrying.
+              {t("REPOSITORY_ACCESS_MODAL.STILL_DENIED")}
             </p>
             <p className="mt-1 text-[10px] text-error/80">
-              Last attempt: {formatElapsed(elapsedSeconds)}
+              {t("REPOSITORY_ACCESS_MODAL.LAST_ATTEMPT", {
+                elapsed: formatElapsed(elapsedSeconds),
+              })}
             </p>
           </div>
         )}
@@ -121,7 +127,7 @@ export function RepositoryAccessModal({
             onClick={handleOpenManageRepos}
             disabled={isRetrying}>
             <ExternalLink size={16} className="mr-2" />
-            Manage repositories
+            {t("REPOSITORY_ACCESS_MODAL.MANAGE_REPOSITORIES")}
           </Button>
           <Button
             type="button"
@@ -131,12 +137,12 @@ export function RepositoryAccessModal({
             {isRetrying ? (
               <>
                 <Loader size={16} className="mr-2 animate-spin" />
-                Retrying…
+                {t("REPOSITORY_ACCESS_MODAL.RETRYING")}
               </>
             ) : (
               <>
                 <RotateCw size={16} className="mr-2" />
-                Retry
+                {t("common:RETRY")}
               </>
             )}
           </Button>

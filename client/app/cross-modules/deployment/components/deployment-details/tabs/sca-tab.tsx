@@ -1,3 +1,4 @@
+import { useT, tStatic } from "@seliseblocks/genesis-os";
 import React, { useState, useMemo } from "react";
 import { Search, ExternalLink } from "lucide-react";
 import {
@@ -118,6 +119,16 @@ const Badge = ({
   variant?: string;
   className?: string;
 }) => {
+  const { t } = useT("release.deployment.scans");
+  const severityLabels: Record<string, string> = {
+    Critical: t("SCA_TAB.SEVERITY_CRITICAL"),
+    High: t("SCA_TAB.SEVERITY_HIGH"),
+    Medium: t("SCA_TAB.SEVERITY_MEDIUM"),
+    Low: t("SCA_TAB.SEVERITY_LOW"),
+    Unassigned: t("SCA_TAB.SEVERITY_UNASSIGNED"),
+  };
+  const content =
+    typeof children === "string" ? (severityLabels[children] ?? children) : children;
   const getVariantStyles = () => {
     switch (variant) {
       case "critical":
@@ -138,7 +149,7 @@ const Badge = ({
   return (
     <span
       className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 ${getVariantStyles()} ${className}`}>
-      {children}
+      {content}
     </span>
   );
 };
@@ -150,12 +161,13 @@ const DependencyFilterToolbar = ({
   filterState: FilterState;
   setFilterState: React.Dispatch<React.SetStateAction<FilterState>>;
 }) => {
+  const { t } = useT("release.deployment.scans");
   return (
     <div className="relative my-5 max-w-sm">
       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-low-emphasis" />
       <input
         type="text"
-        placeholder="Search dependencies..."
+        placeholder={t("SCA_TAB.SEARCH_PLACEHOLDER")}
         value={
           filterState.selectedFilter === "component"
             ? filterState.component
@@ -212,6 +224,7 @@ const DependenciesTable = ({
   sortState: SortState;
   setSortState: React.Dispatch<React.SetStateAction<SortState>>;
 }) => {
+  const { t } = useT("release.deployment.scans");
   const [selectedDependency, setSelectedDependency] =
     useState<Dependency | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -223,7 +236,7 @@ const DependenciesTable = ({
         header: () => (
           <SortHeader
             id="component"
-            label="Component"
+            label={t("SCA_TAB.COLUMN_COMPONENT")}
             value={sortState}
             onChange={setSortState}
           />
@@ -240,7 +253,7 @@ const DependenciesTable = ({
         header: () => (
           <SortHeader
             id="group"
-            label="Package"
+            label={t("SCA_TAB.COLUMN_PACKAGE")}
             value={sortState}
             onChange={setSortState}
           />
@@ -257,7 +270,7 @@ const DependenciesTable = ({
         header: () => (
           <SortHeader
             id="version"
-            label="Version"
+            label={t("SCA_TAB.VERSION")}
             value={sortState}
             onChange={setSortState}
           />
@@ -274,7 +287,7 @@ const DependenciesTable = ({
         header: () => (
           <SortHeader
             id="vulnerability"
-            label="Vulnerability"
+            label={t("SCA_TAB.COLUMN_VULNERABILITY")}
             value={sortState}
             onChange={setSortState}
           />
@@ -301,7 +314,7 @@ const DependenciesTable = ({
         header: () => (
           <SortHeader
             id="cvss"
-            label="CVSS"
+            label={t("SCA_TAB.CVSS")}
             value={sortState}
             onChange={setSortState}
           />
@@ -322,7 +335,7 @@ const DependenciesTable = ({
           return (
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-high-emphasis">
-                {cvss !== null ? cvss : "N/A"}
+                {cvss !== null ? cvss : t("SCA_TAB.NOT_AVAILABLE")}
               </span>
               <Badge variant={variant}>{severity}</Badge>
             </div>
@@ -335,7 +348,7 @@ const DependenciesTable = ({
         header: () => (
           <SortHeader
             id="epss"
-            label="EPSS %"
+            label={t("SCA_TAB.COLUMN_EPSS")}
             value={sortState}
             onChange={setSortState}
           />
@@ -346,13 +359,13 @@ const DependenciesTable = ({
             <div className="text-sm font-medium text-medium-emphasis">
               {epss !== null && epss !== undefined
                 ? `${epss.toFixed(2)}%`
-                : "N/A"}
+                : t("SCA_TAB.NOT_AVAILABLE")}
             </div>
           );
         },
       },
     ],
-    [sortState, setSortState],
+    [sortState, setSortState, t],
   );
 
   const filteredData = useMemo(() => {
@@ -422,7 +435,7 @@ const DependenciesTable = ({
               <TableCell
                 colSpan={columns.length}
                 className="h-24 text-center text-muted-foreground">
-                No dependencies found.
+                {t("SCA_TAB.EMPTY")}
               </TableCell>
             </TableRow>
           ) : (
@@ -477,7 +490,7 @@ const DependenciesTable = ({
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-medium text-high-emphasis">
-                        {dep.cvss !== null ? dep.cvss : "N/A"}
+                        {dep.cvss !== null ? dep.cvss : t("SCA_TAB.NOT_AVAILABLE")}
                       </span>
                       <Badge variant={dep.severity.toLowerCase()}>
                         {dep.severity}
@@ -488,7 +501,7 @@ const DependenciesTable = ({
                     <div className="text-sm font-medium text-medium-emphasis">
                       {dep.epss !== null && dep.epss !== undefined
                         ? `${dep.epss.toFixed(2)}%`
-                        : "N/A"}
+                        : t("SCA_TAB.NOT_AVAILABLE")}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -500,77 +513,77 @@ const DependenciesTable = ({
         <DialogContent>
           <DialogHeader className="p-2">
             {/* <DialogTitle>{selectedDependency?.cweName || "Vulnerability details"}</DialogTitle> */}
-            <DialogTitle>Vulnerability details</DialogTitle>
+            <DialogTitle>{t("SCA_TAB.DIALOG_TITLE")}</DialogTitle>
             <DialogDescription className="py-4">
-              {/* {selectedDependency?.description || "No description available."} */}
+              {/* {selectedDependency?.description || t("SCA_TAB.NO_DESCRIPTION")} */}
               <div className="text-sm font-bold text-muted-foreground">
-                Name
+                {t("SCA_TAB.NAME")}
               </div>
               <div className="text-sm">
-                {selectedDependency?.name || "No name available."}
+                {selectedDependency?.name || t("SCA_TAB.NO_NAME")}
               </div>
 
               <div className="mt-2 text-sm font-bold text-muted-foreground">
-                Group
+                {t("SCA_TAB.GROUP")}
               </div>
               <div className="text-sm">
-                {selectedDependency?.group || "No group available."}
+                {selectedDependency?.group || t("SCA_TAB.NO_GROUP")}
               </div>
 
               <div className="mt-2 text-sm font-bold text-muted-foreground">
-                Version
+                {t("SCA_TAB.VERSION")}
               </div>
               <div className="text-sm">
-                {selectedDependency?.version || "No version available."}
+                {selectedDependency?.version || t("SCA_TAB.NO_VERSION")}
               </div>
 
               <div className="mt-2 text-sm font-bold text-muted-foreground">
-                Latest Version
+                {t("SCA_TAB.LATEST_VERSION")}
               </div>
               <div className="text-sm">
-                {selectedDependency?.latestVersion || "No data available."}
+                {selectedDependency?.latestVersion || t("SCA_TAB.NO_DATA")}
               </div>
 
               <div className="mt-2 text-sm font-bold text-muted-foreground">
-                Source
+                {t("SCA_TAB.SOURCE")}
               </div>
               <div className="text-sm">
-                {selectedDependency?.source || "No source available."}
+                {selectedDependency?.source || t("SCA_TAB.NO_SOURCE")}
               </div>
 
               <div className="mt-2 text-sm font-bold text-muted-foreground">
-                CVSS
+                {t("SCA_TAB.CVSS")}
               </div>
               <div className="text-sm">
-                {selectedDependency?.cvss || "No CVSS available."}
+                {selectedDependency?.cvss || t("SCA_TAB.NO_CVSS")}
               </div>
 
               <div className="mt-2 text-sm font-bold text-muted-foreground">
-                EPSS Percentile
+                {t("SCA_TAB.EPSS_PERCENTILE")}
               </div>
               <div className="text-sm">
-                {selectedDependency?.epss || "No EPSS available."}
+                {selectedDependency?.epss || t("SCA_TAB.NO_EPSS")}
               </div>
 
               <div className="mt-2 text-sm font-bold text-muted-foreground">
-                EPSS Score
+                {t("SCA_TAB.EPSS_SCORE")}
               </div>
               <div className="text-sm">
-                {selectedDependency?.epssScore || "No EPSS Score available."}
+                {selectedDependency?.epssScore || t("SCA_TAB.NO_EPSS_SCORE")}
               </div>
 
               <div className="mt-2 text-sm font-bold text-muted-foreground">
-                CWE Name
+                {t("SCA_TAB.CWE_NAME")}
               </div>
               <div className="text-sm">
-                {selectedDependency?.cweName || "No CWE Name available."}
+                {selectedDependency?.cweName || t("SCA_TAB.NO_CWE_NAME")}
               </div>
 
               <div className="mt-2 text-sm font-bold text-muted-foreground">
-                Description
+                {t("SCA_TAB.DESCRIPTION")}
               </div>
               <div className="text-sm">
-                {selectedDependency?.description || "No description available."}
+                {selectedDependency?.description || t("SCA_TAB.NO_DESCRIPTION")}
               </div>
             </DialogDescription>
           </DialogHeader>
@@ -597,12 +610,13 @@ const SummaryCards = ({
     | "Unassigned"
     | null;
 }) => {
+  const { t } = useT("release.deployment.scans");
   return (
     <div className="border-b pb-5 transition-colors">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-6">
         <div className="border-l-4 border-red-800 pl-2 sm:pl-3">
           <div className="mb-1 text-xs font-medium text-high-emphasis">
-            Total vulnerabilities
+            {t("SCA_TAB.TOTAL_VULNERABILITIES")}
           </div>
           <div className="text-xl font-bold sm:text-2xl">
             {summary.vulnerabilities}
@@ -616,7 +630,7 @@ const SummaryCards = ({
           }`}
           onClick={() => onSeverityClick?.("Critical")}>
           <span className="mb-1 block text-xs font-medium text-high-emphasis">
-            Critical
+            {t("SCA_TAB.SEVERITY_CRITICAL")}
           </span>
           <span className="block text-xl font-bold sm:text-2xl">
             {summary.critical}
@@ -630,7 +644,7 @@ const SummaryCards = ({
           }`}
           onClick={() => onSeverityClick?.("High")}>
           <span className="mb-1 block text-xs font-medium text-high-emphasis">
-            High
+            {t("SCA_TAB.SEVERITY_HIGH")}
           </span>
           <span className="block text-xl font-bold sm:text-2xl">
             {summary.high}
@@ -644,7 +658,7 @@ const SummaryCards = ({
           }`}
           onClick={() => onSeverityClick?.("Medium")}>
           <span className="mb-1 block text-xs font-medium text-high-emphasis">
-            Medium
+            {t("SCA_TAB.SEVERITY_MEDIUM")}
           </span>
           <span className="block text-xl font-bold sm:text-2xl">
             {summary.medium}
@@ -658,7 +672,7 @@ const SummaryCards = ({
           }`}
           onClick={() => onSeverityClick?.("Low")}>
           <span className="mb-1 block text-xs font-medium text-high-emphasis">
-            Low
+            {t("SCA_TAB.SEVERITY_LOW")}
           </span>
           <span className="block text-xl font-bold sm:text-2xl">
             {summary.low}
@@ -672,7 +686,7 @@ const SummaryCards = ({
           }`}
           onClick={() => onSeverityClick?.("Unassigned")}>
           <span className="mb-1 block text-xs font-medium text-high-emphasis">
-            Unassigned
+            {t("SCA_TAB.SEVERITY_UNASSIGNED")}
           </span>
           <span className="block text-xl font-bold sm:text-2xl">
             {summary.unassigned}
@@ -692,6 +706,7 @@ const DependencyPaginationComponent = ({
   filterState: FilterState;
   setFilterState: React.Dispatch<React.SetStateAction<FilterState>>;
 }) => {
+  const { t } = useT("release.deployment.scans");
   const handlePageChange = (newPage: number) => {
     setFilterState((prev) => ({ ...prev, page: newPage }));
   };
@@ -717,16 +732,18 @@ const DependencyPaginationComponent = ({
     <div className="border-transition border-t bg-background px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="text-xs text-low-emphasis">
-          Showing {currentPage * filterState.pageSize + 1}-
-          {Math.min((currentPage + 1) * filterState.pageSize, totalItems)} of{" "}
-          {totalItems} entries
+          {t("SCA_TAB.SHOWING_ENTRIES", {
+            from: currentPage * filterState.pageSize + 1,
+            to: Math.min((currentPage + 1) * filterState.pageSize, totalItems),
+            total: totalItems,
+          })}
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
             disabled={currentPage === 0}
             className="px-3 py-2 text-xs text-low-emphasis hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
-            Previous
+            {t("SCA_TAB.PREVIOUS")}
           </button>
 
           {pageNumbers.map((pageNum) => (
@@ -760,7 +777,7 @@ const DependencyPaginationComponent = ({
             }
             disabled={currentPage === totalPages - 1}
             className="px-3 py-2 text-xs text-low-emphasis hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
-            Next
+            {t("SCA_TAB.NEXT")}
           </button>
         </div>
       </div>
@@ -769,6 +786,7 @@ const DependencyPaginationComponent = ({
 };
 
 const DependencyTrackButton: React.FC = () => {
+  const { t } = useT("release.deployment.scans");
   const params = useParams();
   const buildId = params?.buildId as string;
 
@@ -790,8 +808,8 @@ const DependencyTrackButton: React.FC = () => {
       disabled={isSCALoading}
       className="flex gap-2">
       <ExternalLink className="h-4 w-4" />
-      <span className="hidden sm:inline">View in Dependency Track</span>
-      <span className="sm:hidden">Dependency Track</span>
+      <span className="hidden sm:inline">{t("SCA_TAB.VIEW_IN_DEPENDENCY_TRACK")}</span>
+      <span className="sm:hidden">{t("SCA_TAB.DEPENDENCY_TRACK")}</span>
     </Button>
   );
 };
@@ -803,6 +821,7 @@ const SCACard: React.FC<SCACardProps> = ({
   caption,
   truncatedCount,
 }) => {
+  const { t } = useT("release.deployment.scans");
   const [filterState, setFilterState] = useState<FilterState>({
     page: 0,
     pageSize: 5,
@@ -875,17 +894,17 @@ const SCACard: React.FC<SCACardProps> = ({
 
         <div className="flex flex-col gap-3 text-xs font-medium sm:flex-row">
           <div className="flex gap-2">
-            <span className="text-low-emphasis">Total components:</span>
+            <span className="text-low-emphasis">{t("SCA_TAB.TOTAL_COMPONENTS")}</span>
             <span className="font-semibold">{summary?.components}</span>
           </div>
           <div className="flex gap-2">
-            <span className="text-low-emphasis">Vulnerable components:</span>
+            <span className="text-low-emphasis">{t("SCA_TAB.VULNERABLE_COMPONENTS")}</span>
             <span className="font-semibold">
               {summary?.vulnerableComponents}
             </span>
           </div>
           <div className="flex gap-2">
-            <span className="text-low-emphasis">Risk Score:</span>
+            <span className="text-low-emphasis">{t("SCA_TAB.RISK_SCORE")}</span>
             <span className="font-semibold">{summary?.riskScore}</span>
           </div>
         </div>
@@ -902,8 +921,7 @@ const SCACard: React.FC<SCACardProps> = ({
         {truncatedCount != null && (
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <p className="text-xs text-medium-emphasis">
-              Showing the {truncatedCount} most severe findings. Open Dependency-Track for the full
-              list.
+              {t("SCA_TAB.TRUNCATED_NOTICE", { count: truncatedCount })}
             </p>
             <DependencyTrackButton />
           </div>
@@ -974,7 +992,6 @@ const ScaTabSkeleton: React.FC = () => (
   </div>
 );
 
-const SCA_LOAD_ERROR = "Error loading SCA data";
 
 const ScaLoadError: React.FC<Readonly<{ text: string }>> = ({ text }) => (
   <Card>
@@ -995,28 +1012,30 @@ const ScaReportContent: React.FC<
     findingsCount: number;
   }>
 > = ({ report, error, dependencies, findingsCount }) => {
+  const { t } = useT("release.deployment.scans");
+  const loadError = t("SCA_TAB.LOAD_ERROR");
   const status = report?.status;
   const scaDetails = report?.details;
-  if (error) return <ScaLoadError text={error.message || SCA_LOAD_ERROR} />;
+  if (error) return <ScaLoadError text={error.message || loadError} />;
   if (status === "Pending") return <ContainerWaiting type="overall" />;
   if (status === "NotRun" || status === "Failed") {
     return (
       <ReportUnavailableCard
-        title="Software Composition Analysis"
+        title={t("SCA_TAB.TITLE")}
         status={status}
         message={report?.message}
         action={<DependencyTrackButton />}
       />
     );
   }
-  if (!scaDetails) return <ScaLoadError text={SCA_LOAD_ERROR} />;
+  if (!scaDetails) return <ScaLoadError text={loadError} />;
 
   const isReady = status === "Ready";
   const analyzedAt = report?.analyzedAt ?? report?.capturedAt;
-  const caption = isReady && analyzedAt ? `Analyzed ${formatFullDate(new Date(analyzedAt))}` : null;
+  const caption = isReady && analyzedAt ? t("SCA_TAB.ANALYZED_CAPTION", { date: formatFullDate(new Date(analyzedAt)) }) : null;
   return (
     <SCACard
-      title="Software library package"
+      title={t("SCA_TAB.PACKAGE_CARD_TITLE")}
       summary={toLibraryPackageSummary(scaDetails)}
       dependencies={dependencies}
       caption={caption}
@@ -1026,6 +1045,7 @@ const ScaReportContent: React.FC<
 };
 
 const SCATab: React.FC = () => {
+  const { language } = useT("release.deployment.scans");
   const params = useParams();
   const buildId = params?.buildId as string;
   const {
@@ -1058,18 +1078,18 @@ const SCATab: React.FC = () => {
     // Transform vulnerabilities
     const transformed = vulnerabilities.map((vuln, index) => ({
       id: (index + 1).toString(),
-      component: vuln.name || "Unknown",
-      group: vuln.group || "Unknown",
-      version: vuln.version || "Unknown",
-      vulnerability: vuln.id || "Unknown",
+      component: vuln.name || tStatic("release.deployment.scans", "SCA_TAB.UNKNOWN"),
+      group: vuln.group || tStatic("release.deployment.scans", "SCA_TAB.UNKNOWN"),
+      version: vuln.version || tStatic("release.deployment.scans", "SCA_TAB.UNKNOWN"),
+      vulnerability: vuln.id || tStatic("release.deployment.scans", "SCA_TAB.UNKNOWN"),
       cvss: vuln.score ? Number.parseFloat(String(vuln.score)) : null,
       severity: severityMap[vuln.severity ?? ""] || "Unassigned",
       source: "NVD",
       epss: Number(vuln.epssPercentile) * 100 || 0,
-      cweName: vuln.cweName || "Unknown",
-      description: vuln.description || "No description available",
-      name: vuln.name || "No name available",
-      latestVersion: vuln.latestVersion || "No version available",
+      cweName: vuln.cweName || tStatic("release.deployment.scans", "SCA_TAB.UNKNOWN"),
+      description: vuln.description || tStatic("release.deployment.scans", "SCA_TAB.FALLBACK_NO_DESCRIPTION"),
+      name: vuln.name || tStatic("release.deployment.scans", "SCA_TAB.FALLBACK_NO_NAME"),
+      latestVersion: vuln.latestVersion || tStatic("release.deployment.scans", "SCA_TAB.FALLBACK_NO_VERSION"),
       epssScore: vuln.epssScore,
     }));
 
@@ -1107,7 +1127,8 @@ const SCATab: React.FC = () => {
   // In your component, use the function:
   const libraryPackageDependencies: Dependency[] = useMemo(
     () => transformVulnerabilities(vulnerabilities),
-    [vulnerabilities],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [vulnerabilities, language],
   );
 
   return (

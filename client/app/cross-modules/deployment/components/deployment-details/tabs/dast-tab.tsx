@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import React, { useState, useMemo } from "react";
 import { Search, ExternalLink, RefreshCw } from "lucide-react";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
@@ -66,6 +67,7 @@ export const useVulnerabilitySortQueryParams = () => {
 };
 
 const VulnerabilityFilterToolbar = () => {
+  const { t } = useT("release.deployment.scans");
   const { queryParams, setQueryParams } = useVulnerabilityFilterQueryParams();
 
   return (
@@ -74,7 +76,7 @@ const VulnerabilityFilterToolbar = () => {
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
         <input
           type="text"
-          placeholder="Search vulnerabilities..."
+          placeholder={t("DAST_TAB.SEARCH_PLACEHOLDER")}
           value={queryParams["selected-filter"] === "name" ? queryParams.name : queryParams.cwe}
           onChange={(e) => {
             const value = e.target.value;
@@ -141,6 +143,7 @@ const VulnerabilitiesTable = ({
   vulnerabilities: Vulnerability[];
   isLoading: boolean;
 }) => {
+  const { t } = useT("release.deployment.scans");
   const { queryParams } = useVulnerabilityFilterQueryParams();
   const { sortQueryParams, setSortQueryParams } = useVulnerabilitySortQueryParams();
 
@@ -152,7 +155,7 @@ const VulnerabilitiesTable = ({
         header: () => (
           <SortHeader
             id="name"
-            label="Name"
+            label={t("DAST_TAB.COLUMN_NAME")}
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
@@ -167,7 +170,7 @@ const VulnerabilitiesTable = ({
         id: "cwe",
         accessorKey: "cwe",
         header: () => (
-          <SortHeader id="cwe" label="CWE" value={sortQueryParams} onChange={setSortQueryParams} />
+          <SortHeader id="cwe" label={t("DAST_TAB.COLUMN_CWE")} value={sortQueryParams} onChange={setSortQueryParams} />
         ),
         cell: (info) => (
           <div className="flex items-center gap-2">
@@ -184,7 +187,7 @@ const VulnerabilitiesTable = ({
         header: () => (
           <SortHeader
             id="date"
-            label="Date"
+            label={t("DAST_TAB.COLUMN_DATE")}
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
@@ -197,7 +200,7 @@ const VulnerabilitiesTable = ({
         header: () => (
           <SortHeader
             id="severity"
-            label="Security"
+            label={t("DAST_TAB.COLUMN_SECURITY")}
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
@@ -214,12 +217,19 @@ const VulnerabilitiesTable = ({
             low: "success",
             informational: "info",
           };
+          const severityLabels: Record<string, string> = {
+            critical: t("DAST_TAB.SEVERITY_CRITICAL"),
+            high: t("DAST_TAB.SEVERITY_HIGH"),
+            medium: t("DAST_TAB.SEVERITY_MEDIUM"),
+            low: t("DAST_TAB.SEVERITY_LOW"),
+            informational: t("DAST_TAB.SEVERITY_INFORMATIONAL"),
+          };
           const variant = severityVariantMap[severity.toLowerCase()] ?? "default";
-          return <Badge variant={variant}>{severity}</Badge>;
+          return <Badge variant={variant}>{severityLabels[severity.toLowerCase()] ?? severity}</Badge>;
         },
       },
     ],
-    [sortQueryParams, setSortQueryParams],
+    [sortQueryParams, setSortQueryParams, t],
   );
 
   const filteredData = useMemo(() => {
@@ -281,7 +291,7 @@ const VulnerabilitiesTable = ({
                 colSpan={columns.length}
                 className="h-24 text-center text-muted-foreground"
               >
-                No vulnerabilities found.
+                {t("DAST_TAB.EMPTY")}
               </TableCell>
             </TableRow>
           ) : (
@@ -307,31 +317,32 @@ const VulnerabilitiesTable = ({
 };
 
 const SummaryCards = ({ summary }: { summary: DASTSummary }) => {
+  const { t } = useT("release.deployment.scans");
   return (
     <div className="border-b border-gray-100 px-6 py-4">
       <div className="grid grid-cols-6 gap-4">
         <div className="border-l-4 border-red-500 pl-3">
-          <div className="mb-1 text-xs font-medium text-gray-600">Critical</div>
+          <div className="mb-1 text-xs font-medium text-gray-600">{t("DAST_TAB.SEVERITY_CRITICAL")}</div>
           <div className="text-2xl font-bold text-gray-900">{summary.critical}</div>
         </div>
         <div className="border-l-4 border-orange-500 pl-3">
-          <div className="mb-1 text-xs font-medium text-gray-600">High</div>
+          <div className="mb-1 text-xs font-medium text-gray-600">{t("DAST_TAB.SEVERITY_HIGH")}</div>
           <div className="text-2xl font-bold text-gray-900">{summary.high}</div>
         </div>
         <div className="border-l-4 border-yellow-500 pl-3">
-          <div className="mb-1 text-xs font-medium text-gray-600">Medium</div>
+          <div className="mb-1 text-xs font-medium text-gray-600">{t("DAST_TAB.SEVERITY_MEDIUM")}</div>
           <div className="text-2xl font-bold text-gray-900">{summary.medium}</div>
         </div>
         <div className="border-l-4 border-green-500 pl-3">
-          <div className="mb-1 text-xs font-medium text-gray-600">Low</div>
+          <div className="mb-1 text-xs font-medium text-gray-600">{t("DAST_TAB.SEVERITY_LOW")}</div>
           <div className="text-2xl font-bold text-gray-900">{summary.low}</div>
         </div>
         <div className="border-l-4 border-blue-500 pl-3">
-          <div className="mb-1 text-xs font-medium text-gray-600">Informational</div>
+          <div className="mb-1 text-xs font-medium text-gray-600">{t("DAST_TAB.SEVERITY_INFORMATIONAL")}</div>
           <div className="text-2xl font-bold text-gray-900">{summary.informational}</div>
         </div>
         <div className="border-l-4 border-gray-900 pl-3">
-          <div className="mb-1 text-xs font-medium text-gray-600">Total</div>
+          <div className="mb-1 text-xs font-medium text-gray-600">{t("DAST_TAB.TOTAL")}</div>
           <div className="text-2xl font-bold text-gray-900">{summary.total}</div>
         </div>
       </div>
@@ -341,6 +352,7 @@ const SummaryCards = ({ summary }: { summary: DASTSummary }) => {
 
 // Pagination Component for Observability tables
 const PaginationComponent = () => {
+  const { t } = useT("release.deployment.scans");
   const { queryParams, setQueryParams } = useVulnerabilityFilterQueryParams();
 
   const handlePageChange = (newPage: number) => {
@@ -354,8 +366,11 @@ const PaginationComponent = () => {
     <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="text-xs text-gray-500">
-          Showing {currentPage * queryParams.pageSize + 1}-
-          {Math.min((currentPage + 1) * queryParams.pageSize, 193)} of 193 entries
+          {t("DAST_TAB.SHOWING_ENTRIES", {
+            from: currentPage * queryParams.pageSize + 1,
+            to: Math.min((currentPage + 1) * queryParams.pageSize, 193),
+            total: 193,
+          })}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -363,7 +378,7 @@ const PaginationComponent = () => {
             disabled={currentPage === 0}
             className="px-3 py-2 text-xs text-gray-500 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Previous
+            {t("DAST_TAB.PREVIOUS")}
           </button>
           {[...Array(Math.min(5, totalPages))].map((_, i) => (
             <button
@@ -381,7 +396,7 @@ const PaginationComponent = () => {
             disabled={currentPage === totalPages - 1}
             className="px-3 py-2 text-xs text-gray-500 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Next
+            {t("DAST_TAB.NEXT")}
           </button>
         </div>
       </div>
@@ -390,6 +405,7 @@ const PaginationComponent = () => {
 };
 
 const DASTCard: React.FC<DASTCardProps> = ({ title, summary, vulnerabilities }) => {
+  const { t } = useT("release.deployment.scans");
   const [isLoading] = useState(false);
 
   return (
@@ -399,21 +415,21 @@ const DASTCard: React.FC<DASTCardProps> = ({ title, summary, vulnerabilities }) 
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900">
             <ExternalLink className="h-4 w-4" />
-            View in DefectDojo
+            {t("DAST_TAB.VIEW_IN_DEFECTDOJO")}
           </button>
         </div>
 
         <div className="mt-3 flex items-center gap-6 text-xs text-gray-500">
           <div className="flex items-center gap-1">
-            <span>Last scan:</span>
+            <span>{t("DAST_TAB.LAST_SCAN")}</span>
             <span className="font-medium text-gray-700">19/02/2024 at 15:32:41</span>
           </div>
           <div className="flex items-center gap-1">
-            <span>Scan type:</span>
+            <span>{t("DAST_TAB.SCAN_TYPE")}</span>
             <span className="font-medium text-gray-700">OWASP ZAP Full Scan</span>
           </div>
           <div className="flex items-center gap-1">
-            <span>Target URL:</span>
+            <span>{t("DAST_TAB.TARGET_URL")}</span>
             <span className="font-medium text-gray-700">https://app.example.com</span>
             <RefreshCw className="h-3 w-3 text-gray-400" />
           </div>
@@ -432,6 +448,7 @@ const DASTCard: React.FC<DASTCardProps> = ({ title, summary, vulnerabilities }) 
 };
 
 const DASTTab: React.FC = () => {
+  const { t } = useT("release.deployment.scans");
   const dastSummary = {
     critical: 1,
     high: 18,
@@ -517,7 +534,7 @@ const DASTTab: React.FC = () => {
   return (
     <div className="min-h-screen w-full space-y-6 bg-gray-100 pr-6">
       <DASTCard
-        title="Overview of metrics"
+        title={t("DAST_TAB.OVERVIEW_TITLE")}
         summary={dastSummary}
         vulnerabilities={dastVulnerabilities}
       />

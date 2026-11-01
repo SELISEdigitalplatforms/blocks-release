@@ -1,3 +1,4 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import { formatFullDate } from "@/utils/date.util";
 import type { ReportStatus } from "@blocks-deployment/models/sca-report";
 
@@ -90,36 +91,36 @@ export function getNewCodeStats(d: SastDetails): SastStat[] {
   return [
     {
       id: "new-issues",
-      title: "New issues",
+      title: tStatic("release.deployment.scans", "SAST_METRICS.NEW_ISSUES"),
       value: formatCount(d.new_violations),
       indicator: { kind: "none" },
     },
     {
       id: "new-accepted",
-      title: "Accepted issues",
+      title: tStatic("release.deployment.scans", "SAST_METRICS.ACCEPTED_ISSUES"),
       value: formatCount(d.new_accepted_issues),
-      subtitle: "Valid issues that were not fixed",
+      subtitle: tStatic("release.deployment.scans", "SAST_METRICS.ACCEPTED_ISSUES_SUBTITLE"),
       indicator: { kind: "none" },
     },
     {
       id: "new-coverage",
-      title: "Coverage",
+      title: tStatic("release.deployment.scans", "SAST_METRICS.COVERAGE"),
       value: formatPercent(coverageRaw),
       subtitle: linesToCover
-        ? `On ${formatCount(linesToCover)} new lines to cover`
+        ? tStatic("release.deployment.scans", "SAST_METRICS.NEW_LINES_TO_COVER", { count: formatCount(linesToCover) })
         : undefined,
       indicator: { kind: "ring", percent: parsePercent(coverageRaw) },
     },
     {
       id: "new-duplications",
-      title: "Duplications",
+      title: tStatic("release.deployment.scans", "SAST_METRICS.DUPLICATIONS"),
       value: formatPercent(dupRaw),
-      subtitle: newLines ? `On ${formatCount(newLines)} new lines` : undefined,
+      subtitle: newLines ? tStatic("release.deployment.scans", "SAST_METRICS.NEW_LINES", { count: formatCount(newLines) }) : undefined,
       indicator: { kind: "dot", percent: parsePercent(dupRaw) },
     },
     {
       id: "new-hotspots",
-      title: "Security hotspots",
+      title: tStatic("release.deployment.scans", "SAST_METRICS.SECURITY_HOTSPOTS"),
       value: formatCount(d.new_security_hotspots),
       indicator: {
         kind: "rating",
@@ -138,9 +139,9 @@ export function getOverallCodeStats(d: SastDetails): SastStat[] {
   return [
     {
       id: "overall-security",
-      title: "Security",
+      title: tStatic("release.deployment.scans", "SAST_METRICS.SECURITY"),
       value: formatCount(pick(d, "software_quality_security_issues", "vulnerabilities")),
-      subtitle: "Open issues",
+      subtitle: tStatic("release.deployment.scans", "SAST_METRICS.OPEN_ISSUES"),
       indicator: {
         kind: "rating",
         letter: toRatingLetter(
@@ -150,9 +151,9 @@ export function getOverallCodeStats(d: SastDetails): SastStat[] {
     },
     {
       id: "overall-reliability",
-      title: "Reliability",
+      title: tStatic("release.deployment.scans", "SAST_METRICS.RELIABILITY"),
       value: formatCount(pick(d, "software_quality_reliability_issues", "bugs")),
-      subtitle: "Open issues",
+      subtitle: tStatic("release.deployment.scans", "SAST_METRICS.OPEN_ISSUES"),
       indicator: {
         kind: "rating",
         letter: toRatingLetter(
@@ -162,11 +163,11 @@ export function getOverallCodeStats(d: SastDetails): SastStat[] {
     },
     {
       id: "overall-maintainability",
-      title: "Maintainability",
+      title: tStatic("release.deployment.scans", "SAST_METRICS.MAINTAINABILITY"),
       value: formatCount(
         pick(d, "software_quality_maintainability_issues", "code_smells"),
       ),
-      subtitle: "Open issues",
+      subtitle: tStatic("release.deployment.scans", "SAST_METRICS.OPEN_ISSUES"),
       indicator: {
         kind: "rating",
         letter: toRatingLetter(
@@ -176,30 +177,30 @@ export function getOverallCodeStats(d: SastDetails): SastStat[] {
     },
     {
       id: "overall-accepted",
-      title: "Accepted issues",
+      title: tStatic("release.deployment.scans", "SAST_METRICS.ACCEPTED_ISSUES"),
       value: formatCount(d.accepted_issues),
-      subtitle: "Valid issues that were not fixed",
+      subtitle: tStatic("release.deployment.scans", "SAST_METRICS.ACCEPTED_ISSUES_SUBTITLE"),
       indicator: { kind: "none" },
     },
     {
       id: "overall-coverage",
-      title: "Coverage",
+      title: tStatic("release.deployment.scans", "SAST_METRICS.COVERAGE"),
       value: formatPercent(coverageRaw),
       subtitle: linesToCover
-        ? `On ${formatCount(linesToCover)} lines to cover`
+        ? tStatic("release.deployment.scans", "SAST_METRICS.LINES_TO_COVER", { count: formatCount(linesToCover) })
         : undefined,
       indicator: { kind: "ring", percent: parsePercent(coverageRaw) },
     },
     {
       id: "overall-duplications",
-      title: "Duplications",
+      title: tStatic("release.deployment.scans", "SAST_METRICS.DUPLICATIONS"),
       value: formatPercent(dupRaw),
-      subtitle: lines ? `On ${formatCount(lines)} lines` : undefined,
+      subtitle: lines ? tStatic("release.deployment.scans", "SAST_METRICS.LINES", { count: formatCount(lines) }) : undefined,
       indicator: { kind: "dot", percent: parsePercent(dupRaw) },
     },
     {
       id: "overall-hotspots",
-      title: "Security hotspots",
+      title: tStatic("release.deployment.scans", "SAST_METRICS.SECURITY_HOTSPOTS"),
       value: formatCount(d.security_hotspots),
       indicator: {
         kind: "rating",
@@ -208,7 +209,7 @@ export function getOverallCodeStats(d: SastDetails): SastStat[] {
     },
     {
       id: "overall-debt",
-      title: "Technical debt",
+      title: tStatic("release.deployment.scans", "SAST_METRICS.TECHNICAL_DEBT"),
       value: formatEffort(
         pick(
           d,
@@ -240,7 +241,7 @@ export function getNewCodePeriodLabel(d: SastDetails): string | null {
     day: "numeric",
     timeZone: "UTC",
   });
-  return `Since ${formatted}`;
+  return tStatic("release.deployment.scans", "SAST_METRICS.SINCE_DATE", { date: formatted });
 }
 
 
@@ -271,32 +272,66 @@ export interface SastIssueBreakdown {
 }
 export type SastScope = "new" | "overall";
 
-const CONDITION_LABELS: Record<string, string> = {
-  new_violations: "Issues",
-  violations: "Issues",
-  new_coverage: "Coverage",
-  coverage: "Coverage",
-  new_duplicated_lines_density: "Duplicated Lines",
-  duplicated_lines_density: "Duplicated Lines",
-  new_security_hotspots_reviewed: "Security Hotspots Reviewed",
-  security_hotspots_reviewed: "Security Hotspots Reviewed",
-  new_software_quality_reliability_rating: "Reliability Rating",
-  new_reliability_rating: "Reliability Rating",
-  software_quality_reliability_rating: "Reliability Rating",
-  reliability_rating: "Reliability Rating",
-  new_software_quality_security_rating: "Security Rating",
-  new_security_rating: "Security Rating",
-  software_quality_security_rating: "Security Rating",
-  security_rating: "Security Rating",
-  new_software_quality_maintainability_rating: "Maintainability Rating",
-  new_maintainability_rating: "Maintainability Rating",
-  software_quality_maintainability_rating: "Maintainability Rating",
-  sqale_rating: "Maintainability Rating",
-  new_security_review_rating: "Security Review Rating",
-  security_review_rating: "Security Review Rating",
+type ConditionGroup =
+  | "ISSUES"
+  | "COVERAGE"
+  | "DUPLICATED_LINES"
+  | "HOTSPOTS_REVIEWED"
+  | "RELIABILITY_RATING"
+  | "SECURITY_RATING"
+  | "MAINTAINABILITY_RATING"
+  | "SECURITY_REVIEW_RATING";
+
+const CONDITION_GROUPS: Record<string, ConditionGroup> = {
+  new_violations: "ISSUES",
+  violations: "ISSUES",
+  new_coverage: "COVERAGE",
+  coverage: "COVERAGE",
+  new_duplicated_lines_density: "DUPLICATED_LINES",
+  duplicated_lines_density: "DUPLICATED_LINES",
+  new_security_hotspots_reviewed: "HOTSPOTS_REVIEWED",
+  security_hotspots_reviewed: "HOTSPOTS_REVIEWED",
+  new_software_quality_reliability_rating: "RELIABILITY_RATING",
+  new_reliability_rating: "RELIABILITY_RATING",
+  software_quality_reliability_rating: "RELIABILITY_RATING",
+  reliability_rating: "RELIABILITY_RATING",
+  new_software_quality_security_rating: "SECURITY_RATING",
+  new_security_rating: "SECURITY_RATING",
+  software_quality_security_rating: "SECURITY_RATING",
+  security_rating: "SECURITY_RATING",
+  new_software_quality_maintainability_rating: "MAINTAINABILITY_RATING",
+  new_maintainability_rating: "MAINTAINABILITY_RATING",
+  software_quality_maintainability_rating: "MAINTAINABILITY_RATING",
+  sqale_rating: "MAINTAINABILITY_RATING",
+  new_security_review_rating: "SECURITY_REVIEW_RATING",
+  security_review_rating: "SECURITY_REVIEW_RATING",
 };
 
-const RATING_KEYS = new Set(Object.keys(CONDITION_LABELS).filter((k) => k.includes("rating")));
+/** Label of a quality-gate metric; the raw metric key when it is not known. */
+function getConditionLabel(metricKey: string): string {
+  switch (CONDITION_GROUPS[metricKey]) {
+    case "ISSUES":
+      return tStatic("release.deployment.scans", "SAST_METRICS.CONDITION_ISSUES");
+    case "COVERAGE":
+      return tStatic("release.deployment.scans", "SAST_METRICS.COVERAGE");
+    case "DUPLICATED_LINES":
+      return tStatic("release.deployment.scans", "SAST_METRICS.CONDITION_DUPLICATED_LINES");
+    case "HOTSPOTS_REVIEWED":
+      return tStatic("release.deployment.scans", "SAST_METRICS.CONDITION_HOTSPOTS_REVIEWED");
+    case "RELIABILITY_RATING":
+      return tStatic("release.deployment.scans", "SAST_METRICS.CONDITION_RELIABILITY_RATING");
+    case "SECURITY_RATING":
+      return tStatic("release.deployment.scans", "SAST_METRICS.CONDITION_SECURITY_RATING");
+    case "MAINTAINABILITY_RATING":
+      return tStatic("release.deployment.scans", "SAST_METRICS.CONDITION_MAINTAINABILITY_RATING");
+    case "SECURITY_REVIEW_RATING":
+      return tStatic("release.deployment.scans", "SAST_METRICS.CONDITION_SECURITY_REVIEW_RATING");
+    default:
+      return metricKey;
+  }
+}
+
+const RATING_KEYS = new Set(Object.keys(CONDITION_GROUPS).filter((k) => k.includes("rating")));
 
 const STAT_TO_METRICS: Record<string, string[]> = {
   "new-issues": ["new_violations"],
@@ -358,7 +393,7 @@ export function formatCondition(c: SastGateCondition): {
   label: string;
   requirement: string;
 } {
-  const label = CONDITION_LABELS[c.metricKey] ?? c.metricKey;
+  const label = getConditionLabel(c.metricKey);
   const value = formatConditionValue(c.metricKey, c.actualValue);
   const isRating = RATING_KEYS.has(c.metricKey) || c.metricKey.includes("rating");
   let thresholdDisplay: string;
@@ -373,13 +408,13 @@ export function formatCondition(c: SastGateCondition): {
   if (isRating) {
     requirement =
       c.comparator === "GT"
-        ? `is worse than ${thresholdDisplay}`
-        : `is better than ${thresholdDisplay}`;
+        ? tStatic("release.deployment.scans", "SAST_METRICS.REQUIREMENT_WORSE_THAN", { value: thresholdDisplay })
+        : tStatic("release.deployment.scans", "SAST_METRICS.REQUIREMENT_BETTER_THAN", { value: thresholdDisplay });
   } else {
     requirement =
       c.comparator === "GT"
-        ? `is greater than ${thresholdDisplay}`
-        : `is less than ${thresholdDisplay}`;
+        ? tStatic("release.deployment.scans", "SAST_METRICS.REQUIREMENT_GREATER_THAN", { value: thresholdDisplay })
+        : tStatic("release.deployment.scans", "SAST_METRICS.REQUIREMENT_LESS_THAN", { value: thresholdDisplay });
   }
   return { value, label, requirement };
 }
@@ -397,15 +432,15 @@ export function formatRequired(c: SastGateCondition): string {
   if (isRating) {
     // GT = worse-than threshold → Required ≥ letter; LT = better-than → Required ≤ letter
     return c.comparator === "GT"
-      ? `Required ≥ ${thresholdDisplay}`
-      : `Required ≤ ${thresholdDisplay}`;
+      ? tStatic("release.deployment.scans", "SAST_METRICS.REQUIRED_AT_LEAST", { value: thresholdDisplay })
+      : tStatic("release.deployment.scans", "SAST_METRICS.REQUIRED_AT_MOST", { value: thresholdDisplay });
   }
   if (c.comparator === "GT") {
     const n = Number(c.errorThreshold);
-    if (Number.isFinite(n) && n === 0) return "Required = 0";
-    return `Required ≤ ${thresholdDisplay}`;
+    if (Number.isFinite(n) && n === 0) return tStatic("release.deployment.scans", "SAST_METRICS.REQUIRED_ZERO");
+    return tStatic("release.deployment.scans", "SAST_METRICS.REQUIRED_AT_MOST", { value: thresholdDisplay });
   }
-  return `Required ≥ ${thresholdDisplay}`;
+  return tStatic("release.deployment.scans", "SAST_METRICS.REQUIRED_AT_LEAST", { value: thresholdDisplay });
 }
 
 export function getFailedConditionForStat(
@@ -426,11 +461,11 @@ export function getSeverityRows(
   counts: SastSeverityCounts,
 ): { key: string; label: string; count: number }[] {
   return [
-    { key: "blocker", label: "Blocker", count: counts.blocker },
-    { key: "high", label: "High", count: counts.high },
-    { key: "medium", label: "Medium", count: counts.medium },
-    { key: "low", label: "Low", count: counts.low },
-    { key: "info", label: "Info", count: counts.info },
+    { key: "blocker", label: tStatic("release.deployment.scans", "SAST_METRICS.SEVERITY_BLOCKER"), count: counts.blocker },
+    { key: "high", label: tStatic("release.deployment.scans", "SAST_METRICS.SEVERITY_HIGH"), count: counts.high },
+    { key: "medium", label: tStatic("release.deployment.scans", "SAST_METRICS.SEVERITY_MEDIUM"), count: counts.medium },
+    { key: "low", label: tStatic("release.deployment.scans", "SAST_METRICS.SEVERITY_LOW"), count: counts.low },
+    { key: "info", label: tStatic("release.deployment.scans", "SAST_METRICS.SEVERITY_INFO"), count: counts.info },
   ];
 }
 
@@ -466,6 +501,11 @@ export interface SastReportResponse {
 export function getSastScanCaption(report: SastReportData): string | null {
   const scannedAt = report.analysisDate ?? report.capturedAt;
   if (!scannedAt) return null;
-  const scanned = `Scanned ${formatFullDate(new Date(scannedAt))}`;
-  return report.revision ? `${scanned} · commit ${report.revision.slice(0, 7)}` : scanned;
+  const date = formatFullDate(new Date(scannedAt));
+  return report.revision
+    ? tStatic("release.deployment.scans", "SAST_METRICS.SCAN_CAPTION_COMMIT", {
+        date,
+        commit: report.revision.slice(0, 7),
+      })
+    : tStatic("release.deployment.scans", "SAST_METRICS.SCAN_CAPTION", { date });
 }

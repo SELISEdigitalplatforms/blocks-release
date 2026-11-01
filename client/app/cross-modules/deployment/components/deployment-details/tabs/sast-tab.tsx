@@ -43,6 +43,7 @@ import {
   type SastQualityGate,
   type SastStat,
 } from "@blocks-deployment/utils/sast-metrics.utils";
+import { useT, type TFunction } from "@seliseblocks/genesis-os";
 import { ReportUnavailableCard } from "./sca-waiting-card";
 
 const RATING_BADGE_CLASS: Record<RatingLetter, string> = {
@@ -62,6 +63,7 @@ const OverviewStats = ({
   qualityGate?: SastQualityGate | null;
   gridColumns?: string;
 }) => {
+  const { t } = useT("release.deployment.scans");
   return (
     <div className="w-full space-y-4">
       <div className={`grid w-full gap-x-10 gap-y-2 ${gridColumns}`}>
@@ -79,7 +81,7 @@ const OverviewStats = ({
                     <span
                       data-testid={`sast-failed-${item.id}`}
                       className={`${getDeploymentLogEventBadgeClassName("Failed")} text-[10px]`}>
-                      Failed
+                      {t("SAST_TAB.FAILED")}
                     </span>
                   )}
                 </div>
@@ -159,18 +161,36 @@ const renderIndicator = (item: SastStat) => {
   );
 };
 
-const getOverviewData = (details: SastDetails, gate?: SastQualityGate | null) => [
+const getOverviewData = (
+  details: SastDetails,
+  gate: SastQualityGate | null | undefined,
+  t: TFunction,
+) => [
   {
-    name: "Quality Gate",
+    name: t("SAST_TAB.QUALITY_GATE"),
     id: "quality_gate",
     value: getQualityGateLabel(details, gate),
   },
   {
-    name: "Lines of code",
+    name: t("SAST_TAB.LINES_OF_CODE"),
     id: "linesOfCode",
     value: details?.ncloc ? Number(details.ncloc).toLocaleString("en-US") : "-",
   },
 ];
+
+/** Shown text of a quality-gate label; the English label itself stays the status code. */
+const getQualityGateText = (label: string, t: TFunction) => {
+  switch (label) {
+    case "Passed":
+      return t("SAST_TAB.GATE_PASSED");
+    case "Failed":
+      return t("SAST_TAB.FAILED");
+    case "Not computed":
+      return t("SAST_TAB.GATE_NOT_COMPUTED");
+    default:
+      return label;
+  }
+};
 
 const qualityGateBadgeStatus = (label: string) => {
   if (label === "Not computed") return "Pending";
@@ -178,6 +198,7 @@ const qualityGateBadgeStatus = (label: string) => {
 };
 
 const SastTab = () => {
+  const { t, language } = useT("release.deployment.scans");
   const params = useParams();
   const buildId = params?.buildId as string;
   const { data: sastData, isLoading, error } = useGetSASTData(buildId);
@@ -191,21 +212,25 @@ const SastTab = () => {
   const issueBreakdown = report?.issueBreakdown ?? null;
   const scanCaption = report && status === "Ready" ? getSastScanCaption(report) : null;
 
+  // `language` is a dependency because the helpers read the active language when they run.
   const overviewData = useMemo(
-    () => (details ? getOverviewData(details, qualityGate) : []),
-    [details, qualityGate],
+    () => (details ? getOverviewData(details, qualityGate, t) : []),
+    [details, qualityGate, t],
   );
   const newCodeStats = useMemo(
     () => (details ? getNewCodeStats(details) : []),
-    [details],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [details, language],
   );
   const overallStats = useMemo(
     () => (details ? getOverallCodeStats(details) : []),
-    [details],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [details, language],
   );
   const periodLabel = useMemo(
     () => (details ? getNewCodePeriodLabel(details) : null),
-    [details],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [details, language],
   );
   const showNewCode = details ? hasNewCode(details) : false;
 
@@ -218,7 +243,7 @@ const SastTab = () => {
   const sonarQubeButton = (
     <Button variant="outline" size="sm" onClick={handleSASTRedirect} disabled={isSASTLoading}>
       <ExternalLink className="mr-2 h-4 w-4" />
-      View in SonarQube
+      {t("SAST_TAB.VIEW_IN_SONARQUBE")}
     </Button>
   );
 
@@ -250,7 +275,7 @@ const SastTab = () => {
   } else if (!error && (status === "NotRun" || status === "Failed")) {
     body = (
       <ReportUnavailableCard
-        title="Static Application Security Testing"
+        title={t("SAST_TAB.TITLE")}
         status={status}
         message={report?.message}
         action={sonarQubeButton}
@@ -261,7 +286,7 @@ const SastTab = () => {
       <Card>
         <CardHeader className="mb-0 flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <CardTitle>Overview</CardTitle>
+            <CardTitle>{t("SAST_TAB.OVERVIEW")}</CardTitle>
             {sonarQubeButton}
           </div>
 
@@ -271,11 +296,11 @@ const SastTab = () => {
                 <span className="text-low-emphasis">{item.name}</span>
                 <span
                   className={
-                    item.name === "Quality Gate"
+                    item.id === "quality_gate"
                       ? `${getDeploymentLogEventBadgeClassName(qualityGateBadgeStatus(item.value))} ml-2`
                       : `pl-2`
                   }>
-                  {item.value}
+                  {item.id === "quality_gate" ? getQualityGateText(item.value, t) : item.value}
                 </span>
               </div>
             ))}
@@ -286,24 +311,24 @@ const SastTab = () => {
           <Separator orientation="horizontal" className="my-4 w-full" />
           <Tabs defaultValue="new">
             <TabsList>
-              <TabsTrigger value="new">New Code</TabsTrigger>
-              <TabsTrigger value="overall">Overall Code</TabsTrigger>
+              <TabsTrigger value="new">{t("SAST_TAB.TAB_NEW_CODE")}</TabsTrigger>
+              <TabsTrigger value="overall">{t("SAST_TAB.TAB_OVERALL_CODE")}</TabsTrigger>
             </TabsList>
             <TabsContent value="new" className="mt-4 space-y-3">
               {periodLabel && (
                 <p className="text-xs text-medium-emphasis">
-                  New code: {periodLabel}
+                  {t("SAST_TAB.NEW_CODE_PERIOD", { period: periodLabel })}
                 </p>
               )}
               {qualityGate && getConditionsForScope(qualityGate, "new").length > 0 && (
                 <div className="space-y-1 rounded-md border border-border p-3 text-xs">
                   {(() => {
                     const failed = getConditionsForScope(qualityGate, "new").filter((c) => c.status === "ERROR");
-                    if (failed.length === 0) return <p className="text-green-700">All conditions passed</p>;
+                    if (failed.length === 0) return <p className="text-green-700">{t("SAST_TAB.ALL_CONDITIONS_PASSED")}</p>;
                     return (
                       <>
                         <p className="font-medium text-red-700">
-                          {failed.length} condition{failed.length === 1 ? "" : "s"} failed
+                          {t("SAST_TAB.CONDITIONS_FAILED", { count: failed.length })}
                         </p>
                         <ul className="space-y-1 text-medium-emphasis">
                           {failed.map((c) => {
@@ -325,17 +350,16 @@ const SastTab = () => {
               ) : (
                 <div className="space-y-1 py-6 text-center">
                   <p className="text-sm font-medium text-high-emphasis">
-                    No new lines to analyze
+                    {t("SAST_TAB.NO_NEW_LINES_TITLE")}
                   </p>
                   <p className="text-xs text-medium-emphasis">
-                    There is no new code on this branch since the new code
-                    period started.
+                    {t("SAST_TAB.NO_NEW_LINES_DESCRIPTION")}
                   </p>
                 </div>
               )}
               {issueBreakdown?.newCode && (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-high-emphasis">Issues by severity</p>
+                  <p className="text-xs font-medium text-high-emphasis">{t("SAST_TAB.ISSUES_BY_SEVERITY")}</p>
                   <div className="flex flex-wrap gap-2">
                     {getSeverityRows(issueBreakdown.newCode).map((r) => (
                       <span key={r.key} className="rounded-full bg-muted px-2 py-0.5 text-xs text-medium-emphasis">
@@ -351,11 +375,11 @@ const SastTab = () => {
                 <div className="space-y-1 rounded-md border border-border p-3 text-xs">
                   {(() => {
                     const failed = getConditionsForScope(qualityGate, "overall").filter((c) => c.status === "ERROR");
-                    if (failed.length === 0) return <p className="text-green-700">All conditions passed</p>;
+                    if (failed.length === 0) return <p className="text-green-700">{t("SAST_TAB.ALL_CONDITIONS_PASSED")}</p>;
                     return (
                       <>
                         <p className="font-medium text-red-700">
-                          {failed.length} condition{failed.length === 1 ? "" : "s"} failed
+                          {t("SAST_TAB.CONDITIONS_FAILED", { count: failed.length })}
                         </p>
                         <ul className="space-y-1 text-medium-emphasis">
                           {failed.map((c) => {
@@ -375,7 +399,7 @@ const SastTab = () => {
               <OverviewStats stats={overallStats} qualityGate={qualityGate} />
               {issueBreakdown?.overall && (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-high-emphasis">Issues by severity</p>
+                  <p className="text-xs font-medium text-high-emphasis">{t("SAST_TAB.ISSUES_BY_SEVERITY")}</p>
                   <div className="flex flex-wrap gap-2">
                     {getSeverityRows(issueBreakdown.overall).map((r) => (
                       <span key={r.key} className="rounded-full bg-muted px-2 py-0.5 text-xs text-medium-emphasis">
@@ -404,21 +428,21 @@ const SastTab = () => {
             </div>
           </div>
           <CardTitle className="text-2xl">
-            Static Application Security Testing
+            {t("SAST_TAB.TITLE")}
           </CardTitle>
           <CardDescription className="text-lg">
-            Data Processing
+            {t("SAST_TAB.PROCESSING_SUBTITLE")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-center">
           <p className="text-muted-foreground">
-            The SAST data is still being processed. Please check back later.
+            {t("SAST_TAB.PROCESSING_DESCRIPTION")}
           </p>
 
           <div className="pt-4">
             <div className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
               <Clock className="mr-1 h-3 w-3" />
-              Analysis in progress
+              {t("SAST_TAB.PROCESSING_BADGE")}
             </div>
           </div>
         </CardContent>
@@ -435,15 +459,15 @@ const SastTab = () => {
             </div>
           </div>
           <CardTitle className="text-2xl">
-            Static Application Security Testing
+            {t("SAST_TAB.TITLE")}
           </CardTitle>
           <CardDescription className="text-lg">
-            Error Loading Data
+            {t("SAST_TAB.ERROR_SUBTITLE")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-center">
           <p className="text-muted-foreground">
-            There was an error loading the SAST data. Please try again later.
+            {t("SAST_TAB.ERROR_DESCRIPTION")}
           </p>
         </CardContent>
       </Card>

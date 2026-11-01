@@ -28,6 +28,7 @@ import {
 } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useMemo } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { useAlertFilterQueryParams } from "./alerts-filter-toolbar";
 
 type AlertsListProps = {
@@ -94,6 +95,7 @@ export function AlertsList({
   totalCount = 0,
   onPageChange,
 }: AlertsListProps) {
+  const { t } = useT("release.deployment.alerts");
   const projectKey = useProjectStore()?.selectedProject?.tenantId || "";
   const { setQueryParams } = useAlertFilterQueryParams();
   const { sortQueryParams, setSortQueryParams } = useAlertSortQueryParams();
@@ -110,13 +112,13 @@ export function AlertsList({
         header: () => (
           <FilterControls.SortHeader
             id="name"
-            label="Name"
+            label={t("common:NAME")}
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
         ),
         cell: ({ row }) => {
-          const name = row.original.name || row.original.operationName || "N/A";
+          const name = row.original.name || row.original.operationName || t("ALERTS_LIST.NOT_AVAILABLE");
           return (
             <div className="ml-2 flex flex-row items-center sm:ml-0 sm:w-[180px]">
               <span>{name}</span>
@@ -129,7 +131,7 @@ export function AlertsList({
         header: () => (
           <FilterControls.SortHeader
             id="monitor_type"
-            label="Monitor Type"
+            label={t("ALERTS_LIST.COLUMN_MONITOR_TYPE")}
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
@@ -137,8 +139,8 @@ export function AlertsList({
         cell: ({ row }) => {
           const monitorType =
             row.original.monitorConfigurationType === 0
-              ? "Request"
-              : "Callback";
+              ? t("ALERTS_LIST.MONITOR_TYPE_REQUEST")
+              : t("ALERTS_LIST.MONITOR_TYPE_CALLBACK");
           return (
             <div className="ml-2 flex w-[180px] items-center sm:ml-0 sm:w-[150px]">
               <span>{monitorType}</span>
@@ -151,13 +153,13 @@ export function AlertsList({
         header: () => (
           <FilterControls.SortHeader
             id="url"
-            label="URL"
+            label={t("ALERTS_LIST.COLUMN_URL")}
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
         ),
         cell: ({ row }) => {
-          const url = row.original.url || "N/A";
+          const url = row.original.url || t("ALERTS_LIST.NOT_AVAILABLE");
           return (
             <div className="ml-2 flex w-[180px] items-center sm:ml-0 sm:w-[150px]">
               <span className="break-all">{url}</span>
@@ -171,7 +173,7 @@ export function AlertsList({
         header: () => (
           <FilterControls.SortHeader
             id="uptime"
-            label="Uptime"
+            label={t("ALERTS_LIST.COLUMN_UPTIME")}
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
@@ -205,7 +207,7 @@ export function AlertsList({
         header: () => (
           <FilterControls.SortHeader
             id="status"
-            label="Status"
+            label={t("common:STATUS")}
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
@@ -251,7 +253,7 @@ export function AlertsList({
         },
       },
     ],
-    [setSortQueryParams, sortQueryParams, projectKey],
+    [setSortQueryParams, sortQueryParams, projectKey, t],
   );
   // TanStack Table returns fresh functions each render, so the React Compiler skips this
   // component; the compiler is not enabled here, and no compiler-safe table API exists.
@@ -310,7 +312,7 @@ export function AlertsList({
                 <TableCell
                   colSpan={table.getAllColumns().length}
                   className="h-24 text-center text-muted-foreground">
-                  No results.
+                  {t("ALERTS_LIST.NO_RESULTS")}
                 </TableCell>
               </TableRow>
             )}

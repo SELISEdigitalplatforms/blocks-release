@@ -1,3 +1,4 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import { isErrorWithErrors } from "@/lib/error";
 import {
   REPO_SECRET_KEY_MAX_LENGTH,
@@ -5,6 +6,9 @@ import {
   REPO_SECRET_MAX_BYTES,
   type RepoSecretMap,
 } from "@blocks-deployment/models/repo-secrets.model";
+
+const tr = (key: string, values?: Record<string, string | number>) =>
+  tStatic("release.deployment.secrets", key, values);
 
 /** One row of the key/value editor. */
 export interface ISecretRow {
@@ -23,14 +27,14 @@ export type ParseResult =
  * it and stay worded identically.
  */
 export const validateSecretKey = (key: string): string | null => {
-  if (!key) return "A key is required.";
+  if (!key) return tr("REPO_SECRETS_UTIL.KEY_REQUIRED");
 
   if (key.length > REPO_SECRET_KEY_MAX_LENGTH) {
-    return `A key may be at most ${REPO_SECRET_KEY_MAX_LENGTH} characters.`;
+    return tr("REPO_SECRETS_UTIL.KEY_TOO_LONG", { max: REPO_SECRET_KEY_MAX_LENGTH });
   }
 
   if (!REPO_SECRET_KEY_PATTERN.test(key)) {
-    return "Start with a letter or underscore; letters, digits and underscore only.";
+    return tr("REPO_SECRETS_UTIL.KEY_PATTERN");
   }
 
   return null;
@@ -39,7 +43,7 @@ export const validateSecretKey = (key: string): string | null => {
 /** Shared empty/size checks for both paste parsers (function so callers above are safe). */
 function finalizeSecretMap(value: RepoSecretMap): ParseResult {
   if (Object.keys(value).length === 0) {
-    return { ok: false, message: "Add at least one variable." };
+    return { ok: false, message: tr("REPO_SECRETS_UTIL.ADD_AT_LEAST_ONE") };
   }
 
   const tooLarge = exceedsSizeLimit(value);
@@ -62,7 +66,7 @@ export const parseSecretJson = (text: string): ParseResult => {
   const trimmed = text.trim();
 
   if (!trimmed) {
-    return { ok: false, message: "Paste a JSON object." };
+    return { ok: false, message: tr("REPO_SECRETS_UTIL.JSON_EMPTY") };
   }
 
   let parsed: unknown;
@@ -70,13 +74,13 @@ export const parseSecretJson = (text: string): ParseResult => {
   try {
     parsed = JSON.parse(trimmed);
   } catch {
-    return { ok: false, message: "This is not valid JSON." };
+    return { ok: false, message: tr("REPO_SECRETS_UTIL.JSON_INVALID") };
   }
 
   if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
     return {
       ok: false,
-      message: 'Provide a JSON object, for example {"API_KEY": "value"}.',
+      message: tr("REPO_SECRETS_UTIL.JSON_NOT_OBJECT"),
     };
   }
 
@@ -86,13 +90,13 @@ export const parseSecretJson = (text: string): ParseResult => {
     const keyError = validateSecretKey(key);
 
     if (keyError) {
-      return { ok: false, message: `Key "${key}": ${keyError}` };
+      return { ok: false, message: tr("REPO_SECRETS_UTIL.JSON_KEY_ERROR", { key, error: keyError }) };
     }
 
     if (typeof raw !== "string") {
       return {
         ok: false,
-        message: `The value for "${key}" must be text in quotes.`,
+        message: tr("REPO_SECRETS_UTIL.JSON_VALUE_NOT_TEXT", { key }),
       };
     }
 
@@ -116,7 +120,7 @@ const parseEnvLine = (line: string, lineNum: number): EnvLineParse => {
   const eq = line.indexOf("=");
 
   if (eq === -1) {
-    return { kind: "error", message: `Line ${lineNum}: expected KEY=VALUE.` };
+    return { kind: "error", message: tr("REPO_SECRETS_UTIL.ENV_EXPECTED_PAIR", { line: lineNum }) };
   }
 
   const key = line.slice(0, eq).trim();
@@ -125,7 +129,7 @@ const parseEnvLine = (line: string, lineNum: number): EnvLineParse => {
   if (keyError) {
     return {
       kind: "error",
-      message: `Line ${lineNum}, key "${key}": ${keyError}`,
+      message: tr("REPO_SECRETS_UTIL.ENV_KEY_ERROR", { line: lineNum, key, error: keyError }),
     };
   }
 
@@ -141,7 +145,7 @@ const parseEnvLine = (line: string, lineNum: number): EnvLineParse => {
  */
 export const parseSecretEnv = (text: string): ParseResult => {
   if (!text.trim()) {
-    return { ok: false, message: "Paste .env-formatted text, e.g. KEY=value." };
+    return { ok: false, message: tr("REPO_SECRETS_UTIL.ENV_EMPTY") };
   }
 
   const lines = text.split(/\r?\n/);
@@ -158,7 +162,7 @@ export const parseSecretEnv = (text: string): ParseResult => {
       if (firstSeenLine !== undefined) {
         return {
           ok: false,
-          message: `Line ${lineNum}: key "${parsed.key}" was already set on line ${firstSeenLine}.`,
+          message: tr("REPO_SECRETS_UTIL.ENV_DUPLICATE_KEY", { line: lineNum, key: parsed.key, first: firstSeenLine }),
         };
       }
 
@@ -176,7 +180,7 @@ export const exceedsSizeLimit = (secrets: RepoSecretMap): string | null => {
   const bytes = new TextEncoder().encode(JSON.stringify(secrets)).length;
 
   return bytes > REPO_SECRET_MAX_BYTES
-    ? `This set is ${bytes} bytes; the maximum is ${REPO_SECRET_MAX_BYTES}.`
+    ? tr("REPO_SECRETS_UTIL.SET_TOO_LARGE", { bytes, max: REPO_SECRET_MAX_BYTES })
     : null;
 };
 

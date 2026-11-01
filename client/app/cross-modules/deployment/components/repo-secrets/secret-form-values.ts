@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-  REPO_SECRET_KEY_MAX_LENGTH,
-  REPO_SECRET_KEY_PATTERN,
-} from "@blocks-deployment/models/repo-secrets.model";
+import { tStatic } from "@seliseblocks/genesis-os";
 import {
   dropBlankRows,
   exceedsSizeLimit,
@@ -11,6 +8,7 @@ import {
   parseSecretEnv,
   parseSecretJson,
   rowsToMap,
+  validateSecretKey,
   type ParseResult,
 } from "@blocks-deployment/utils/repo-secrets.util";
 
@@ -22,24 +20,6 @@ export interface ISecretFormValues {
   json: string;
   env: string;
 }
-
-/**
- * Field-level rules, shared by both entry modes so the wording cannot drift between them.
- *
- * These mirror the server's validation to save a round trip; they never replace it. The server
- * re-validates every save and its 400 is routed back onto the offending field.
- */
-const keyField = z
-  .string()
-  .min(1, "A key is required.")
-  .max(
-    REPO_SECRET_KEY_MAX_LENGTH,
-    `A key may be at most ${REPO_SECRET_KEY_MAX_LENGTH} characters.`,
-  )
-  .regex(
-    REPO_SECRET_KEY_PATTERN,
-    "Start with a letter or underscore; letters, digits and underscore only.",
-  );
 
 /** Empty is legitimate — a blank string is a valid secret value. */
 const valueField = z.string();
@@ -109,13 +89,10 @@ const kvIssues = (rows: ISecretFormValues["rows"]): KvIssue[] => {
   rows.forEach((row, index) => {
     if (isBlankRow(row)) return;
 
-    const result = keyField.safeParse(row.key);
+    const keyError = validateSecretKey(row.key);
 
-    if (!result.success) {
-      issues.push({
-        path: ["rows", index, "key"],
-        message: result.error.issues[0]?.message ?? "Invalid key.",
-      });
+    if (keyError) {
+      issues.push({ path: ["rows", index, "key"], message: keyError });
     }
   });
 
@@ -124,7 +101,7 @@ const kvIssues = (rows: ISecretFormValues["rows"]): KvIssue[] => {
   const filled = dropBlankRows(rows);
 
   if (filled.length === 0) {
-    return [{ path: ["rows"], message: "Add at least one variable." }];
+    return [{ path: ["rows"], message: tStatic("release.deployment.secrets", "SECRET_FORM_VALUES.ADD_AT_LEAST_ONE") }];
   }
 
   const duplicate = findDuplicateKey(filled);
@@ -133,7 +110,7 @@ const kvIssues = (rows: ISecretFormValues["rows"]): KvIssue[] => {
     return [
       {
         path: ["rows", indexOfDuplicate(rows, duplicate), "key"],
-        message: "Each key may appear only once.",
+        message: tStatic("release.deployment.secrets", "SECRET_FORM_VALUES.KEY_DUPLICATE"),
       },
     ];
   }

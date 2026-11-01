@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui-kits/textarea/textarea";
 import type { RepoSecretMap } from "@blocks-deployment/models/repo-secrets.model";
 import { mapToEnv, mapToJson } from "@blocks-deployment/utils/repo-secrets.util";
 import { useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 
 type RevealSecretModalProps = {
   open: boolean;
@@ -33,12 +34,17 @@ type RevealTextViewProps = {
  * The whole set as one copyable block. Env and JSON differ only in their text and labels, so
  * they share this rather than repeating the markup.
  */
-const RevealTextView = ({ label, "aria-label": ariaLabel, text, rows }: RevealTextViewProps) => (
+const RevealTextView = ({ label, "aria-label": ariaLabel, text, rows }: RevealTextViewProps) => {
+  const { t } = useT("release.deployment.secrets");
+
+  return (
   <div className="flex flex-col gap-2">
     <div className="flex items-center justify-between">
       <Label className="text-xs text-muted-foreground">{label}</Label>
       <CopyToClipboardButton textToCopy={text}>
-        <span className="text-xs text-muted-foreground">Copy all</span>
+        <span className="text-xs text-muted-foreground">
+          {t("REVEAL_SECRET_MODAL.COPY_ALL")}
+        </span>
       </CopyToClipboardButton>
     </div>
     <Textarea
@@ -49,22 +55,24 @@ const RevealTextView = ({ label, "aria-label": ariaLabel, text, rows }: RevealTe
       className="font-mono text-sm"
     />
   </div>
-);
+  );
+};
 
 /** Label and text for the two whole-set views; kept outside the body for Sonar's budget. */
 const textViewFor = (
   mode: "env" | "json",
   secrets: RepoSecretMap,
+  t: (key: string) => string,
 ): Omit<RevealTextViewProps, "rows"> =>
   mode === "env"
     ? {
-        label: "Env",
-        "aria-label": "Environment variables as env",
+        label: t("REVEAL_SECRET_MODAL.ENV"),
+        "aria-label": t("REVEAL_SECRET_MODAL.ENV_ARIA_LABEL"),
         text: mapToEnv(secrets),
       }
     : {
-        label: "JSON",
-        "aria-label": "Environment variables as JSON",
+        label: t("REVEAL_SECRET_MODAL.JSON"),
+        "aria-label": t("REVEAL_SECRET_MODAL.JSON_ARIA_LABEL"),
         text: mapToJson(secrets),
       };
 
@@ -93,6 +101,7 @@ export const RevealSecretModal = ({
 );
 
 const RevealSecretBody = ({ secrets }: { secrets: RepoSecretMap | null }) => {
+  const { t } = useT("release.deployment.secrets");
   const [mode, setMode] = useState<RevealMode>("env");
 
   const entries = Object.entries(secrets ?? {});
@@ -100,17 +109,16 @@ const RevealSecretBody = ({ secrets }: { secrets: RepoSecretMap | null }) => {
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Environment variables</DialogTitle>
+        <DialogTitle>{t("REVEAL_SECRET_MODAL.TITLE")}</DialogTitle>
         <DialogDescription>
-          These values are shown in full. Reading them is recorded in the
-          activity log.
+          {t("REVEAL_SECRET_MODAL.DESCRIPTION")}
         </DialogDescription>
       </DialogHeader>
 
       <div className="flex flex-col gap-5">
         <div
           role="radiogroup"
-          aria-label="View mode"
+          aria-label={t("REVEAL_SECRET_MODAL.VIEW_MODE")}
           className="flex w-fit gap-1 rounded-md border border-input p-1">
           <Button
             type="button"
@@ -119,7 +127,7 @@ const RevealSecretBody = ({ secrets }: { secrets: RepoSecretMap | null }) => {
             size="sm"
             variant={mode === "env" ? "secondary" : "ghost"}
             onClick={() => setMode("env")}>
-            Env
+            {t("REVEAL_SECRET_MODAL.ENV")}
           </Button>
           <Button
             type="button"
@@ -128,7 +136,7 @@ const RevealSecretBody = ({ secrets }: { secrets: RepoSecretMap | null }) => {
             size="sm"
             variant={mode === "kv" ? "secondary" : "ghost"}
             onClick={() => setMode("kv")}>
-            Key / value
+            {t("REVEAL_SECRET_MODAL.KEY_VALUE")}
           </Button>
           <Button
             type="button"
@@ -137,15 +145,19 @@ const RevealSecretBody = ({ secrets }: { secrets: RepoSecretMap | null }) => {
             size="sm"
             variant={mode === "json" ? "secondary" : "ghost"}
             onClick={() => setMode("json")}>
-            JSON
+            {t("REVEAL_SECRET_MODAL.JSON")}
           </Button>
         </div>
 
         {mode === "kv" ? (
           <div className="flex flex-col gap-3">
             <div className="hidden gap-3 sm:grid sm:grid-cols-[1fr_1fr_auto]">
-              <Label className="text-xs text-muted-foreground">Key</Label>
-              <Label className="text-xs text-muted-foreground">Value</Label>
+              <Label className="text-xs text-muted-foreground">
+                {t("REVEAL_SECRET_MODAL.KEY")}
+              </Label>
+              <Label className="text-xs text-muted-foreground">
+                {t("REVEAL_SECRET_MODAL.VALUE")}
+              </Label>
               <span className="w-[70px]" />
             </div>
 
@@ -156,17 +168,17 @@ const RevealSecretBody = ({ secrets }: { secrets: RepoSecretMap | null }) => {
                 <Input
                   readOnly
                   value={key}
-                  aria-label={`Key ${key}`}
+                  aria-label={t("REVEAL_SECRET_MODAL.KEY_NAMED", { key })}
                   className="font-mono text-sm"
                 />
                 <Input
                   readOnly
                   value={value}
-                  aria-label={`Value of ${key}`}
+                  aria-label={t("REVEAL_SECRET_MODAL.VALUE_OF", { key })}
                   className="font-mono text-sm"
                   // Empty is a legitimate stored value; say so rather than showing a blank box
                   // the reader has to interpret.
-                  placeholder="(empty)"
+                  placeholder={t("REVEAL_SECRET_MODAL.EMPTY_VALUE")}
                 />
                 <CopyToClipboardButton textToCopy={value}>
                   <></>
@@ -176,7 +188,7 @@ const RevealSecretBody = ({ secrets }: { secrets: RepoSecretMap | null }) => {
           </div>
         ) : (
           <RevealTextView
-            {...textViewFor(mode, secrets ?? {})}
+            {...textViewFor(mode, secrets ?? {}, t)}
             rows={Math.min(entries.length * 2 + 4, 16)}
           />
         )}

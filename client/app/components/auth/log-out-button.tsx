@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { Button } from "@/components/ui-kits/button/button";
 import { useLanguageViewStore } from "@/store/use-language-view.store";
 import { useLogout } from "@blocks-idp/authentication/hooks/use-auth";
@@ -6,6 +7,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { useProjectStore } from "@/store/project.store";
 
 export function LogOutButton() {
+  const { t } = useT("release.shared");
   const queryClient = getQueryClient();
   const { resetProjectStore } = useProjectStore();
   const { setUnAuthenticated, clearTokens } = useAuthStore();
@@ -33,7 +35,7 @@ export function LogOutButton() {
       className="flex h-full w-full justify-start p-0! text-error hover:no-underline"
       disabled={isPending}
       onClick={handleLogout}>
-      Logout
+      {t("LOG_OUT_BUTTON.LOGOUT")}
     </Button>
   );
 }

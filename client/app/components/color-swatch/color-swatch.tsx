@@ -1,4 +1,5 @@
 import React, { useRef } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { cn } from "@/lib/utils";
 
 interface ColorSwatchProps {
@@ -14,6 +15,7 @@ export const ColorSwatch: React.FC<ColorSwatchProps> = ({
   className = "",
   hasError = false,
 }) => {
+  const { t } = useT("release.shared");
   const colorInputRef = useRef<HTMLInputElement>(null);
 
   const handleColorPickerClick = () => {
@@ -46,8 +48,8 @@ export const ColorSwatch: React.FC<ColorSwatchProps> = ({
             className="h-6 w-6 cursor-pointer rounded-sm border"
             style={{ backgroundColor: value }}
             onClick={handleColorPickerClick}
-            title="Pick a color"
-            aria-label="Pick a color"
+            title={t("COLOR_SWATCH.PICK_A_COLOR")}
+            aria-label={t("COLOR_SWATCH.PICK_A_COLOR")}
           />
           <input
             ref={colorInputRef}

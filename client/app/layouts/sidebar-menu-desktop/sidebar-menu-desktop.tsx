@@ -2,7 +2,8 @@ import { Logo } from "@/components/logo";
 import { DesktopMenuItem } from "@/components/menus/desktop-menu-item";
 import { Button } from "@/components/ui-kits/button/button";
 import { Separator } from "@/components/ui-kits/separator/separator";
-import { navigationMenus } from "@/constants/navigation-menus.constant";
+import { useNavigationMenus } from "@/hooks/use-navigation-menus";
+import { useT } from "@seliseblocks/genesis-os";
 import { SidebarContext } from "@/contexts/dashboard-layout-provider";
 import { useFilteredMenus } from "@/hooks/use-filtered-menus";
 import { useAppSettingsStore } from "@seliseblocks/genesis-os/store";
@@ -21,6 +22,8 @@ export function SidebarMenuDesktop() {
   const { settings } = useAppSettingsStore();
   const theme = settings.theme ?? "system";
   const resolvedTheme = theme === "system" ? getSystemTheme() : theme;
+  const { t } = useT("release.shared");
+  const navigationMenus = useNavigationMenus();
   const allowedMenu = useFilteredMenus(navigationMenus);
 
   const getLogoSrc = () => {
@@ -36,14 +39,14 @@ export function SidebarMenuDesktop() {
       <div className="flex h-[60px] shrink-0 items-center justify-between border-b bg-background px-3">
         <Link
           to="/app/console"
-          aria-label="Go to Console"
+          aria-label={t("SIDEBAR_MENU_DESKTOP.GO_TO_CONSOLE")}
           className={cn(
             "relative inline-block cursor-pointer overflow-hidden transition-all",
             isSidebarOpen ? "h-[36px] w-[72px]" : "h-8 w-8",
           )}>
           <Logo
             src={getLogoSrc()}
-            alt="Logo"
+            alt={t("SIDEBAR_MENU_DESKTOP.LOGO_ALT")}
             className="h-full w-full object-contain"
           />
         </Link>

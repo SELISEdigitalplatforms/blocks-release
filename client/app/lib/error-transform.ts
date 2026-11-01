@@ -1,3 +1,4 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import type { FastAPIError } from "@/models";
 
 type ErrorInput = {
@@ -31,7 +32,7 @@ export function ErrorTransformer(error: unknown): ErrorRecord {
   const result: ErrorRecord = {};
 
   if (!isErrorInput(error)) {
-    return { non_field_error: "Something went wrong" };
+    return { non_field_error: tStatic("release.shared", "ERROR_TRANSFORM.SOMETHING_WENT_WRONG") };
   }
 
   const { detail } = error.errors;
@@ -77,7 +78,9 @@ export function ErrorTransformer(error: unknown): ErrorRecord {
       // Transform "field required" -> "Username is required"
       const message =
         err.msg === "field required"
-          ? `${formatFieldName(fieldPath)} is required`
+          ? tStatic("release.shared", "ERROR_TRANSFORM.FIELD_REQUIRED", {
+              field: formatFieldName(fieldPath),
+            })
           : err.msg;
 
       // Merge multiple messages for the same field

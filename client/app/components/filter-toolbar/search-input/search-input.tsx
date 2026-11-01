@@ -1,5 +1,6 @@
 import { useRef, MouseEvent, useState, useEffect } from "react";
 import { Search, X } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { cn } from "@/lib/utils";
@@ -14,11 +15,12 @@ type SearchInputProps = {
 
 export const SearchInput: React.FC<SearchInputProps> = ({
   onChange,
-  placeholder = "Search...",
+  placeholder,
   value,
   className = "",
 }) => {
   const [state, setState] = useState(value);
+  const { t } = useT("release.shared");
   const inputRef = useRef<HTMLInputElement>(null);
 
   // A new value from the parent replaces whatever is being typed.
@@ -58,7 +60,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       <Search className="mr-2 h-4 w-4 text-muted-foreground" />
       <Input
         ref={inputRef}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("SEARCH_INPUT.PLACEHOLDER")}
         value={state}
         onChange={handleChange}
         className={cn(

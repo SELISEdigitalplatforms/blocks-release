@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { RenderAlternatively } from "@/components/render-elements";
 import { useAppSettingsStore } from "@seliseblocks/genesis-os/store";
 
@@ -16,11 +17,13 @@ interface LogoProps {
 
 export function Logo({
   src,
-  alt = "SELISE Logo",
+  alt,
   width,
   height,
   className,
 }: LogoProps) {
+  const { t } = useT("release.shared");
+  const altText = alt ?? t("LOGO.SELISE_LOGO");
   const { settings } = useAppSettingsStore();
   const theme = settings.theme ?? "system";
   const resolvedTheme = theme === "system" ? getSystemTheme() : theme;
@@ -29,7 +32,7 @@ export function Logo({
     return (
       <img
         src={src}
-        alt={alt}
+        alt={altText}
         width={width}
         height={height}
         className={className}
@@ -41,14 +44,14 @@ export function Logo({
     <RenderAlternatively condition={resolvedTheme === "dark"}>
       <img
         src="/Logo_Dark.svg"
-        alt={alt}
+        alt={altText}
         width={width}
         height={height}
         className={className}
       />
       <img
         src="/Logo_Light.svg"
-        alt={alt}
+        alt={altText}
         width={width}
         height={height}
         className={className}

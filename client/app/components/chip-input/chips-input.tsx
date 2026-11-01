@@ -2,6 +2,7 @@
 import { Input } from "@/components/ui-kits/input/input";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 import { useState } from "react";
 
 import { createContext, useContext } from "react";
@@ -24,6 +25,7 @@ export const useChipsContext = () => {
 };
 
 export const ChipsInputList = () => {
+  const { t } = useT("release.shared");
   const { value, handleRemoveChip } = useChipsContext();
   return (
     <>
@@ -37,7 +39,7 @@ export const ChipsInputList = () => {
             type="button"
             className="cursor-pointer"
             onClick={() => handleRemoveChip(item)}
-            aria-label={`Remove ${item}`}
+            aria-label={t("CHIPS_INPUT.REMOVE_ITEM", { item })}
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -52,6 +54,7 @@ export interface ChipsInputFieldProps {
 }
 
 export const ChipsInputField = ({ className }: ChipsInputFieldProps) => {
+  const { t } = useT("release.shared");
   const { inputValue, handleInputChange, handleKeyDown, error } = useChipsContext();
 
   return (
@@ -60,7 +63,7 @@ export const ChipsInputField = ({ className }: ChipsInputFieldProps) => {
         value={inputValue}
         onChange={(e) => handleInputChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Type and press enter"
+        placeholder={t("CHIPS_INPUT.TYPE_AND_PRESS_ENTER")}
         className={cn(
           "h-fit min-w-40 flex-1 border-0 p-0 py-0.5 text-sm focus-visible:ring-0 focus-visible:ring-offset-0",
           error && "text-error",
@@ -88,9 +91,11 @@ export const ChipsInput = ({
   onChange,
   validatorRegex,
   customValidator,
-  validatorRegexErrorMessage = "Invalid format",
+  validatorRegexErrorMessage,
   className,
 }: ChipsInputRootProps) => {
+  const { t } = useT("release.shared");
+  const errorMessage = validatorRegexErrorMessage ?? t("CHIPS_INPUT.INVALID_FORMAT");
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -100,13 +105,13 @@ export const ChipsInput = ({
     if (val.trim()) {
       if (customValidator) {
         if (!customValidator(val.trim())) {
-          setError(validatorRegexErrorMessage);
+          setError(errorMessage);
         } else {
           setError(null);
         }
       } else if (validatorRegex) {
         if (!validatorRegex.test(val.trim())) {
-          setError(validatorRegexErrorMessage);
+          setError(errorMessage);
         } else {
           setError(null);
         }

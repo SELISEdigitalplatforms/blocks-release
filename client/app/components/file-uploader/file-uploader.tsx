@@ -1,4 +1,5 @@
 
+import { tStatic } from "@seliseblocks/genesis-os";
 import { Input } from "@/components/ui-kits/input/input";
 import { cn } from "@/lib/utils";
 import {
@@ -96,7 +97,7 @@ export const FileUploader = forwardRef<
 
     useEffect(() => {
       if (isFileTooBig) {
-        showErrorToast({ errors: "The file size is more than 5MB" });
+        showErrorToast({ errors: tStatic("release.shared", "FILE_UPLOADER.FILE_SIZE_MORE_THAN_LIMIT") });
       }
     }, [isFileTooBig]);
 
@@ -105,7 +106,7 @@ export const FileUploader = forwardRef<
         const files = acceptedFiles;
 
         if (!files) {
-          toast.error("file error , probably too big");
+          toast.error(tStatic("release.shared", "FILE_UPLOADER.FILE_ERROR"));
           return;
         }
 
@@ -127,13 +128,15 @@ export const FileUploader = forwardRef<
           for (let i = 0; i < rejectedFiles.length; i++) {
             if (rejectedFiles[i].errors[0]?.code === "file-too-large") {
               showErrorToast({
-                errors: `File is too large. Max size is ${maxSize / 1024 / 1024}MB`
+                errors: tStatic("release.shared", "FILE_UPLOADER.FILE_TOO_LARGE", {
+                  size: maxSize / 1024 / 1024,
+                })
               });
               break;
             }
             if (rejectedFiles[i].errors[0]?.code === "file-invalid-type") {
               showErrorToast({
-                errors: "Invalid file type"
+                errors: tStatic("release.shared", "FILE_UPLOADER.INVALID_FILE_TYPE")
               });
               break;
             }

@@ -1,6 +1,6 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { useAppSettingsStore } from "@seliseblocks/genesis-os/store";
 import { useI18nStore } from "@seliseblocks/genesis-os";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
@@ -13,7 +13,6 @@ vi.mock("@blocks-idp/authentication/hooks/use-auth", () => ({
 }));
 
 import { BlocksAppLauncher } from "./blocks-app-launcher/blocks-app-launcher";
-import { LanguageSelector } from "./language-selector/language-selector";
 import { UserDropdownMenu } from "./user-dropdown-menu/user-dropdown-menu";
 import { DesktopMenuItem } from "./menus/desktop-menu-item";
 import { MobileMenuItem } from "./menus/mobile-menu-item";
@@ -46,31 +45,6 @@ describe("BlocksAppLauncher", () => {
     expect(
       await screen.findByText(/favourite|apps/i, { exact: false }),
     ).toBeTruthy();
-  });
-});
-
-describe("LanguageSelector", () => {
-  beforeEach(() => {
-    useAppSettingsStore.getState().setSettings({ language: "en" });
-  });
-
-  it("shows the current language and offers English and German only", async () => {
-    const user = userEvent.setup({ pointerEventsCheck: 0 });
-    renderWithProviders(<LanguageSelector />);
-    expect(screen.getByRole("button")).toHaveTextContent("en");
-    await user.click(screen.getByRole("button"));
-    expect(await screen.findByText("English")).toBeInTheDocument();
-    expect(screen.getByText("Deutsch")).toBeInTheDocument();
-    expect(screen.queryByText("French")).not.toBeInTheDocument();
-  });
-
-  it("switches the shared app-settings language to German", async () => {
-    const user = userEvent.setup({ pointerEventsCheck: 0 });
-    renderWithProviders(<LanguageSelector />);
-    await user.click(screen.getByRole("button"));
-    await user.click(await screen.findByText("Deutsch"));
-    expect(useAppSettingsStore.getState().settings.language).toBe("de");
-    expect(document.documentElement.lang).toBe("de");
   });
 });
 

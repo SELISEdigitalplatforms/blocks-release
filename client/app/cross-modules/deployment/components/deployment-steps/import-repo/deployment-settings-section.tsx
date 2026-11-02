@@ -102,6 +102,21 @@ const DeploymentSettingSection = ({
 
   const availableMachineSpecs = getRegionMachineSpecs();
 
+  let specsMessage: { className: string; text: string } | null = null;
+  if (!deploymentData.region) {
+    specsMessage = {
+      className:
+        "rounded-md border border-blocks-primary-shades-300 bg-secondary p-4 text-center text-medium-emphasis",
+      text: t("DEPLOYMENT_SETTINGS_SECTION.SELECT_REGION_FIRST"),
+    };
+  } else if (availableMachineSpecs.length === 0) {
+    specsMessage = {
+      className:
+        "rounded-md border border-blocks-primary-shades-300 bg-gray-50 p-4 text-center text-medium-emphasis",
+      text: t("DEPLOYMENT_SETTINGS_SECTION.NO_SPECIFICATIONS"),
+    };
+  }
+
   return (
     <div className="flex w-full flex-col items-start rounded-sm border border-border-default bg-background p-5">
       <h3 className="mb-6 text-lg font-semibold">{t("DEPLOYMENT_SETTINGS_SECTION.TITLE")}</h3>
@@ -184,14 +199,8 @@ const DeploymentSettingSection = ({
           <label className="mb-4 block text-sm font-medium">
             {t("DEPLOYMENT_SETTINGS_SECTION.SELECT_SPECIFICATION")}
           </label>
-          {!deploymentData.region ? (
-            <div className="rounded-md border border-blocks-primary-shades-300 bg-secondary p-4 text-center text-medium-emphasis">
-              {t("DEPLOYMENT_SETTINGS_SECTION.SELECT_REGION_FIRST")}
-            </div>
-          ) : availableMachineSpecs.length === 0 ? (
-            <div className="rounded-md border border-blocks-primary-shades-300 bg-gray-50 p-4 text-center text-medium-emphasis">
-              {t("DEPLOYMENT_SETTINGS_SECTION.NO_SPECIFICATIONS")}
-            </div>
+          {specsMessage ? (
+            <div className={specsMessage.className}>{specsMessage.text}</div>
           ) : (
             <div className="flex flex-wrap gap-4">
               {availableMachineSpecs.map((spec, index) => (

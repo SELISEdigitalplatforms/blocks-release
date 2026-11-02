@@ -339,7 +339,7 @@ const DependenciesTable = ({
           return (
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-high-emphasis">
-                {cvss === null ? t(SCA_TAB_NOT_AVAILABLE) : cvss}
+                {cvss ?? t(SCA_TAB_NOT_AVAILABLE)}
               </span>
               <Badge variant={variant}>{severity}</Badge>
             </div>
@@ -494,7 +494,7 @@ const DependenciesTable = ({
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-medium text-high-emphasis">
-                        {dep.cvss === null ? t(SCA_TAB_NOT_AVAILABLE) : dep.cvss}
+                        {dep.cvss ?? t(SCA_TAB_NOT_AVAILABLE)}
                       </span>
                       <Badge variant={dep.severity.toLowerCase()}>
                         {dep.severity}

@@ -32,7 +32,7 @@ export function BlocksLoginPage({
   loginLabel: loginLabelProp,
   docsUrl = "https://docs.seliseblocks.com/",
   footerLink: footerLinkProp,
-}: BlocksLoginPageProps) {
+}: Readonly<BlocksLoginPageProps>) {
   const { t } = useT("release.idp");
   const eyebrow = eyebrowProp ?? t("BLOCKS_LOGIN_PAGE.EYEBROW");
   const loginLabel = loginLabelProp ?? t("BLOCKS_LOGIN_PAGE.LOGIN_LABEL");

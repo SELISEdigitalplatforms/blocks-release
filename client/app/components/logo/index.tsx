@@ -21,7 +21,7 @@ export function Logo({
   width,
   height,
   className,
-}: LogoProps) {
+}: Readonly<LogoProps>) {
   const { t } = useT("release.shared");
   const altText = alt ?? t("LOGO.SELISE_LOGO");
   const { settings } = useAppSettingsStore();

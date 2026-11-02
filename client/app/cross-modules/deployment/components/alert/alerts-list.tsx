@@ -266,71 +266,69 @@ export function AlertsList({
 
   if (isLoading) return <LoadingSkelton />;
   return (
-    <>
-      <ScrollArea className="w-full">
-        <Table className="text-sm">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
+    <ScrollArea className="w-full">
+      <Table className="text-sm">
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow
+              key={headerGroup.id}
+              className="px-4 py-2 hover:bg-transparent">
+              {headerGroup.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  className="font-bold text-medium-emphasis">
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows?.length ? (
+            table.getRowModel().rows.map((row) => (
               <TableRow
-                key={headerGroup.id}
-                className="px-4 py-2 hover:bg-transparent">
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    className="font-bold text-medium-emphasis">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
+                key={row.id}
+                data-state={row.getIsSelected() && "selected"}
+                className="text-medium-emphasis cursor-auto"
+                isHoverable>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(
+                      cell.column.columnDef.cell,
+                      cell.getContext(),
+                    )}
+                  </TableCell>
                 ))}
               </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="text-medium-emphasis cursor-auto"
-                  isHoverable>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={table.getAllColumns().length}
-                  className="h-24 text-center text-muted-foreground">
-                  {t("ALERTS_LIST.NO_RESULTS")}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-        {totalCount > pageSize && (
-          <div className="mt-5 flex items-center md:justify-end">
-            <Pagination
-              page={pageNumber as number}
-              pageSize={pageSize as number}
-              pageSizeOptions={[pageSize as number]}
-              onChange={handlePageChange}
-              totalCount={totalCount || 0}
-            />
-          </div>
-        )}
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
-    </>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell
+                colSpan={table.getAllColumns().length}
+                className="h-24 text-center text-muted-foreground">
+                {t("ALERTS_LIST.NO_RESULTS")}
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+      {totalCount > pageSize && (
+        <div className="mt-5 flex items-center md:justify-end">
+          <Pagination
+            page={pageNumber as number}
+            pageSize={pageSize as number}
+            pageSizeOptions={[pageSize as number]}
+            onChange={handlePageChange}
+            totalCount={totalCount || 0}
+          />
+        </div>
+      )}
+      <ScrollBar orientation="horizontal" />
+    </ScrollArea>
   );
 }

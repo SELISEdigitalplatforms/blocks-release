@@ -194,6 +194,9 @@ export function Notification() {
     return fallbackDescription || t("NOTIFICATION.NO_DESCRIPTION");
   }
 
+  // While the first page loads the empty box shows nothing; afterwards it says there is nothing.
+  const emptyListText = isLoading ? null : t("NOTIFICATION.EMPTY");
+
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
@@ -235,11 +238,9 @@ export function Notification() {
           className="max-h-[400px] overflow-y-auto"
           ref={listRef}
           onScroll={handleScroll}>
-          {isLoading && notifications.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground"></div>
-          ) : notifications.length === 0 ? (
+          {notifications.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              {t("NOTIFICATION.EMPTY")}
+              {emptyListText}
             </div>
           ) : (
             notifications.map((notification, idx) => (

@@ -308,6 +308,15 @@ export const RepositorySelectionModal = ({
     cancelButton: t("common:CANCEL"),
   };
 
+  let repoTriggerLabel: string | undefined;
+  if (selectedRepoId) {
+    repoTriggerLabel = allRepositories.find((r) => String(r.id) === selectedRepoId)?.full_name;
+  } else if (isLoading || isFetching) {
+    repoTriggerLabel = t("REPOSITORY_SELECTION_MODAL.LOADING_REPOSITORIES");
+  } else {
+    repoTriggerLabel = t("REPOSITORY_SELECTION_MODAL.SELECT_A_REPOSITORY");
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl p-6">
@@ -392,12 +401,7 @@ export const RepositorySelectionModal = ({
                 aria-expanded={isPopoverOpen}
                 className="w-full justify-between"
                 disabled={isLoading || isFetching}>
-                {selectedRepoId
-                  ? allRepositories.find((r) => String(r.id) === selectedRepoId)
-                      ?.full_name
-                  : isLoading || isFetching
-                    ? t("REPOSITORY_SELECTION_MODAL.LOADING_REPOSITORIES")
-                    : t("REPOSITORY_SELECTION_MODAL.SELECT_A_REPOSITORY")}
+                {repoTriggerLabel}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>

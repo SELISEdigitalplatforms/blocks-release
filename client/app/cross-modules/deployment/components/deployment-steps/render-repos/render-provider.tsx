@@ -89,37 +89,35 @@ const ProviderButtons = ({
   };
 
   return (
-    <>
-      <div className="flex h-auto w-full flex-col items-center self-stretch">
-        <div className="flex flex-col items-center gap-4">
-          {/* <h2 className="mb-2 text-center text-base font-normal text-gray-600">
-            Select a Git provider to import an existing project from a Git Repository.
-          </h2> */}
-          {providers.map((provider) => {
-            const iconSrc = iconMap[provider.icon];
-            return (
-              <Button
-                key={provider.id}
-                onClick={() => handleContinue(provider.id)}
-                className={`flex w-[345px] items-center justify-center gap-2 rounded border border-border-default bg-background px-4 py-2 font-medium transition-colors duration-200 hover:bg-background ${provider.name.toLowerCase()}`}
-                type="button"
-                disabled={!provider.active}>
-                <img
-                  src={iconSrc}
-                  alt={t("RENDER_PROVIDER.ICON_ALT", { name: provider.name })}
-                  width={18}
-                  height={18}
-                  className="object-contain"
-                />
-                <span className="text-high-emphasis">
-                  {t("RENDER_PROVIDER.CONTINUE_WITH", { name: provider.name })}
-                </span>
-              </Button>
-            );
-          })}
-        </div>
+    <div className="flex h-auto w-full flex-col items-center self-stretch">
+      <div className="flex flex-col items-center gap-4">
+        {/* <h2 className="mb-2 text-center text-base font-normal text-gray-600">
+          Select a Git provider to import an existing project from a Git Repository.
+        </h2> */}
+        {providers.map((provider) => {
+          const iconSrc = iconMap[provider.icon];
+          return (
+            <Button
+              key={provider.id}
+              onClick={() => handleContinue(provider.id)}
+              className={`flex w-[345px] items-center justify-center gap-2 rounded border border-border-default bg-background px-4 py-2 font-medium transition-colors duration-200 hover:bg-background ${provider.name.toLowerCase()}`}
+              type="button"
+              disabled={!provider.active}>
+              <img
+                src={iconSrc}
+                alt={t("RENDER_PROVIDER.ICON_ALT", { name: provider.name })}
+                width={18}
+                height={18}
+                className="object-contain"
+              />
+              <span className="text-high-emphasis">
+                {t("RENDER_PROVIDER.CONTINUE_WITH", { name: provider.name })}
+              </span>
+            </Button>
+          );
+        })}
       </div>
-    </>
+    </div>
   );
 };
 

@@ -23,6 +23,18 @@ interface DeployedLogsProps {
   isSuccess?: boolean;
 }
 
+// The whole deployment's status from the build record's status; undefined keeps the current one.
+const overallDeploymentStatus = (status?: string): string | undefined => {
+  if (
+    status === DEPLOYMENT_LOG_EVENT_STATUS.COMPLETED ||
+    status === DEPLOYMENT_LOG_EVENT_STATUS.SUCCESS
+  ) {
+    return "Successful";
+  }
+  if (status === DEPLOYMENT_LOG_EVENT_STATUS.FAILED) return "Failed";
+  return undefined;
+};
+
 const DeployedLogs: React.FC<DeployedLogsProps> = ({
   buildId,
   cardData,
@@ -64,14 +76,8 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
       setExpandedSteps(defaultExpanded);
     }
 
-    if (
-      cardData?.status === DEPLOYMENT_LOG_EVENT_STATUS.COMPLETED ||
-      cardData?.status === DEPLOYMENT_LOG_EVENT_STATUS.SUCCESS
-    ) {
-      setWholeDeploymentStatus("Successful");
-    } else if (cardData?.status === DEPLOYMENT_LOG_EVENT_STATUS.FAILED) {
-      setWholeDeploymentStatus("Failed");
-    }
+    const overall = overallDeploymentStatus(cardData?.status);
+    if (overall) setWholeDeploymentStatus(overall);
   }
 
   const title: string = t("DEPLOYED_LOGS.TITLE");

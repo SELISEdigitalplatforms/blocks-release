@@ -23,6 +23,107 @@ interface RepositorySelectorProps {
   onBranchSelect: (branch: string | null) => void;
 }
 
+// Branches from the API for the selected repository; none until a repository is selected.
+const branchesFrom = (selectedRepo: string | null | undefined, data: unknown): IBranch[] =>
+  selectedRepo && Array.isArray(data) ? (data as IBranch[]) : [];
+
+// Domain of the selected project's first application, from the persisted project store.
+const storedApplicationDomain = (): string => {
+  const persistedData = localStorage.getItem("project-store");
+  if (!persistedData) return "";
+  const parsedData = JSON.parse(persistedData);
+  return parsedData.state.selectedProject.applications?.[0]?.domain ?? "";
+};
+
+type BranchDropdownProps = {
+  branches: IBranch[];
+  selectedRepo: string | null | undefined;
+  selectedBranch: string | null | undefined;
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  onSelect: (branchName: string) => void;
+};
+
+const BranchDropdown = ({
+  branches,
+  selectedRepo,
+  selectedBranch,
+  searchTerm,
+  onSearchChange,
+  onSelect,
+}: Readonly<BranchDropdownProps>) => {
+  const { t } = useT("release.deployment.shared");
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium">{t("RENDER_REPO_SELECTION.BRANCH")}</label>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            disabled={!selectedRepo}
+            className={`flex w-full items-center justify-between rounded-md border border-blocks-primary-shades-300 px-3 py-2 text-left focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary ${
+              !selectedRepo
+                ? "cursor-not-allowed opacity-50"
+                : "bg-background"
+            }`}>
+            <div className="flex items-center gap-2 truncate">
+              {selectedBranch ? (
+                <>
+                  <GitBranch size={16} className="shrink-0" />
+                  <span className="truncate">{selectedBranch}</span>
+                </>
+              ) : (
+                <span className="text-low-emphasis">
+                  {selectedRepo
+                    ? t("RENDER_REPO_SELECTION.SELECT_BRANCH")
+                    : t("RENDER_REPO_SELECTION.SELECT_REPOSITORY_FIRST")}
+                </span>
+              )}
+            </div>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="max-h-[300px] min-w-(--radix-dropdown-menu-trigger-width) overflow-y-auto">
+          <div className="sticky top-0 border-b bg-background p-2">
+            <input
+              type="text"
+              placeholder={t("RENDER_REPO_SELECTION.SEARCH_BRANCH")}
+              className="focus:ring- w-full rounded-md border border-low-emphasis px-3 py-2 text-sm focus:outline-hidden focus:ring-2"
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            />
+          </div>
+          <div className="max-h-[200px] overflow-y-auto">
+            {branches.length > 0 ? (
+              branches.map((branch) => (
+                <DropdownMenuItem
+                  key={branch.name}
+                  onClick={() => onSelect(branch.name!)}
+                  className="flex items-center gap-2">
+                  <GitBranch size={16} />
+                  <span className="flex-1">{branch.name}</span>
+                  {selectedBranch === branch.name && (
+                    <Check className="h-4 w-4 text-primary" />
+                  )}
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <div className="px-3 py-2 text-sm text-low-emphasis">
+                {searchTerm
+                  ? t("RENDER_REPO_SELECTION.NO_BRANCHES_MATCH")
+                  : t("RENDER_REPO_SELECTION.NO_BRANCHES")}
+              </div>
+            )}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+};
+
 const RepositorySelector = ({
   repositories,
   selectedRepo,
@@ -40,12 +141,7 @@ const RepositorySelector = ({
     { name: "main", commit: { sha: "", url: "" } },
   ];
 
-  const apiBranches: IBranch[] =
-    selectedRepo && branchesData
-      ? Array.isArray(branchesData)
-        ? branchesData
-        : []
-      : [];
+  const apiBranches = branchesFrom(selectedRepo, branchesData);
 
   const validBranches = selectedRepo
     ? apiBranches.filter((branch) => branch.name !== null)
@@ -75,13 +171,7 @@ const RepositorySelector = ({
     setBranchSearchTerm("");
   };
 
-  let applicationDomain = "";
-  const persistedData = localStorage.getItem("project-store");
-  if (persistedData) {
-    const parsedData = JSON.parse(persistedData);
-    applicationDomain =
-      parsedData.state.selectedProject.applications?.[0]?.domain ?? "";
-  }
+  const applicationDomain = storedApplicationDomain();
 
   return (
     <div className="flex h-auto w-full flex-col items-start justify-center gap-5 self-stretch rounded-sm border border-border-default bg-background px-5 pb-6 pt-5">
@@ -157,73 +247,14 @@ const RepositorySelector = ({
           </div>
 
           {/* Branch Dropdown */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">{t("RENDER_REPO_SELECTION.BRANCH")}</label>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  disabled={!selectedRepo}
-                  className={`flex w-full items-center justify-between rounded-md border border-blocks-primary-shades-300 px-3 py-2 text-left focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary ${
-                    !selectedRepo
-                      ? "cursor-not-allowed opacity-50"
-                      : "bg-background"
-                  }`}>
-                  <div className="flex items-center gap-2 truncate">
-                    {selectedBranch ? (
-                      <>
-                        <GitBranch size={16} className="shrink-0" />
-                        <span className="truncate">{selectedBranch}</span>
-                      </>
-                    ) : (
-                      <span className="text-low-emphasis">
-                        {selectedRepo
-                          ? t("RENDER_REPO_SELECTION.SELECT_BRANCH")
-                          : t("RENDER_REPO_SELECTION.SELECT_REPOSITORY_FIRST")}
-                      </span>
-                    )}
-                  </div>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="max-h-[300px] min-w-(--radix-dropdown-menu-trigger-width) overflow-y-auto">
-                <div className="sticky top-0 border-b bg-background p-2">
-                  <input
-                    type="text"
-                    placeholder={t("RENDER_REPO_SELECTION.SEARCH_BRANCH")}
-                    className="focus:ring- w-full rounded-md border border-low-emphasis px-3 py-2 text-sm focus:outline-hidden focus:ring-2"
-                    value={branchSearchTerm}
-                    onChange={(e) => setBranchSearchTerm(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  />
-                </div>
-                <div className="max-h-[200px] overflow-y-auto">
-                  {filteredBranches.length > 0 ? (
-                    filteredBranches.map((branch) => (
-                      <DropdownMenuItem
-                        key={branch.name}
-                        onClick={() => handleSelectBranch(branch.name!)}
-                        className="flex items-center gap-2">
-                        <GitBranch size={16} />
-                        <span className="flex-1">{branch.name}</span>
-                        {selectedBranch === branch.name && (
-                          <Check className="h-4 w-4 text-primary" />
-                        )}
-                      </DropdownMenuItem>
-                    ))
-                  ) : (
-                    <div className="px-3 py-2 text-sm text-low-emphasis">
-                      {branchSearchTerm
-                        ? t("RENDER_REPO_SELECTION.NO_BRANCHES_MATCH")
-                        : t("RENDER_REPO_SELECTION.NO_BRANCHES")}
-                    </div>
-                  )}
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <BranchDropdown
+            branches={filteredBranches}
+            selectedRepo={selectedRepo}
+            selectedBranch={selectedBranch}
+            searchTerm={branchSearchTerm}
+            onSearchChange={setBranchSearchTerm}
+            onSelect={handleSelectBranch}
+          />
 
           <div className="space-y-2">
             <label className="text-sm font-medium leading-5">

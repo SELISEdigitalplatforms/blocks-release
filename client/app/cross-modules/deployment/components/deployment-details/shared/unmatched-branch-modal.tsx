@@ -245,14 +245,14 @@ export default function BranchVerificationModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        role="button"
-        tabIndex={0}
+      <button
+        type="button"
         aria-label={t("UNMATCHED_BRANCH_MODAL.CLOSE_DIALOG")}
-        className="fixed inset-0 bg-black/50"
+        className="fixed inset-0 cursor-default bg-black/50"
         onClick={handleBackdropClick}
         onKeyDown={(event) => {
           if (event.key !== "Enter" && event.key !== " ") return;
+          // Handled here, so the browser does not also click (or scroll on Space).
           event.preventDefault();
           handleBackdropClick();
         }}

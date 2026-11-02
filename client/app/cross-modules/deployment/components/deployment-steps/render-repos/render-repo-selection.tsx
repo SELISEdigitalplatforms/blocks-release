@@ -62,9 +62,9 @@ const BranchDropdown = ({
             type="button"
             disabled={!selectedRepo}
             className={`flex w-full items-center justify-between rounded-md border border-blocks-primary-shades-300 px-3 py-2 text-left focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary ${
-              !selectedRepo
-                ? "cursor-not-allowed opacity-50"
-                : "bg-background"
+              selectedRepo
+                ? "bg-background"
+                : "cursor-not-allowed opacity-50"
             }`}>
             <div className="flex items-center gap-2 truncate">
               {selectedBranch ? (
@@ -101,7 +101,7 @@ const BranchDropdown = ({
               branches.map((branch) => (
                 <DropdownMenuItem
                   key={branch.name}
-                  onClick={() => onSelect(branch.name!)}
+                  onClick={() => onSelect(branch.name)}
                   className="flex items-center gap-2">
                   <GitBranch size={16} />
                   <span className="flex-1">{branch.name}</span>

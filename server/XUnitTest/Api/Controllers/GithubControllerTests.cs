@@ -72,6 +72,23 @@ namespace XUnitTest.Api.Controllers
             (await CreateController().GetRepos("q", 1, 30)).Should().BeOfType<BadRequestObjectResult>();
         }
 
+        [Fact]
+        public async Task GetRepos_GithubNotConnected_ReturnsNotFound_NotA500()
+        {
+            // Rollbar #750/#2053: no stored GitHub token makes the service answer null, and the
+            // controller dereferenced it.
+            _github.Setup(g => g.SearchUserRepositories(It.IsAny<SearchRepositoryListRequest>()))
+                   .ReturnsAsync((BaseApiResponse)null!);
+
+            var body = (await CreateController().GetRepos("q", 1, 30))
+                .Should().BeOfType<NotFoundObjectResult>()
+                .Which.Value.Should().BeOfType<BaseApiResponse>().Which;
+
+            body.IsSuccess.Should().BeFalse();
+            body.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            body.Message.Should().Be("GitHub is not connected for this user, or the connection is no longer valid.");
+        }
+
         // ---- GetBranches ----
 
         [Fact]

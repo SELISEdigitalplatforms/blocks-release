@@ -14,6 +14,10 @@ public interface IVersionControlService
     public Task<bool> RevokeOauthAccess(RepositoryToken token);
     public Task<List<GithubUserOrgResponse>> GetUserOrganizations(string accessToken);
     public Task<BaseApiResponse> GetRepositories(SearchRepositoryListRequest repoSearchQuery);
+    /// <summary>
+    /// The calling Blocks user's GitHub repositories, or <c>null</c> when they have not connected
+    /// GitHub (no stored token). Callers must handle the null.
+    /// </summary>
     public Task<BaseApiResponse> SearchUserRepositories(SearchRepositoryListRequest repoSearchQuery);
     public Task<List<Branch>> GetBranches(string repo);
     public Task<(bool, string)> GetRepoBranchByName(string repo, string branch);

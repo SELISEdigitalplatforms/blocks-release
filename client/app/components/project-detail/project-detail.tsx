@@ -1,10 +1,11 @@
 import { ReactNode } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button";
 import { Button } from "@/components/ui-kits/button/button";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { MaskedText } from "@/components/masked-text";
 import { IProject } from "@blocks-identifier/models/project.model";
-import { environmentOptions } from "@/constants/environment-options.constant";
+import { getEnvironmentOptions } from "@/constants/environment-options.constant";
 import { getProjectBlocksApiUrl } from "@/lib/domain";
 
 // Lightweight date formatter (deployment has no shared formatFullDate helper).
@@ -61,12 +62,13 @@ export const ProjectDetail = ({
   project?: IProject;
   isLoading: boolean;
 }) => {
+  const { t } = useT("release.shared");
   if (isLoading) return <LoadingSkeleton />;
 
   return (
     <div className="rounded-sm border bg-card px-2 py-2 shadow-xs">
       <div className="grid-col-1 grid gap-4 px-2 py-4 md:gap-6 lg:grid-cols-2">
-        <ProjectDetailItem label="Name">{project?.name}</ProjectDetailItem>
+        <ProjectDetailItem label={t("PROJECT_DETAIL.NAME")}>{project?.name}</ProjectDetailItem>
         <ProjectDetailItem label="X-Blocks-Key">
           <div className="flex h-6 items-center gap-2">
             <CopyToClipboardButton
@@ -83,7 +85,7 @@ export const ProjectDetail = ({
           </div>
         </ProjectDetailItem>
         {project?.tenantSlug && (
-          <ProjectDetailItem label="Project Slug">
+          <ProjectDetailItem label={t("PROJECT_DETAIL.PROJECT_SLUG")}>
             <div className="flex h-6 items-center gap-2">
               <CopyToClipboardButton
                 textToCopy={project?.tenantSlug || ""}
@@ -94,10 +96,10 @@ export const ProjectDetail = ({
             </div>
           </ProjectDetailItem>
         )}
-        <ProjectDetailItem label="Environment">
+        <ProjectDetailItem label={t("PROJECT_DETAIL.ENVIRONMENT")}>
           {project?.environment === "prod" ? (
             <Button className="mr-4 h-6 rounded-xl" size="sm" variant="default">
-              Production
+              {t("PROJECT_DETAIL.PRODUCTION")}
             </Button>
           ) : (
             <Button
@@ -106,23 +108,23 @@ export const ProjectDetail = ({
               variant="secondary"
             >
               {
-                environmentOptions.find(
+                getEnvironmentOptions().find(
                   (option) => option.value === project?.environment,
                 )?.label
               }
             </Button>
           )}
         </ProjectDetailItem>
-        <ProjectDetailItem label="Blocks Microservices Url">
+        <ProjectDetailItem label={t("PROJECT_DETAIL.BLOCKS_MICROSERVICES_URL")}>
           <div className="flex h-auto items-center gap-2">
             <RenderProjectUrl project={project} />
           </div>
         </ProjectDetailItem>
-        <ProjectDetailItem label="Last updated Date">
+        <ProjectDetailItem label={t("PROJECT_DETAIL.LAST_UPDATED_DATE")}>
           {project?.lastUpdatedDate &&
             formatFullDate(new Date(project.lastUpdatedDate))}
         </ProjectDetailItem>
-        <ProjectDetailItem label="Created Date">
+        <ProjectDetailItem label={t("PROJECT_DETAIL.CREATED_DATE")}>
           {project?.createdDate &&
             formatFullDate(new Date(project.createdDate))}
         </ProjectDetailItem>

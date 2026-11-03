@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useCallback, useMemo } from "react";
 import { Clock, ChevronDown, ChevronRight } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 import {
   DeploymentEventGroup,
   DeploymentEventType,
@@ -20,6 +21,8 @@ import { LogLineText } from "@blocks-deployment/components/deployment-details/sh
 import { useNotificationListener } from "@/cross-modules/communication/hooks/use-notification-listener";
 import { IDeploymentEvent } from "@blocks-deployment/pages/deployment-details";
 
+const LIVE_LOGS_SECTION_LOADING = "LIVE_LOGS_SECTION.LOADING";
+
 interface LiveDeploymentLogsProps {
   buildId?: string;
   historicalEvents?: IDeploymentEvent[];
@@ -29,6 +32,7 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
   buildId,
   historicalEvents,
 }) => {
+  const { t } = useT("release.deployment.details");
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
   const [notificationSteps, setNotificationSteps] = useState<IBuildStep[]>([]);
   const [isLoadingHistorical, setIsLoadingHistorical] = useState<boolean>(true);
@@ -111,8 +115,8 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
   const showSuccessToast = (buildId: string) => {
     if (!completedBuilds.has(buildId)) {
       toast({
-        title: "Deployment Status",
-        description: "Successfully deployed",
+        title: t("LIVE_LOGS_SECTION.TOAST_STATUS_TITLE"),
+        description: t("LIVE_LOGS_SECTION.TOAST_DEPLOYED"),
         variant: "success",
       });
       setCompletedBuilds((prev) => new Set(prev).add(buildId));
@@ -122,9 +126,8 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
   const showErrorToast = (buildId: string) => {
     if (!failedBuilds.has(buildId)) {
       toast({
-        title: "Deployment Failed",
-        description:
-          "Deployment failed. Please check the logs for more details.",
+        title: t("LIVE_LOGS_SECTION.TOAST_FAILED_TITLE"),
+        description: t("LIVE_LOGS_SECTION.TOAST_FAILED_DESCRIPTION"),
         variant: "destructive",
       });
       setFailedBuilds((prev) => new Set(prev).add(buildId));
@@ -201,7 +204,7 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
 
   useNotificationListener("BuildLogNotification", handleNotificationData);
 
-  const title = "Deployment logs";
+  const title = t("LIVE_LOGS_SECTION.TITLE");
   const logSteps = notificationSteps;
 
   const toggleExpanded = (stepId: string) => {
@@ -233,9 +236,9 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
           <div className="py-8 text-center text-gray-500">
             <Clock className="mx-auto mb-2 h-8 w-8 animate-spin" />
             <p>
-              {!buildId
-                ? "Waiting for build ID..."
-                : "Loading deployment logs..."}
+              {buildId
+                ? t(LIVE_LOGS_SECTION_LOADING)
+                : t("LIVE_LOGS_SECTION.WAITING_FOR_BUILD_ID")}
             </p>
           </div>
         </div>
@@ -255,7 +258,7 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
           !hasLoadedHistorical && (
             <div className="py-8 text-center text-gray-500">
               <Clock className="mx-auto mb-2 h-8 w-8 animate-spin" />
-              <p>Loading deployment logs...</p>
+              <p>{t(LIVE_LOGS_SECTION_LOADING)}</p>
             </div>
           )}
 
@@ -263,7 +266,7 @@ const LiveDeploymentLogs: React.FC<LiveDeploymentLogsProps> = ({
           (!isLoadingHistorical || hasLoadedHistorical) && (
             <div className="py-8 text-center text-gray-500">
               <Clock className="mx-auto mb-2 h-8 w-8 animate-spin" />
-              <p>Loading deployment logs...</p>
+              <p>{t(LIVE_LOGS_SECTION_LOADING)}</p>
             </div>
           )}
 

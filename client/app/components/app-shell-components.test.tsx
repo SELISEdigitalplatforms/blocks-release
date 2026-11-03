@@ -1,6 +1,8 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { useAppSettingsStore } from "@seliseblocks/genesis-os/store";
+import { useI18nStore } from "@seliseblocks/genesis-os";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
 
 vi.mock("@blocks-idp/iam/hooks/use-user", () => ({
@@ -11,7 +13,6 @@ vi.mock("@blocks-idp/authentication/hooks/use-auth", () => ({
 }));
 
 import { BlocksAppLauncher } from "./blocks-app-launcher/blocks-app-launcher";
-import { LanguageSelector } from "./language-selector/language-selector";
 import { UserDropdownMenu } from "./user-dropdown-menu/user-dropdown-menu";
 import { DesktopMenuItem } from "./menus/desktop-menu-item";
 import { MobileMenuItem } from "./menus/mobile-menu-item";
@@ -47,21 +48,27 @@ describe("BlocksAppLauncher", () => {
   });
 });
 
-describe("LanguageSelector", () => {
-  it("shows the current language and opens the menu", async () => {
-    const user = userEvent.setup({ pointerEventsCheck: 0 });
-    renderWithProviders(<LanguageSelector />);
-    await user.click(screen.getByRole("button"));
-    expect(await screen.findByText("English")).toBeInTheDocument();
-  });
-});
-
 describe("UserDropdownMenu", () => {
   it("opens the user menu", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderWithProviders(<UserDropdownMenu />);
     await user.click(screen.getByRole("button"));
     expect(await screen.findByText("My profile")).toBeInTheDocument();
+  });
+
+  it("shows German once German text is loaded and the language is de", async () => {
+    useI18nStore
+      .getState()
+      .setRemote("de", "release.shared", { "USER_DROPDOWN_MENU.MY_PROFILE": "Mein Profil" });
+    useAppSettingsStore.getState().setSettings({ language: "de" });
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    try {
+      renderWithProviders(<UserDropdownMenu />);
+      await user.click(screen.getByRole("button"));
+      expect(await screen.findByText("Mein Profil")).toBeInTheDocument();
+    } finally {
+      useAppSettingsStore.getState().setSettings({ language: "en" });
+    }
   });
 });
 

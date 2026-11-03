@@ -8,6 +8,7 @@ import {
 } from "@/components/ui-kits/form/form";
 import { Input } from "@/components/ui-kits/input/input";
 import { Plus, Trash2 } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 import type { UseFieldArrayReturn, UseFormReturn } from "react-hook-form";
 import type { ISecretFormValues } from "./secret-form-values";
 
@@ -26,15 +27,18 @@ export const SecretKvEditor = ({
   fieldArray,
   disabled,
 }: SecretKvEditorProps) => {
+  const { t } = useT("release.deployment.secrets");
   const { fields, append, remove } = fieldArray;
 
   return (
     <div className="flex flex-col gap-3">
       <div className="hidden gap-3 sm:grid sm:grid-cols-[1fr_1fr_auto]">
         <FormLabel className="text-xs text-muted-foreground">
-          Key <span className="text-destructive">*</span>
+          {t("SECRET_KV_EDITOR.KEY")} <span className="text-destructive">*</span>
         </FormLabel>
-        <FormLabel className="text-xs text-muted-foreground">Value</FormLabel>
+        <FormLabel className="text-xs text-muted-foreground">
+          {t("SECRET_KV_EDITOR.VALUE")}
+        </FormLabel>
         <span className="w-9" />
       </div>
 
@@ -47,7 +51,9 @@ export const SecretKvEditor = ({
             name={`rows.${index}.key`}
             render={({ field: keyField }) => (
               <FormItem>
-                <FormLabel className="sr-only">Key {index + 1}</FormLabel>
+                <FormLabel className="sr-only">
+                  {t("SECRET_KV_EDITOR.KEY_ROW", { index: index + 1 })}
+                </FormLabel>
                 <FormControl>
                   <Input
                     {...keyField}
@@ -67,7 +73,9 @@ export const SecretKvEditor = ({
             name={`rows.${index}.value`}
             render={({ field: valueField }) => (
               <FormItem>
-                <FormLabel className="sr-only">Value {index + 1}</FormLabel>
+                <FormLabel className="sr-only">
+                  {t("SECRET_KV_EDITOR.VALUE_ROW", { index: index + 1 })}
+                </FormLabel>
                 <FormControl>
                   {/* type="text", not "password": the user is entering a value they already
                       know, and masking it here only invites typos they cannot see. */}
@@ -88,7 +96,7 @@ export const SecretKvEditor = ({
             type="button"
             variant="ghost"
             size="icon"
-            aria-label={`Remove variable ${index + 1}`}
+            aria-label={t("SECRET_KV_EDITOR.REMOVE_VARIABLE", { index: index + 1 })}
             disabled={disabled || fields.length === 1}
             onClick={() => remove(index)}>
             <Trash2 className="h-4 w-4" />
@@ -104,7 +112,7 @@ export const SecretKvEditor = ({
           disabled={disabled}
           onClick={() => append({ key: "", value: "" })}>
           <Plus className="mr-2 h-4 w-4" />
-          Add more
+          {t("SECRET_KV_EDITOR.ADD_MORE")}
         </Button>
       </div>
     </div>

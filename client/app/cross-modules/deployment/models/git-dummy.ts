@@ -1,4 +1,5 @@
 import { ForwardRefExoticComponent } from "react";
+import { tStatic } from "@seliseblocks/genesis-os";
 import { DeploymentData } from "./github-info";
 
 interface IconMap {
@@ -35,8 +36,21 @@ const providers: Provider[] = [
   { id: "aws", name: "AWS", icon: "aws", active: false },
 ];
 const DEPLOYMENT_OPTIONS = [
-  { value: "auto", label: "Git based deployment" },
-  { value: "manual", label: "Blocks Cloud based deployment" },
+  {
+    value: "auto",
+    get label() {
+      return tStatic("release.deployment.shared", "DEPLOYMENT_SETTINGS.GIT_BASED");
+    },
+  },
+  {
+    value: "manual",
+    get label() {
+      return tStatic(
+        "release.deployment.shared",
+        "DEPLOYMENT_SETTINGS.CLOUD_BASED",
+      );
+    },
+  },
 ];
 const FRAMEWORK_OPTIONS = [
   { value: "", label: "Select framework" },

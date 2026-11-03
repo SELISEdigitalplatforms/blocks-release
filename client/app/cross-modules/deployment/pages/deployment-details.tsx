@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { useParams, useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/ui-kits/button/button";
 import { useGetCardProjectAndBranch } from "@/cross-modules/deployment/hooks/use-github-info";
@@ -66,6 +67,7 @@ export interface IDeploymentResponse {
 }
 
 const DeploymentDetails = () => {
+  const { t } = useT("release.deployment.pages");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   // A string, unlike the function useScopedPath returns, is stable across renders.
@@ -132,7 +134,7 @@ const DeploymentDetails = () => {
     () => [
       {
         id: "deployment-logs",
-        label: "Deployment Logs",
+        label: t("DEPLOYMENT_DETAILS.TAB_DEPLOYMENT_LOGS"),
         component: DeploymentLogsTab,
       },
       {
@@ -151,25 +153,25 @@ const DeploymentDetails = () => {
         component: ComingSoonTab,
       },
     ],
-    [],
+    [t],
   );
 
   React.useEffect(() => {
     if (isError) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch deployment data",
+        title: t("common:ERROR"),
+        description: t("DEPLOYMENT_DETAILS.FETCH_FAILED"),
       });
     }
-  }, [isError]);
+  }, [isError, t]);
 
   if (!buildIdStr) {
     return (
       <div className="flex h-64 w-full items-center justify-center">
         <div className="text-center">
           <div className="mb-2 h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
-          <p className="text-sm text-gray-600">Loading deployment details...</p>
+          <p className="text-sm text-gray-600">{t("DEPLOYMENT_DETAILS.LOADING")}</p>
         </div>
       </div>
     );

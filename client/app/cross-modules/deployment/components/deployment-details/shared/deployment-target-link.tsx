@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
 
 interface DeploymentTargetLinkProps {
@@ -14,12 +15,13 @@ export const DeploymentTargetLink = ({
   isLive,
   url,
 }: DeploymentTargetLinkProps) => {
+  const { t } = useT("release.deployment.details");
   if (!isLive) {
     return (
       <span
         className="block truncate text-sm text-low-emphasis line-through"
         data-testid="deploys-to-inactive">
-        {url || "N/A"}
+        {url || t("DEPLOYMENT_TARGET_LINK.NOT_AVAILABLE")}
       </span>
     );
   }
@@ -32,7 +34,7 @@ export const DeploymentTargetLink = ({
         rel="noopener noreferrer"
         className="block truncate text-sm text-primary hover:underline"
         onClick={(e) => e.stopPropagation()}>
-        {url || "N/A"}
+        {url || t("DEPLOYMENT_TARGET_LINK.NOT_AVAILABLE")}
       </a>
     </CopyToClipboardButton>
   );

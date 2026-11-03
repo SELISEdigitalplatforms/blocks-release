@@ -1,4 +1,5 @@
 import { Trash2 } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 
 import ConfirmationModal from "@/components/confirmation-modal/confirmation-modal";
 import { Button } from "@/components/ui-kits/button/button";
@@ -32,29 +33,29 @@ export const DeleteDeploymentButton = ({
   onConfirm,
   onCancel,
 }: DeleteDeploymentButtonProps) => {
+  const { t } = useT("release.deployment.details");
   if (!hasLiveDeployment) {
     return null;
   }
 
   const confirmationData = {
-    dialogTitle: "Delete deployment?",
+    dialogTitle: t("DELETE_DEPLOYMENT_BUTTON.DIALOG_TITLE"),
     dialogSubtitle: (
       <>
-        This permanently destroys the deployment of{" "}
-        <strong>{repoName}</strong>
-        {deploymentUrl ? (
-          <>
-            {" "}
-            at <strong>{deploymentUrl}</strong>
-          </>
-        ) : null}
-        . The site will stop responding. Build history is kept.
+        {deploymentUrl
+          ? t("DELETE_DEPLOYMENT_BUTTON.SUBTITLE_WITH_URL", {
+              repoName: repoName ?? "",
+              url: deploymentUrl,
+            })
+          : t("DELETE_DEPLOYMENT_BUTTON.SUBTITLE", {
+              repoName: repoName ?? "",
+            })}
         <br />
         <br />
       </>
     ),
-    confirmButton: "Delete",
-    cancelButton: "Cancel",
+    confirmButton: t("common:DELETE"),
+    cancelButton: t("common:CANCEL"),
   };
 
   return (
@@ -68,7 +69,9 @@ export const DeleteDeploymentButton = ({
           data-testid="delete-deployment-button">
           <div className="flex items-center justify-center gap-2">
             <Trash2 size={20} />
-            <span>{isDeleting ? "Deleting..." : "Delete"}</span>
+            <span>{isDeleting
+                ? t("DELETE_DEPLOYMENT_BUTTON.DELETING")
+                : t("common:DELETE")}</span>
           </div>
         </Button>
       </DialogTrigger>

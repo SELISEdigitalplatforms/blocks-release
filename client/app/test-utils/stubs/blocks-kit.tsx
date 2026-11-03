@@ -21,6 +21,16 @@ export {
   useBlocksAuthStore,
   useImpersonateStore,
 } from "./blocks-kit-stores";
+export {
+  DEFAULT_LANGUAGE,
+  SUPPORTED_LANGUAGES,
+  resolveLanguage,
+  registerTranslations,
+  useI18nStore,
+  useT,
+  tStatic,
+  useLanguageSwitcher,
+} from "./blocks-kit-i18n";
 export type { StubProject as ProjectStoreState } from "./blocks-kit-stores";
 
 type PassthroughProps = { children?: React.ReactNode } & Record<string, unknown>;

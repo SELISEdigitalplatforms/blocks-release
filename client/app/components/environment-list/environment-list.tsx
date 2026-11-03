@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { ChevronDown, Loader } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
 import {
@@ -20,6 +21,7 @@ const DEPLOYMENT_REPO_PATH = /^\/app\/deployment\/repo\/[^/]+$/;
 const DEPLOYMENT_REPO_REDIRECT = "/app/deployment";
 
 export function EnvironmentList() {
+  const { t } = useT("release.shared");
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { data: projectGroups = [], isLoading } = useGetProjects({});
@@ -91,10 +93,10 @@ export function EnvironmentList() {
                 {environment}
               </div>
             ) : (
-              <span className="text-sm">Select an Environment</span>
+              <span className="text-sm">{t("ENVIRONMENT_LIST.SELECT_AN_ENVIRONMENT")}</span>
             )}
             <small className="mt-1 w-full max-w-[150px] truncate text-left text-xs text-muted-foreground md:text-right">
-              {applicationDomain || "No domain selected"}
+              {applicationDomain || t("ENVIRONMENT_LIST.NO_DOMAIN_SELECTED")}
             </small>
           </div>
           <ChevronDown className="h-4 w-4 shrink-0" />
@@ -103,7 +105,7 @@ export function EnvironmentList() {
       <DropdownMenuContent
         align="end"
         className="w-(--radix-dropdown-menu-trigger-width)">
-        <DropdownMenuLabel>Your Environments</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("ENVIRONMENT_LIST.YOUR_ENVIRONMENTS")}</DropdownMenuLabel>
         {projects
           .filter((project) => project.itemId !== selectedProject?.itemId)
           .slice(0, 5)
@@ -122,7 +124,7 @@ export function EnvironmentList() {
           ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>
-          Environment overview is not part of this client
+          {t("ENVIRONMENT_LIST.OVERVIEW_NOT_AVAILABLE")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -2,8 +2,10 @@ import { Button } from "@/components/ui-kits/button/button";
 import { GitBranch } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useProjectStore } from "@/store/project.store";
+import { useT } from "@seliseblocks/genesis-os";
 
 export const NoDeploymentAvailable = () => {
+  const { t } = useT("release.deployment.details");
   const navigate = useNavigate();
   const tenantGroupId = useProjectStore().selectedProject?.tenantGroupId || "";
 
@@ -16,10 +18,9 @@ export const NoDeploymentAvailable = () => {
               <GitBranch className="h-8 w-8 text-gray-400" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-gray-900">No deployments available</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{t("NO_DEPLOYMENT.TITLE")}</h3>
               <p className="max-w-md text-sm text-gray-500">
-                This repository has not been deployed yet. Click the deploy button to create your
-                first deployment.
+                {t("NO_DEPLOYMENT.DESCRIPTION")}
               </p>
             </div>
             <Button
@@ -28,7 +29,7 @@ export const NoDeploymentAvailable = () => {
               }
               size={"sm"}
             >
-              Go to project overview
+              {t("NO_DEPLOYMENT.GO_TO_OVERVIEW")}
             </Button>
           </div>
         </div>

@@ -3,6 +3,7 @@ import {
   IBuildData,
   IDeploySettings,
 } from "@blocks-deployment/models/deployed-logs";
+import { useT } from "@seliseblocks/genesis-os";
 import { IRepoResponse, RepoCards } from "./repo-cards/repo-cards";
 import { NoRepositoryAvailable } from "../deployment-details/shared/no-repository";
 import { ErrorRepository } from "../deployment-details/shared/error-repository";
@@ -31,11 +32,12 @@ interface DeploymentOverviewProps {
 }
 
 const DeploymentOverview = ({ projects, refetch }: DeploymentOverviewProps) => {
+  const { t } = useT("release.deployment.home");
 
   return (
     <div className="mx-auto min-h-screen w-full">
       <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
-        <h1 className="text-xl font-semibold">Deployment Overview</h1>
+        <h1 className="text-xl font-semibold">{t("DEPLOYMENT_OVERVIEW.TITLE")}</h1>
       </div>
 
       {GetProjectOverview(projects, refetch)}

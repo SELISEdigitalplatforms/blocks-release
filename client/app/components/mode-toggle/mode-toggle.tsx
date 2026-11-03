@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui-kits/button/button";
 import { useAppSettingsStore } from "@seliseblocks/genesis-os/store";
@@ -11,6 +12,7 @@ function getSystemTheme(): "light" | "dark" {
 }
 
 export function ModeToggle() {
+  const { t } = useT("release.shared");
   const { settings, setSettings } = useAppSettingsStore();
   const theme = settings.theme ?? "system";
   const resolvedTheme = theme === "system" ? getSystemTheme() : theme;
@@ -34,7 +36,7 @@ export function ModeToggle() {
     >
       <Moon className="aspect-square w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
       <Sun className="absolute aspect-square w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-      <span className="sr-only">Toggle theme</span>
+      <span className="sr-only">{t("MODE_TOGGLE.TOGGLE_THEME")}</span>
     </Button>
   );
 }

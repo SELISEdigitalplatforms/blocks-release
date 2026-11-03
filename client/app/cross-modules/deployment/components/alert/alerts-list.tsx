@@ -28,6 +28,7 @@ import {
 } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useMemo } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { useAlertFilterQueryParams } from "./alerts-filter-toolbar";
 
 type AlertsListProps = {
@@ -94,6 +95,7 @@ export function AlertsList({
   totalCount = 0,
   onPageChange,
 }: AlertsListProps) {
+  const { t } = useT("release.deployment.alerts");
   const projectKey = useProjectStore()?.selectedProject?.tenantId || "";
   const { setQueryParams } = useAlertFilterQueryParams();
   const { sortQueryParams, setSortQueryParams } = useAlertSortQueryParams();
@@ -110,13 +112,13 @@ export function AlertsList({
         header: () => (
           <FilterControls.SortHeader
             id="name"
-            label="Name"
+            label={t("common:NAME")}
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
         ),
         cell: ({ row }) => {
-          const name = row.original.name || row.original.operationName || "N/A";
+          const name = row.original.name || row.original.operationName || t("ALERTS_LIST.NOT_AVAILABLE");
           return (
             <div className="ml-2 flex flex-row items-center sm:ml-0 sm:w-[180px]">
               <span>{name}</span>
@@ -129,7 +131,7 @@ export function AlertsList({
         header: () => (
           <FilterControls.SortHeader
             id="monitor_type"
-            label="Monitor Type"
+            label={t("ALERTS_LIST.COLUMN_MONITOR_TYPE")}
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
@@ -137,8 +139,8 @@ export function AlertsList({
         cell: ({ row }) => {
           const monitorType =
             row.original.monitorConfigurationType === 0
-              ? "Request"
-              : "Callback";
+              ? t("ALERTS_LIST.MONITOR_TYPE_REQUEST")
+              : t("ALERTS_LIST.MONITOR_TYPE_CALLBACK");
           return (
             <div className="ml-2 flex w-[180px] items-center sm:ml-0 sm:w-[150px]">
               <span>{monitorType}</span>
@@ -151,13 +153,13 @@ export function AlertsList({
         header: () => (
           <FilterControls.SortHeader
             id="url"
-            label="URL"
+            label={t("ALERTS_LIST.COLUMN_URL")}
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
         ),
         cell: ({ row }) => {
-          const url = row.original.url || "N/A";
+          const url = row.original.url || t("ALERTS_LIST.NOT_AVAILABLE");
           return (
             <div className="ml-2 flex w-[180px] items-center sm:ml-0 sm:w-[150px]">
               <span className="break-all">{url}</span>
@@ -171,7 +173,7 @@ export function AlertsList({
         header: () => (
           <FilterControls.SortHeader
             id="uptime"
-            label="Uptime"
+            label={t("ALERTS_LIST.COLUMN_UPTIME")}
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
@@ -205,7 +207,7 @@ export function AlertsList({
         header: () => (
           <FilterControls.SortHeader
             id="status"
-            label="Status"
+            label={t("common:STATUS")}
             value={sortQueryParams}
             onChange={setSortQueryParams}
           />
@@ -251,7 +253,7 @@ export function AlertsList({
         },
       },
     ],
-    [setSortQueryParams, sortQueryParams, projectKey],
+    [setSortQueryParams, sortQueryParams, projectKey, t],
   );
   // TanStack Table returns fresh functions each render, so the React Compiler skips this
   // component; the compiler is not enabled here, and no compiler-safe table API exists.
@@ -264,71 +266,69 @@ export function AlertsList({
 
   if (isLoading) return <LoadingSkelton />;
   return (
-    <>
-      <ScrollArea className="w-full">
-        <Table className="text-sm">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
+    <ScrollArea className="w-full">
+      <Table className="text-sm">
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow
+              key={headerGroup.id}
+              className="px-4 py-2 hover:bg-transparent">
+              {headerGroup.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  className="font-bold text-medium-emphasis">
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows?.length ? (
+            table.getRowModel().rows.map((row) => (
               <TableRow
-                key={headerGroup.id}
-                className="px-4 py-2 hover:bg-transparent">
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    className="font-bold text-medium-emphasis">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
+                key={row.id}
+                data-state={row.getIsSelected() && "selected"}
+                className="text-medium-emphasis cursor-auto"
+                isHoverable>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(
+                      cell.column.columnDef.cell,
+                      cell.getContext(),
+                    )}
+                  </TableCell>
                 ))}
               </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="text-medium-emphasis cursor-auto"
-                  isHoverable>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={table.getAllColumns().length}
-                  className="h-24 text-center text-muted-foreground">
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-        {totalCount > pageSize && (
-          <div className="mt-5 flex items-center md:justify-end">
-            <Pagination
-              page={pageNumber as number}
-              pageSize={pageSize as number}
-              pageSizeOptions={[pageSize as number]}
-              onChange={handlePageChange}
-              totalCount={totalCount || 0}
-            />
-          </div>
-        )}
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
-    </>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell
+                colSpan={table.getAllColumns().length}
+                className="h-24 text-center text-muted-foreground">
+                {t("ALERTS_LIST.NO_RESULTS")}
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+      {totalCount > pageSize && (
+        <div className="mt-5 flex items-center md:justify-end">
+          <Pagination
+            page={pageNumber as number}
+            pageSize={pageSize as number}
+            pageSizeOptions={[pageSize as number]}
+            onChange={handlePageChange}
+            totalCount={totalCount || 0}
+          />
+        </div>
+      )}
+      <ScrollBar orientation="horizontal" />
+    </ScrollArea>
   );
 }

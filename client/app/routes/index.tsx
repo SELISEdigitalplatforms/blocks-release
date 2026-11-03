@@ -20,13 +20,24 @@ import DeploymentPage from "./deployment/deployment";
 import DeploymentRepoDetailsPage from "./deployment/deployment-repo-details";
 import DeploymentLogsPage from "./deployment/deployment-logs";
 import DeploymentLivePage from "./deployment/deployment-live";
-import { navigationMenus } from "@/constants/navigation-menus.constant";
+import { useNavigationMenus } from "@/hooks/use-navigation-menus";
 import { DeploymentLayout } from "@/layouts/deployment-layout";
 
 const redirectPaths: Record<string, string> = {
   "/app/release/monitor/*": "/app/release",
   "/app/release/monitor/incidents/*": "/app/release",
 };
+
+// Menu names depend on the language, so they are read inside a component.
+function LocalizedDashboardRoute() {
+  const navigationMenus = useNavigationMenus();
+  return (
+    <DashboardRoute
+      redirectPaths={redirectPaths}
+      navigationMenus={navigationMenus}
+    />
+  );
+}
 
 export const routes = [
   {
@@ -85,12 +96,7 @@ export const routes = [
           // Impersonated project scope: /app/:itemId/*
           {
             path: ":itemId",
-            element: (
-              <DashboardRoute
-                redirectPaths={redirectPaths}
-                navigationMenus={navigationMenus}
-              />
-            ),
+            element: <LocalizedDashboardRoute />,
             children: [
               {
                 index: true,

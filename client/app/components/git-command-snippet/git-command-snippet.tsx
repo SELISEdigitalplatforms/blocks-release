@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { Plus } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 import {
   Card,
   CardContent,
@@ -28,6 +29,7 @@ const LoadingSkeleton = () => (
 );
 
 export const GitCommandSnippet = () => {
+  const { t } = useT("release.shared");
   const { itemId } = useProjectStore().selectedProject || {
     itemId: "",
     tenantId: "",
@@ -44,19 +46,18 @@ export const GitCommandSnippet = () => {
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle>Git Commands</CardTitle>
+        <CardTitle>{t("GIT_COMMAND_SNIPPET.GIT_COMMANDS")}</CardTitle>
       </CardHeader>
       <CardContent>
         {!hasRepository && (
           <div className="flex flex-col items-center justify-between gap-3 rounded-sm border border-base-error bg-blocks-error-100 px-4 py-4 text-base font-normal text-blocks-error-800 md:flex-row md:gap-4">
             <p>
-              Please add a repository and set the Application Domain above to
-              enable git commands.
+              {t("GIT_COMMAND_SNIPPET.ADD_REPOSITORY_HINT")}
             </p>
             <Link to="/app/deployment">
               <Button size="sm">
                 <Plus className="mr-2 h-4 w-4" />
-                Add Repository
+                {t("GIT_COMMAND_SNIPPET.ADD_REPOSITORY")}
               </Button>
             </Link>
           </div>

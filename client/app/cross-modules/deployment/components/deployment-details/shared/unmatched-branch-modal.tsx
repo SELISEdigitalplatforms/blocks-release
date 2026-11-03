@@ -1,4 +1,5 @@
 import { Loader, X } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "@/hooks/use-toast";
 import { IRepoResponse } from "@blocks-deployment/components/deployment-home/repo-cards/repo-cards";
@@ -34,6 +35,7 @@ export default function BranchVerificationModal({
   onReopenModal,
   onRetry,
 }: BranchVerificationModalProps) {
+  const { t } = useT("release.deployment.details");
   const [modalState, setModalState] = useState<ModalState>("loading");
   const [isRetrying, setIsRetrying] = useState(false);
   const isCancelledRef = useRef(false);
@@ -60,9 +62,8 @@ export default function BranchVerificationModal({
       if (result.error) {
         setModalState("error");
         toast({
-          title: "Branch Match Failed",
-          description:
-            "Unable to check branch compatibility. Please try again later.",
+          title: t("UNMATCHED_BRANCH_MODAL.TOAST_TITLE"),
+          description: t("UNMATCHED_BRANCH_MODAL.TOAST_DESCRIPTION"),
           variant: "destructive",
         });
         return;
@@ -93,9 +94,8 @@ export default function BranchVerificationModal({
 
       setModalState("error");
       toast({
-        title: "Branch Match Failed",
-        description:
-          "Unable to check branch compatibility. Please try again later.",
+        title: t("UNMATCHED_BRANCH_MODAL.TOAST_TITLE"),
+        description: t("UNMATCHED_BRANCH_MODAL.TOAST_DESCRIPTION"),
         variant: "destructive",
       });
     }
@@ -177,15 +177,14 @@ export default function BranchVerificationModal({
     switch (modalState) {
       case "loading":
         return {
-          title: "Please wait…",
+          title: t("UNMATCHED_BRANCH_MODAL.WAIT_TITLE"),
           content: (
             <div className="flex flex-col items-center justify-center space-x-3">
               <div className="mb-2 py-2">
                 <Loader className="h-8 w-8 animate-spin" />
               </div>
               <p className="text-sm leading-relaxed text-medium-emphasis">
-                We&apos;re verifying your repository setup. This may take a few
-                seconds.
+                {t("UNMATCHED_BRANCH_MODAL.VERIFYING")}
               </p>
             </div>
           ),
@@ -194,19 +193,19 @@ export default function BranchVerificationModal({
               onClick={handleClose}
               variant="outline"
               className="px-4 py-2 text-sm">
-              Cancel
+              {t("common:CANCEL")}
             </Button>
           ),
         };
 
       case "error":
         return {
-          title: "Expected branch not available",
+          title: t("UNMATCHED_BRANCH_MODAL.BRANCH_UNAVAILABLE_TITLE"),
           content: (
             <p className="text-sm leading-relaxed text-gray-600">
-              This environment expects a branch named &apos;{repo.branch}&apos;.
-              Please create or adjust the branch name in your Git repository to
-              proceed to deployment.
+              {t("UNMATCHED_BRANCH_MODAL.BRANCH_UNAVAILABLE_BODY", {
+                branch: repo.branch ?? "",
+              })}
             </p>
           ),
           footer: (
@@ -219,10 +218,10 @@ export default function BranchVerificationModal({
                 {isRetrying ? (
                   <>
                     <div className="mr-2 h-3 w-3 animate-spin rounded-full border-b-2 border-current"></div>
-                    Retrying...
+                    {t("UNMATCHED_BRANCH_MODAL.RETRYING")}
                   </>
                 ) : (
-                  "Retry"
+                  t("common:RETRY")
                 )}
               </Button>
               <Button
@@ -230,7 +229,7 @@ export default function BranchVerificationModal({
                 variant="outline"
                 className="px-4 py-2 text-sm"
                 disabled={isRetrying || isProcessing}>
-                Close
+                {t("common:CLOSE")}
               </Button>
             </div>
           ),
@@ -246,14 +245,14 @@ export default function BranchVerificationModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        role="button"
-        tabIndex={0}
-        aria-label="Close dialog"
-        className="fixed inset-0 bg-black/50"
+      <button
+        type="button"
+        aria-label={t("UNMATCHED_BRANCH_MODAL.CLOSE_DIALOG")}
+        className="fixed inset-0 cursor-default bg-black/50"
         onClick={handleBackdropClick}
         onKeyDown={(event) => {
           if (event.key !== "Enter" && event.key !== " ") return;
+          // Handled here, so the browser does not also click (or scroll on Space).
           event.preventDefault();
           handleBackdropClick();
         }}
@@ -267,7 +266,11 @@ export default function BranchVerificationModal({
             className={`p-1 text-gray-400 hover:text-gray-600 ${
               isProcessing ? "hover:text-red-600" : ""
             }`}
-            title={isProcessing ? "Cancel operation" : "Close"}>
+            title={
+              isProcessing
+                ? t("UNMATCHED_BRANCH_MODAL.CANCEL_OPERATION")
+                : t("common:CLOSE")
+            }>
             <X size={20} />
           </button>
         </div>

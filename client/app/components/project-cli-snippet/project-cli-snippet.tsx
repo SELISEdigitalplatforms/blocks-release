@@ -4,6 +4,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui-kits/card/card";
+import { useT } from "@seliseblocks/genesis-os";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { useGetProject } from "@blocks-identifier/hooks/use-project";
 import { useProjectStore } from "@/store/project.store";
@@ -26,6 +27,7 @@ const LoadingSkeleton = () => (
 );
 
 export const ProjectCliSnippet = () => {
+  const { t } = useT("release.shared");
   const { itemId } = useProjectStore().selectedProject || {
     itemId: "",
     tenantId: "",
@@ -41,16 +43,15 @@ export const ProjectCliSnippet = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Frontend Setup commands</CardTitle>
+        <CardTitle>{t("PROJECT_CLI_SNIPPET.FRONTEND_SETUP_COMMANDS")}</CardTitle>
       </CardHeader>
       <CardContent>
         <div>
-          If you have the Blocks CLI already installed, run:
+          {t("PROJECT_CLI_SNIPPET.CLI_INSTALLED_HINT")}
           <CopyableSnippet code={projectSetupCommand} isCopyable={true} />
         </div>
         <div className="mt-6">
-          If you haven&apos;t installed the CLI yet, install it globally using
-          npm, then run the command:
+          {t("PROJECT_CLI_SNIPPET.CLI_NOT_INSTALLED_HINT")}
           <CopyableSnippet
             code={`${cliSetupCommand} \n${projectSetupCommand}`}
             isCopyable={true}

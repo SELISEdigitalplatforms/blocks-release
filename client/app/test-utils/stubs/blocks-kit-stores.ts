@@ -118,8 +118,10 @@ export const useImpersonateStore = create<ImpersonateState>((set) => ({
 }));
 
 interface AppSettingsState {
-  settings: { theme: string; [key: string]: unknown };
-  setSettings: (settings: Partial<{ theme: string }>) => void;
+  settings: { theme: string; language?: string; [key: string]: unknown };
+  setSettings: (
+    settings: Partial<{ theme: string; language: string }>,
+  ) => void;
 }
 
 export const useAppSettingsStore = create<AppSettingsState>((set) => ({

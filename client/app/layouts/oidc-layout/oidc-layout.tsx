@@ -1,4 +1,5 @@
 import { Logo } from "@/components/logo";
+import { useT } from "@seliseblocks/genesis-os";
 import { extractOIDCParams } from "@blocks-idp/authentication/utils/oidc.util";
 import { Loader } from "lucide-react";
 import {
@@ -99,6 +100,7 @@ function OIDCProvider({ children }: { children: ReactNode }) {
 }
 
 function OidcLayoutContent({ children: _children }: { children: ReactNode }) {
+  const { t } = useT("release.shared");
   const { logoUrl, themeColor, isLoading } = useOIDCContext();
 
   if (isLoading) {
@@ -116,7 +118,7 @@ function OidcLayoutContent({ children: _children }: { children: ReactNode }) {
       <div className="flex w-full items-center justify-center">
         <Logo
           src={logoUrl || "/Logo_Light.svg"}
-          alt="OIDC Logo"
+          alt={t("OIDC_LAYOUT.OIDC_LOGO_ALT")}
           width={128}
           height={55}
           className="max-h-[55px] max-w-[128px]"

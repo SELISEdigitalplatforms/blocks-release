@@ -6,6 +6,7 @@ const WarningBanner = () => {
     <div className="flex w-[90%] items-start self-stretch rounded border border-yellow-400 bg-yellow-50 px-4 py-3">
       <div className="pr-10 text-base font-normal leading-6 text-yellow-800">
         {t("WARNING_BANNER.INTRO")}{" "}
+        {/* eslint-disable-next-line no-restricted-syntax -- product name, not translated */}
         <span className="font-medium">Blocks Construct</span>{" "}
         {t("WARNING_BANNER.MIDDLE")}{" "}
         <a
@@ -14,6 +15,7 @@ const WarningBanner = () => {
           target="_blank"
           rel="noopener noreferrer"
         >
+          {/* eslint-disable-line no-restricted-syntax -- product name, not translated */}
           Blocks Construct
         </a>{" "}
         {t("WARNING_BANNER.END")}

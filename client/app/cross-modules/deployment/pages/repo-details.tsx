@@ -514,8 +514,10 @@ export default function RepoDetails() {
             {t("REPO_DETAILS.MISSING_PARAMETERS")}
           </div>
           <div className="mb-4 text-sm text-low-emphasis">
+            {/* eslint-disable-line no-restricted-syntax -- URL parameter names, shown as code identifiers */}
             repoId: {repoId || "MISSING"}
             <br />
+            {/* eslint-disable-line no-restricted-syntax -- URL parameter names, shown as code identifiers */}
             projectKey: {projectKey || "MISSING"}
           </div>
           <div className="space-x-2">

@@ -294,6 +294,7 @@ export function BlocksLoginPage({
               target="_blank"
               rel="noreferrer"
               className="nav-link">
+              {/* eslint-disable-line no-restricted-syntax -- product name, not translated */}
               Blocks
             </a>
             <a
@@ -301,6 +302,7 @@ export function BlocksLoginPage({
               target="_blank"
               rel="noreferrer"
               className="nav-link">
+              {/* eslint-disable-line no-restricted-syntax -- product name, not translated */}
               GitHub
             </a>
           </nav>

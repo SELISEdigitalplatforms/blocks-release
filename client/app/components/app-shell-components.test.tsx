@@ -56,16 +56,16 @@ describe("UserDropdownMenu", () => {
     expect(await screen.findByText("My profile")).toBeInTheDocument();
   });
 
-  it("shows German once German text is loaded and the language is de", async () => {
+  it("shows another language's text once it is loaded and that language is selected", async () => {
     useI18nStore
       .getState()
-      .setRemote("de", "release.shared", { "USER_DROPDOWN_MENU.MY_PROFILE": "Mein Profil" });
-    useAppSettingsStore.getState().setSettings({ language: "de" });
+      .setRemote("xx", "release.shared", { "USER_DROPDOWN_MENU.MY_PROFILE": "[xx] My profile" });
+    useAppSettingsStore.getState().setSettings({ language: "xx" });
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     try {
       renderWithProviders(<UserDropdownMenu />);
       await user.click(screen.getByRole("button"));
-      expect(await screen.findByText("Mein Profil")).toBeInTheDocument();
+      expect(await screen.findByText("[xx] My profile")).toBeInTheDocument();
     } finally {
       useAppSettingsStore.getState().setSettings({ language: "en" });
     }

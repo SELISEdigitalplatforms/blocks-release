@@ -81,7 +81,7 @@ export const SecretKvEditor = ({
                       know, and masking it here only invites typos they cannot see. */}
                   <Input
                     {...valueField}
-                    placeholder="value"
+                    placeholder={t("SECRET_KV_EDITOR.VALUE_PLACEHOLDER")}
                     autoComplete="off"
                     spellCheck={false}
                     disabled={disabled}

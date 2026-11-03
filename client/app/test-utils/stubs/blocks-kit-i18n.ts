@@ -1,8 +1,8 @@
 /**
  * Test double for the i18n runtime of `@seliseblocks/genesis-os`.
  *
- * Same behaviour as the real runtime for bundled English and for German
- * dictionaries set with `useI18nStore.getState().setRemote(...)`, without the
+ * Same behaviour as the real runtime for bundled English and for other-language
+ * dictionaries (other languages come from the localization service) set with `useI18nStore.getState().setRemote(...)`, without the
  * network loader. Language comes from the shared app-settings store.
  */
 import { create } from "zustand";
@@ -15,7 +15,7 @@ type TranslateValues = Readonly<Record<string, string | number>>;
 export const DEFAULT_LANGUAGE = "en";
 export const SUPPORTED_LANGUAGES = [
   { code: "en", title: "English" },
-  { code: "de", title: "Deutsch" },
+  { code: "xx", title: "Test language" },
 ] as const;
 
 export const resolveLanguage = (language?: string | null): string => {

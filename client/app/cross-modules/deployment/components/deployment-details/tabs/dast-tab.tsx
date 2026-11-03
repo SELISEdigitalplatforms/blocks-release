@@ -424,14 +424,15 @@ const DASTCard: React.FC<DASTCardProps> = ({ title, summary, vulnerabilities }) 
         <div className="mt-3 flex items-center gap-6 text-xs text-gray-500">
           <div className="flex items-center gap-1">
             <span>{t("DAST_TAB.LAST_SCAN")}</span>
-            <span className="font-medium text-gray-700">19/02/2024 at 15:32:41</span>
+            <span className="font-medium text-gray-700">{t("DAST_TAB.SAMPLE_LAST_SCAN")}</span>
           </div>
           <div className="flex items-center gap-1">
             <span>{t("DAST_TAB.SCAN_TYPE")}</span>
-            <span className="font-medium text-gray-700">OWASP ZAP Full Scan</span>
+            <span className="font-medium text-gray-700">{t("DAST_TAB.SAMPLE_SCAN_TYPE")}</span>
           </div>
           <div className="flex items-center gap-1">
             <span>{t("DAST_TAB.TARGET_URL")}</span>
+            {/* eslint-disable-next-line no-restricted-syntax -- sample URL, not translated */}
             <span className="font-medium text-gray-700">https://app.example.com</span>
             <RefreshCw className="h-3 w-3 text-gray-400" />
           </div>

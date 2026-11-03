@@ -12,6 +12,8 @@
   "DAST_TAB.NEXT": "Next",
   "DAST_TAB.OVERVIEW_TITLE": "Overview of metrics",
   "DAST_TAB.PREVIOUS": "Previous",
+  "DAST_TAB.SAMPLE_LAST_SCAN": "19/02/2024 at 15:32:41",
+  "DAST_TAB.SAMPLE_SCAN_TYPE": "OWASP ZAP Full Scan",
   "DAST_TAB.SCAN_TYPE": "Scan type:",
   "DAST_TAB.SEARCH_PLACEHOLDER": "Search vulnerabilities...",
   "DAST_TAB.SEVERITY_CRITICAL": "Critical",

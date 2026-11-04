@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Devops.DomainService.Shared.Services;
 using Devops.DomainService.Shared.Utilities;
 using YamlDotNet.Serialization;
 
@@ -159,7 +160,7 @@ public class PipelineRunSettings
 
     public PipelineRunSettings setSonarQubeProjectKey(string repoName)
     {
-        sonarQubeProjectKey = repoName.Replace("/", "-");
+        sonarQubeProjectKey = StringFormatterService.AnalysisProjectName(repoName);
         Console.WriteLine($" Sonar project key: {sonarQubeProjectKey}");
         return this;
     }

@@ -16,6 +16,15 @@ namespace XUnitTest.Devops.Shared
         }
 
         [Theory]
+        [InlineData("SELISEdigitalplatforms/l3-react-selise-hrm", "SELISEdigitalplatforms-l3-react-selise-hrm")]
+        [InlineData("org/My_Repo.web", "org-My_Repo.web")]
+        [InlineData("plain", "plain")]
+        public void AnalysisProjectName_ReplacesSlashesOnly_CaseKept(string input, string expected)
+        {
+            StringFormatterService.AnalysisProjectName(input).Should().Be(expected);
+        }
+
+        [Theory]
         [InlineData("https://Example.com", "example.com")]
         [InlineData("http://Example.com", "example.com")]
         [InlineData("Example.com", "example.com")]

@@ -149,10 +149,10 @@ namespace XUnitTest.Devops.AnalyticsTool
         // ---- helpers ----
 
         [Theory]
-        [InlineData("org/My_Repo", "org-my-repo")]
-        [InlineData("--Org.Repo--", "org-repo")]
+        [InlineData("SELISEdigitalplatforms/l3-react-selise-hrm", "SELISEdigitalplatforms-l3-react-selise-hrm")]
+        [InlineData("org/My_Repo.web", "org-My_Repo.web")]
         [InlineData("plain", "plain")]
-        public void FormatProjectName_IsTheBomProjectName(string repoName, string expected) =>
+        public void FormatProjectName_IsTheBomProjectName_CaseKept(string repoName, string expected) =>
             DependencyTrackAnalyticsService.FormatProjectName(repoName).Should().Be(expected);
 
         [Fact]
@@ -178,7 +178,7 @@ namespace XUnitTest.Devops.AnalyticsTool
         public async Task LookupProjectAsync_EncodesNameAndBranch_AndDropsTheBodyOnFailure()
         {
             var build = new Build { RepoName = "org/My Repo", Branch = "feature/a&b" };
-            GivenRequest("/api/v1/project/lookup?name=org-my-repo&version=feature%2Fa%26b", new ScaLookupResponse { uuid = "u" }, new HttpResponseMessage(HttpStatusCode.OK));
+            GivenRequest("/api/v1/project/lookup?name=org-My%20Repo&version=feature%2Fa%26b", new ScaLookupResponse { uuid = "u" }, new HttpResponseMessage(HttpStatusCode.OK));
 
             var (project, status) = await Create().LookupProjectAsync(build);
             project.uuid.Should().Be("u");

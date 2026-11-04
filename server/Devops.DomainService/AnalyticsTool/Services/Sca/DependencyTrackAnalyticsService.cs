@@ -1,11 +1,11 @@
 using System.Net;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using Devops.DomainService.Deployment.Entities;
 using Devops.DomainService.Deployment.Interfaces;
 using Devops.DomainService.Deployment.Services;
 using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.Shared.Interfaces;
+using Devops.DomainService.Shared.Services;
 using Blocks.Genesis.Entities.Release;
 using Devops.DomainService.TestingTools.Models;
 using Microsoft.Extensions.Configuration;
@@ -16,7 +16,6 @@ namespace Devops.DomainService.AnalyticsTool.Services.Sca;
 
 public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
 {
-    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
     private const string ScaToolsApiBaseUriKey = "ScaToolsApiBaseUri";
     private const string ApiKeyHeader = "X-Api-Key";
     private readonly ILogger<DependencyTrackAnalyticsService> _logger;
@@ -237,11 +236,11 @@ public class DependencyTrackAnalyticsService : IDependencyTrackAnalyticsService
         return details;
     }
 
-    /// <summary>The Dependency-Track project name for a repository, as the pipeline's BOM upload names it.</summary>
-    internal static string FormatProjectName(string repoName) =>
-        Regex.Replace(repoName, "[^a-zA-Z0-9]", "-", RegexOptions.None, RegexTimeout).ToLower().Trim()
-            .Trim('-')
-            .ToLower();
+    /// <summary>
+    /// The Dependency-Track project name for a repository, exactly as the pipeline's BOM upload names it. Case is
+    /// kept: Dependency-Track matches names exactly, so a lowercased name finds no project for any repo with capitals.
+    /// </summary>
+    internal static string FormatProjectName(string repoName) => StringFormatterService.AnalysisProjectName(repoName);
 
     // ---- Calls used by the per-build capture (ScaCaptureService). Each returns null data on any failure. ----
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Devops.DomainService.PipelinerunBuilders;
+using Devops.DomainService.Shared.Services;
 using FluentAssertions;
 
 namespace XUnitTest.Devops.PipelinerunBuilders
@@ -376,6 +377,16 @@ namespace XUnitTest.Devops.PipelinerunBuilders
             var result = settings.build();
 
             GetParamValue(result, "sonar-project-key").Should().Be("org-repo");
+        }
+
+        [Fact]
+        public void SetSonarQubeProjectKey_KeepsCase_TheNameTheScaLookupUses()
+        {
+            const string repoName = "SELISEdigitalplatforms/l3-react-selise-hrm";
+            var result = new PipelineRunSettings(BuildRoot()).setSonarQubeProjectKey(repoName).build();
+
+            GetParamValue(result, "sonar-project-key").Should().Be("SELISEdigitalplatforms-l3-react-selise-hrm")
+                .And.Be(StringFormatterService.AnalysisProjectName(repoName));
         }
 
         [Fact]

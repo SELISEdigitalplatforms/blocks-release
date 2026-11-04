@@ -14,6 +14,13 @@ namespace Devops.DomainService.Shared.Services
                         .Trim('-');
         }
 
+        /// <summary>
+        /// A repository's project name in SonarQube and Dependency-Track: the full repository name with "/" as "-",
+        /// case and every other character kept. The pipeline receives it as <c>sonar-project-key</c> and its SCA step
+        /// uploads the BOM under it, and Dependency-Track matches project names exactly, so a lookup must use it as is.
+        /// </summary>
+        public static string AnalysisProjectName(string repoName) => repoName.Replace("/", "-");
+
         public static string RemoveHttpsFromString(string value)
         {
             return Regex.Replace(value, @"^https?://", "", RegexOptions.IgnoreCase, RegexTimeout)

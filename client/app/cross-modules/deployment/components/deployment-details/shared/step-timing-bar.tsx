@@ -1,3 +1,4 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { IBuildStep } from "@blocks-deployment/models/live-logs";
 import {
   DURATION_PLACEHOLDER,
@@ -25,6 +26,7 @@ type StepTimingBarProps = {
  * reached a terminal status makes no claim about its end either way.
  */
 export const StepTimingBar = ({ step }: StepTimingBarProps) => {
+  const { t } = useT("release.deployment.details");
   const { startTime, endTime, duration, timingSource, status } = step;
 
   // `duration` is the placeholder whenever the range is not presentable - no
@@ -52,27 +54,31 @@ export const StepTimingBar = ({ step }: StepTimingBarProps) => {
   return (
     <div className="border-default flex flex-wrap items-center gap-x-2 border-b bg-secondary px-3 py-1.5 text-xs text-medium-emphasis">
       <span>
-        Started {approximate}
-        {formatClockTime(start, withMillis)}
+        {t("STEP_TIMING_BAR.STARTED", {
+          time: approximate + formatClockTime(start, withMillis),
+        })}
       </span>
       {isTerminalStepStatus(status) && (
         <>
           <span aria-hidden="true">·</span>
           <span>
-            Ended {approximate}
-            {formatClockTime(end, withMillis)}
+            {t("STEP_TIMING_BAR.ENDED", {
+              time: approximate + formatClockTime(end, withMillis),
+            })}
           </span>
         </>
       )}
       {isRunning && (
         <>
           <span aria-hidden="true">·</span>
-          <span>Running</span>
+          <span>{t("STEP_TIMING_BAR.RUNNING")}</span>
         </>
       )}
       <span aria-hidden="true">·</span>
       <span>
-        {isRunning ? "Elapsed" : "Took"} {duration}
+        {isRunning
+          ? t("STEP_TIMING_BAR.ELAPSED", { duration: duration ?? "" })
+          : t("STEP_TIMING_BAR.TOOK", { duration: duration ?? "" })}
       </span>
     </div>
   );

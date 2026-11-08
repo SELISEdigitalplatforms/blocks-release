@@ -8,6 +8,7 @@ import { formatFullDate } from "@/utils/date.util";
 import { useScopedPath } from "@/hooks/use-scoped-path";
 import { CopyToClipboardButton } from "@/components/copy-to-clipboard-button/copy-to-clipboard-button";
 import React, { useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import {
   useRepoAndGitBranchMatch,
   useValidateAuthorization,
@@ -17,6 +18,8 @@ import { CustomDomainOnlyTarget } from "@blocks-deployment/components/deployment
 import { DEPLOYMENT_OPTIONS_DETAILS } from "@blocks-deployment/models/deployment-settings";
 import { isCustomDomainOnly } from "@blocks-deployment/utils/custom-domain.utils";
 import { RepositoryAccessModal } from "./repository-access-modal";
+
+const REPO_CARDS_NOT_AVAILABLE = "REPO_CARDS.NOT_AVAILABLE";
 
 export interface IRepoResponse {
   sourceRepoId: string;
@@ -49,6 +52,7 @@ export interface IRepoResponse {
 }
 
 export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
+  const { t } = useT("release.deployment.home");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const [showBranchModal, setShowBranchModal] = useState(false);
@@ -142,15 +146,17 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
           <div className="flex w-full items-center justify-start">
             <h3 className="flex flex-wrap items-center gap-2 text-lg font-semibold">
               <span>
-                Deploys for {repo.repoName?.split("/").pop() || repo.repoName}
+                {t("REPO_CARDS.DEPLOYS_FOR", {
+                  name: repo.repoName?.split("/").pop() || repo.repoName,
+                })}
               </span>
               {isLoading && (
                 <>
                   <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-blue-600"></div>
                   <span className="text-sm font-normal text-blue-600">
                     {showBranchModal
-                      ? "Processing..."
-                      : "Processing in background..."}
+                      ? t("REPO_CARDS.PROCESSING")
+                      : t("REPO_CARDS.PROCESSING_BACKGROUND")}
                   </span>
                 </>
               )}
@@ -165,19 +171,19 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
             {/* Left column */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <p className="text-sm text-low-emphasis">Repo URL</p>
+                <p className="text-sm text-low-emphasis">{t("REPO_CARDS.REPO_URL")}</p>
                 <a
                   href={repo.repoUrl || "#"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block truncate text-sm text-blue-600 hover:underline"
                   onClick={(e) => e.stopPropagation()}>
-                  {repo.repoUrl || "N/A"}
+                  {repo.repoUrl || t(REPO_CARDS_NOT_AVAILABLE)}
                 </a>
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm text-low-emphasis">Deploys To</p>
+                <p className="text-sm text-low-emphasis">{t("REPO_CARDS.DEPLOYS_TO")}</p>
                 {isCustomDomainOnly(repo) ? (
                   <CustomDomainOnlyTarget url={repo.defaultDeploymentUrl} />
                 ) : (
@@ -190,7 +196,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
                       rel="noopener noreferrer"
                       className="block truncate text-sm text-blue-600 hover:underline"
                       onClick={(e) => e.stopPropagation()}>
-                      {repo.defaultDeploymentUrl ?? "N/A"}
+                      {repo.defaultDeploymentUrl ?? t(REPO_CARDS_NOT_AVAILABLE)}
                     </a>
                   </CopyToClipboardButton>
                 )}
@@ -198,7 +204,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
 
               <div className="space-y-2">
                 <p className="text-sm text-low-emphasis">
-                  Custom Deployment URL
+                  {t("REPO_CARDS.CUSTOM_DEPLOYMENT_URL")}
                 </p>
                 {repo.customDeploymentUrl &&
                 repo.customDeploymentUrl !== "N/A" ? (
@@ -215,7 +221,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
                     </a>
                   </CopyToClipboardButton>
                 ) : (
-                  <span className="block truncate text-sm">{"N/A"}</span>
+                  <span className="block truncate text-sm">{t(REPO_CARDS_NOT_AVAILABLE)}</span>
                 )}
               </div>
             </div>
@@ -224,7 +230,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
             <div className="mb-2 grid grid-cols-1 gap-4">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <p className="text-sm text-low-emphasis">Deployment Status</p>
+                  <p className="text-sm text-low-emphasis">{t("REPO_CARDS.DEPLOYMENT_STATUS")}</p>
                   {repo.lastDeploymentStatus ? (
                     <Badge
                       className={getDeploymentLogEventBadgeClassName(
@@ -237,22 +243,22 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
                       className={getDeploymentLogEventBadgeClassName(
                         "NoBuild",
                       )}>
-                      No build
+                      {t("REPO_CARDS.NO_BUILD")}
                     </Badge>
                   )}
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm text-low-emphasis">
-                    Latest Deployment Date
+                    {t("REPO_CARDS.LATEST_DEPLOYMENT_DATE")}
                   </p>
                   <span className="text-sm">
                     {repo.lastDeploymentDate
                       ? formatFullDate(new Date(repo.lastDeploymentDate))
-                      : "N/A"}
+                      : t(REPO_CARDS_NOT_AVAILABLE)}
                   </span>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-sm text-low-emphasis">Deployment Type</p>
+                  <p className="text-sm text-low-emphasis">{t("REPO_CARDS.DEPLOYMENT_TYPE")}</p>
                   <span className="text-sm">
                     {(() => {
                       if (
@@ -260,7 +266,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
                         repo.deploymentType == undefined ||
                         repo.deploymentType == ""
                       ) {
-                        return "N/A";
+                        return t(REPO_CARDS_NOT_AVAILABLE);
                       }
 
                       const result =
@@ -268,7 +274,7 @@ export const RepoCards = ({ repo }: { repo: IRepoResponse }) => {
                           (option) =>
                             option.value.toLowerCase() ==
                             repo.deploymentType?.toLowerCase(),
-                        )?.label || "N/A";
+                        )?.label || t(REPO_CARDS_NOT_AVAILABLE);
 
                       return result;
                     })()}

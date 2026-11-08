@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { Clock, ChevronDown, ChevronRight } from "lucide-react";
 import { DeployedLogsService } from "@blocks-deployment/services/deployed-logs.service";
 import {
@@ -22,6 +23,18 @@ interface DeployedLogsProps {
   isSuccess?: boolean;
 }
 
+// The whole deployment's status from the build record's status; undefined keeps the current one.
+const overallDeploymentStatus = (status?: string): string | undefined => {
+  if (
+    status === DEPLOYMENT_LOG_EVENT_STATUS.COMPLETED ||
+    status === DEPLOYMENT_LOG_EVENT_STATUS.SUCCESS
+  ) {
+    return "Successful";
+  }
+  if (status === DEPLOYMENT_LOG_EVENT_STATUS.FAILED) return "Failed";
+  return undefined;
+};
+
 const DeployedLogs: React.FC<DeployedLogsProps> = ({
   buildId,
   cardData,
@@ -29,6 +42,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
   isError,
   isSuccess,
 }) => {
+  const { t } = useT("release.deployment.details");
   const { getStatusIcon } = useStatusIcon();
 
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
@@ -62,17 +76,21 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
       setExpandedSteps(defaultExpanded);
     }
 
-    if (
-      cardData?.status === DEPLOYMENT_LOG_EVENT_STATUS.COMPLETED ||
-      cardData?.status === DEPLOYMENT_LOG_EVENT_STATUS.SUCCESS
-    ) {
-      setWholeDeploymentStatus("Successful");
-    } else if (cardData?.status === DEPLOYMENT_LOG_EVENT_STATUS.FAILED) {
-      setWholeDeploymentStatus("Failed");
-    }
+    const overall = overallDeploymentStatus(cardData?.status);
+    if (overall) setWholeDeploymentStatus(overall);
   }
 
-  const title: string = "Deployment logs";
+  const title: string = t("DEPLOYED_LOGS.TITLE");
+  const statusLabel =
+    wholeDeploymentStatus === "Successful"
+      ? t("DEPLOYED_LOGS.STATUS_SUCCESSFUL")
+      : t("DEPLOYED_LOGS.STATUS_FAILED");
+  const statusText = wholeDeploymentStatus
+    ? t("DEPLOYED_LOGS.STATUS_AT", {
+        status: statusLabel,
+        event: cardData?.eventName ?? "",
+      })
+    : "";
 
   const toggleExpanded = (stepId: string): void => {
     const newExpanded = new Set(expandedSteps);
@@ -96,13 +114,15 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
               </div>
               <div className="ml-3">
                 <h3 className="text-lg font-medium text-red-800">
-                  Failed to load deployment data
+                  {t("DEPLOYED_LOGS.LOAD_FAILED")}
                 </h3>
                 <h4 className="text-sm font-medium text-red-800">
-                  Unable to show deployment logs
+                  {t("DEPLOYED_LOGS.LOAD_FAILED_HINT")}
                 </h4>
                 <p className="mt-1 text-xs text-red-600">
-                  Build ID: {buildId || "N/A"}
+                  {t("DEPLOYED_LOGS.BUILD_ID", {
+                    id: buildId || t("DEPLOYED_LOGS.NOT_AVAILABLE"),
+                  })}
                 </p>
               </div>
             </div>
@@ -128,8 +148,8 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
             <Clock className="mx-auto mb-2 h-8 w-8 animate-spin" />
             <p>
               {!buildId
-                ? "Waiting for build ID..."
-                : "Loading deployment logs..."}
+                ? t("DEPLOYED_LOGS.WAITING_FOR_BUILD_ID")
+                : t("DEPLOYED_LOGS.LOADING")}
             </p>
           </div>
         </div>
@@ -147,7 +167,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
             <div className="flex items-center gap-2">
               {getStatusIcon(wholeDeploymentStatus ?? "")}
               <p className="text-sm text-gray-600">
-                {wholeDeploymentStatus} at {cardData?.eventName}
+                {statusText}
                 {pipelineDuration ? ` · ${pipelineDuration}` : ""}
               </p>
             </div>
@@ -159,7 +179,7 @@ const DeployedLogs: React.FC<DeployedLogsProps> = ({
             <div className="flex items-center gap-2">
               {getStatusIcon(wholeDeploymentStatus ?? "")}
               <p className="text-sm text-gray-600">
-                {wholeDeploymentStatus} at {cardData?.eventName}
+                {statusText}
                 {pipelineDuration ? ` · ${pipelineDuration}` : ""}
               </p>
             </div>

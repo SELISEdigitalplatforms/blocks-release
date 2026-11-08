@@ -1,3 +1,4 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import { IBuildEvent } from "@blocks-deployment/models/deployed-logs";
 import {
   DeploymentEventType,
@@ -5,6 +6,8 @@ import {
   DeploymentEventGroup,
   IStepTimeRange,
 } from "@blocks-deployment/models/live-logs";
+
+const MODULE = "release.deployment.details";
 
 /**
  * A Kubernetes log line is prefixed with an RFC3339 timestamp, e.g.
@@ -287,20 +290,24 @@ export const getStepTimingTooltip = (step: IBuildStep): string | undefined => {
   }
 
   const isRunning = step.status === "running";
-  const clauses = [`Started ${start.toLocaleString()}`];
+  const clauses = [tStatic(MODULE, "DEPLOYMENT_LOGS_UTILS.TOOLTIP_STARTED", { time: start.toLocaleString() })];
 
   if (isTerminalStepStatus(step.status)) {
-    clauses.push(`Ended ${end.toLocaleString()}`);
+    clauses.push(tStatic(MODULE, "DEPLOYMENT_LOGS_UTILS.TOOLTIP_ENDED", { time: end.toLocaleString() }));
   } else if (isRunning) {
-    clauses.push(`Last output ${end.toLocaleString()}`);
+    clauses.push(tStatic(MODULE, "DEPLOYMENT_LOGS_UTILS.TOOLTIP_LAST_OUTPUT", { time: end.toLocaleString() }));
   }
 
-  clauses.push(`${isRunning ? "Elapsed" : "Took"} ${step.duration}`);
+  clauses.push(
+    isRunning
+      ? tStatic(MODULE, "DEPLOYMENT_LOGS_UTILS.TOOLTIP_ELAPSED", { duration: step.duration ?? "" })
+      : tStatic(MODULE, "DEPLOYMENT_LOGS_UTILS.TOOLTIP_TOOK", { duration: step.duration ?? "" }),
+  );
 
   const base = clauses.join(" · ");
 
   return step.timingSource === "events"
-    ? `${base}\nApproximate — derived from backend polling, not log timestamps.`
+    ? `${base}\n${tStatic(MODULE, "DEPLOYMENT_LOGS_UTILS.TOOLTIP_APPROXIMATE")}`
     : base;
 };
 
@@ -623,9 +630,9 @@ export const getBuildDurationLabel = (
   const elapsed = formatElapsedTime(elapsedMs);
   if (elapsed === DURATION_PLACEHOLDER) return DURATION_PLACEHOLDER;
 
-  if (isLiveBuildStatus(status)) return `Deployment is running · ${elapsed}`;
-  if (status && SUCCEEDED_BUILD_STATUSES.has(status)) return `Deployed in ${elapsed}`;
-  if (status && FAILED_BUILD_STATUSES.has(status)) return `Failed after ${elapsed}`;
+  if (isLiveBuildStatus(status)) return tStatic(MODULE, "DEPLOYMENT_LOGS_UTILS.BUILD_RUNNING", { elapsed });
+  if (status && SUCCEEDED_BUILD_STATUSES.has(status)) return tStatic(MODULE, "DEPLOYMENT_LOGS_UTILS.BUILD_DEPLOYED", { elapsed });
+  if (status && FAILED_BUILD_STATUSES.has(status)) return tStatic(MODULE, "DEPLOYMENT_LOGS_UTILS.BUILD_FAILED", { elapsed });
 
   return DURATION_PLACEHOLDER;
 };

@@ -6,6 +6,10 @@
  * server-audited value endpoint.
  */
 
+import { tStatic } from "@seliseblocks/genesis-os";
+
+const RELEASE_DEPLOYMENT_SECRETS_MODULE = "release.deployment.secrets";
+
 /** Wire values. The backend compares these ordinally, so they are sent verbatim. */
 export const REPO_SECRET_STATUS = {
   Active: "active",
@@ -16,10 +20,16 @@ export const REPO_SECRET_STATUS = {
 export type RepoSecretStatus =
   (typeof REPO_SECRET_STATUS)[keyof typeof REPO_SECRET_STATUS];
 
-export const REPO_SECRET_STATUS_LABEL: Record<RepoSecretStatus, string> = {
-  active: "Active",
-  locked: "Locked",
-  deleted: "Deleted",
+/** Display label of a status; resolved when shown so a language change is picked up. */
+export const getRepoSecretStatusLabel = (status: RepoSecretStatus): string => {
+  switch (status) {
+    case "active":
+      return tStatic(RELEASE_DEPLOYMENT_SECRETS_MODULE, "REPO_SECRET_MODEL.STATUS_ACTIVE");
+    case "locked":
+      return tStatic(RELEASE_DEPLOYMENT_SECRETS_MODULE, "REPO_SECRET_MODEL.STATUS_LOCKED");
+    default:
+      return tStatic(RELEASE_DEPLOYMENT_SECRETS_MODULE, "REPO_SECRET_MODEL.STATUS_DELETED");
+  }
 };
 
 /** A flat key/value set. The only shape the backend accepts. */

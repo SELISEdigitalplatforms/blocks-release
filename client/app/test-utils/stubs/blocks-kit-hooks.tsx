@@ -10,3 +10,5 @@ export const useTheme = () => ({
   setTheme: () => {},
   resolvedTheme: "light" as const,
 });
+
+export { useLanguageSwitcher } from "./blocks-kit-i18n";

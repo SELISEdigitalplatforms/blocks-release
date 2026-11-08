@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui-kits/card/card";
 import { IIncidentSummaries } from "@blocks-deployment/models/alerts.model";
+import { useT } from "@seliseblocks/genesis-os";
 import React, { useState, useMemo } from "react";
 
 type IProgressBar = {
@@ -90,6 +91,7 @@ const IndividualBar = ({
   endTime: Date;
   downtimePercentage: number;
 }) => {
+  const { t } = useT("release.deployment.alerts");
   const [showTooltip, setShowTooltip] = useState(false);
 
   const formatTime = (date: Date) => {
@@ -130,8 +132,11 @@ const IndividualBar = ({
               </span>
             </div>
             <span className="font-semibold">
-              {status ? "Up " : "Down "}
-              {status ? "100" : downtimePercentage.toFixed(1)}%
+              {status
+                ? t("PROGRESS_BAR.UP", { percent: "100" })
+                : t("PROGRESS_BAR.DOWN", {
+                    percent: downtimePercentage.toFixed(1),
+                  })}
             </span>
           </div>
         </Card>

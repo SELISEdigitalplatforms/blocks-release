@@ -1,9 +1,11 @@
+import { useT } from "@seliseblocks/genesis-os";
 import { Button } from "@/components/ui-kits/button/button";
 import { GitBranch } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useProjectStore } from "@/store/project.store";
 
 export const NoBranch = ({ projectEnvironment }: { projectEnvironment: string }) => {
+  const { t } = useT("release.deployment.scans");
   const navigate = useNavigate();
   const tenantGroupId = useProjectStore().selectedProject?.tenantGroupId || "";
 
@@ -16,10 +18,9 @@ export const NoBranch = ({ projectEnvironment }: { projectEnvironment: string })
               <GitBranch className="h-8 w-8 text-gray-400" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-gray-900">No Repository available</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{t("NO_BRANCH.TITLE")}</h3>
               <p className="max-w-md text-sm text-gray-500">
-                {`This project doesn't have any repository for ${projectEnvironment} environment yet.
-                    Please create a repository with ${projectEnvironment} environment or select the proper environment from above.`}
+                {t("NO_BRANCH.DESCRIPTION", { environment: projectEnvironment })}
               </p>
             </div>
             <Button
@@ -28,7 +29,7 @@ export const NoBranch = ({ projectEnvironment }: { projectEnvironment: string })
               }
               size={"sm"}
             >
-              Go to Deployment Overview
+              {t("NO_BRANCH.GO_TO_OVERVIEW")}
             </Button>
           </div>
         </div>

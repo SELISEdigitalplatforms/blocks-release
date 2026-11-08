@@ -8,13 +8,13 @@ describe("useLanguageViewStore", () => {
 
   it("sets and toggles selected languages", () => {
     const store = useLanguageViewStore.getState();
-    store.setSelectedLanguages(["en", "de"]);
+    store.setSelectedLanguages(["en", "xx"]);
     expect(useLanguageViewStore.getState().selectedLanguages).toEqual([
       "en",
-      "de",
+      "xx",
     ]);
-    store.toggleLanguage("fr");
-    expect(useLanguageViewStore.getState().selectedLanguages).toContain("fr");
+    store.toggleLanguage("yy");
+    expect(useLanguageViewStore.getState().selectedLanguages).toContain("yy");
     store.toggleLanguage("en");
     expect(useLanguageViewStore.getState().selectedLanguages).not.toContain(
       "en",

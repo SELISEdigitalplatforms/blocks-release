@@ -1,4 +1,5 @@
 import { CheckIcon, PlusCircledIcon } from "@radix-ui/react-icons";
+import { useT } from "@seliseblocks/genesis-os";
 import { cn } from "@/lib/utils";
 import usePopoverWidth from "@/hooks/use-popover-width";
 
@@ -25,6 +26,7 @@ interface MultiSelectProps {
 }
 
 export function MultiSelect({ label, options, onChange, value: selectedValues }: MultiSelectProps) {
+  const { t } = useT("release.shared");
   const [buttonRef, popoverWidth] = usePopoverWidth();
 
   const onSelectHandler = (value: string) => {
@@ -54,7 +56,7 @@ export function MultiSelect({ label, options, onChange, value: selectedValues }:
                 <div className="flex space-x-1">
                   {selectedValues.length > 2 ? (
                     <Badge variant="secondary" className="rounded-sm px-1 font-normal">
-                      {selectedValues.length} selected
+                      {t("MULTI_SELECT.SELECTED_COUNT", { count: selectedValues.length })}
                     </Badge>
                   ) : (
                     options
@@ -83,7 +85,7 @@ export function MultiSelect({ label, options, onChange, value: selectedValues }:
         <Command>
           <CommandInput placeholder={label} />
           <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandEmpty>{t("MULTI_SELECT.NO_RESULTS_FOUND")}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
                 const isSelected = selectedValues.includes(option.value);
@@ -112,7 +114,7 @@ export function MultiSelect({ label, options, onChange, value: selectedValues }:
                     onSelect={() => onResetHandler()}
                     className="justify-center text-center"
                   >
-                    Clear
+                    {t("common:CLEAR")}
                   </CommandItem>
                 </CommandGroup>
               </>

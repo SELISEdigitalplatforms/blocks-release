@@ -1,4 +1,5 @@
 
+import { tStatic, useT } from "@seliseblocks/genesis-os";
 import { Input } from "@/components/ui-kits/input/input";
 import { cn } from "@/lib/utils";
 import {
@@ -17,6 +18,8 @@ import { toast } from "sonner";
 import { Trash2 as RemoveIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui-kits/button/button";
 import { showErrorToast } from "@/hooks/use-toast";
+
+const RELEASE_SHARED_MODULE = "release.shared";
 
 type DirectionOptions = "rtl" | "ltr" | undefined;
 
@@ -96,7 +99,7 @@ export const FileUploader = forwardRef<
 
     useEffect(() => {
       if (isFileTooBig) {
-        showErrorToast({ errors: "The file size is more than 5MB" });
+        showErrorToast({ errors: tStatic(RELEASE_SHARED_MODULE, "FILE_UPLOADER.FILE_SIZE_MORE_THAN_LIMIT") });
       }
     }, [isFileTooBig]);
 
@@ -105,7 +108,7 @@ export const FileUploader = forwardRef<
         const files = acceptedFiles;
 
         if (!files) {
-          toast.error("file error , probably too big");
+          toast.error(tStatic(RELEASE_SHARED_MODULE, "FILE_UPLOADER.FILE_ERROR"));
           return;
         }
 
@@ -124,23 +127,25 @@ export const FileUploader = forwardRef<
         onValueChange(newValues);
 
         if (rejectedFiles.length > 0) {
-          for (let i = 0; i < rejectedFiles.length; i++) {
-            if (rejectedFiles[i].errors[0]?.code === "file-too-large") {
+          for (const rejected of rejectedFiles) {
+            if (rejected.errors[0]?.code === "file-too-large") {
               showErrorToast({
-                errors: `File is too large. Max size is ${maxSize / 1024 / 1024}MB`
+                errors: tStatic(RELEASE_SHARED_MODULE, "FILE_UPLOADER.FILE_TOO_LARGE", {
+                  size: maxSize / 1024 / 1024,
+                })
               });
               break;
             }
-            if (rejectedFiles[i].errors[0]?.code === "file-invalid-type") {
+            if (rejected.errors[0]?.code === "file-invalid-type") {
               showErrorToast({
-                errors: "Invalid file type"
+                errors: tStatic(RELEASE_SHARED_MODULE, "FILE_UPLOADER.INVALID_FILE_TYPE")
               });
               break;
             }
-            if (rejectedFiles[i].errors[0]?.message) {
-              toast.error(rejectedFiles[i].errors[0].message);
+            if (rejected.errors[0]?.message) {
+              toast.error(rejected.errors[0].message);
               showErrorToast({
-                errors: rejectedFiles[i].errors[0].message
+                errors: rejected.errors[0].message
               });
               break;
             }
@@ -287,6 +292,7 @@ export const FileUploaderItem = forwardRef<
   { index: number } & React.HTMLAttributes<HTMLDivElement>
 >(({ className, index, children, ...props }, ref) => {
   const { removeFileFromSet, activeIndex, direction } = useFileUpload();
+  const { t } = useT(RELEASE_SHARED_MODULE);
   const isSelected = index === activeIndex;
   return (
     <div
@@ -307,7 +313,7 @@ export const FileUploaderItem = forwardRef<
         className={cn("absolute", direction === "rtl" ? "left-1 top-1" : "right-1 top-1")}
         onClick={() => removeFileFromSet(index)}
       >
-        <span className="sr-only">remove item {index}</span>
+        <span className="sr-only">{t("FILE_UPLOADER.REMOVE_ITEM", { index })}</span>
         <RemoveIcon className="h-4 w-4 duration-200 ease-in-out hover:stroke-destructive" />
       </button>
     </div>

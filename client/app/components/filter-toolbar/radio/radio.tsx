@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui-kits/separator/separator";
 import { Badge } from "@/components/ui-kits/badge/badge";
 import { useMemo, useState } from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui-kits/radio-group/radio-group";
+import { useT } from "@seliseblocks/genesis-os";
 import { Label } from "@/components/ui-kits/label/label";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui-kits/input/input";
@@ -24,6 +25,7 @@ interface MultiSelectProps {
 }
 
 export function Radio({ label, options, onChange, value }: MultiSelectProps) {
+  const { t } = useT("release.shared");
   const [search, setSearch] = useState("");
   const [buttonRef, popoverWidth] = usePopoverWidth();
   const isMobile = useIsMobile();
@@ -102,7 +104,7 @@ export function Radio({ label, options, onChange, value }: MultiSelectProps) {
             </RadioGroup>
           ) : (
             <div className="py-6 text-center text-sm text-popover-foreground!">
-              No results found.
+              {t("RADIO.NO_RESULTS_FOUND")}
             </div>
           )}
         </>

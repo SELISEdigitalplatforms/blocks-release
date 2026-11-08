@@ -22,6 +22,7 @@ import {
 } from "@blocks-deployment/utils/repo-secrets.util";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import { tStatic, useT } from "@seliseblocks/genesis-os";
 import {
   useFieldArray,
   useForm,
@@ -180,7 +181,8 @@ const applySaveError = (
 ): void => {
   const reason = getServerReason(error);
   const message =
-    getServerMessage(error) ?? "The environment variables could not be saved.";
+    getServerMessage(error) ??
+    tStatic("release.deployment.secrets", "SECRET_FORM_MODAL.SAVE_FAILED");
 
   if (reason && FIELD_MAPPABLE_REASONS.has(reason)) {
     form.setError(fieldForMode(form.getValues()), {
@@ -222,6 +224,7 @@ const SecretForm = ({
   repoId,
   initialSecrets,
 }: SecretFormProps) => {
+  const { t } = useT("release.deployment.secrets");
   const isEdit = !!initialSecrets;
   const [formError, setFormError] = useState<string | null>(null);
   const saveMutation = useSaveRepoSecrets();
@@ -295,7 +298,7 @@ const SecretForm = ({
     try {
       await saveMutation.mutateAsync({ repoId, secrets });
       showSuccessToast({
-        description: "Environment variables saved successfully",
+        description: t("SECRET_FORM_MODAL.SAVED"),
       });
       onOpenChange(false);
     } catch (error) {
@@ -308,11 +311,12 @@ const SecretForm = ({
     <>
       <DialogHeader>
         <DialogTitle>
-          {isEdit ? "Edit environment variables" : "Add environment variables"}
+          {isEdit
+            ? t("SECRET_FORM_MODAL.TITLE_EDIT")
+            : t("SECRET_FORM_MODAL.TITLE_ADD")}
         </DialogTitle>
         <DialogDescription>
-          Saving replaces the whole set for this repository. Values are stored
-          in Key Vault, never in the repository.
+          {t("SECRET_FORM_MODAL.DESCRIPTION")}
         </DialogDescription>
       </DialogHeader>
 
@@ -325,7 +329,7 @@ const SecretForm = ({
           className="flex flex-col gap-5">
           <div
             role="radiogroup"
-            aria-label="Entry mode"
+            aria-label={t("SECRET_FORM_MODAL.ENTRY_MODE")}
             className="flex w-fit gap-1 rounded-md border border-input p-1">
             <Button
               type="button"
@@ -335,7 +339,7 @@ const SecretForm = ({
               variant={mode === "env" ? "secondary" : "ghost"}
               disabled={isPending}
               onClick={() => switchMode("env")}>
-              Env
+              {t("SECRET_FORM_MODAL.MODE_ENV")}
             </Button>
             <Button
               type="button"
@@ -345,7 +349,7 @@ const SecretForm = ({
               variant={mode === "kv" ? "secondary" : "ghost"}
               disabled={isPending}
               onClick={() => switchMode("kv")}>
-              Key / value
+              {t("SECRET_FORM_MODAL.MODE_KEY_VALUE")}
             </Button>
             <Button
               type="button"
@@ -355,7 +359,7 @@ const SecretForm = ({
               variant={mode === "json" ? "secondary" : "ghost"}
               disabled={isPending}
               onClick={() => switchMode("json")}>
-              Paste JSON
+              {t("SECRET_FORM_MODAL.MODE_JSON")}
             </Button>
           </div>
 
@@ -384,10 +388,12 @@ const SecretForm = ({
               variant="outline"
               disabled={isPending}
               onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("common:CANCEL")}
             </Button>
             <Button type="submit" disabled={!canSave}>
-              {isPending ? "Saving…" : "Save variables"}
+              {isPending
+                ? t("SECRET_FORM_MODAL.SAVING")
+                : t("SECRET_FORM_MODAL.SAVE_VARIABLES")}
             </Button>
           </DialogFooter>
         </form>

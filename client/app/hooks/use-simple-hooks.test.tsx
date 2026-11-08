@@ -4,7 +4,6 @@ import { useBoolean } from "./use-boolean";
 import { useDebounce } from "./use-debounce";
 import { useCountDown } from "./use-count-down";
 import useIsMobile from "./use-is-mobile";
-import useLanguage from "./use-language-switcher";
 import { useCopyToClipboard } from "./use-copy-to-clipboard";
 
 describe("useBoolean", () => {
@@ -76,18 +75,6 @@ describe("useIsMobile", () => {
       window.dispatchEvent(new Event("resize"));
     });
     expect(result.current).toBe(false);
-  });
-});
-
-describe("useLanguage", () => {
-  beforeEach(() => localStorage.clear());
-
-  it("defaults to en and persists changes", () => {
-    const { result } = renderHook(() => useLanguage());
-    expect(result.current.language).toBe("en");
-    act(() => result.current.changeLanguage("de"));
-    expect(result.current.language).toBe("de");
-    expect(localStorage.getItem("language")).toBe("de");
   });
 });
 

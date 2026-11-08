@@ -1,11 +1,15 @@
 import { Menu } from "@/models/menu.model";
 import { GitBranch, Home, Package } from "lucide-react";
+import { tStatic } from "@seliseblocks/genesis-os";
 
-export const navigationMenus: Menu[] = [
+const MODULE = "release.shared";
+
+// Names are looked up when the menus are read, so a language change is picked up.
+export const getNavigationMenus = (): Menu[] => [
   {
     id: "overview-project",
     type: "menu",
-    name: "Overview",
+    name: tStatic(MODULE, "NAVIGATION_MENUS.OVERVIEW"),
     path: "/app/dashboard",
     icon: Home,
   },
@@ -16,7 +20,7 @@ export const navigationMenus: Menu[] = [
   {
     id: "deployment",
     type: "menu",
-    name: "Deployment",
+    name: tStatic(MODULE, "NAVIGATION_MENUS.DEPLOYMENT"),
     path: "/app/deployment",
     icon: GitBranch,
   },
@@ -25,7 +29,7 @@ export const navigationMenus: Menu[] = [
   {
     id: "environments",
     type: "menu",
-    name: "Environments",
+    name: tStatic(MODULE, "NAVIGATION_MENUS.ENVIRONMENTS"),
     path: "/app/project/environments",
     icon: Package,
   },

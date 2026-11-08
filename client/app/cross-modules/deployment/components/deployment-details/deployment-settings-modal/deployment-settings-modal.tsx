@@ -33,6 +33,7 @@ import useIsMobile from "@/hooks/use-is-mobile";
 import { useProjectStore } from "@/store/project.store";
 import { useNavigate } from "react-router";
 import { useScopedPath } from "@/hooks/use-scoped-path";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface IDeploymentSettingsModalProps {
   isOpen: boolean;
@@ -58,6 +59,7 @@ const DeploymentSettingsModal = ({
   pageNumber = 1,
   pageSize = 30,
 }: IDeploymentSettingsModalProps) => {
+  const { t } = useT("release.deployment.details");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   // A string, unlike the function useScopedPath returns, is stable across renders.
@@ -68,6 +70,14 @@ const DeploymentSettingsModal = ({
   const projectName = useProjectStore().selectedProject?.name || "";
 
   const isMobile = useIsMobile();
+  const deploymentOptionLabels: Record<string, string> = {
+    auto: t("DEPLOYMENT_SETTINGS_MODAL.OPTION_AUTO"),
+    manual: t("DEPLOYMENT_SETTINGS_MODAL.OPTION_MANUAL"),
+  };
+  const domainOptionLabels: Record<string, string> = {
+    both: t("DEPLOYMENT_SETTINGS_MODAL.DOMAIN_BOTH"),
+    custom: t("DEPLOYMENT_SETTINGS_MODAL.DOMAIN_CUSTOM"),
+  };
   const [deploymentData, setDeploymentData] = useState<DeploymentFormData>({
     customDomain: "",
     lastDeploymentStatus: "",
@@ -101,16 +111,16 @@ const DeploymentSettingsModal = ({
   const { mutate: updateRepoSettings, isPending } = useUpdateRepoSettings({
     onSuccess: () => {
       toast({
-        title: "Settings",
-        description: "Settings updated successfully",
+        title: t("common:SETTINGS"),
+        description: t("DEPLOYMENT_SETTINGS_MODAL.TOAST_UPDATED"),
         variant: "success",
       });
       onClose();
     },
     onError: () => {
       toast({
-        title: "Settings",
-        description: "Failed to update settings",
+        title: t("common:SETTINGS"),
+        description: t("DEPLOYMENT_SETTINGS_MODAL.TOAST_UPDATE_FAILED"),
         variant: "destructive",
       });
     },
@@ -266,9 +276,13 @@ const DeploymentSettingsModal = ({
 
   const getButtonText = () => {
     if (isDeploymentFlow) {
-      return isDeploying ? "Deploying..." : "Deploy Now";
+      return isDeploying
+        ? t("DEPLOYMENT_SETTINGS_MODAL.DEPLOYING")
+        : t("DEPLOYMENT_SETTINGS_MODAL.DEPLOY_NOW");
     }
-    return isPending ? "Saving..." : "Save Settings";
+    return isPending
+      ? t("DEPLOYMENT_SETTINGS_MODAL.SAVING")
+      : t("DEPLOYMENT_SETTINGS_MODAL.SAVE_SETTINGS");
   };
 
   const isButtonDisabled = () => {
@@ -288,19 +302,21 @@ const DeploymentSettingsModal = ({
         }>
         <DialogHeader>
           <DialogTitle className="text-left text-lg font-semibold">
-            {isDeploymentFlow ? "Configure Deployment" : "Deployment Settings"}
+            {isDeploymentFlow
+              ? t("DEPLOYMENT_SETTINGS_MODAL.TITLE_FLOW")
+              : t("DEPLOYMENT_SETTINGS_MODAL.TITLE_SETTINGS")}
           </DialogTitle>
           <DialogDescription className="text-left">
             {isDeploymentFlow
-              ? "Configure your deployment settings and deploy your repository."
-              : "Configure your deployment settings including hosting provider, region, and machine specifications."}
+              ? t("DEPLOYMENT_SETTINGS_MODAL.DESCRIPTION_FLOW")
+              : t("DEPLOYMENT_SETTINGS_MODAL.DESCRIPTION_SETTINGS")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-6">
           <div className="w-full">
             <label className="mb-3 block text-sm font-medium">
-              Deployment Type
+              {t("DEPLOYMENT_SETTINGS_MODAL.DEPLOYMENT_TYPE")}
             </label>
             <RadioGroup
               value={deploymentData.deploymentType}
@@ -316,7 +332,7 @@ const DeploymentSettingsModal = ({
                     checked={deploymentData.deploymentType === option.value}
                   />
                   <label htmlFor={option.value} className="text-sm">
-                    {option.label}
+                    {deploymentOptionLabels[option.value] ?? option.label}
                   </label>
                 </div>
               ))}
@@ -328,7 +344,7 @@ const DeploymentSettingsModal = ({
               <p
                 id="domains-heading"
                 className="mb-3 block text-sm font-medium">
-                Domains
+                {t("DEPLOYMENT_SETTINGS_MODAL.DOMAINS")}
               </p>
               <RadioGroup
                 aria-labelledby="domains-heading"
@@ -352,13 +368,13 @@ const DeploymentSettingsModal = ({
                     <label
                       htmlFor={`domains-${option.value}`}
                       className="text-sm">
-                      {option.label}
+                      {domainOptionLabels[option.value] ?? option.label}
                     </label>
                   </div>
                 ))}
               </RadioGroup>
               <p className="mt-2 text-xs text-low-emphasis">
-                Applies from the next deployment.
+                {t("DEPLOYMENT_SETTINGS_MODAL.DOMAINS_HINT")}
               </p>
             </div>
           )}
@@ -375,7 +391,7 @@ const DeploymentSettingsModal = ({
                 }
               />
               <label htmlFor="view-in-blocks-monitor" className="text-sm">
-                View in Blocks Monitor
+                {t("DEPLOYMENT_SETTINGS_MODAL.VIEW_IN_MONITOR")}
               </label>
             </div>
           )}
@@ -386,7 +402,7 @@ const DeploymentSettingsModal = ({
             variant="outline"
             onClick={handleClose}
             disabled={isButtonDisabled()}>
-            Cancel
+            {t("common:CANCEL")}
           </Button>
           <Button onClick={handleSave} disabled={isButtonDisabled()}>
             {getButtonText()}

@@ -1,5 +1,6 @@
 import { ArrowUpRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { useT } from "@seliseblocks/genesis-os";
 
 type DocCardProps = {
   label: string;
@@ -9,6 +10,7 @@ type DocCardProps = {
 };
 
 const DocCard = ({ label, imageUri, description, url }: DocCardProps) => {
+  const { t } = useT("release.shared");
   return (
     <motion.a
       href={url}
@@ -40,38 +42,37 @@ const DocCard = ({ label, imageUri, description, url }: DocCardProps) => {
           {description}
         </p>
         <span className="mt-auto pt-3 text-xs font-medium text-primary opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-          Explore →
+          {t("DEFAULT_DOC.EXPLORE")}
         </span>
       </div>
     </motion.a>
   );
 };
 
-const data = [
+const getDocs = (t: (key: string) => string) => [
   {
-    label: "Docs",
-    description:
-      "Established standards that help project managers and technical leaders minimize project risks.",
+    label: t("DEFAULT_DOC.DOCS_LABEL"),
+    description: t("DEFAULT_DOC.DOCS_DESCRIPTION"),
     imageUri: "/assets/images/console/console_timeline.png",
     url: "https://github.com/SELISEdigitalplatforms/Wiki-BlocksGuideline-Code/wiki",
   },
   {
-    label: "Code",
-    description:
-      "A repository of well-documented, reusable, tried and tested core components for developers.",
+    label: t("DEFAULT_DOC.CODE_LABEL"),
+    description: t("DEFAULT_DOC.CODE_DESCRIPTION"),
     imageUri: "/assets/images/console/console_coding.png",
     url: "https://github.com/SELISEdigitalplatforms",
   },
   {
-    label: "Cloud",
-    description:
-      "High-performing, optimized, and 24/7 monitored enterprise cloud deployment.",
+    label: t("DEFAULT_DOC.CLOUD_LABEL"),
+    description: t("DEFAULT_DOC.CLOUD_DESCRIPTION"),
     imageUri: "/assets/images/console/console_data-center.png",
     url: "https://selisegroup.com/blocks/",
   },
 ];
 
 export const DefaultDoc = () => {
+  const { t } = useT("release.shared");
+  const data = getDocs(t);
   return (
     <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
       {data.map((item, index) => (

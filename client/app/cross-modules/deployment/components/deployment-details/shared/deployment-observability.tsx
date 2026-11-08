@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 import { Button } from "@/components/ui-kits/button/button";
 import { useNavigate } from "react-router";
 import {
@@ -17,6 +18,8 @@ import { useTickingNow } from "@/hooks/use-ticking-now";
 import SASTLogo from "@blocks-deployment/assets/icons/SAST.svg";
 import SCALogo from "@blocks-deployment/assets/icons/SCA.svg";
 import DASTLogo from "@blocks-deployment/assets/icons/DAST.png";
+
+const DEPLOYMENT_OBSERVABILITY_LOGO_ALT = "DEPLOYMENT_OBSERVABILITY.LOGO_ALT";
 
 interface DeploymentObservabilityProps {
   builds: IPipeline[];
@@ -106,6 +109,7 @@ const DeploymentObservability = ({
   totalCount,
   dataUpdatedAt,
 }: DeploymentObservabilityProps) => {
+  const { t } = useT("release.deployment.details");
   const navigate = useNavigate();
   const scoped = useScopedPath();
   const actions = ["SAST", "SCA", "DAST"];
@@ -165,7 +169,7 @@ const DeploymentObservability = ({
             src={SASTLogo}
             width={16}
             height={16}
-            alt="SAST logo"
+            alt={t(DEPLOYMENT_OBSERVABILITY_LOGO_ALT, { name: "SAST" })}
             className="mr-2 h-4 w-4"
           />
         );
@@ -175,7 +179,7 @@ const DeploymentObservability = ({
             src={SCALogo}
             width={16}
             height={16}
-            alt="SCA logo"
+            alt={t(DEPLOYMENT_OBSERVABILITY_LOGO_ALT, { name: "SCA" })}
             className="mr-2 h-4 w-4"
           />
         );
@@ -185,7 +189,7 @@ const DeploymentObservability = ({
             src={DASTLogo}
             width={12}
             height={12}
-            alt="DAST logo"
+            alt={t(DEPLOYMENT_OBSERVABILITY_LOGO_ALT, { name: "DAST" })}
             className="mr-2 h-3 w-3"
           />
         );
@@ -221,7 +225,9 @@ const DeploymentObservability = ({
                       <DeploymentStatusBadge status={statusOf(build)} />
                     </div>
                     <span className="text-xs text-medium-emphasis sm:text-sm">
-                      ID: {build.itemId}
+                      {t("DEPLOYMENT_OBSERVABILITY.BUILD_ID", {
+                        id: build.itemId,
+                      })}
                     </span>
                   </span>
                 </div>
@@ -300,7 +306,9 @@ const DeploymentObservability = ({
                     </span>
                     <DeploymentStatusBadge status={statusOf(build)} />
                   </div>
-                  <span className="text-xs sm:text-sm">ID: {build.itemId}</span>
+                  <span className="text-xs sm:text-sm">
+                    {t("DEPLOYMENT_OBSERVABILITY.BUILD_ID", { id: build.itemId })}
+                  </span>
                 </span>
               </div>
 
@@ -351,8 +359,14 @@ const DeploymentObservability = ({
 
       <div className="border-default mt-2 border-t px-4 py-3 text-xs text-medium-emphasis">
         {displayedBuilds.length === 0
-          ? `Showing 0 of ${totalCount ?? 0} deploys`
-          : `Showing ${startIndex}-${startIndex + displayedBuilds.length - 1} of ${totalCount ?? displayedBuilds.length} deploys`}
+          ? t("DEPLOYMENT_OBSERVABILITY.SHOWING_NONE", {
+              total: totalCount ?? 0,
+            })
+          : t("DEPLOYMENT_OBSERVABILITY.SHOWING_RANGE", {
+              from: startIndex,
+              to: startIndex + displayedBuilds.length - 1,
+              total: totalCount ?? displayedBuilds.length,
+            })}
       </div>
     </div>
   );

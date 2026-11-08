@@ -25,12 +25,13 @@ import {
 } from "@blocks-deployment/hooks/use-repo-secrets";
 import {
   REPO_SECRET_STATUS,
-  REPO_SECRET_STATUS_LABEL,
+  getRepoSecretStatusLabel,
   type RepoSecretMap,
 } from "@blocks-deployment/models/repo-secrets.model";
 import { getServerReason } from "@blocks-deployment/utils/repo-secrets.util";
 import { History, Eye, Lock, Pencil, Trash2, Unlock } from "lucide-react";
 import { useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { RepoSecretsEmpty } from "./repo-secrets-empty";
 import { RevealSecretModal } from "./reveal-secret-modal";
 import { SecretAuditModal } from "./secret-audit-modal";
@@ -62,6 +63,7 @@ export const RepoSecretsPanelLoading = () => (
  * audited read, and the fetched set is dropped as soon as its dialog closes.
  */
 export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) => {
+  const { t } = useT("release.deployment.secrets");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isRevealOpen, setIsRevealOpen] = useState(false);
   const [isAuditOpen, setIsAuditOpen] = useState(false);
@@ -86,8 +88,8 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
       <Card>
         <CardContent className="px-6 py-12 text-center text-sm text-muted-foreground">
           {forbidden
-            ? "You do not have permission to manage environment variables for this repository."
-            : "The environment variables for this repository could not be loaded."}
+            ? t("REPO_SECRETS_PANEL.FORBIDDEN")
+            : t("REPO_SECRETS_PANEL.LOAD_FAILED")}
         </CardContent>
       </Card>
     );
@@ -173,10 +175,10 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
       <Card className={isBusy ? "opacity-60 transition-opacity" : undefined}>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <h3 className="text-base font-semibold">Environment Variables</h3>
+            <h3 className="text-base font-semibold">{t("REPO_SECRETS_PANEL.TITLE")}</h3>
             {status && (
               <Badge variant={isDeleted ? "outline" : "secondary"}>
-                {REPO_SECRET_STATUS_LABEL[status]}
+                {getRepoSecretStatusLabel(status)}
               </Badge>
             )}
           </div>
@@ -194,13 +196,13 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                         disabled={isBusy || isLocked}
                         onClick={handleReveal}>
                         <Eye className="mr-2 h-4 w-4" />
-                        Reveal
+                        {t("REPO_SECRETS_PANEL.REVEAL")}
                       </Button>
                     </span>
                   </TooltipTrigger>
                   {isLocked && (
                     <TooltipContent>
-                      Unlock these variables to read or change them.
+                      {t("REPO_SECRETS_PANEL.UNLOCK_HINT")}
                     </TooltipContent>
                   )}
                 </Tooltip>
@@ -215,7 +217,7 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                 disabled={isBusy || isLocked}
                 onClick={handleEdit}>
                 <Pencil className="mr-2 h-4 w-4" />
-                Edit
+                {t("common:EDIT")}
               </Button>
             )}
 
@@ -226,9 +228,9 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                   variant="outline"
                   size="sm"
                   disabled={isBusy}
-                  onClick={() => runLifecycle(unlock, "Environment variables unlocked")}>
+                  onClick={() => runLifecycle(unlock, t("REPO_SECRETS_PANEL.UNLOCKED"))}>
                   <Unlock className="mr-2 h-4 w-4" />
-                  Unlock
+                  {t("REPO_SECRETS_PANEL.UNLOCK")}
                 </Button>
               ) : (
                 <Button
@@ -236,9 +238,9 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                   variant="outline"
                   size="sm"
                   disabled={isBusy}
-                  onClick={() => runLifecycle(lock, "Environment variables locked")}>
+                  onClick={() => runLifecycle(lock, t("REPO_SECRETS_PANEL.LOCKED"))}>
                   <Lock className="mr-2 h-4 w-4" />
-                  Lock
+                  {t("REPO_SECRETS_PANEL.LOCK")}
                 </Button>
               ))}
 
@@ -248,8 +250,8 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                 variant="outline"
                 size="sm"
                 disabled={isBusy}
-                onClick={() => runLifecycle(restore, "Environment variables restored")}>
-                Restore
+                onClick={() => runLifecycle(restore, t("REPO_SECRETS_PANEL.RESTORED"))}>
+                {t("REPO_SECRETS_PANEL.RESTORE")}
               </Button>
             )}
 
@@ -260,7 +262,7 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
               disabled={isBusy}
               onClick={() => setIsAuditOpen(true)}>
               <History className="mr-2 h-4 w-4" />
-              Activity
+              {t("REPO_SECRETS_PANEL.ACTIVITY")}
             </Button>
 
             {!isDeleted && (
@@ -272,18 +274,20 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
                     size="sm"
                     disabled={isBusy}>
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    {t("common:DELETE")}
                   </Button>
                 </DialogTrigger>
                 <ConfirmationModal
                   data={{
-                    dialogTitle: "Delete environment variables",
-                    dialogSubtitle: `The environment variables for ${repoName || "this repository"} will stop being available to deployments. You can restore them later.`,
-                    confirmButton: "Delete",
+                    dialogTitle: t("REPO_SECRETS_PANEL.DELETE_DIALOG_TITLE"),
+                    dialogSubtitle: repoName
+                      ? t("REPO_SECRETS_PANEL.DELETE_DIALOG_SUBTITLE", { repo: repoName })
+                      : t("REPO_SECRETS_PANEL.DELETE_DIALOG_SUBTITLE_THIS_REPO"),
+                    confirmButton: t("common:DELETE"),
                   }}
                   onCancel={() => setIsDeleteOpen(false)}
                   onConfirm={async () => {
-                    await runLifecycle(remove, "Environment variables deleted");
+                    await runLifecycle(remove, t("REPO_SECRETS_PANEL.DELETED"));
                     setIsDeleteOpen(false);
                   }}
                   buttonState={{ confirm: { disable: remove.isPending } }}
@@ -295,19 +299,28 @@ export const RepoSecretsPanel = ({ repoId, repoName }: RepoSecretsPanelProps) =>
 
         <CardContent className="flex flex-col gap-2 text-sm text-muted-foreground">
           <p>
-            Stored in Key Vault. Variable names and values are shown only through a
-            deliberate reveal, which is recorded in the activity log.
+            {t("REPO_SECRETS_PANEL.STORED_IN_KEY_VAULT")}
           </p>
           {data.lastRotatedDate && (
             <p>
-              Last changed {new Date(data.lastRotatedDate).toLocaleString()}
-              {data.lastRotatedBy ? ` by ${data.lastRotatedBy}` : ""} ·{" "}
-              {data.rotationCount} update
-              {data.rotationCount === 1 ? "" : "s"}
+              {data.lastRotatedBy
+                ? t("REPO_SECRETS_PANEL.LAST_CHANGED_BY", {
+                    date: new Date(data.lastRotatedDate).toLocaleString(),
+                    user: data.lastRotatedBy,
+                    count: data.rotationCount,
+                  })
+                : t("REPO_SECRETS_PANEL.LAST_CHANGED", {
+                    date: new Date(data.lastRotatedDate).toLocaleString(),
+                    count: data.rotationCount,
+                  })}
             </p>
           )}
           {isDeleted && data.deletedDate && (
-            <p>Deleted {new Date(data.deletedDate).toLocaleString()}</p>
+            <p>
+              {t("REPO_SECRETS_PANEL.DELETED_ON", {
+                date: new Date(data.deletedDate).toLocaleString(),
+              })}
+            </p>
           )}
         </CardContent>
       </Card>

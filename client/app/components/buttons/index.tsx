@@ -1,4 +1,5 @@
 import { ChevronLeft } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 import { Button } from "../ui-kits/button/button";
 
 type BackIconButtonProps = {
@@ -12,9 +13,10 @@ export function BackIconButton({
   onClick,
   className,
 }: BackIconButtonProps) {
+  const { t } = useT("release.shared");
   return (
     <Button
-      aria-label="Go back"
+      aria-label={t("BUTTONS.GO_BACK")}
       variant={"ghost"}
       size={"icon"}
       onClick={onClick}

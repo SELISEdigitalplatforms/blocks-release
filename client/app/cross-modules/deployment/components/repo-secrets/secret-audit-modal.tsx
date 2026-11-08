@@ -18,6 +18,7 @@ import { Button } from "@/components/ui-kits/button/button";
 import { useRepoSecretAudit } from "@blocks-deployment/hooks/use-repo-secrets";
 import type { IRepoSecretAuditRow } from "@blocks-deployment/models/repo-secrets.model";
 import { useState } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 
 type SecretAuditModalProps = {
   open: boolean;
@@ -38,6 +39,8 @@ const SecretAuditBody = ({
   isLoading: boolean;
   rows: IRepoSecretAuditRow[];
 }) => {
+  const { t } = useT("release.deployment.secrets");
+
   if (isLoading) {
     return (
       <div className="flex flex-col gap-2" data-testid="audit-loading">
@@ -51,7 +54,7 @@ const SecretAuditBody = ({
   if (rows.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-muted-foreground">
-        No activity recorded yet.
+        {t("SECRET_AUDIT_MODAL.EMPTY")}
       </p>
     );
   }
@@ -61,10 +64,10 @@ const SecretAuditBody = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Action</TableHead>
-            <TableHead>Outcome</TableHead>
-            <TableHead>Actor</TableHead>
-            <TableHead>When</TableHead>
+            <TableHead>{t("SECRET_AUDIT_MODAL.COLUMN_ACTION")}</TableHead>
+            <TableHead>{t("SECRET_AUDIT_MODAL.COLUMN_OUTCOME")}</TableHead>
+            <TableHead>{t("SECRET_AUDIT_MODAL.COLUMN_ACTOR")}</TableHead>
+            <TableHead>{t("SECRET_AUDIT_MODAL.COLUMN_WHEN")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -100,6 +103,7 @@ export const SecretAuditModal = ({
   onOpenChange,
   repoId,
 }: SecretAuditModalProps) => {
+  const { t } = useT("release.deployment.secrets");
   const [pageNumber, setPageNumber] = useState(1);
 
   const { data, isLoading } = useRepoSecretAudit(
@@ -117,10 +121,9 @@ export const SecretAuditModal = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Environment variable activity</DialogTitle>
+          <DialogTitle>{t("SECRET_AUDIT_MODAL.TITLE")}</DialogTitle>
           <DialogDescription>
-            Every action taken on this repository&apos;s environment variables. Values are
-            never recorded here.
+            {t("SECRET_AUDIT_MODAL.DESCRIPTION")}
           </DialogDescription>
         </DialogHeader>
 
@@ -129,7 +132,10 @@ export const SecretAuditModal = ({
         {totalCount > PAGE_SIZE && (
           <div className="flex items-center justify-end gap-2">
             <span className="text-sm text-muted-foreground">
-              Page {pageNumber} of {Math.ceil(totalCount / PAGE_SIZE)}
+              {t("SECRET_AUDIT_MODAL.PAGE_OF", {
+                page: pageNumber,
+                total: Math.ceil(totalCount / PAGE_SIZE),
+              })}
             </span>
             <Button
               type="button"
@@ -137,7 +143,7 @@ export const SecretAuditModal = ({
               size="sm"
               disabled={pageNumber === 1}
               onClick={() => setPageNumber((page) => page - 1)}>
-              Previous
+              {t("common:PREVIOUS")}
             </Button>
             <Button
               type="button"
@@ -145,7 +151,7 @@ export const SecretAuditModal = ({
               size="sm"
               disabled={!hasNextPage}
               onClick={() => setPageNumber((page) => page + 1)}>
-              Next
+              {t("common:NEXT")}
             </Button>
           </div>
         )}

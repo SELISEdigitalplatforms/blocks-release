@@ -8,9 +8,10 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui-kits/tooltip/tooltip";
-import { environmentOptions } from "@/constants/environment-options.constant";
+import { getEnvironmentOptions } from "@/constants/environment-options.constant";
 import { useProjectStore } from "@/store/project.store";
 import { ChevronRight, Settings2 } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 
 type ProjectCardProps = {
   project: IProject;
@@ -18,6 +19,7 @@ type ProjectCardProps = {
 };
 
 export const ProjectCard = ({ project, projects }: ProjectCardProps) => {
+  const { t } = useT("release.shared");
   const navigate = useNavigate();
   const setTenantGroup = useProjectStore((state) => state.setTenantGroup);
   const setSelectedProject = useProjectStore(
@@ -40,7 +42,7 @@ export const ProjectCard = ({ project, projects }: ProjectCardProps) => {
   };
 
   const renderEnvChip = (env: string, envProject: IProject) => {
-    const label = environmentOptions.find((o) => o.value === env)?.label;
+    const label = getEnvironmentOptions().find((o) => o.value === env)?.label;
     return (
       <button
         key={env}
@@ -72,7 +74,7 @@ export const ProjectCard = ({ project, projects }: ProjectCardProps) => {
                   <Settings2 size={16} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Open Project</TooltipContent>
+              <TooltipContent>{t("PROJECT_CARD.OPEN_PROJECT")}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
@@ -80,7 +82,7 @@ export const ProjectCard = ({ project, projects }: ProjectCardProps) => {
       <div className="mt-auto">
         {envList.length === 0 ? (
           <span className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-xs text-muted-foreground">
-            No environments
+            {t("PROJECT_CARD.NO_ENVIRONMENTS")}
           </span>
         ) : envList.length > 3 ? (
           <TooltipProvider>

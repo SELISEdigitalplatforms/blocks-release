@@ -1,4 +1,5 @@
 import { Pencil } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 import { Skeleton } from "@/components/ui-kits/skeleton/skeleton";
 import { Card, CardTitle } from "@/components/ui-kits/card/card";
 import { IProject } from "@blocks-identifier/models/project.model";
@@ -14,6 +15,7 @@ export const ProjectRepoList = ({
   project?: IProject;
   isLoading: boolean;
 }) => {
+  const { t } = useT("release.shared");
   const projectKey = useProjectStore().selectedProject?.tenantId || "";
   const { data: reposResponse, isPending: isReposLoading } = useGetAllProjects(
     {
@@ -43,19 +45,19 @@ export const ProjectRepoList = ({
   return (
     <Card className="mt-6 border bg-card px-4 py-4 shadow-xs md:mt-0">
       <div className="mt-2 flex items-center justify-between">
-        <CardTitle>Repositories</CardTitle>
+        <CardTitle>{t("PROJECT_REPO_LIST.REPOSITORIES")}</CardTitle>
         <Button
           disabled={!project?.customDomain || project?.customDomain === ""}
           variant="outline"
         >
           <Pencil className="mr-2 h-3.5 w-3.5" />
-          Edit domain
+          {t("PROJECT_REPO_LIST.EDIT_DOMAIN")}
         </Button>
       </div>
       <div className="mt-4">
         {repositories.length === 0 ? (
           <div className="text-medium-emphasis">
-            No repositories found for this project.
+            {t("PROJECT_REPO_LIST.NO_REPOSITORIES")}
           </div>
         ) : (
           <ul className="divide-y">

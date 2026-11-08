@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { tStatic } from "@seliseblocks/genesis-os";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { showErrorToast } from "@/hooks/use-toast";
 import { BlocksLoginPage } from "@/components/blocks-login-page";
@@ -30,12 +31,12 @@ export default function LoginPage() {
       if (data.redirect_uri) {
         window.location.href = data.redirect_uri;
       } else {
-        showErrorToast({ errors: "Failed to get authorization URL" });
+        showErrorToast({ errors: tStatic("release.shared", "LOGIN.FAILED_TO_GET_AUTHORIZATION_URL") });
         setIsStarting(false);
       }
     } catch (errors) {
       console.error("Login initiation error:", errors);
-      showErrorToast({ errors: "Unable to start login. Please try again." });
+      showErrorToast({ errors: tStatic("release.shared", "LOGIN.UNABLE_TO_START_LOGIN") });
       setIsStarting(false);
     }
   };

@@ -1,5 +1,6 @@
 import { useRef, MouseEvent, useState, useEffect, ReactNode } from "react";
 import { X } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 import { Button } from "@/components/ui-kits/button/button";
 import { Input } from "@/components/ui-kits/input/input";
 import { cn } from "@/lib/utils";
@@ -28,12 +29,13 @@ type DropdownSearchInputProps = {
 
 export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
   onChange,
-  placeholder = "Search...",
+  placeholder,
   value,
   className = {},
   options = [],
 }) => {
   const [state, setState] = useState<ValueType>(value);
+  const { t } = useT("release.shared");
   const inputRef = useRef<HTMLInputElement>(null);
 
   // A new value from the parent replaces whatever is being typed.
@@ -95,7 +97,7 @@ export const DropdownSearchInput: React.FC<DropdownSearchInputProps> = ({
 
       <Input
         ref={inputRef}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("DROPDOWN_SEARCH_INPUT.PLACEHOLDER")}
         value={state.value}
         onChange={handleChange}
         className={cn(

@@ -5,6 +5,7 @@ import { useProjectStore } from "@/store/project.store";
 import { useDeploymentStatus } from "@blocks-deployment/components/deployment-details/shared/notification-listener";
 import { ExternalLink } from "lucide-react";
 import { AlertsList } from "./alerts-list";
+import { useT } from "@seliseblocks/genesis-os";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 
 const Alert = ({
@@ -18,6 +19,7 @@ const Alert = ({
   status: string;
   buildLength: number;
 }) => {
+  const { t } = useT("release.deployment.alerts");
   const build = useDeploymentStatus(latestBuild, status);
   const projectKey = useProjectStore()?.selectedProject?.tenantId || "";
   const { data, isLoading } = useGetMonitorListById(projectKey, repoId);
@@ -27,7 +29,7 @@ const Alert = ({
       <CardHeader>
         <div className="flex flex-col items-start justify-between sm:flex-row sm:items-center">
           <span className="p-2 text-xl font-semibold leading-none">
-            Monitoring
+            {t("ALERT.MONITORING")}
           </span>
           <div className="flex h-10 items-center justify-end gap-4 rounded text-base">
             <Button
@@ -44,7 +46,7 @@ const Alert = ({
                 (build !== "Succeeded" && build !== "Failed")
               }>
               <ExternalLink className="h-4 w-4" />
-              Manage Monitors
+              {t("ALERT.MANAGE_MONITORS")}
             </Button>
           </div>
         </div>
@@ -55,7 +57,7 @@ const Alert = ({
         </CardContent>
       ) : (
         <div className="flex h-20 items-center justify-center">
-          Please deploy your project to begin populating this section
+          {t("ALERT.DEPLOY_FIRST")}
         </div>
       )}
     </Card>

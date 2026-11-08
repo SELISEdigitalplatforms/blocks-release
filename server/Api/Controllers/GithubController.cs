@@ -66,6 +66,14 @@ public class GithubController: ControllerBase
         };
 
         var result = await _githubService.SearchUserRepositories(request);
+        // Null when the caller has not connected GitHub. Answer the 404 GetCredential gives, so the
+        // CLI (`blocks release git repos`) can tell "connect GitHub" from a failure, instead of a
+        // NullReferenceException 500 (Rollbar #750/#2053).
+        if (result is null)
+        {
+            return NotFound(GithubNotConnected());
+        }
+
         if (result.StatusCode == HttpStatusCode.OK)
         {
             return Ok(result);
@@ -121,16 +129,18 @@ public class GithubController: ControllerBase
         var credential = await _githubService.GetPushCredential();
         if (credential is null)
         {
-            return NotFound(new BaseApiResponse
-            {
-                IsSuccess = false,
-                Message = "GitHub is not connected for this user, or the connection is no longer valid.",
-                StatusCode = HttpStatusCode.NotFound,
-            });
+            return NotFound(GithubNotConnected());
         }
 
         return Ok(credential);
     }
+
+    private static BaseApiResponse GithubNotConnected() => new()
+    {
+        IsSuccess = false,
+        Message = "GitHub is not connected for this user, or the connection is no longer valid.",
+        StatusCode = HttpStatusCode.NotFound,
+    };
 
     /// <summary>Creates a GitHub repository for a project that has none yet — see <see cref="CreateRepositoryRequest"/>.</summary>
     [HttpPost("repos")]

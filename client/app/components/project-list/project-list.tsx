@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useT } from "@seliseblocks/genesis-os";
 import { ChevronDown, Loader } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
 import {
@@ -20,6 +21,7 @@ const DEPLOYMENT_REPO_PATH = /^\/app\/deployment\/repo\/[^/]+$/;
 const DEPLOYMENT_REPO_REDIRECT = "/app/deployment";
 
 export function ProjectList() {
+  const { t } = useT("release.shared");
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { data: projectGroups = [], isLoading } = useGetProjects({});
@@ -60,7 +62,7 @@ export function ProjectList() {
       <DropdownMenuTrigger className="w-full rounded-sm p-1 text-left hover:bg-accent hover:text-accent-foreground md:p-2">
         <div className="flex items-center justify-between gap-2">
           <div className="truncate text-sm font-medium">
-            {name || "Select a Project"}
+            {name || t("PROJECT_LIST.SELECT_A_PROJECT")}
           </div>
           <ChevronDown className="h-4 w-4 shrink-0" />
         </div>
@@ -68,7 +70,7 @@ export function ProjectList() {
       <DropdownMenuContent
         align="end"
         className="w-(--radix-dropdown-menu-trigger-width)">
-        <DropdownMenuLabel>Your Projects</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("PROJECT_LIST.YOUR_PROJECTS")}</DropdownMenuLabel>
         {projects
           .filter((project) => project.itemId !== selectedProject?.itemId)
           .slice(0, 5)
@@ -87,7 +89,7 @@ export function ProjectList() {
           ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>
-          Project overview is not part of this client
+          {t("PROJECT_LIST.OVERVIEW_NOT_AVAILABLE")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

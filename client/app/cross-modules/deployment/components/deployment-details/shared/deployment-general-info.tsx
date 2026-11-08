@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { useT } from "@seliseblocks/genesis-os";
 import { formatFullDate } from "@/utils/date.util";
 import { IDeploymentPageData } from "@blocks-deployment/pages/deployment-details";
 import NotificationListener from "./notification-listener";
@@ -25,6 +26,8 @@ const DeploymentGeneralInfo = ({
   buildId,
   // showStatus,
 }: DeploymentGeneralInfoProps) => {
+  const { t } = useT("release.deployment.details");
+  const notAvailable = t("GENERAL_INFO.NOT_AVAILABLE");
   let selectedRepoURL = "";
   let deploymentStatus = "";
   let deploymentDate = "";
@@ -84,8 +87,8 @@ const DeploymentGeneralInfo = ({
     return (
       <div className="flex h-auto flex-col items-start justify-center gap-4 self-stretch rounded-lg border border-red-200 bg-red-50 p-6 shadow-xs">
         <div className="text-red-600">
-          <p className="font-medium">Failed to load deployment information</p>
-          <p className="text-sm">Please try refreshing the page</p>
+          <p className="font-medium">{t("GENERAL_INFO.LOAD_FAILED")}</p>
+          <p className="text-sm">{t("GENERAL_INFO.LOAD_FAILED_HINT")}</p>
         </div>
       </div>
     );
@@ -94,14 +97,14 @@ const DeploymentGeneralInfo = ({
   return (
     <div className="flex h-auto flex-col items-start justify-center gap-4 self-stretch rounded-lg border bg-background p-4 shadow-xs sm:gap-6 sm:p-6">
       <h1 className="text-lg font-semibold text-high-emphasis">
-        General information
+        {t("GENERAL_INFO.TITLE")}
       </h1>
 
       <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
         <div className="space-y-4">
           <div>
             <p className="mb-2 text-sm font-medium text-medium-emphasis">
-              Repo URL
+              {t("GENERAL_INFO.REPO_URL")}
             </p>
             {selectedRepoURL ? (
               <CopyToClipboardButton
@@ -117,13 +120,13 @@ const DeploymentGeneralInfo = ({
                 </a>
               </CopyToClipboardButton>
             ) : (
-              <span className="block truncate text-sm font-medium">N/A</span>
+              <span className="block truncate text-sm font-medium">{notAvailable}</span>
             )}
           </div>
 
           <div>
             <p className="mb-2 text-sm font-medium text-medium-emphasis">
-              Deploys To
+              {t("GENERAL_INFO.DEPLOYS_TO")}
             </p>
             {isCustomDomainOnly(cardData) ? (
               <CustomDomainOnlyTarget url={defaultDeploymentURL} />
@@ -137,7 +140,9 @@ const DeploymentGeneralInfo = ({
                   rel="noopener noreferrer"
                   className="block truncate text-sm text-blue-600 hover:underline"
                   onClick={(e) => e.stopPropagation()}>
-                  {defaultDeploymentURL || "N/A"}
+                  {!defaultDeploymentURL || defaultDeploymentURL === "N/A"
+                    ? notAvailable
+                    : defaultDeploymentURL}
                 </a>
               </CopyToClipboardButton>
             )}
@@ -145,7 +150,7 @@ const DeploymentGeneralInfo = ({
 
           <div>
             <p className="mb-2 text-sm font-medium text-medium-emphasis">
-              Custom Deployment URL
+              {t("GENERAL_INFO.CUSTOM_DEPLOYMENT_URL")}
             </p>
             {customDeploymentURL && customDeploymentURL !== "N/A" ? (
               <CopyToClipboardButton
@@ -162,7 +167,9 @@ const DeploymentGeneralInfo = ({
               </CopyToClipboardButton>
             ) : (
               <span className="block truncate text-sm font-medium">
-                {customDeploymentURL || "N/A"}
+                {!customDeploymentURL || customDeploymentURL === "N/A"
+                  ? notAvailable
+                  : customDeploymentURL}
               </span>
             )}
           </div>
@@ -171,7 +178,7 @@ const DeploymentGeneralInfo = ({
         <div className="space-y-4">
           <div>
             <p className="mb-2 text-sm font-medium text-medium-emphasis">
-              Deployment Status
+              {t("GENERAL_INFO.DEPLOYMENT_STATUS")}
             </p>
             <NotificationListener
               latestBuild={latestBuild}
@@ -181,7 +188,7 @@ const DeploymentGeneralInfo = ({
 
           <div>
             <p className="mb-2 text-sm font-medium text-medium-emphasis">
-              Latest Deployment Date
+              {t("GENERAL_INFO.LATEST_DEPLOYMENT_DATE")}
             </p>
             <span className="text-sm font-medium">
               {formatFullDate(new Date(deploymentDate))}

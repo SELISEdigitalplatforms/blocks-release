@@ -1,3 +1,4 @@
+import { tStatic } from "@seliseblocks/genesis-os";
 import type { FastAPIError } from "@/models";
 
 type ErrorInput = {
@@ -27,11 +28,44 @@ function errorsHasDetail(errors: unknown): errors is { detail: FastAPIError } {
   return typeof errors === "object" && errors !== null && "detail" in errors;
 }
 
+// Adds a message under a key; a second message for the same key turns the value into a list.
+function addMessage(result: ErrorRecord, key: string, message: string): void {
+  const current = result[key];
+  if (!current) {
+    result[key] = message;
+  } else if (Array.isArray(current)) {
+    current.push(message);
+  } else {
+    result[key] = [current, message];
+  }
+}
+
+// One validation entry (loc/msg/type) as its field path and message; null when it has no usable field.
+function toFieldMessage(err: {
+  loc?: unknown;
+  msg?: unknown;
+  type?: unknown;
+}): { field: string; message: string } | null {
+  if (!Array.isArray(err.loc) || typeof err.msg !== "string" || typeof err.type !== "string") {
+    return null; // skip invalid entries
+  }
+  const field = err.loc
+    .filter((p: string | number) => p !== "body" && p !== "query" && p !== "path")
+    .join(".");
+  if (!field) return null;
+  // Transform "field required" -> "Username is required"
+  const message =
+    err.msg === "field required"
+      ? tStatic("release.shared", "ERROR_TRANSFORM.FIELD_REQUIRED", { field: formatFieldName(field) })
+      : err.msg;
+  return { field, message };
+}
+
 export function ErrorTransformer(error: unknown): ErrorRecord {
   const result: ErrorRecord = {};
 
   if (!isErrorInput(error)) {
-    return { non_field_error: "Something went wrong" };
+    return { non_field_error: tStatic("release.shared", "ERROR_TRANSFORM.SOMETHING_WENT_WRONG") };
   }
 
   const { detail } = error.errors;
@@ -47,49 +81,11 @@ export function ErrorTransformer(error: unknown): ErrorRecord {
     for (const err of detail) {
       // Rare case: item is a string
       if (typeof err === "string") {
-        if (!result["non_field_error"]) {
-          result["non_field_error"] = err;
-        } else if (Array.isArray(result["non_field_error"])) {
-          result["non_field_error"].push(err);
-        } else {
-          result["non_field_error"] = [result["non_field_error"], err];
-        }
+        addMessage(result, "non_field_error", err);
         continue;
       }
-
-      // Validate that err has loc/msg/type
-      if (
-        !Array.isArray(err.loc) ||
-        typeof err.msg !== "string" ||
-        typeof err.type !== "string"
-      ) {
-        continue; // skip invalid entries
-      }
-
-      // Extract field path
-      const fieldPath = err.loc
-        .filter(
-          (p: string | number) => p !== "body" && p !== "query" && p !== "path",
-        )
-        .join(".");
-      if (!fieldPath) continue;
-
-      // Transform "field required" -> "Username is required"
-      const message =
-        err.msg === "field required"
-          ? `${formatFieldName(fieldPath)} is required`
-          : err.msg;
-
-      // Merge multiple messages for the same field
-      if (result[fieldPath]) {
-        if (Array.isArray(result[fieldPath])) {
-          result[fieldPath].push(message);
-        } else {
-          result[fieldPath] = [result[fieldPath], message];
-        }
-      } else {
-        result[fieldPath] = message;
-      }
+      const entry = toFieldMessage(err);
+      if (entry) addMessage(result, entry.field, entry.message);
     }
   }
 

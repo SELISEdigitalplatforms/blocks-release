@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useT } from "@seliseblocks/genesis-os";
 import { useGetProjects } from "@/cross-modules/identifier/hooks/use-project";
 import { ProjectCard } from "@/components/project-card/project-card";
 import { ProjectCardLoading } from "@/components/project-card/loading";
@@ -30,6 +31,7 @@ const SelfProjectLoading = () => {
 };
 
 export const SelfProject = () => {
+  const { t } = useT("release.shared");
   const { data, isLoading, isFetching } = useGetProjects({});
   if (isLoading || isFetching) return <SelfProjectLoading />;
   const projectGroups = data || [];
@@ -38,11 +40,10 @@ export const SelfProject = () => {
     return (
       <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/60 bg-card/40 px-6 py-16 text-center">
         <h2 className="text-base font-semibold text-[hsl(var(--high-emphasis))]">
-          No projects found
+          {t("SELF_PROJECT.NO_PROJECTS_FOUND")}
         </h2>
         <p className="max-w-md text-sm text-[hsl(var(--medium-emphasis))]">
-          You don&apos;t have any Blocks projects yet. Create a project from the
-          Blocks console to get started with deployments.
+          {t("SELF_PROJECT.NO_PROJECTS_HINT")}
         </p>
       </div>
     );
@@ -53,7 +54,7 @@ export const SelfProject = () => {
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <h2 className="shrink-0 text-base font-semibold text-[hsl(var(--high-emphasis))]">
-            Your Blocks Projects
+            {t("SELF_PROJECT.YOUR_BLOCKS_PROJECTS")}
           </h2>
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
             {projectGroups.length}

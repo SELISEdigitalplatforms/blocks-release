@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui-kits/button/button";
 import { Card } from "@/components/ui-kits/card/card";
 import { CircleX } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 
 export function ErrorRepository({ refetch }: { refetch: () => void }) {
+  const { t } = useT("release.deployment.details");
   return (
     <Card>
       <div className="flex h-auto flex-col items-center justify-center self-stretch rounded-sm bg-background px-1 py-5">
@@ -11,11 +13,11 @@ export function ErrorRepository({ refetch }: { refetch: () => void }) {
         </div>
         <div className="flex flex-col items-center gap-2">
           <h3 className="py-4 text-xl font-semibold text-high-emphasis text-destructive">
-            Error while fetching repositories
+            {t("ERROR_REPOSITORY.TITLE")}
           </h3>
         </div>
         <Button onClick={() => refetch()} size={"sm"} className="mt-6">
-          Retry
+          {t("common:RETRY")}
         </Button>
       </div>
     </Card>

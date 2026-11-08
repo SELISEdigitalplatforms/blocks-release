@@ -1,5 +1,6 @@
 import React from "react";
 import { Loader } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 
 interface LoadingSpinnerProps {
   size?: number;
@@ -12,8 +13,10 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   size = 32,
   color = "text-primary",
   variant = "overlay",
-  label = "Loading...",
+  label,
 }) => {
+  const { t } = useT("release.shared");
+  const text = label ?? t("common:LOADING");
   const containerClasses = {
     fullscreen:
       "fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs",
@@ -28,8 +31,8 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
         <div className="flex animate-pulse">
           <Loader size={size} className={`animate-spin ${color}`} />
         </div>
-        {label && (
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        {text && (
+          <p className="text-sm font-medium text-muted-foreground">{text}</p>
         )}
       </div>
     </div>

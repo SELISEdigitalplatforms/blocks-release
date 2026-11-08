@@ -1,4 +1,5 @@
 import { FilterToolbar, useSortQueryParams } from "@/components/filter-toolbar";
+import { useT } from "@seliseblocks/genesis-os";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 
 type ALertFilter = { search: string; repositories: string[] };
@@ -20,6 +21,7 @@ type AlertFilterToolBarProps = {
 };
 
 export function AlertsFilterToolbar({ repositories }: AlertFilterToolBarProps) {
+  const { t } = useT("release.deployment.alerts");
   const { queryParams, setQueryParams } = useAlertFilterQueryParams();
 
   const changeHandler = (key: string, value: unknown) => {
@@ -38,7 +40,7 @@ export function AlertsFilterToolbar({ repositories }: AlertFilterToolBarProps) {
         {
           key: "repositories",
           type: "MultiSelect",
-          label: "Repositories",
+          label: t("ALERTS_FILTER_TOOLBAR.REPOSITORIES"),
           props: { options: repositories },
         },
       ]}

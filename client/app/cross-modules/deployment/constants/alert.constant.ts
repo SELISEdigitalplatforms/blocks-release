@@ -1,3 +1,5 @@
+import { tStatic } from "@seliseblocks/genesis-os";
+
 export enum ALERT_PROVIDERS {
   health = "health",
   resources = "resources",
@@ -25,9 +27,23 @@ export const SCHEDULES: {
   label: string;
   value: ScheduleOptions;
 }[] = [
-  { label: "Simple", value: ScheduleOptions.SIMPLE },
+  {
+    // Read when shown (getter), so the label follows the chosen language.
+    get label() {
+      return tStatic("release.deployment.shared", "ALERT_CONSTANT.SCHEDULE_SIMPLE");
+    },
+    value: ScheduleOptions.SIMPLE,
+  },
   { label: "Cron", value: ScheduleOptions.CRON },
-  { label: "On Calender", value: ScheduleOptions.CALENDER },
+  {
+    get label() {
+      return tStatic(
+        "release.deployment.shared",
+        "ALERT_CONSTANT.SCHEDULE_CALENDAR",
+      );
+    },
+    value: ScheduleOptions.CALENDER,
+  },
 ];
 export enum REPO_TYPE {
   repo_name = 0,

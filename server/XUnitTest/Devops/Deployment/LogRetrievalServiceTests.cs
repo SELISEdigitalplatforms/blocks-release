@@ -164,6 +164,37 @@ namespace XUnitTest.Devops.Deployment
         }
 
         [Fact]
+        public async Task MergeStepsPerTaskAsync_PlatformError_StoresAndSendsOnlyContactAdministrator()
+        {
+            var build = new Build { ItemId = "build-1", RepoId = "repo-1", Events = new List<BuildEventResponse>() };
+            _f.BuildRepo.Setup(b => b.GetBuildByPipelineRunName("run-1", "tenant-1")).ReturnsAsync(build);
+            _f.RepoRepo.Setup(r => r.GetProjectPeopleList("tenant-1")).ReturnsAsync(new List<string>());
+            var sent = new List<string>();
+            _f.Notification
+                .Setup(n => n.NotifyPipeLineLogData(
+                    It.IsAny<BuildEventResponse>(), It.IsAny<List<string>>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .Callback<BuildEventResponse, List<string>, string, string, string>((e, _, _, _, _) => sent.Add(e.Message))
+                .ReturnsAsync(true);
+
+            List<BuildEventResponse> stored = null;
+            _f.BuildRepo
+                .Setup(b => b.UpdateBuildEvents("run-1", It.IsAny<List<BuildEventResponse>>(), It.IsAny<string>(), It.IsAny<string>(), "tenant-1"))
+                .Callback<string, List<BuildEventResponse>, string, string, string>((_, events, _, _, _) => stored = events)
+                .Returns(Task.CompletedTask);
+
+            var logs = SingleTask("build-push", "Failed",
+                "error checking push permissions -- make sure you entered the correct tag name: checking push permission for "
+                + "\"example.azurecr.io/team/app:1b2c3d4e\": UNAUTHORIZED: CorrelationId: 00000000-0000-0000-0000-000000000000");
+
+            await _f.LogRetrievalService().MergeStepsPerTaskAsync(logs, "run-1", "user-1", "tenant-1");
+
+            stored.Should().NotBeEmpty();
+            stored.Should().OnlyContain(e => e.Message == BuildLogSanitizer.ContactAdministrator);
+            sent.Should().NotBeEmpty().And.OnlyContain(m => m == BuildLogSanitizer.ContactAdministrator);
+        }
+
+        [Fact]
         public async Task MergeStepsPerTaskAsync_BlankLogs_SkipsTaskEntirely()
         {
             var build = new Build { ItemId = "build-1", RepoId = "repo-1", Events = new List<BuildEventResponse>() };

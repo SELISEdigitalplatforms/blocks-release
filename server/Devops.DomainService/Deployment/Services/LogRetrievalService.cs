@@ -11,7 +11,6 @@ using Blocks.Genesis;
 using Devops.DomainService.AnalyticsTool.Models;
 using Devops.DomainService.AnalyticsTool.Services.Capture;
 using System.Threading.Tasks;
-using System.Text.RegularExpressions;
 using Devops.DomainService.DataGatewayDeployment.Services;
 using Microsoft.Extensions.Logging;
 
@@ -19,8 +18,6 @@ namespace Devops.DomainService.Deployment.Services;
 
 public class LogRetrievalService
 {
-    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
-
     private readonly IBuildRepository _buildRepository;
     private readonly IRepoRepository _repoRepository;
     private readonly PipelineRunService _pipelineRunService;
@@ -298,22 +295,24 @@ public class LogRetrievalService
                     }
                 }
 
-                var combinedLogsMessage = Regex.Replace(
-                    Regex.Replace(
-                        combinedLogsBuilder.ToString(),
-                        @"\S*github\.com\S*",
-                        "**",
-                        RegexOptions.None,
-                        RegexTimeout),
-                    @"(?i)(namespace\s+).*",
-                    "$1***",
-                    RegexOptions.None,
-                    RegexTimeout);
+                // Everything stored on the build and sent to users below is built from this one value.
+                var sanitized = BuildLogSanitizer.Sanitize(combinedLogsBuilder.ToString());
+                var combinedLogsMessage = sanitized.Text;
                 if (string.IsNullOrWhiteSpace(combinedLogsMessage))
                 {
                     continue;
                 }
                 PipeLineTaskConstants.EventGroupMapping.TryGetValue(taskName, out var pipelineRunEventGroup);
+
+                // Users only see the replacement, so keep the real cause in the server log - once per build and
+                // stage, not on every poll after the task has failed.
+                if (sanitized.MatchedRule is not null
+                    && !results.Any(e => e.EventGroup == (pipelineRunEventGroup ?? taskName) && e.Message == combinedLogsMessage))
+                {
+                    _logger.LogWarning(
+                        "Build log of {PipelineRunName} task {TaskName} matched platform error rule '{Rule}' and was replaced for users. Original line: {OriginalLine}",
+                        pipelineRunName, taskName, sanitized.MatchedRule.Contains, sanitized.MatchedLine);
+                }
                 PipeLineTaskConstants.StatusEventMapping.TryGetValue(taskLog.Status, out var pipelineRunEventType);
 
                 Console.WriteLine($"EventGroup: TaskName: - {taskName} EventGroup: - {pipelineRunEventGroup ?? taskName}, TaskLog Status: - {taskLog.Status} EventType: {pipelineRunEventType ?? taskLog.Status}");

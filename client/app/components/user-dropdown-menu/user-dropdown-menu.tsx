@@ -1,4 +1,5 @@
 import { UserRound } from "lucide-react";
+import { useT } from "@seliseblocks/genesis-os";
 import { Link } from "react-router";
 import { LogOutButton } from "@/components/auth/log-out-button";
 import { Button } from "@/components/ui-kits/button/button";
@@ -13,6 +14,7 @@ import {
 import { useGetUser } from "@blocks-idp/iam/hooks/use-user";
 
 function UserDropdownMenuLogo() {
+  const { t } = useT("release.shared");
   const { data } = useGetUser({ enabled: true });
   const userData = data?.data || {
     firstName: "",
@@ -26,7 +28,7 @@ function UserDropdownMenuLogo() {
     return (
       <img
         src={userData.profileImageUrl}
-        alt="Profile"
+        alt={t("USER_DROPDOWN_MENU.PROFILE_ALT")}
         className="h-full w-full object-cover"
       />
     );
@@ -40,6 +42,7 @@ function UserDropdownMenuLogo() {
 }
 
 export function UserDropdownMenu() {
+  const { t } = useT("release.shared");
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -53,10 +56,14 @@ export function UserDropdownMenu() {
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link to="/app/profile">My profile</Link>
+            <Link to="/app/profile">{t("USER_DROPDOWN_MENU.MY_PROFILE")}</Link>
           </DropdownMenuItem>
-          <DropdownMenuItem disabled>Privacy</DropdownMenuItem>
-          <DropdownMenuItem disabled>Support</DropdownMenuItem>
+          <DropdownMenuItem disabled>
+            {t("USER_DROPDOWN_MENU.PRIVACY")}
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled>
+            {t("USER_DROPDOWN_MENU.SUPPORT")}
+          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>

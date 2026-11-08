@@ -68,6 +68,14 @@ internal sealed class FakeSecretValueStore : ISecretValueStore
         return Task.CompletedTask;
     }
 
+    public Task PurgeAsync(string secretId, CancellationToken cancellationToken = default)
+    {
+        Record("purge", secretId);
+        SoftDeleted.TryRemove(secretId, out _);
+        Values.TryRemove(secretId, out _);
+        return Task.CompletedTask;
+    }
+
     private void Record(string operation, string secretId)
     {
         _calls.Enqueue((operation, secretId));

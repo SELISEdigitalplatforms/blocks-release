@@ -110,32 +110,32 @@ describe("AlertsService", () => {
   });
 
   describe("updateHealth", () => {
-    it("calls logicService.post with the health endpoint and payload", async () => {
+    it("calls deploymentService.post (release backend) with the health endpoint and payload", async () => {
       const mockResponse = { ...mockSuccessResponse, data: {} };
-      logicService.post.mockResolvedValue(mockResponse);
+      deploymentService.post.mockResolvedValue(mockResponse);
 
       const payload = { itemId: MOCK_MONITOR_ID, isActive: false };
       const result = await alertsService.updateHealth(payload);
 
-      expect(logicService.post).toHaveBeenCalledWith(
+      expect(deploymentService.post).toHaveBeenCalledWith(
         ALERT_ENDPOINTS.UPDATE_HEALTH,
         payload,
       );
-      expect(deploymentService.post).not.toHaveBeenCalled();
+      expect(logicService.post).not.toHaveBeenCalled();
       expect(result).toEqual(mockResponse);
     });
   });
 
   describe("deleteHealth", () => {
-    it("calls logicService.delete with the health delete endpoint and itemId", async () => {
+    it("calls deploymentService.delete (release backend) with the health delete endpoint and itemId", async () => {
       const mockResponse = { ...mockDeleteSuccessResponse, data: null };
-      logicService.delete.mockResolvedValue(mockResponse);
+      deploymentService.delete.mockResolvedValue(mockResponse);
 
       const result = await alertsService.deleteHealth(MOCK_MONITOR_ID);
 
       const expectedUrl = `${ALERT_ENDPOINTS.DELETE_HEALTH}?itemId=${encodeURIComponent(MOCK_MONITOR_ID)}`;
-      expect(logicService.delete).toHaveBeenCalledWith(expectedUrl);
-      expect(deploymentService.delete).not.toHaveBeenCalled();
+      expect(deploymentService.delete).toHaveBeenCalledWith(expectedUrl);
+      expect(logicService.delete).not.toHaveBeenCalled();
       expect(result).toEqual(mockResponse);
     });
   });

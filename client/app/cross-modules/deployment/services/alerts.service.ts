@@ -32,14 +32,15 @@ class AlertsService {
     return this.deploymentClient.get<IGetMonitorList>(url);
   }
 
+  // Heartbeat changes are handled by the release backend itself, not blocks-logic.
   async updateHealth(payload: Partial<IUpdateHealth>) {
     const url = ALERT_ENDPOINTS.UPDATE_HEALTH;
-    return this.logicClient.post<ISaveSingleHealthResponse>(url, payload);
+    return this.deploymentClient.post<ISaveSingleHealthResponse>(url, payload);
   }
 
   async deleteHealth(itemId: string) {
     const url = `${ALERT_ENDPOINTS.DELETE_HEALTH}?itemId=${encodeURIComponent(itemId)}`;
-    return this.logicClient.delete<IDeleteHealthResponse>(url);
+    return this.deploymentClient.delete<IDeleteHealthResponse>(url);
   }
 }
 export const alertsService = new AlertsService();

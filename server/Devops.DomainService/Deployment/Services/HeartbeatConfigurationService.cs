@@ -70,7 +70,7 @@ public class HeartbeatConfigurationService : IHeartbeatConfigurationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating HealthConfiguration {ItemId}", request.ItemId);
+            _logger.LogError(ex, "Error updating HealthConfiguration {ItemId}", ForLog(request.ItemId));
             return Failure(HttpStatusCode.InternalServerError, "Error updating configuration.");
         }
     }
@@ -92,7 +92,7 @@ public class HeartbeatConfigurationService : IHeartbeatConfigurationService
                 return Failure(HttpStatusCode.Forbidden, ManagedByBlocksMessage);
 
             if (!await _store.DeleteAsync(itemId))
-                _logger.LogWarning("HealthConfiguration {ItemId} was already gone when deleting.", itemId);
+                _logger.LogWarning("HealthConfiguration {ItemId} was already gone when deleting.", ForLog(itemId));
 
             return new BaseApiResponse
             {
@@ -103,7 +103,7 @@ public class HeartbeatConfigurationService : IHeartbeatConfigurationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting HealthConfiguration {ItemId}", itemId);
+            _logger.LogError(ex, "Error deleting HealthConfiguration {ItemId}", ForLog(itemId));
             return Failure(HttpStatusCode.InternalServerError, "Error deleting configuration.");
         }
     }
@@ -127,6 +127,10 @@ public class HeartbeatConfigurationService : IHeartbeatConfigurationService
             && !string.IsNullOrEmpty(heartbeat.TenantId)
             && !string.Equals(callerTenantId, heartbeat.TenantId, StringComparison.Ordinal);
     }
+
+    /// <summary>The item id comes from the request: strip line breaks so it cannot forge log entries.</summary>
+    public static string ForLog(string? value) =>
+        (value ?? string.Empty).Replace("\r", string.Empty).Replace("\n", string.Empty);
 
     private static BaseApiResponse Failure(HttpStatusCode statusCode, string message) => new()
     {

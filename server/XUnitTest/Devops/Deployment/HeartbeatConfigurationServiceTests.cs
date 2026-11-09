@@ -161,6 +161,13 @@ namespace XUnitTest.Devops.Deployment
             result.Message.Should().NotContain("db down");
         }
 
+        [Theory]
+        [InlineData("hb-1\r\nFAKE ENTRY", "hb-1FAKE ENTRY")]
+        [InlineData("hb-1", "hb-1")]
+        [InlineData(null, "")]
+        public void ForLog_StripsLineBreaks(string? value, string expected) =>
+            HeartbeatConfigurationService.ForLog(value).Should().Be(expected);
+
         // ---- Delete ----
 
         [Fact]

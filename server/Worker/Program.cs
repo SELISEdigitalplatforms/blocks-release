@@ -9,7 +9,6 @@ using Devops.DomainService.Shared.Models;
 using Worker;
 using Worker.Configuration;
 using Worker.Consumers;
-using SeliseBlocks.ConfigurationDriver;
 
 const string _serviceName = "blocks-release-worker";
 
@@ -24,13 +23,7 @@ IHostBuilder CreateHostBuilder(string[] args) =>
         .ConfigureAppConfiguration((context, builder) =>
         {
             // ApplicationConfigurations.ConfigureWorkerEnv(builder, args);
-            builder.AddMongoDbConfiguration(options =>
-            {
-                options.ConnectionString = secret.DatabaseConnectionString;
-                options.DatabaseName     = secret.RootDatabaseName;
-                options.CollectionName   = "Secrets";
-                options.SecretKey        = "blocks-secret-release";
-            });
+            builder.AddKeyValueConfiguration(secret, "blocks-secret-release");
         })
         .ConfigureServices((services) =>
         {

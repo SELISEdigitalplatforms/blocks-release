@@ -49,6 +49,16 @@ namespace Devops.DomainService.Deployment.Entities
         public MonitorConfigurationTypes MonitorConfigurationType { get; set; }
         public MonitorSourceTypes? MonitorSourceType { get; set; }
 
+        // Older monitor documents carry the source type under this misspelled element only.
+        [BsonElement("MonitorSourcetypes")]
+        [BsonIgnoreIfNull]
+        public MonitorSourceTypes? LegacyMonitorSourceType { get; set; }
+
+        // Same resolution blocks-monitor uses (Blocks.Genesis.Entities.Monitor.MonitorConfiguration).
+        [BsonIgnore]
+        public MonitorSourceTypes EffectiveMonitorSourceType =>
+            MonitorSourceType ?? LegacyMonitorSourceType ?? MonitorSourceTypes.DeployedServices;
+
         public MonitorProtocolTypes? ProtocolType { get; set; }
         public MonitorHttpMethodTypes? HttpMethodType { get; set; }
 

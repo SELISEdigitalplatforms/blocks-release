@@ -74,23 +74,64 @@ var app = builder.Build();
 // The CSP origins come from configuration (FrontendRuntime + Csp:Extra*), not from a
 // compiled-in host list -- see Api.Security.ContentSecurityPolicy.
 var contentSecurityPolicy = Api.Security.ContentSecurityPolicy.Build(app.Configuration);
-app.UseMiddleware<Api.Middleware.SecurityHeadersMiddleware>(contentSecurityPolicy);
+app.UseMiddleware<Api.Middleware.SecurityHeadersMiddleware>(
+    contentSecurityPolicy, Api.Security.StyleNonce.CreateWithRandomKey());
 
 app.MapHub<DeploymentLogHub>("/deploymentHub");
+
+// The SPA shell carries the response's style nonce (meta[name=csp-nonce]), so it is rendered
+// rather than sent verbatim. Read after ApplyFrontendRuntimeSettings filled the runtime
+// placeholders.
+var indexHtml = Path.Combine(app.Environment.WebRootPath ?? "", "index.html");
+var indexHtmlTemplate = File.Exists(indexHtml)
+    ? await File.ReadAllTextAsync(indexHtml).ConfigureAwait(false)
+    : null;
+
+if (indexHtmlTemplate is not null)
+{
+    // "/" and "/index.html" would otherwise be served verbatim by the static file
+    // middleware, with the nonce placeholder still in them.
+    app.Use(async (context, next) =>
+    {
+        var path = context.Request.Path.Value;
+        if ((HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method))
+            && (path is "/" or "" || string.Equals(path, "/index.html", StringComparison.OrdinalIgnoreCase)))
+        {
+            await WriteSpaShell(context, indexHtmlTemplate).ConfigureAwait(false);
+            return;
+        }
+
+        await next().ConfigureAwait(false);
+    });
+}
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-
-
-var indexHtml = Path.Combine(app.Environment.WebRootPath ?? "", "index.html");
-if (File.Exists(indexHtml))
+// Fallback to the SPA shell for React routing (non-API, non-file routes).
+if (indexHtmlTemplate is not null)
 {
-    app.MapFallbackToFile("/index.html");
+    app.MapFallback(context => WriteSpaShell(context, indexHtmlTemplate));
 }
 
 ApplicationConfigurations.ConfigureMiddleware(app);
 
 await app.RunAsync();
+
+static async Task WriteSpaShell(HttpContext context, string indexHtmlTemplate)
+{
+    // Same methods the static file fallback answered before; anything else is not a page.
+    if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    var nonce = (string)context.Items[Api.Middleware.SecurityHeadersMiddleware.StyleNonceItemKey]!;
+    context.Response.ContentType = "text/html; charset=utf-8";
+    await context.Response.WriteAsync(Api.Security.ContentSecurityPolicy.RenderIndex(indexHtmlTemplate, nonce))
+        .ConfigureAwait(false);
+}
 
 static VaultType ResolveVaultType()
 {

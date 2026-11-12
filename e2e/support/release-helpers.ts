@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test"
+import { expect, type Locator, type Page } from "@playwright/test"
 import {
   ensureConsole,
   namedProjectCard,
@@ -223,4 +223,21 @@ export async function hasLinkedRepository(page: Page): Promise<boolean> {
     .first()
     .isVisible({ timeout: 3_000 })
     .catch(() => false)
+}
+
+/** The repository name a "Deploys for <name>" repo card shows. */
+export async function repoCardName(repoCard: Locator): Promise<string> {
+  const name = /Deploys for\s+(\S+)/.exec(await repoCard.innerText())?.[1] ?? ""
+  expect(name, "repo card names its repository").not.toBe("")
+  return name
+}
+
+/**
+ * Repository Details opened from a repo card. Its level-1 heading is "Repository Details"
+ * while the repository has no deployment, and the repository's name once it has one
+ * (client repo-details.tsx, both branches).
+ */
+export async function expectRepositoryDetailsHeading(page: Page, repoName: string) {
+  const heading = (name: string) => page.getByRole("heading", { level: 1, name, exact: true })
+  await expect(heading("Repository Details").or(heading(repoName))).toBeVisible({ timeout: 30_000 })
 }

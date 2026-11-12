@@ -2,7 +2,9 @@ import { test, expect, type Page } from "../../support/test-base";
 import {
   openReleaseDeployment,
   connectFirstRepository,
+  expectRepositoryDetailsHeading,
   hasLinkedRepository,
+  repoCardName,
 } from "../../support/release-helpers";
 import { readReleaseProject } from "../../support/release-project";
 
@@ -216,11 +218,10 @@ async function openRepoDetails(
     .filter({ hasText: "Deploys for" })
     .first();
   if (await repoCard.isVisible().catch(() => false)) {
+    const repoName = await repoCardName(repoCard);
     await repoCard.click();
     await expect(page).toHaveURL(/\/deployment\/repo\//, { timeout: 30_000 });
-    await expect(
-      page.getByRole("heading", { name: /Repository Details/i }).first(),
-    ).toBeVisible({ timeout: 30_000 });
+    await expectRepositoryDetailsHeading(page, repoName);
     return "real";
   }
 

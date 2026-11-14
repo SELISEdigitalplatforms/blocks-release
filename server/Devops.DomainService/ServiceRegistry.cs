@@ -54,6 +54,8 @@ public static class ServiceRegistry
         services.AddScoped<IGithubWebhookService,GithubWebhookService>();
         services.AddScoped<LogRetrievalService>();
         services.AddScoped<IMonitorProvisioningService, MonitorProvisioningService>();
+        services.AddScoped<IHeartbeatConfigurationStore, HeartbeatConfigurationStore>();
+        services.AddScoped<IHeartbeatConfigurationService, HeartbeatConfigurationService>();
         services.AddScoped<BuildService>();
         services.AddScoped<IBuildService, BuildService>();
         services.AddScoped<IDeploymentTeardownService, DeploymentTeardownService>();

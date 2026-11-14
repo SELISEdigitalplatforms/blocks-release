@@ -336,6 +336,27 @@
         "OrganizationId": "default"
     },
     {
+        "_id": "3f6c2a8e-5b1d-4e7a-9c04-8d2e6f1a7b35",
+        "CreatedDate": ISODate("2026-11-09T00:00:00.000+0000"),
+        "LastUpdatedDate": ISODate("2026-11-09T00:00:00.000+0000"),
+        "CreatedBy": "1554751b-e91c-4ea4-8500-cdaf714b248e",
+        "Language": null,
+        "LastUpdatedBy": "1554751b-e91c-4ea4-8500-cdaf714b248e",
+        "OrganizationIds": [],
+        "Tags": [],
+        "Name": "Manage Repository Heartbeat Monitors",
+        "Type": NumberInt(1),
+        "Description": "Pause, resume, rename or delete a heartbeat (inbound ping) monitor of a connected repository. Written directly to the Blocks Monitor configuration; Infrastructure and Blocks services monitors are refused. Covers: POST /api/Health/UpdateHealth, DELETE /api/Health/DeleteHealth?itemId={itemId}.",
+        "Resource": "blocks-release::monitor::manage-health",
+        "ResourceGroup": "release",
+        "IsBuiltIn": true,
+        "IsArchived": false,
+        "PermissionSeverity": NumberInt(0),
+        "DependentPermissions": [],
+        "Roles": [],
+        "OrganizationId": "default"
+    },
+    {
         "_id": "aff3a139-ae10-4b31-9667-54c3bd4c405a",
         "CreatedDate": ISODate("2026-07-09T11:38:01.473+0000"),
         "LastUpdatedDate": ISODate("2026-07-09T11:38:01.473+0000"),

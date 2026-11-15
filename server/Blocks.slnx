@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="Api/Api.csproj" />
   <Project Path="Devops.DomainService/Devops.DomainService.csproj" />
+  <Project Path="Release.Driver/Release.Driver.csproj" />
   <Project Path="Worker/Worker.csproj" />
   <Project Path="XUnitTest/XUnitTest.csproj" />
 </Solution>

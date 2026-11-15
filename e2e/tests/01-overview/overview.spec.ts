@@ -47,25 +47,28 @@ test.describe("Console & Project Overview", () => {
       await expect(page.locator("html")).not.toHaveClass(/dark/);
     });
 
-    await test.step("[Positive] language selector shows EN and lists English/German/French", async () => {
-      const languageButton = page.getByRole("button", { name: /^en$/i });
+    // Since genesis-os 4.5.0 (18b48be) the switcher is a "Change language" button showing the
+    // current code, opening a menu of radio items; since #260 the menu lists every enabled
+    // language, not only English.
+    await test.step("[Positive] language selector shows EN and lists English with the enabled languages", async () => {
+      const languageButton = page.getByRole("button", { name: "Change language" });
       await expect(languageButton).toBeVisible();
+      await expect(languageButton).toHaveText(/^en$/i);
       await languageButton.click();
-      await expect(page.getByRole("menuitem", { name: "English" })).toBeVisible();
-      await expect(page.getByRole("menuitem", { name: "German" })).toBeVisible();
-      await expect(page.getByRole("menuitem", { name: "French" })).toBeVisible();
+      const languageMenu = page.getByRole("menu", { name: "Change language" });
+      await expect(languageMenu).toBeVisible();
+      await expect(languageMenu.getByRole("menuitemradio", { name: "English" })).toBeVisible();
+      expect(await languageMenu.getByRole("menuitemradio").count()).toBeGreaterThan(1);
       await page.keyboard.press("Escape");
     });
 
-    await test.step("[Negative] German and French are disabled (English-only environment)", async () => {
-      const languageButton = page.getByRole("button", { name: /^en$/i });
+    await test.step("[Negative] only the current language (English) is checked", async () => {
+      const languageButton = page.getByRole("button", { name: "Change language" });
       await languageButton.click();
-      await expect(page.getByRole("menuitem", { name: "German" })).toHaveAttribute(
-        "aria-disabled",
-        "true",
-      );
-      await expect(page.getByRole("menuitem", { name: "French" })).toHaveAttribute(
-        "aria-disabled",
+      const languageMenu = page.getByRole("menu", { name: "Change language" });
+      await expect(languageMenu.getByRole("menuitemradio", { checked: true })).toHaveCount(1);
+      await expect(languageMenu.getByRole("menuitemradio", { name: "English" })).toHaveAttribute(
+        "aria-checked",
         "true",
       );
       await page.keyboard.press("Escape");

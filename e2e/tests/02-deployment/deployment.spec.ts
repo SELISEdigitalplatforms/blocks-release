@@ -1,6 +1,8 @@
 import { test, expect } from "../../support/test-base";
 import {
+  expectRepositoryDetailsHeading,
   openReleaseDeployment,
+  repoCardName,
   verifyAddRepositoryOpensOsTab,
 } from "../../support/release-helpers";
 
@@ -73,11 +75,10 @@ test.describe("Deployment", () => {
 
     await test.step("[Positive] opening a repo card navigates to Repository Details", async () => {
       await expect(repoCard).toBeVisible({ timeout: 30_000 });
+      const repoName = await repoCardName(repoCard);
       await repoCard.click();
       await expect(page).toHaveURL(/\/deployment\/repo\//, { timeout: 30_000 });
-      await expect(page.getByRole("heading", { name: /Repository Details/i }).first()).toBeVisible({
-        timeout: 30_000,
-      });
+      await expectRepositoryDetailsHeading(page, repoName);
     });
 
     const noDeploymentsHeading = page.getByRole("heading", { name: "No deployments available" });
@@ -177,6 +178,11 @@ test.describe("Deployment", () => {
       // row-level navigation into the deployment logs page.
       await historyRow.click();
       await expect(page).toHaveURL(/\/deployment-logs\//, { timeout: 30_000 });
+
+      // Back to Repository Details: the sections below use its tabs.
+      await page.goBack();
+      await expect(page).toHaveURL(/[?&]tab=history/, { timeout: 30_000 });
+      await expect(historyTab).toBeVisible({ timeout: 30_000 });
     });
 
     // -------------------------------------------------------------------------
@@ -260,8 +266,11 @@ test.describe("Deployment", () => {
       }
 
       // The Delete control is rendered for every deployed repository (it is
-      // the destructive teardown control beside Configure/Deploy). Strict
-      // assertion.
+      // the destructive teardown control beside Deploy in the Details tab's
+      // Deployment Information card). Strict assertion.
+      const detailsTab = page.getByRole("tab", { name: "Details" });
+      await detailsTab.click();
+      await expect(detailsTab).toHaveAttribute("data-state", "active");
       const deleteButton = page.getByTestId("delete-deployment-button");
       await expect(deleteButton).toBeVisible({ timeout: 10_000 });
 

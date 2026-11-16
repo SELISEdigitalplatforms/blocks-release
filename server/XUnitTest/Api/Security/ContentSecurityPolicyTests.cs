@@ -8,7 +8,8 @@ namespace XUnitTest.Api.Security;
 /// The SPA's CSP, ported from blocks-monitor. Two things went wrong with the first release
 /// policy (#211, reverted in 97bca1e) and both are pinned here: the host list was hardcoded to
 /// <c>dev-*</c> (stg and prod could not reach their own IAM), and <c>style-src 'self'</c> blocked
-/// the inline styles Radix, vaul, sonner and cmdk inject at runtime.
+/// the inline styles Radix, vaul, sonner and cmdk inject at runtime. Those <c>&lt;style&gt;</c>
+/// elements now carry the per-response style nonce instead of relying on 'unsafe-inline'.
 /// </summary>
 public class ContentSecurityPolicyTests
 {
@@ -132,13 +133,66 @@ public class ContentSecurityPolicyTests
     // ---------- Directives that must not drift ----------
 
     [Fact]
-    public void Build_KeepsInlineStylesAllowedAndInlineScriptsBlocked()
+    public void Build_AllowsStyleElementsOnlyWithTheNonceAndBlocksInlineScripts()
     {
+        // ZAP 10055 (CSP: style-src unsafe-inline): <style> elements need the nonce; style
+        // attributes stay allowed through style-src-attr only.
         var policy = ContentSecurityPolicy.Build(Config([]));
 
-        Directive(policy, "style-src").Should().Contain("'unsafe-inline'");
+        Directive(policy, "style-src").Should().Be($" 'self' 'nonce-{ContentSecurityPolicy.StyleNoncePlaceholder}'");
+        Directive(policy, "style-src").Should().NotContain("'unsafe-inline'");
+        Directive(policy, "style-src-attr").Should().Be(" 'unsafe-inline'");
         Directive(policy, "script-src").Should().NotContain("'unsafe-inline'");
         Directive(policy, "script-src").Should().NotContain("'unsafe-eval'");
+    }
+
+    [Fact]
+    public void WithStyleNonce_ReplacesThePlaceholderOnly()
+    {
+        var policy = ContentSecurityPolicy.BuildPolicy([], [], []);
+
+        var withNonce = ContentSecurityPolicy.WithStyleNonce(policy, "abc123==");
+
+        Directive(withNonce, "style-src").Should().Be(" 'self' 'nonce-abc123=='");
+        withNonce.Should().NotContain(ContentSecurityPolicy.StyleNoncePlaceholder);
+        withNonce.Replace("abc123==", ContentSecurityPolicy.StyleNoncePlaceholder).Should().Be(policy);
+    }
+
+    [Fact]
+    public void WithStyleNonce_RefusesAnEmptyNonce()
+    {
+        var act = () => ContentSecurityPolicy.WithStyleNonce(ContentSecurityPolicy.BuildPolicy([], [], []), "");
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void RenderIndex_WritesTheNonceIntoTheShell()
+    {
+        var template = $"<meta name=\"csp-nonce\" nonce=\"{ContentSecurityPolicy.StyleNoncePlaceholder}\" />";
+
+        ContentSecurityPolicy.RenderIndex(template, "n0nce").Should().Be("<meta name=\"csp-nonce\" nonce=\"n0nce\" />");
+    }
+
+    [Fact]
+    public void RenderIndex_RefusesAnEmptyNonce()
+    {
+        var act = () => ContentSecurityPolicy.RenderIndex("<html></html>", "");
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void ShippedIndexHtml_CarriesTheNoncePlaceholderAndTheShim()
+    {
+        // The server can only stamp the nonce if the built shell has the placeholder, and
+        // runtime <style> elements only get it through /csp-nonce.js loaded before the app.
+        var indexHtml = File.ReadAllText(Path.Combine(RepoRoot(), "client", "index.html"));
+
+        indexHtml.Should().Contain($"<meta name=\"csp-nonce\" nonce=\"{ContentSecurityPolicy.StyleNoncePlaceholder}\" />");
+        indexHtml.IndexOf("/csp-nonce.js", StringComparison.Ordinal).Should()
+            .BeLessThan(indexHtml.IndexOf("/app/main.tsx", StringComparison.Ordinal));
+        File.Exists(Path.Combine(RepoRoot(), "client", "public", "csp-nonce.js")).Should().BeTrue();
     }
 
     [Fact]
@@ -232,7 +286,8 @@ public class ContentSecurityPolicyTests
         var policy = ContentSecurityPolicy.Build(
             new ConfigurationBuilder().AddJsonFile(appsettings, optional: false).Build());
 
-        Directive(policy, "style-src").Should().Be(" 'self' 'unsafe-inline'");
+        Directive(policy, "style-src").Should().Be($" 'self' 'nonce-{ContentSecurityPolicy.StyleNoncePlaceholder}'");
+        Directive(policy, "style-src-attr").Should().Be(" 'unsafe-inline'");
         Directive(policy, "font-src").Should().Be(" 'self' data:");
     }
 
@@ -245,6 +300,17 @@ public class ContentSecurityPolicyTests
         }
 
         throw new FileNotFoundException("server/Api/appsettings.json not found above the test output.");
+    }
+
+    /// <summary>The repository root: the first directory above the test output with client/index.html.</summary>
+    private static string RepoRoot()
+    {
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "client", "index.html"))) return dir.FullName;
+        }
+
+        throw new DirectoryNotFoundException("client/index.html not found above the test output.");
     }
 
     /// <summary>The sources of one directive, without its name or the trailing separator.</summary>

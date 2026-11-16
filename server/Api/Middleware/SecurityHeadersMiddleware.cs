@@ -1,22 +1,30 @@
+using Api.Security;
+
 namespace Api.Middleware;
 
 /// <summary>
 /// Browser security headers (ZAP DAST bar). Env bootstrap via /runtime-config.js
 /// so CSP can keep script-src 'self' without unsafe-inline. The policy itself is built from
-/// configuration once at startup -- see <see cref="Api.Security.ContentSecurityPolicy"/>.
+/// configuration once at startup -- see <see cref="Api.Security.ContentSecurityPolicy"/>; only its
+/// style nonce varies per response (<see cref="StyleNonce"/>).
 /// </summary>
 public sealed class SecurityHeadersMiddleware
 {
     private readonly RequestDelegate _next;
 
-    // Built once from configuration at startup -- the policy does not vary per request.
-    private readonly string _contentSecurityPolicy;
+    /// <summary><see cref="HttpContext.Items"/> key for the response's style nonce.</summary>
+    public const string StyleNonceItemKey = "csp-style-nonce";
 
-    /// <summary>Creates the middleware with the policy built at startup.</summary>
-    public SecurityHeadersMiddleware(RequestDelegate next, string contentSecurityPolicy)
+    // Built once from configuration at startup; only the style nonce varies per response.
+    private readonly string _contentSecurityPolicy;
+    private readonly StyleNonce _styleNonces;
+
+    /// <summary>Creates the middleware with the policy built at startup and the nonce source.</summary>
+    public SecurityHeadersMiddleware(RequestDelegate next, string contentSecurityPolicy, StyleNonce styleNonces)
     {
         _next = next;
         _contentSecurityPolicy = contentSecurityPolicy;
+        _styleNonces = styleNonces;
     }
 
     /// <summary>Sets the headers now and again when the response starts.</summary>
@@ -24,10 +32,16 @@ public sealed class SecurityHeadersMiddleware
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        Apply(context, _contentSecurityPolicy);
+        // The response's style nonce, stable per browser (see StyleNonce). The SPA shell is
+        // rendered with the same value as the header.
+        var styleNonce = _styleNonces.ForRequest(context);
+        context.Items[StyleNonceItemKey] = styleNonce;
+        var policy = ContentSecurityPolicy.WithStyleNonce(_contentSecurityPolicy, styleNonce);
+
+        Apply(context, policy);
         context.Response.OnStarting(() =>
         {
-            Apply(context, _contentSecurityPolicy);
+            Apply(context, policy);
             return Task.CompletedTask;
         });
 

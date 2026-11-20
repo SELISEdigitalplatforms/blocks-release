@@ -1,14 +1,29 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
 import { showErrorToast } from "@/hooks/use-toast";
 import { BlocksAppLauncher } from "./blocks-app-launcher";
 
 vi.mock("@/hooks/use-toast", () => ({ showErrorToast: vi.fn() }));
 
+type MutableWindow = typeof globalThis.window & { __BLOCKS_ENV__?: Record<string, string> };
+const ENV = (globalThis.window as MutableWindow).__BLOCKS_ENV__ ?? {};
+// An app that still sets the merged areas' keys, so their tiles show (see the merged-tile test below).
+const MERGED_KEYS = {
+  BLOCKS_LOGIC_BASE_URL: "https://logic.example.test",
+  BLOCKS_LOCALIZATION_BASE_URL: "https://localization.example.test",
+  BLOCKS_DATA_BASE_URL: "https://data.example.test",
+  BLOCKS_MONITOR_BASE_URL: "https://monitor.example.test",
+};
+
 describe("BlocksAppLauncher", () => {
+  afterEach(() => {
+    (globalThis.window as MutableWindow).__BLOCKS_ENV__ = ENV;
+  });
+
   beforeEach(() => {
+    (globalThis.window as MutableWindow).__BLOCKS_ENV__ = { ...ENV, ...MERGED_KEYS };
     vi.clearAllMocks();
     localStorage.clear();
     Object.defineProperty(window, "location", {
@@ -71,5 +86,21 @@ describe("BlocksAppLauncher", () => {
     fireEvent.click(await screen.findByText("IAM"));
     await waitFor(() => expect(showErrorToast).toHaveBeenCalled());
     vi.unstubAllGlobals();
+  });
+
+  it("shows the logic, localization, data and monitor tiles only while their base URL is set", async () => {
+    (globalThis.window as MutableWindow).__BLOCKS_ENV__ = {
+      ...ENV,
+      BLOCKS_LOGIC_BASE_URL: "",
+      BLOCKS_OS_BASE_URL: "https://os.example.test",
+    };
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderWithProviders(<BlocksAppLauncher />);
+    await user.click(screen.getByLabelText("SELISE Blocks apps"));
+    expect(await screen.findByText("IAM")).toBeInTheDocument();
+    expect(screen.getByText("OS")).toBeInTheDocument();
+    for (const label of ["Logic", "Localization", "Data", "Monitor"]) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+    }
   });
 });

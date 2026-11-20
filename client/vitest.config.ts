@@ -23,6 +23,10 @@ export default defineConfig({
         __dirname,
         "./app/test-utils/stubs/blocks-kit-providers.tsx",
       ),
+      "@seliseblocks/genesis-os/lib": path.resolve(
+        __dirname,
+        "./app/test-utils/stubs/blocks-kit-lib.ts",
+      ),
       "@seliseblocks/genesis-os/store": path.resolve(
         __dirname,
         "./app/test-utils/stubs/blocks-kit-store.ts",

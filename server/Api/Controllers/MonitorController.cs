@@ -103,6 +103,11 @@ public class MonitorController : ControllerBase
             _configuration["FrontendRuntime:BLOCKS_LOGIC_BASE_URL"],
             Environment.GetEnvironmentVariable("BLOCKS_LOGIC_BASE_URL"),
             Environment.GetEnvironmentVariable("FrontendRuntime__BLOCKS_LOGIC_BASE_URL"),
+            // Monitor and logic are served by the os host once their own keys are removed.
+            _configuration["BLOCKS_OS_BASE_URL"],
+            _configuration["FrontendRuntime:BLOCKS_OS_BASE_URL"],
+            Environment.GetEnvironmentVariable("BLOCKS_OS_BASE_URL"),
+            Environment.GetEnvironmentVariable("FrontendRuntime__BLOCKS_OS_BASE_URL"),
         };
 
         return candidates

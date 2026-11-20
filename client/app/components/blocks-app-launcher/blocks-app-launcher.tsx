@@ -11,6 +11,7 @@ import {
 } from "@/components/ui-kits/popover/popover";
 import { cn } from "@/lib/utils";
 import { getRuntimeEnv } from "@/lib/runtime-env";
+import type { MergedAreaKey } from "@seliseblocks/genesis-os/lib";
 import { showErrorToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { tStatic, useT } from "@seliseblocks/genesis-os";
@@ -24,6 +25,11 @@ interface BlocksApp {
   icon: React.ReactNode;
   clientId: string;
   redirectUri: string;
+  /**
+   * Set for the areas folded into the os app (logic, localization, data, monitor): the tile is shown only while this
+   * key is set, the same as genesis-os's app switcher. Once it is removed, the OS tile covers the area.
+   */
+  mergedKey?: MergedAreaKey;
 }
 
 // IDP icon – shield with lock
@@ -195,6 +201,7 @@ const SELISE_APPS: BlocksApp[] = [
     icon: <UilmIcon />,
     clientId: "57214b67-aa9c-4307-92ab-a25e35180fac",
     redirectUri: getRuntimeEnv("BLOCKS_LOCALIZATION_CALLBACK_URL"),
+    mergedKey: "BLOCKS_LOCALIZATION_BASE_URL",
   },
   {
     key: "agents",
@@ -211,6 +218,7 @@ const SELISE_APPS: BlocksApp[] = [
     icon: <DataGatewayIcon />,
     clientId: "e76867a8-37a1-483e-a15e-875c3884b8e8",
     redirectUri: getRuntimeEnv("BLOCKS_DATA_CALLBACK_URL"),
+    mergedKey: "BLOCKS_DATA_BASE_URL",
   },
   {
     key: "os",
@@ -235,6 +243,7 @@ const SELISE_APPS: BlocksApp[] = [
     icon: <LogicIcon />,
     clientId: "a25aee32-73ae-484b-b813-522a8d091f89",
     redirectUri: getRuntimeEnv("BLOCKS_LOGIC_CALLBACK_URL"),
+    mergedKey: "BLOCKS_LOGIC_BASE_URL",
   },
   {
     key: "monitor",
@@ -243,6 +252,7 @@ const SELISE_APPS: BlocksApp[] = [
     icon: <ObservabilityIcon />,
     clientId: "1bd234da-1fa1-4264-982e-3debb1078be5",
     redirectUri: getRuntimeEnv("BLOCKS_MONITOR_CALLBACK_URL"),
+    mergedKey: "BLOCKS_MONITOR_BASE_URL",
   },
   {
     key: "release",
@@ -400,8 +410,9 @@ export function BlocksAppLauncher() {
   };
 
 
-  const favourites = SELISE_APPS.filter((a) => favouriteKeys.has(a.key));
-  const moreApps = SELISE_APPS.filter((a) => !favouriteKeys.has(a.key));
+  const apps = SELISE_APPS.filter((a) => !a.mergedKey || getRuntimeEnv(a.mergedKey));
+  const favourites = apps.filter((a) => favouriteKeys.has(a.key));
+  const moreApps = apps.filter((a) => !favouriteKeys.has(a.key));
 
   return (
     <>
@@ -478,7 +489,7 @@ export function BlocksAppLauncher() {
             <DialogTitle>{t("BLOCKS_APP_LAUNCHER.MANAGE_FAVOURITES")}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-2">
-            {SELISE_APPS.map((app) => (
+            {apps.map((app) => (
               <button
                 key={app.key}
                 onClick={() => toggleFavourite(app.key)}

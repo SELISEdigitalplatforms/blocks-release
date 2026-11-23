@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 
 var serviceName = "blocks-release-api";
-var vaultType = ResolveVaultType();
+var vaultType = ApplicationConfigurations.ResolveVaultType();
 var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(serviceName, vaultType);
 var cloudBuildSecret = await CloudBuildSecret.ProcessBlocksSecret(vaultType);
 var builder = WebApplication.CreateBuilder(args);
@@ -131,23 +131,6 @@ static async Task WriteSpaShell(HttpContext context, string indexHtmlTemplate)
     context.Response.ContentType = "text/html; charset=utf-8";
     await context.Response.WriteAsync(Api.Security.ContentSecurityPolicy.RenderIndex(indexHtmlTemplate, nonce))
         .ConfigureAwait(false);
-}
-
-static VaultType ResolveVaultType()
-{
-    var configuredVaultType = Environment.GetEnvironmentVariable("BLOCKS_VAULT_TYPE");
-    if (!string.IsNullOrWhiteSpace(configuredVaultType) &&
-        Enum.TryParse<VaultType>(configuredVaultType, true, out var parsedVaultType))
-    {
-        return parsedVaultType;
-    }
-
-    var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
-                      Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
-
-    return string.Equals(environment, "Development", StringComparison.OrdinalIgnoreCase)
-        ? VaultType.OnPrem
-        : VaultType.Azure;
 }
 
 static void ApplyFrontendRuntimeSettings(IConfiguration configuration, string webRootPath)

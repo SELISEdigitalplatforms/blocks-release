@@ -39,11 +39,13 @@ public static class ContentSecurityPolicy
     /// <summary>
     /// Origins the SPA opens a WebSocket to. A CSP source is scheme-sensitive, so
     /// <c>https://host</c> does not permit <c>wss://host</c>. The deployment hub is
-    /// same-origin and covered by <c>'self'</c>; the notification hub lives on logic.
+    /// same-origin and covered by <c>'self'</c>; the notification hub lives on logic, which is served by the os host
+    /// once <c>BLOCKS_LOGIC_BASE_URL</c> is removed (genesis-os <c>getMergedAreaBaseUrl</c>).
     /// </summary>
     internal static readonly string[] WebSocketOriginKeys =
     [
         "BLOCKS_LOGIC_BASE_URL",
+        "BLOCKS_OS_BASE_URL",
     ];
 
     /// <summary>Where a login POST may be sent: the identity host and the portal.</summary>

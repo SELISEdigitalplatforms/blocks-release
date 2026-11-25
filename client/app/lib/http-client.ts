@@ -1,5 +1,6 @@
 import { HttpClient } from "@seliseblocks/genesis-os";
 import { createHttpFailureReporter, getRollbar } from "@seliseblocks/genesis-os/observability";
+import { getMergedAreaBaseUrl } from "@seliseblocks/genesis-os/lib";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { SERVICE_NAME } from "@/constants/service.constant";
 
@@ -14,8 +15,9 @@ export const serviceInstances = {
     blocksKey: () => getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || "",
     onError: reportTransportFailure,
   }),
+  // Logic is served by the os host: BLOCKS_LOGIC_BASE_URL while set, else BLOCKS_OS_BASE_URL.
   logicService: new HttpClient({
-    baseURL: () => getRuntimeEnv("BLOCKS_LOGIC_BASE_URL") || "",
+    baseURL: () => getMergedAreaBaseUrl("BLOCKS_LOGIC_BASE_URL"),
     blocksKey: () => getRuntimeEnv("BLOCKS_X_BLOCKS_KEY") || "",
     onError: reportTransportFailure,
   }),

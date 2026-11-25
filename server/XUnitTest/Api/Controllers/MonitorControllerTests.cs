@@ -72,6 +72,35 @@ public class MonitorControllerTests
     }
 
     [Fact]
+    public async Task MissingMonitorAndLogicUrls_FallBackToTheOsHost()
+    {
+        var originalMonitorEnv = Environment.GetEnvironmentVariable("BLOCKS_MONITOR_BASE_URL");
+        var originalLogicEnv = Environment.GetEnvironmentVariable("BLOCKS_LOGIC_BASE_URL");
+        try
+        {
+            // Monitor and logic are served by the os host once their own keys are removed.
+            Environment.SetEnvironmentVariable("BLOCKS_MONITOR_BASE_URL", null);
+            Environment.SetEnvironmentVariable("BLOCKS_LOGIC_BASE_URL", null);
+            var handler = new CapturingHandler(JsonResponse(HttpStatusCode.OK, "{}"));
+            var controller = CreateController(handler, new Dictionary<string, string?>
+            {
+                ["FrontendRuntime:BLOCKS_OS_BASE_URL"] = "https://os.example/"
+            });
+
+            await controller.GetMonitorListByRepoId(ProjectKey, RepoId);
+
+            handler.Requests.Should().ContainSingle();
+            handler.Requests[0].RequestUri!.ToString().Should()
+                .StartWith("https://os.example/api/Monitor/GetMonitorListByRepoId");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("BLOCKS_MONITOR_BASE_URL", originalMonitorEnv);
+            Environment.SetEnvironmentVariable("BLOCKS_LOGIC_BASE_URL", originalLogicEnv);
+        }
+    }
+
+    [Fact]
     public async Task BaseUrlResolution_ChecksRootBeforeFrontendRuntimeBeforeEnvironment()
     {
         var originalMonitorEnv = Environment.GetEnvironmentVariable("BLOCKS_MONITOR_BASE_URL");
@@ -132,10 +161,12 @@ public class MonitorControllerTests
     {
         var originalMonitorEnv = Environment.GetEnvironmentVariable("BLOCKS_MONITOR_BASE_URL");
         var originalLogicEnv = Environment.GetEnvironmentVariable("BLOCKS_LOGIC_BASE_URL");
+        var originalOsEnv = Environment.GetEnvironmentVariable("BLOCKS_OS_BASE_URL");
         try
         {
             Environment.SetEnvironmentVariable("BLOCKS_MONITOR_BASE_URL", null);
             Environment.SetEnvironmentVariable("BLOCKS_LOGIC_BASE_URL", null);
+            Environment.SetEnvironmentVariable("BLOCKS_OS_BASE_URL", null);
             var logger = new TestLogger<MonitorController>();
             var handler = new CapturingHandler(JsonResponse(HttpStatusCode.OK, "{}"));
             var controller = CreateController(handler, new Dictionary<string, string?>(), logger);
@@ -154,6 +185,7 @@ public class MonitorControllerTests
         {
             Environment.SetEnvironmentVariable("BLOCKS_MONITOR_BASE_URL", originalMonitorEnv);
             Environment.SetEnvironmentVariable("BLOCKS_LOGIC_BASE_URL", originalLogicEnv);
+            Environment.SetEnvironmentVariable("BLOCKS_OS_BASE_URL", originalOsEnv);
         }
     }
 

@@ -27,6 +27,8 @@
     <PackageReference Include="SeliseBlocks.Genesis.OS" />
     <PackageReference Include="SeliseBlocks.Secrets.OS" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <!-- SeliseBlocks.Genesis.OS 4.6.3 brings the SignalR Redis backplane at 10.0.7 (CVE-2026-114147, fixed in 10.0.15). -->
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" />
   </ItemGroup>
 
   <ItemGroup>

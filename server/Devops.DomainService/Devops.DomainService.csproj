@@ -10,6 +10,9 @@
     <!-- Pin Swashbuckle to the supported version so the Swagger stack pulled transitively via
          SeliseBlocks.Genesis.OS resolves to a Microsoft.OpenApi build without known advisories. -->
     <PackageReference Include="Swashbuckle.AspNetCore" />
+    <!-- Same for the SignalR Redis backplane: SeliseBlocks.Genesis.OS 4.6.3 brings 10.0.7 (CVE-2026-114147,
+         fixed in 10.0.15). -->
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" />
   </ItemGroup>
 
 	<ItemGroup>

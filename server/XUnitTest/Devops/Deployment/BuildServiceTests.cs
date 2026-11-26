@@ -10,6 +10,7 @@ using Devops.DomainService.Deployment.Models.Dtos;
 using Devops.DomainService.Deployment.Models.Request;
 using Devops.DomainService.Deployment.Models.Response;
 using Devops.DomainService.Shared.Models;
+using Devops.DomainService.VersionControlSystems.Models.Dtos;
 using FluentAssertions;
 using FluentValidation.Results;
 using Moq;
@@ -51,27 +52,100 @@ namespace XUnitTest.Devops.Deployment
             result.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
+        // H6: Manual -> Auto turns the hook on with the signed-in user's token, then saves.
         [Fact]
-        public async Task UpdateRepo_Success_UpdatesWebhookAndReturnsOk()
+        public async Task UpdateRepo_ManualToAuto_TurnsTheHookOnFirstThenSaves()
         {
-            var repo = new Repo { ItemId = "id", DeploymentType = "Manual" };
+            SetContext("tenant-b");
+            var repo = new Repo { ItemId = "id", ProjectId = "tenant-b", RepoName = "org/web", DeploymentType = "Manual" };
+            var order = new List<string>();
             _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(repo);
-            _f.RepoRepo.Setup(r => r.UpdateRepo(It.IsAny<RepoUpdateRequest>())).ReturnsAsync(true);
-            _f.Webhook.Setup(w => w.UpdateWebhookStatus(It.IsAny<Repo>(), It.IsAny<bool>())).ReturnsAsync(true);
+            _f.Webhook.Setup(w => w.SetActiveAsync(repo, true, "tenant-b", "user-1"))
+                .Callback(() => order.Add("webhook")).ReturnsAsync(WebhookOutcome.Success(new GithubWebhook { Id = 1, Active = true }));
+            _f.RepoRepo.Setup(r => r.UpdateRepo(It.IsAny<RepoUpdateRequest>()))
+                .Callback(() => order.Add("save")).ReturnsAsync(true);
 
-            var result = await _f.BuildService().UpdateRepo(new RepoUpdateRequest { RepoId = "id", DeploymentType = "Auto" });
+            var result = await _f.BuildService().UpdateRepo(new RepoUpdateRequest { RepoId = "id", DeploymentType = "auto" });
 
             result.IsSuccess.Should().BeTrue();
             result.StatusCode.Should().Be(HttpStatusCode.OK);
+            result.Warning.Should().BeNull();
+            order.Should().Equal("webhook", "save");
+            _f.RepoRepo.Verify(r => r.UpdateRepo(It.Is<RepoUpdateRequest>(q => q.DeploymentType == "Auto")), Times.Once);
+        }
+
+        // C1: refused, nothing saved.
+        [Fact]
+        public async Task UpdateRepo_ManualToAuto_Refused_SavesNothing()
+        {
+            SetContext("tenant-b");
+            _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(new Repo { ItemId = "id", RepoName = "org/web", DeploymentType = "Manual" });
+            _f.Webhook.Setup(w => w.SetActiveAsync(It.IsAny<Repo>(), true, "tenant-b", "user-1"))
+                .ReturnsAsync(WebhookOutcome.Failure(WebhookCodes.NotConnected));
+
+            var result = await _f.BuildService().UpdateRepo(new RepoUpdateRequest { RepoId = "id", DeploymentType = "Auto", CustomDomain = "x.example.com" });
+
+            result.IsSuccess.Should().BeFalse();
+            result.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            result.Errors["webhook"].Should().Be(WebhookCodes.NotConnected);
+            _f.RepoRepo.Verify(r => r.UpdateRepo(It.IsAny<RepoUpdateRequest>()), Times.Never);
+        }
+
+        // C7, then H8: Auto -> Manual saves first and turns the hook off after; no mode change makes no call.
+        [Fact]
+        public async Task UpdateRepo_AutoToManual_SavesThenTurnsTheHookOff_WithAWarningWhenItStaysOn()
+        {
+            SetContext("tenant-b");
+            var repo = new Repo { ItemId = "id", RepoName = "org/web", DeploymentType = "Auto", GithubWebhook = new GithubWebhook { Id = 3, Active = true } };
+            var order = new List<string>();
+            _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(repo);
+            _f.RepoRepo.Setup(r => r.UpdateRepo(It.IsAny<RepoUpdateRequest>())).Callback(() => order.Add("save")).ReturnsAsync(true);
+            _f.Webhook.Setup(w => w.SetActiveAsync(repo, false, "tenant-b", "user-1"))
+                .Callback(() => order.Add("webhook")).ReturnsAsync(WebhookOutcome.Failure(WebhookCodes.Permission));
+
+            var result = await _f.BuildService().UpdateRepo(new RepoUpdateRequest { RepoId = "id", DeploymentType = "manual" });
+
+            result.IsSuccess.Should().BeTrue();
+            result.Warning.Code.Should().Be(DeploymentWarning.WebhookStillActive);
+            order.Should().Equal("save", "webhook");
         }
 
         [Fact]
-        public async Task UpdateRepo_UpdateFails_ReturnsFailedMessage()
+        public async Task UpdateRepo_WithoutAModeChange_LeavesTheWebhookAlone()
+        {
+            SetContext("tenant-b");
+            _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(new Repo { ItemId = "id", DeploymentType = "Manual" });
+            _f.RepoRepo.Setup(r => r.UpdateRepo(It.IsAny<RepoUpdateRequest>())).ReturnsAsync(true);
+
+            var result = await _f.BuildService().UpdateRepo(new RepoUpdateRequest { RepoId = "id", DeploymentType = "Manual" });
+
+            result.IsSuccess.Should().BeTrue();
+            _f.Webhook.Verify(w => w.SetActiveAsync(It.IsAny<Repo>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
+        // C15: "Failed to update." is a failure, never isSuccess true.
+        [Fact]
+        public async Task UpdateRepo_UpdateFails_IsABadRequestFailure()
         {
             _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(new Repo { ItemId = "id" });
             _f.RepoRepo.Setup(r => r.UpdateRepo(It.IsAny<RepoUpdateRequest>())).ReturnsAsync(false);
             var result = await _f.BuildService().UpdateRepo(new RepoUpdateRequest { RepoId = "id" });
             result.Message.Should().Be("Failed to update.");
+            result.IsSuccess.Should().BeFalse();
+            result.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task UpdateRepo_ReadsDeploySettingsWhenAllThreeAreGiven()
+        {
+            var settings = new DeploySettings();
+            _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(new Repo { ItemId = "id" });
+            _f.RepoRepo.Setup(r => r.GetDeploySettings("p", "r", "m")).ReturnsAsync(settings);
+            _f.RepoRepo.Setup(r => r.UpdateRepo(It.IsAny<RepoUpdateRequest>())).ReturnsAsync(true);
+
+            await _f.BuildService().UpdateRepo(new RepoUpdateRequest { RepoId = "id", HostingProviderId = "p", RegionId = "r", MachineConfigId = "m" });
+
+            _f.RepoRepo.Verify(r => r.UpdateRepo(It.Is<RepoUpdateRequest>(q => q.deploySettings == settings)), Times.Once);
         }
 
         [Fact]
@@ -206,34 +280,6 @@ namespace XUnitTest.Devops.Deployment
             };
             var result = await _f.BuildService().TransformToRepoCustomDomains(request);
             result.Should().HaveCount(2);
-        }
-
-        // ---- RepoWebhookUpdate ----
-
-        [Fact]
-        public async Task RepoWebhookUpdate_Auto_EnablesWebhook()
-        {
-            _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(new Repo { ItemId = "id" });
-            _f.Webhook.Setup(w => w.UpdateWebhookStatus(It.IsAny<Repo>(), true)).ReturnsAsync(true);
-            var result = await _f.BuildService().RepoWebhookUpdate(new RepoUpdateRequest { DeploymentType = "Auto" }, new Repo { ItemId = "id" });
-            result.Should().BeTrue();
-        }
-
-        [Fact]
-        public async Task RepoWebhookUpdate_Manual_DisablesWebhook()
-        {
-            _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(new Repo { ItemId = "id" });
-            _f.Webhook.Setup(w => w.UpdateWebhookStatus(It.IsAny<Repo>(), false)).ReturnsAsync(false);
-            var result = await _f.BuildService().RepoWebhookUpdate(new RepoUpdateRequest { DeploymentType = "Manual" }, new Repo { ItemId = "id" });
-            result.Should().BeFalse();
-        }
-
-        [Fact]
-        public async Task RepoWebhookUpdate_Unknown_ReturnsFalse()
-        {
-            _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(new Repo { ItemId = "id" });
-            var result = await _f.BuildService().RepoWebhookUpdate(new RepoUpdateRequest { DeploymentType = "Other" }, new Repo { ItemId = "id" });
-            result.Should().BeFalse();
         }
 
         // ---- HandleWebhookEventAsync ----
@@ -698,6 +744,233 @@ namespace XUnitTest.Devops.Deployment
             saved.ScaReport.Attempts.Should().Be(0);
             saved.ScaReport.Message.Should().BeNull();
             saved.ScaReport.Findings.Should().BeNullOrEmpty();
+        }
+
+        // ---- #279: the deployment-mode step inside deploys ----
+
+        private Repo ArrangeRepo(string mode, GithubWebhook hook = null)
+        {
+            SetContext("tenant-1");
+            var repo = new Repo
+            {
+                ItemId = "repo-1", ProjectId = "tenant-1", ProjectName = "p", RepoName = "org/web",
+                RepoUrl = "https://github.com/org/web.git", Branch = "dev", CreatedBy = "user-1",
+                DefaultDeploymentUrl = "web.example.com", DeploymentType = mode, GithubWebhook = hook,
+            };
+            _f.RepoRepo.Setup(r => r.GetRepo("repo-1")).ReturnsAsync(repo);
+            _f.Vcs.Setup(v => v.GetRepoBranchByName("org/web", "dev")).ReturnsAsync((true, string.Empty));
+            return repo;
+        }
+
+        /// <summary>Lets CreateNamespaceAsync submit its PipelineRun, so a deploy can go all the way through.</summary>
+        private void ArrangePipelineStarts()
+        {
+            _f.TokenRepo.Setup(t => t.getToken("user-1")).ReturnsAsync("gh-token");
+            _f.CustomObjects
+                .Setup(c => c.CreateNamespacedCustomObjectWithHttpMessagesAsync(
+                    It.IsAny<object>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+                    It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new k8s.Autorest.HttpOperationResponse<object>
+                {
+                    Body = new Dictionary<string, object> { ["metadata"] = "created" },
+                    Request = new System.Net.Http.HttpRequestMessage(),
+                    Response = new System.Net.Http.HttpResponseMessage(),
+                });
+            _f.BuildRepo.Setup(b => b.SaveBuild(It.IsAny<Build>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+            _f.RepoRepo.Setup(r => r.UpdateRepo(It.IsAny<Repo>(), It.IsAny<string>())).ReturnsAsync(true);
+            _f.RepoRepo.Setup(r => r.UpdateRepo(It.IsAny<RepoUpdateRequest>(), It.IsAny<string>())).ReturnsAsync(true);
+        }
+
+        private void VerifyNothingStarted()
+        {
+            // CreateNamespaceAsync reads the owner's token first: no read means no PipelineRun.
+            _f.TokenRepo.Verify(t => t.getToken(It.IsAny<string>()), Times.Never);
+            _f.CustomObjects.Verify(c => c.CreateNamespacedCustomObjectWithHttpMessagesAsync(
+                It.IsAny<object>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool?>(),
+                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>>(), It.IsAny<CancellationToken>()), Times.Never);
+            _f.BuildRepo.Verify(b => b.SaveBuild(It.IsAny<Build>(), It.IsAny<string>()), Times.Never);
+            _f.BuildRepo.Verify(b => b.SaveBuild(It.IsAny<Build>()), Times.Never);
+            _f.RepoRepo.Verify(r => r.UpdateRepo(It.IsAny<Repo>(), It.IsAny<string>()), Times.Never);
+            _f.RepoRepo.Verify(r => r.UpdateRepo(It.IsAny<RepoUpdateRequest>(), It.IsAny<string>()), Times.Never);
+        }
+
+        // C2, example 4: a refused mode step starts no pipeline, saves no build and changes no repository.
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Deploy_ModeStepRefusal_StartsNothing(bool throughRunBuild)
+        {
+            ArrangeRepo("Auto");
+            _f.Webhook.Setup(w => w.SetActiveAsync(It.IsAny<Repo>(), true, "tenant-1", "user-1"))
+                .ReturnsAsync(WebhookOutcome.Failure(WebhookCodes.NotConnected));
+
+            var result = throughRunBuild
+                ? await _f.BuildService().RunBuild(new RepoBuildRequest { RepoId = "repo-1" })
+                : await _f.BuildService().ManualBuild(new RepoBuildRequest { RepoId = "repo-1" });
+
+            result.IsSuccess.Should().BeFalse();
+            result.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            result.Message.Should().Be("Connect your GitHub account to use Git based deployment. To deploy now, switch to Blocks Cloud based deployment in Settings.");
+            result.Errors["webhook"].Should().Be(WebhookCodes.NotConnected);
+            result.buildId.Should().BeNull();
+            VerifyNothingStarted();
+        }
+
+        private static Blocks.Genesis.DataAccess.Rules.DataValidationResult RuleRefusal(string field, string message)
+        {
+            var result = new Blocks.Genesis.DataAccess.Rules.DataValidationResult();
+            result.AddError(field, message, "MaxLength");
+            return result;
+        }
+
+        // C12: a rule refusal comes first, with no GitHub call.
+        [Fact]
+        public async Task Deploy_RuleRefusal_MakesNoGithubCall()
+        {
+            ArrangeRepo("Manual");
+            _f.RepoRepo.Setup(r => r.CheckRepoAsync(It.IsAny<Repo>(), "tenant-1"))
+                .ThrowsAsync(new Blocks.Genesis.DataAccess.Rules.DataValidationException(RuleRefusal("Branch", "Branch must be main")));
+
+            var result = await _f.BuildService().RunBuild(new RepoBuildRequest { RepoId = "repo-1", DeploymentType = "auto" });
+
+            result.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            _f.Webhook.Verify(w => w.SetActiveAsync(It.IsAny<Repo>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
+        // H2, H3/C19: the dialog's "auto" turns the hook on before the pipeline and the repository is stored Auto.
+        [Fact]
+        public async Task RunBuild_AutoChosenForAManualRepository_TurnsTheHookOnBeforeThePipelineAndStoresAuto()
+        {
+            var repo = ArrangeRepo("Manual");
+            ArrangePipelineStarts();
+            var order = new List<string>();
+            _f.Webhook.Setup(w => w.SetActiveAsync(repo, true, "tenant-1", "user-1"))
+                .Callback(() => { order.Add("webhook"); repo.GithubWebhook = new GithubWebhook { Id = 42, Active = true }; })
+                .ReturnsAsync(WebhookOutcome.Success(new GithubWebhook { Id = 42, Active = true }));
+            _f.TokenRepo.Setup(t => t.getToken("user-1")).Callback(() => order.Add("pipeline")).ReturnsAsync("gh-token");
+            Repo written = null;
+            _f.RepoRepo.Setup(r => r.UpdateRepo(It.IsAny<Repo>(), "tenant-1")).Callback<Repo, string>((r, _) => written = r).ReturnsAsync(true);
+
+            var result = await _f.BuildService().RunBuild(new RepoBuildRequest { RepoId = "repo-1", DeploymentType = "auto" });
+
+            result.IsSuccess.Should().BeTrue(result.Message);
+            result.buildId.Should().NotBeNullOrEmpty();
+            result.Warning.Should().BeNull();
+            order.Should().StartWith(new[] { "webhook", "pipeline" });
+            _f.RepoRepo.Verify(r => r.UpdateRepo(It.Is<RepoUpdateRequest>(q => q.RepoId == "repo-1" && q.DeploymentType == "Auto"), "tenant-1"), Times.Once);
+            written.DeploymentType.Should().Be("Auto");
+            written.GithubWebhook.Id.Should().Be(42);
+        }
+
+        // H1, P1: Blocks Cloud based on a Manual repository: no webhook step at all.
+        [Theory]
+        [InlineData(null)]
+        [InlineData("manual")]
+        public async Task RunBuild_ManualRepositoryStayingManual_NeverTouchesTheWebhook(string requested)
+        {
+            ArrangeRepo("Manual");
+            ArrangePipelineStarts();
+
+            var result = await _f.BuildService().RunBuild(new RepoBuildRequest { RepoId = "repo-1", DeploymentType = requested });
+
+            result.IsSuccess.Should().BeTrue(result.Message);
+            _f.Webhook.Verify(w => w.SetActiveAsync(It.IsAny<Repo>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _f.Webhook.Verify(w => w.CreateWebhook(It.IsAny<Repo>()), Times.Never);
+        }
+
+        // H4, P2: a healthy Git based redeploy through either endpoint makes no webhook call.
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Redeploy_AutoWithAnActiveHook_NeverTouchesTheWebhook(bool throughRunBuild)
+        {
+            ArrangeRepo("Auto", new GithubWebhook { Id = 7, Active = true });
+            ArrangePipelineStarts();
+
+            var result = throughRunBuild
+                ? await _f.BuildService().RunBuild(new RepoBuildRequest { RepoId = "repo-1" })
+                : await _f.BuildService().ManualBuild(new RepoBuildRequest { RepoId = "repo-1" });
+
+            result.IsSuccess.Should().BeTrue(result.Message);
+            _f.Webhook.Verify(w => w.SetActiveAsync(It.IsAny<Repo>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
+        // C7 on a deploy: Manual chosen for an Auto repository starts the build with the warning.
+        [Fact]
+        public async Task ManualBuild_ManualChosenForAnAutoRepository_StartsWithAStillActiveWarning()
+        {
+            var repo = ArrangeRepo("Auto", new GithubWebhook { Id = 7, Active = true });
+            ArrangePipelineStarts();
+            _f.Webhook.Setup(w => w.SetActiveAsync(repo, false, "tenant-1", "user-1"))
+                .ReturnsAsync(WebhookOutcome.Failure(WebhookCodes.Unreachable));
+
+            var result = await _f.BuildService().ManualBuild(new RepoBuildRequest { RepoId = "repo-1", DeploymentType = "manual" });
+
+            result.IsSuccess.Should().BeTrue(result.Message);
+            result.Warning.Code.Should().Be(DeploymentWarning.WebhookStillActive);
+            result.Warning.Reason.Should().Be(WebhookCodes.Unreachable);
+            _f.RepoRepo.Verify(r => r.UpdateRepo(It.Is<RepoUpdateRequest>(q => q.DeploymentType == "Manual"), "tenant-1"), Times.Once);
+        }
+
+        // C14: the pipeline fails after Git based was switched on; the answer says the switch stays.
+        [Fact]
+        public async Task RunBuild_PipelineFailsAfterTurningAutoOn_SaysGitBasedIsNowOn()
+        {
+            var repo = ArrangeRepo("Manual");
+            _f.RepoRepo.Setup(r => r.UpdateRepo(It.IsAny<RepoUpdateRequest>(), It.IsAny<string>())).ReturnsAsync(true);
+            _f.Webhook.Setup(w => w.SetActiveAsync(repo, true, "tenant-1", "user-1"))
+                .ReturnsAsync(WebhookOutcome.Success(new GithubWebhook { Id = 42, Active = true }));
+            // No token for the pipeline: CreateNamespaceAsync answers "Access token not found".
+
+            var result = await _f.BuildService().RunBuild(new RepoBuildRequest { RepoId = "repo-1", DeploymentType = "auto" });
+
+            result.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            result.Message.Should().StartWith("Git based deployment is now on, but the deployment couldn't start: Failed to initiate pipeline.");
+            _f.RepoRepo.Verify(r => r.UpdateRepo(It.Is<RepoUpdateRequest>(q => q.DeploymentType == "Auto"), "tenant-1"), Times.Once);
+        }
+
+        [Fact]
+        public async Task RunBuild_PipelineFailsWithoutAModeChange_KeepsTodaysMessage()
+        {
+            ArrangeRepo("Manual");
+
+            var result = await _f.BuildService().RunBuild(new RepoBuildRequest { RepoId = "repo-1" });
+
+            result.Message.Should().StartWith("Failed to initiate pipeline.");
+        }
+
+        [Fact]
+        public async Task RunBuild_AnUnexpectedFailureAfterTurningAutoOn_IsPrefixedToo()
+        {
+            var repo = ArrangeRepo("Manual");
+            _f.RepoRepo.Setup(r => r.UpdateRepo(It.IsAny<RepoUpdateRequest>(), It.IsAny<string>())).ReturnsAsync(true);
+            _f.Webhook.Setup(w => w.SetActiveAsync(repo, true, "tenant-1", "user-1"))
+                .ReturnsAsync(WebhookOutcome.Success(new GithubWebhook { Id = 42, Active = true }));
+            ArrangePipelineStarts();
+            _f.BuildRepo.Setup(b => b.SaveBuild(It.IsAny<Build>(), It.IsAny<string>())).ThrowsAsync(new InvalidOperationException("db down"));
+
+            var result = await _f.BuildService().RunBuild(new RepoBuildRequest { RepoId = "repo-1", DeploymentType = "auto" });
+
+            result.Message.Should().Be("Git based deployment is now on, but the deployment couldn't start: db down");
+        }
+
+        // H12, P6: a push-triggered build never runs the mode step.
+        [Fact]
+        public async Task Push_TriggeredBuild_MakesNoWebhookCall()
+        {
+            SetContext("tenant-b");
+            _f.RepoRepo.Setup(r => r.GetRepoByBranch("tenant-b", It.IsAny<string>(), "main"))
+                .ReturnsAsync(new Repo { ItemId = "repo-1", ProjectId = "tenant-b", RepoName = "web", Branch = "main", DeploymentType = "Auto" });
+            _f.BuildRepo.Setup(b => b.SaveWebhook(It.IsAny<RepositoryWebhook>(), It.IsAny<string>())).ReturnsAsync(true);
+
+            await _f.BuildService().HandleWebhookEventAsync("push", PushPayload, "tenant-b");
+
+            _f.Webhook.Verify(w => w.SetActiveAsync(It.IsAny<Repo>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _f.Webhook.Verify(w => w.CreateWebhook(It.IsAny<Repo>()), Times.Never);
         }
 }
 }

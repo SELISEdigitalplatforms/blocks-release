@@ -15,6 +15,7 @@ import {
   IChangeSettings,
   IDeploymentStartResponse,
   IManualDeploymentPayload,
+  IRepoSettingsUpdateResponse,
   IReposListResponse,
 } from "@blocks-deployment/models/utils";
 import type { IRepoDetailsResponse } from "@blocks-deployment/pages/repo-details";
@@ -164,7 +165,7 @@ export class GithubInfoService {
 
   async updateRepoSettings(payload: IChangeRepoSpecs) {
     const url = CLOUD_BUILD_ENDPOINTS.REPO_SETTINGS_UPDATE;
-    return this.httpClient.post(url, payload);
+    return this.httpClient.post<IRepoSettingsUpdateResponse>(url, payload);
   }
 
   async getBuildLogs(repoId: string): Promise<IBuildApiResponse> {

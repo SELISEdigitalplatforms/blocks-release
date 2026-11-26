@@ -52,6 +52,7 @@ public static class ServiceRegistry
         services.AddScoped<IAuthService,AuthService>();
         services.AddScoped<IVersionControlService, GithubService>();
         services.AddScoped<IGithubWebhookService,GithubWebhookService>();
+        services.AddScoped<IDeploymentModeService, DeploymentModeService>();
         services.AddScoped<LogRetrievalService>();
         services.AddScoped<IMonitorProvisioningService, MonitorProvisioningService>();
         services.AddScoped<BuildService>();

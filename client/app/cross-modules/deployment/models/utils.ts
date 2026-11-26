@@ -3,6 +3,7 @@ import type { IRepoResponse } from "@blocks-deployment/components/deployment-hom
 import { IProvider, IRegion } from "./deployment-settings";
 import { DeploymentFormData } from "./github-info";
 import { IDeploymentLogsDenormalizedPayload } from "./live-logs";
+import type { IDeploymentWarning } from "./webhook-messages";
 
 export interface IBuild {
   id: string;
@@ -92,6 +93,16 @@ export interface IDeploymentStartResponse {
   buildId?: string;
   /** Set when the deploy went through but the opted-in Blocks Monitor could not be created. */
   monitorError?: string;
+  /** Set when the deploy went through but the GitHub webhook is not in the state its mode asks for. */
+  warning?: IDeploymentWarning;
+}
+
+/** What a Settings save (repo-settings-update) answers with. */
+export interface IRepoSettingsUpdateResponse {
+  isSuccess?: boolean;
+  message?: string;
+  /** Set when the settings were saved but the GitHub webhook is not in the state their mode asks for. */
+  warning?: IDeploymentWarning;
 }
 
 /** repos-list response: the project's repositories. */

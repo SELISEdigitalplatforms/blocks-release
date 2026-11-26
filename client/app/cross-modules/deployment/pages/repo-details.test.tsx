@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
@@ -524,6 +524,229 @@ describe("RepoDetails page", () => {
     });
     fireEvent.click(deployButtons[deployButtons.length - 1]);
     expect(initialDeploy).toHaveBeenCalled();
+  });
+
+  // ─── #279: GitHub webhook refusals and warnings on deploys ──────────────────
+
+  const openFirstDeployDialog = async () => {
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
+    return screen.findByRole("dialog");
+  };
+
+  // The dialog fills its form from the stored repository once the specs query settles; a choice made
+  // before that would be overwritten, so wait until the stored Blocks Cloud based mode shows.
+  const waitForStoredManualMode = (dialog: HTMLElement) =>
+    waitFor(() =>
+      expect(
+        within(dialog).getByRole("radio", { name: "Blocks Cloud based deployment" }),
+      ).toBeChecked(),
+    );
+
+  const manualRepoDetails = {
+    data: { repo: { ...baseRepo, deploymentType: "Manual" }, build: [] },
+    isSuccess: true,
+  };
+
+  const clickDialogDeploy = (dialog: HTMLElement) =>
+    fireEvent.click(within(dialog).getByRole("button", { name: "Deploy Now" }));
+
+  // S3, H3, C1, C2, C5, C18: a refused Git based first deploy keeps the dialog open with the choice.
+  it("sends the chosen mode and keeps the dialog open on a webhook refusal", async () => {
+    const initialDeploy = vi.fn((_vars, opts) => {
+      opts.onError({ errors: { webhook: "GITHUB_WEBHOOK_PERMISSION" } });
+    });
+    vi.mocked(useInitialRepoDeployment).mockReturnValue({
+      mutate: initialDeploy,
+      isPending: false,
+    } as never);
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: manualRepoDetails,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    const dialog = await openFirstDeployDialog();
+    await waitForStoredManualMode(dialog);
+    fireEvent.click(within(dialog).getByRole("radio", { name: "Git based deployment" }));
+    clickDialogDeploy(dialog);
+
+    expect(initialDeploy).toHaveBeenCalledWith(
+      expect.objectContaining({ repoId: "r1", deploymentType: "auto" }),
+      expect.anything(),
+    );
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      title: "Deployment Failed",
+      description:
+        "Your GitHub account can't manage webhooks on acme/app. Git based deployment needs a repository admin, or a role with the Manage webhooks permission. To deploy now, switch to Blocks Cloud based deployment in Settings.",
+      variant: "destructive",
+    });
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("dialog")).getByRole("radio", { name: "Git based deployment" }),
+    ).toBeChecked();
+    expect(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Deploy Now" }),
+    ).toBeEnabled();
+  });
+
+  // S4, H3, H13: Blocks Cloud based chosen in the dialog, deployed with both secondary toasts.
+  it("sends manual and shows the webhook warning next to the monitor error", async () => {
+    const initialDeploy = vi.fn((_vars, opts) => {
+      opts.onSuccess({
+        buildId: "b-1",
+        monitorError: "Failed to add the repository to Blocks Monitor.",
+        warning: {
+          code: "WEBHOOK_STILL_ACTIVE",
+          reason: "GITHUB_WEBHOOK_PERMISSION",
+          message: "server text",
+          detail: null,
+        },
+      });
+    });
+    vi.mocked(useInitialRepoDeployment).mockReturnValue({
+      mutate: initialDeploy,
+      isPending: false,
+    } as never);
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: manualRepoDetails,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    const dialog = await openFirstDeployDialog();
+    await waitForStoredManualMode(dialog);
+    fireEvent.click(within(dialog).getByRole("radio", { name: "Git based deployment" }));
+    fireEvent.click(
+      within(dialog).getByRole("radio", { name: "Blocks Cloud based deployment" }),
+    );
+    clickDialogDeploy(dialog);
+
+    expect(initialDeploy).toHaveBeenCalledWith(
+      expect.objectContaining({ deploymentType: "manual" }),
+      expect.anything(),
+    );
+    expect(navigateMock).toHaveBeenCalledWith(
+      expect.stringContaining("deployment-live/b-1"),
+    );
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Blocks Monitor", variant: "destructive" }),
+    );
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      title: "Git based deployment",
+      description:
+        "Push deploys are off. The GitHub webhook on acme/app is still active: Your GitHub account can't manage webhooks on acme/app. Git based deployment needs a repository admin, or a role with the Manage webhooks permission.",
+      variant: "warning",
+    });
+  });
+
+  it("keeps today's text for a first deploy that fails without a webhook code", async () => {
+    const initialDeploy = vi.fn((_vars, opts) => {
+      opts.onError({ errors: { message: "Failed to initiate pipeline. x" } });
+    });
+    vi.mocked(useInitialRepoDeployment).mockReturnValue({
+      mutate: initialDeploy,
+      isPending: false,
+    } as never);
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: repoDetailsEmpty,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    clickDialogDeploy(await openFirstDeployDialog());
+
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      title: "Deployment Failed",
+      description: "Failed to initiate pipeline. x",
+      variant: "destructive",
+    });
+  });
+
+  const withDeployedRepo = () =>
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: {
+        data: { repo: { ...baseRepo }, build: [makeBuild()] },
+        isSuccess: true,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+
+  // S5, C5, A1: a refused redeploy shows GitHub's own message and the deploy hint; the modal stays.
+  it("shows GitHub's message and the deploy hint when a redeploy is refused", () => {
+    const deployMutate = vi.fn((_vars, opts) => {
+      opts.onError({
+        errors: {
+          webhook: "GITHUB_WEBHOOK_FAILED",
+          webhookDetail: "Resource protected by organization SAML enforcement.",
+        },
+      });
+      opts.onSettled?.();
+    });
+    vi.mocked(useInitialRepoDeployment).mockReturnValue({
+      mutate: deployMutate,
+      isPending: false,
+    } as never);
+    withDeployedRepo();
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Deploy" }));
+    fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
+
+    expect(deployMutate).toHaveBeenCalledWith({ repoId: "r1" }, expect.anything());
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      title: "Deployment Failed",
+      description:
+        "GitHub couldn't set up the webhook on acme/app: Resource protected by organization SAML enforcement. To deploy now, switch to Blocks Cloud based deployment in Settings.",
+      variant: "destructive",
+    });
+    expect(screen.getByText("Confirm Deployment")).toBeInTheDocument();
+  });
+
+  // S4 on a redeploy.
+  it("shows the webhook warning after a redeploy that went through", () => {
+    const deployMutate = vi.fn((_vars, opts) => {
+      opts.onSuccess({
+        buildId: "b-2",
+        warning: {
+          code: "WEBHOOK_NOT_WORKING",
+          reason: "GITHUB_TOKEN_INVALID",
+          message: "server text",
+        },
+      });
+    });
+    vi.mocked(useInitialRepoDeployment).mockReturnValue({
+      mutate: deployMutate,
+      isPending: false,
+    } as never);
+    withDeployedRepo();
+    renderWithProviders(<RepoDetails />, {
+      route: "/app/deployment/repo/r1?tab=details",
+      nuqs: true,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Deploy" }));
+    fireEvent.click(screen.getByRole("button", { name: "Deploy Now" }));
+
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(
+      expect.objectContaining({ variant: "success" }),
+    );
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      title: "Git based deployment",
+      description:
+        "Settings saved, but Git based deployment isn't working: Your GitHub connection has expired. Reconnect GitHub and try again.",
+      variant: "warning",
+    });
   });
 
   it("handles a manual deployment error", () => {

@@ -90,10 +90,14 @@ namespace XUnitTest.Devops.Deployment
             new(BuildRepo.Object, RepoRepo.Object, PipelineRunService(),
                 MessageClient.Object, Notification.Object, DataGatewayRepo.Object);
 
+        /// <summary>The real mode step over the webhook mock, so BuildService tests arrange GitHub outcomes on <see cref="Webhook"/>.</summary>
+        public DeploymentModeService DeploymentModeService() =>
+            new(new Mock<ILogger<DeploymentModeService>>().Object, RepoRepo.Object, Webhook.Object);
+
         public BuildService BuildService() =>
             new(new Mock<ILogger<BuildService>>().Object,
                 BuildRepo.Object, RepoRepo.Object, Vcs.Object,
-                PipelineRunService(), Webhook.Object,
+                PipelineRunService(), DeploymentModeService(),
                 DomainValidator.Object, MessageClient.Object, MonitorProvisioning.Object, Notification.Object);
 
         public Mock<ISecretService> SecretService { get; } = new();

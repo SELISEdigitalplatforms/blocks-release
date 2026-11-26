@@ -577,5 +577,35 @@ describe("Github Info Hooks", () => {
         payload,
       );
     });
+
+    // #279: the modal reads the response's warning and the error's webhook code.
+    it("passes the response to onSuccess", async () => {
+      const response = {
+        isSuccess: true,
+        warning: { code: "WEBHOOK_NOT_WORKING", reason: "GITHUB_UNREACHABLE", message: "m" },
+      };
+      vi.mocked(githubInfoService.updateRepoSettings).mockResolvedValue(response as never);
+      const onSuccess = vi.fn();
+
+      const { result } = renderHook(() => useUpdateRepoSettings({ onSuccess }), {
+        wrapper: createWrapper(),
+      });
+      result.current.mutate({ repoId: MOCK_REPO_ID } as never);
+
+      await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(response));
+    });
+
+    it("passes the error to onError", async () => {
+      const error = { status: 400, errors: { webhook: "GITHUB_NOT_CONNECTED" } };
+      vi.mocked(githubInfoService.updateRepoSettings).mockRejectedValue(error);
+      const onError = vi.fn();
+
+      const { result } = renderHook(() => useUpdateRepoSettings({ onError }), {
+        wrapper: createWrapper(),
+      });
+      result.current.mutate({ repoId: MOCK_REPO_ID } as never);
+
+      await waitFor(() => expect(onError).toHaveBeenCalledWith(error));
+    });
   });
 });

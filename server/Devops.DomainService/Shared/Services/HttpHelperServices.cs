@@ -160,6 +160,35 @@ namespace Devops.DomainService.Shared.Services
         }
 
 
+        public async Task<HttpCallResult> SendWithTimeoutAsync(string clientName, string url, HttpMethod method, object? payload, Dictionary<string, string>? headers, string? token, TimeSpan timeout)
+        {
+            using var cancellation = new CancellationTokenSource(timeout);
+            try
+            {
+                var client = _httpClientFactory.CreateClient(clientName);
+                using var request = new HttpRequestMessage(method, url);
+                // Headers go on this request only, never on the client, which the factory may hand out again.
+                if (!string.IsNullOrEmpty(token))
+                    request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                if (headers != null)
+                {
+                    foreach (var header in headers)
+                        request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+                if (payload != null)
+                    request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+
+                using var response = await client.SendAsync(request, cancellation.Token);
+                var body = await response.Content.ReadAsStringAsync(cancellation.Token);
+                return new HttpCallResult(response.StatusCode, body);
+            }
+            catch (Exception ex) when (ex is OperationCanceledException or HttpRequestException)
+            {
+                // The caller logs the outcome with its own context; the payload and token never are.
+                return HttpCallResult.NoAnswer();
+            }
+        }
+
         public async Task<(T? data, E? error, HttpResponseMessage Response)> MakeHttpRequest<T, E>(string clientName, string url, HttpMethod method,  object? payload = null, Dictionary<string, string>? headers = null, string? token = null)
         where T : class
         where E : class

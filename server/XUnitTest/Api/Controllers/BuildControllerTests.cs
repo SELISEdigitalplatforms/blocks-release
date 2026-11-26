@@ -13,6 +13,7 @@ using Devops.DomainService.Deployment.Models.Request;
 using Devops.DomainService.Shared.Entities;
 using Devops.DomainService.Deployment.Models.Response;
 using Devops.DomainService.Shared.Models;
+using Devops.DomainService.VersionControlSystems.Models.Dtos;
 using FluentAssertions;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Mvc;
@@ -109,9 +110,90 @@ namespace XUnitTest.Api.Controllers
         {
             _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(new Repo { ItemId = "id" });
             _f.RepoRepo.Setup(r => r.UpdateRepo(It.IsAny<RepoUpdateRequest>())).ReturnsAsync(true);
-            _f.Webhook.Setup(w => w.UpdateWebhookStatus(It.IsAny<Repo>(), It.IsAny<bool>())).ReturnsAsync(true);
             (await CreateController().RepoSettingsUpdate(new RepoUpdateRequest { RepoId = "id" })).Should().BeOfType<OkObjectResult>();
         }
+
+        // C15: every failure of repo-settings-update is a 400 with isSuccess false.
+        [Fact]
+        public async Task RepoSettingsUpdate_RepositoryNotFound_ReturnsBadRequest()
+        {
+            _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync((Repo)null);
+
+            var result = await CreateController().RepoSettingsUpdate(new RepoUpdateRequest { RepoId = "id" });
+
+            var body = result.Should().BeOfType<BadRequestObjectResult>().Subject.Value.Should().BeOfType<RepoSettingsUpdateResponse>().Subject;
+            body.IsSuccess.Should().BeFalse();
+            body.Message.Should().Be("Repository not found.");
+        }
+
+        [Fact]
+        public async Task RepoSettingsUpdate_WriteFails_ReturnsBadRequest()
+        {
+            _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(new Repo { ItemId = "id" });
+            _f.RepoRepo.Setup(r => r.UpdateRepo(It.IsAny<RepoUpdateRequest>())).ReturnsAsync(false);
+
+            var result = await CreateController().RepoSettingsUpdate(new RepoUpdateRequest { RepoId = "id" });
+
+            var body = result.Should().BeOfType<BadRequestObjectResult>().Subject.Value.Should().BeOfType<RepoSettingsUpdateResponse>().Subject;
+            body.IsSuccess.Should().BeFalse();
+            body.Message.Should().Be("Failed to update.");
+        }
+
+        // C1 at the HTTP boundary: a refused switch to Git based is a 400 naming the code.
+        [Fact]
+        public async Task RepoSettingsUpdate_WebhookRefusal_ReturnsBadRequestWithTheCode()
+        {
+            SetTenantContext();
+            _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(new Repo { ItemId = "id", RepoName = "org/app", DeploymentType = "Manual" });
+            _f.Webhook.Setup(w => w.SetActiveAsync(It.IsAny<Repo>(), true, It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(WebhookOutcome.Failure(WebhookCodes.Permission));
+
+            var result = await CreateController().RepoSettingsUpdate(new RepoUpdateRequest { RepoId = "id", DeploymentType = "auto" });
+
+            var json = Serialize(result.Should().BeOfType<BadRequestObjectResult>().Subject.Value);
+            using var doc = JsonDocument.Parse(json);
+            doc.RootElement.GetProperty("isSuccess").GetBoolean().Should().BeFalse();
+            doc.RootElement.GetProperty("statusCode").GetInt32().Should().Be(400);
+            doc.RootElement.GetProperty("errors").GetProperty("webhook").GetString().Should().Be("GITHUB_WEBHOOK_PERMISSION");
+            doc.RootElement.TryGetProperty("warning", out _).Should().BeFalse("no warning is sent when there is none");
+        }
+
+        // A7: the warning's wire shape, and its absence when there is none.
+        [Fact]
+        public async Task RepoSettingsUpdate_SavedWithAWarning_SendsItCamelCased()
+        {
+            SetTenantContext();
+            _f.RepoRepo.Setup(r => r.GetRepo("id")).ReturnsAsync(new Repo
+            {
+                ItemId = "id", RepoName = "org/app", DeploymentType = "Auto", GithubWebhook = new GithubWebhook { Id = 7, Active = true },
+            });
+            _f.RepoRepo.Setup(r => r.UpdateRepo(It.IsAny<RepoUpdateRequest>())).ReturnsAsync(true);
+            _f.Webhook.Setup(w => w.SetActiveAsync(It.IsAny<Repo>(), false, It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(WebhookOutcome.Failure(WebhookCodes.Failed, "SAML"));
+
+            var result = await CreateController().RepoSettingsUpdate(new RepoUpdateRequest { RepoId = "id", DeploymentType = "manual" });
+
+            var json = Serialize(result.Should().BeOfType<OkObjectResult>().Subject.Value);
+            using var doc = JsonDocument.Parse(json);
+            var warning = doc.RootElement.GetProperty("warning");
+            warning.GetProperty("code").GetString().Should().Be("WEBHOOK_STILL_ACTIVE");
+            warning.GetProperty("reason").GetString().Should().Be("GITHUB_WEBHOOK_FAILED");
+            warning.GetProperty("message").GetString().Should().Be("Push deploys are off. The GitHub webhook on org/app is still active: GitHub couldn't set up the webhook on org/app: SAML");
+            warning.GetProperty("detail").GetString().Should().Be("SAML");
+        }
+
+        [Fact]
+        public void BuildResponse_LeavesWarningOutWhenThereIsNone()
+        {
+            Serialize(new BuildResponse { buildId = "b-1", IsSuccess = true }).Should().NotContain("warning");
+            Serialize(new BuildResponse { Warning = new DeploymentWarning { Code = "WEBHOOK_STILL_ACTIVE" } }).Should().Contain("\"warning\":{\"code\":\"WEBHOOK_STILL_ACTIVE\"");
+        }
+
+        private static void SetTenantContext() =>
+            BlocksContext.SetContext(BlocksContext.Create(
+                "tenant", new[] { "role" }, "user", true, "uri", "org",
+                DateTime.UtcNow.AddHours(1), "e@x.com", new[] { "perm" }, "octo",
+                "phone", "display", "oauth", "tenant"));
 
         [Fact]
         public async Task RepoDomainUpdateRequest_Success_ReturnsResponse()

@@ -29,6 +29,10 @@ import {
   DOMAIN_OPTIONS,
 } from "@blocks-deployment/models/deployment-settings";
 import { hasCustomDomain } from "@blocks-deployment/utils/custom-domain.utils";
+import {
+  webhookRefusalText,
+  webhookWarningText,
+} from "@blocks-deployment/models/webhook-messages";
 import useIsMobile from "@/hooks/use-is-mobile";
 import { useProjectStore } from "@/store/project.store";
 import { useNavigate } from "react-router";
@@ -108,19 +112,32 @@ const DeploymentSettingsModal = ({
     error,
   } = useGetRepoDetails(repoId, { pageNumber, pageSize });
   const { data: specs, isLoading: isSpecsLoading } = useGetSpecs() as any;
+  const repoName = repoDetails?.data?.repo?.repoName ?? "";
   const { mutate: updateRepoSettings, isPending } = useUpdateRepoSettings({
-    onSuccess: () => {
+    onSuccess: (response) => {
       toast({
         title: t("common:SETTINGS"),
         description: t("DEPLOYMENT_SETTINGS_MODAL.TOAST_UPDATED"),
         variant: "success",
       });
+      // Saved, but the GitHub webhook is not in the state the chosen mode asks for.
+      const warningText = webhookWarningText(response?.warning, repoName);
+      if (warningText) {
+        toast({
+          title: t("DEPLOYMENT_SETTINGS_MODAL.TOAST_WEBHOOK_WARNING_TITLE"),
+          description: warningText,
+          variant: "warning",
+        });
+      }
       onClose();
     },
-    onError: () => {
+    // The modal stays open with the user's choices, so they can switch mode or retry.
+    onError: (error) => {
       toast({
         title: t("common:SETTINGS"),
-        description: t("DEPLOYMENT_SETTINGS_MODAL.TOAST_UPDATE_FAILED"),
+        description:
+          webhookRefusalText(error, repoName, { deploy: false }) ??
+          t("DEPLOYMENT_SETTINGS_MODAL.TOAST_UPDATE_FAILED"),
         variant: "destructive",
       });
     },

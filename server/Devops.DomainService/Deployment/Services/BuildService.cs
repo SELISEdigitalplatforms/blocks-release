@@ -29,7 +29,7 @@ public class BuildService : IBuildService
     private readonly IBuildRepository _buildRepository;
     private readonly IRepoRepository _repoRepository;
     private readonly PipelineRunService _pipelineRunService;
-    private readonly IGithubWebhookService _githubWebhookService;
+    private readonly IDeploymentModeService _deploymentModeService;
     private readonly IVersionControlService _githubService;
     private readonly IValidator<RepoDomainUpdateRequest> _repoDomainUpdateRequestValidator;
     private readonly IMessageClient _messageClient;
@@ -42,7 +42,7 @@ public class BuildService : IBuildService
                         IRepoRepository repoRepository,
                         IVersionControlService githubService,
                         PipelineRunService pipelineRunService,
-                        IGithubWebhookService githubWebhookService,
+                        IDeploymentModeService deploymentModeService,
                         IValidator<RepoDomainUpdateRequest> repoDomainUpdateRequestValidator,
                         IMessageClient messageClient,
                         IMonitorProvisioningService monitorProvisioningService,
@@ -56,16 +56,27 @@ public class BuildService : IBuildService
         _repoDomainUpdateRequestValidator = repoDomainUpdateRequestValidator;
         _githubService = githubService;
         _pipelineRunService = pipelineRunService;
-        _githubWebhookService = githubWebhookService;
+        _deploymentModeService = deploymentModeService;
         _messageClient = messageClient;
     }
 
+    /// <summary>Starts a build as it stands, with no deployment-mode step (the push path).</summary>
     public Task<BuildResponse> Build(BuildRequest request, Repo? repo = null) =>
-        Build(request, repo, repo?.ProjectId ?? BlocksContext.GetContext()?.TenantId);
+        Build(request, repo, repo?.ProjectId ?? BlocksContext.GetContext()?.TenantId, DeployMode.None);
 
-    private async Task<BuildResponse> Build(BuildRequest request, Repo? repo, string? targetTenantId)
+    /// <summary>
+    /// Whether a build runs the deployment-mode step first, and the mode the caller asked for. Deploys asked for by a
+    /// user (run-build, manual) do; push-triggered builds do not, so they never call GitHub (budget P6).
+    /// </summary>
+    private sealed record DeployMode(bool Apply, string? RequestedType)
+    {
+        public static readonly DeployMode None = new(false, null);
+    }
+
+    private async Task<BuildResponse> Build(BuildRequest request, Repo? repo, string? targetTenantId, DeployMode deployMode)
     {
         _logger.LogInformation("Build(): Starting build process for repo.");
+        var modeStep = DeployModeStep.Unchanged;
 
         try
         {
@@ -84,6 +95,13 @@ public class BuildService : IBuildService
                     : repo.CreatedBy;
             // Rules on the repo first, so a refused repo leaves no namespace, pipeline or GitHub webhook behind.
             await _repoRepository.CheckRepoAsync(repo, tenantId);
+            // The GitHub webhook matches the deployment mode before anything starts: a refusal starts nothing.
+            if (deployMode.Apply)
+            {
+                modeStep = await _deploymentModeService.ApplyBeforeDeployAsync(repo, deployMode.RequestedType, tenantId, blocksUserId);
+                if (modeStep.Refusal is not null)
+                    return modeStep.Refusal;
+            }
             var (pipelineRunNameGuid, buildImageName, paramNamespace, errorMessage) =
                 await _pipelineRunService.CreateNamespaceAsync(repo, tenantId, blocksUserId);
          
@@ -92,13 +110,13 @@ public class BuildService : IBuildService
                 _logger.LogInformation($"Failed to initiate pipeline.");
                 return new BuildResponse
                 {
-                    Message = $"Failed to initiate pipeline. {errorMessage}",
+                    Message = AfterModeStep(modeStep, $"Failed to initiate pipeline. {errorMessage}"),
                     IsSuccess = false,
-                    StatusCode = HttpStatusCode.BadRequest
+                    StatusCode = HttpStatusCode.BadRequest,
+                    Warning = modeStep.Warning
                 };
             }
-            var webhook = await _githubWebhookService.CreateWebhook(repo, tenantId, blocksUserId);
-            var repoUpdate = await this.RepositoryUpdateForBuild(repo, request, webhook, tenantId, paramNamespace);
+            var repoUpdate = await this.RepositoryUpdateForBuild(repo, request, tenantId, paramNamespace);
 
             if (!repoUpdate)
             {
@@ -133,7 +151,8 @@ public class BuildService : IBuildService
                 buildId = build.ItemId,
                 Message = "Pipeline created successfully",
                 IsSuccess = true,
-                StatusCode = HttpStatusCode.OK
+                StatusCode = HttpStatusCode.OK,
+                Warning = modeStep.Warning
             };
             return buildResponse;
         }
@@ -147,12 +166,17 @@ public class BuildService : IBuildService
             _logger.LogError($"Internal server error: {e.Message}");
             return new BuildResponse
             {
-                Message = e.Message,
+                Message = AfterModeStep(modeStep, e.Message),
                 IsSuccess = false,
-                StatusCode = HttpStatusCode.BadRequest
+                StatusCode = HttpStatusCode.BadRequest,
+                Warning = modeStep.Warning
             };
         }
     }
+
+    /// <summary>A deploy that failed after switching Git based deployment on says so: the switch stays (C14).</summary>
+    private static string AfterModeStep(DeployModeStep modeStep, string message) =>
+        modeStep.TurnedAutoOn ? DeploymentModeService.PipelineFailedAfterTurningAutoOn(message) : message;
 
     /// <summary>
     /// Tears a deployment down completely: cancels any in-flight build, deletes the Kubernetes namespace the
@@ -478,51 +502,33 @@ public class BuildService : IBuildService
     }
 
 
-    public async Task<BaseApiResponse> UpdateRepo(RepoUpdateRequest request)
+    /// <summary>
+    /// Saves a repository's Settings. A switch to Git based deployment needs a working GitHub webhook and is
+    /// refused, with nothing saved, without one; see <see cref="IDeploymentModeService.SaveSettingsAsync"/>.
+    /// </summary>
+    public async Task<RepoSettingsUpdateResponse> UpdateRepo(RepoUpdateRequest request)
     {
         Repo repo = await _repoRepository.GetRepo(request.RepoId);
-        if (repo != null) 
+        if (repo is null)
         {
-            if (!string.IsNullOrWhiteSpace(request.HostingProviderId) && !string.IsNullOrWhiteSpace(request.RegionId) && !string.IsNullOrWhiteSpace(request.MachineConfigId))
-            request.deploySettings = await _repoRepository.GetDeploySettings(request.HostingProviderId, request.RegionId, request.MachineConfigId);
-
-            if (!string.IsNullOrWhiteSpace(request.DeploymentType))
+            return new RepoSettingsUpdateResponse()
             {
-                if(string.Equals(request.DeploymentType, RepoDeploymentType.Auto, StringComparison.OrdinalIgnoreCase))
-                {
-                    request.DeploymentType = RepoDeploymentType.Auto;
-                }
-                else
-                {
-                    request.DeploymentType = RepoDeploymentType.Manual;
-                }
-            }
-            var result = await _repoRepository.UpdateRepo(request);
-
-            if (result)
-            {
-                await RepoWebhookUpdate(request,repo);
-                return new BaseApiResponse()
-                {
-                    IsSuccess = true,
-                    Message = "Repository updated successfully.",
-                    StatusCode = HttpStatusCode.OK
-                };
-            }
-            return new BaseApiResponse()
-            {
-                IsSuccess = true,
-                Message = "Failed to update.",
-                StatusCode = HttpStatusCode.OK
+                IsSuccess = false,
+                Message = "Repository not found.",
+                StatusCode = HttpStatusCode.BadRequest
             };
         }
 
-        return new BaseApiResponse()
-        {
-            IsSuccess = false,
-            Message = "Repository not found.",
-            StatusCode = HttpStatusCode.BadRequest
-        };
+        if (!string.IsNullOrWhiteSpace(request.HostingProviderId) && !string.IsNullOrWhiteSpace(request.RegionId) && !string.IsNullOrWhiteSpace(request.MachineConfigId))
+            request.deploySettings = await _repoRepository.GetDeploySettings(request.HostingProviderId, request.RegionId, request.MachineConfigId);
+
+        if (!string.IsNullOrWhiteSpace(request.DeploymentType))
+            request.DeploymentType = DeploymentModeService.Normalize(request.DeploymentType);
+
+        // The acting user's own token, and the hook URL of the tenant the repository was read from.
+        var context = BlocksContext.GetContext();
+        var tenantId = string.IsNullOrWhiteSpace(repo.ProjectId) ? context?.TenantId : repo.ProjectId;
+        return await _deploymentModeService.SaveSettingsAsync(repo, request, tenantId ?? string.Empty, context?.UserId);
     }
 
 
@@ -543,7 +549,8 @@ public class BuildService : IBuildService
                 machineConfigId = repo?.DeploySettings?.MachineConfig.Id,
                 deploymentType = repo.DeploymentType
             };
-            return await Build(buildRequest, repo);
+            return await Build(buildRequest, repo, repo.ProjectId ?? BlocksContext.GetContext()?.TenantId,
+                new DeployMode(true, request.DeploymentType));
         }
         return new BuildResponse
         {
@@ -583,7 +590,8 @@ public class BuildService : IBuildService
                     machineConfigId = repo?.DeploySettings?.MachineConfig?.Id ?? request.machineConfigId,
                     deploymentType = repo.DeploymentType
                 };
-                var buildResponse = await Build(buildRequest, repo);
+                var buildResponse = await Build(buildRequest, repo, repo.ProjectId ?? BlocksContext.GetContext()?.TenantId,
+                    new DeployMode(true, request.DeploymentType));
                 if (buildResponse.IsSuccess && request.viewInBlocksMonitor)
                     buildResponse.monitorError = await _monitorProvisioningService.CreateMonitorForRepoAsync(repo);
                 if (!string.IsNullOrWhiteSpace(buildResponse.monitorError))
@@ -739,7 +747,7 @@ public class BuildService : IBuildService
     }
 
     private async Task<bool> RepositoryUpdateForBuild(
-        Repo repo, BuildRequest request, GithubWebhook webhook, string tenantId, string paramNamespace = null)
+        Repo repo, BuildRequest request, string tenantId, string paramNamespace = null)
     {
         DeploySettings deploySettings = null;
 
@@ -760,10 +768,6 @@ public class BuildService : IBuildService
             repo.DeployedNamespace = paramNamespace;
         }
 
-        if (webhook is not null)
-        {
-            repo.GithubWebhook = webhook;
-        }
         return await _repoRepository.UpdateRepo(repo, tenantId);
     }
 
@@ -796,7 +800,7 @@ public class BuildService : IBuildService
                     };
                     _logger.LogInformation($"{pushEvent.commits?.Count ?? 0} commit(s) pushed to {pushEvent.Ref} in {pushEvent.repository.fullName} by {pushEvent.pusher.name}");
                     await SaveWbhook(rawJson, repo, tenantId);
-                    var autoResponse = await Build(buildRequest, repo, tenantId);
+                    var autoResponse = await Build(buildRequest, repo, tenantId, DeployMode.None);
                     var autoRecipients = await NotificationService.ResolveRecipientsAsync(_repoRepository, _logger, tenantId, repo.CreatedBy);
                     await NotificationService.SafeSendAsync(_notificationService, _logger, tenantId, "release-auto-deploy-status", autoRecipients,
                         NotificationService.BuildPayload("release-auto-deploy-status",
@@ -821,20 +825,6 @@ public class BuildService : IBuildService
         }; ;
     }
 
-
-    public async Task<bool> RepoWebhookUpdate(RepoUpdateRequest request, Repo repo)
-    {
-        var updatedRepo = await _repoRepository.GetRepo(repo.ItemId);
-        if(string.Equals(request.DeploymentType, RepoDeploymentType.Auto, StringComparison.OrdinalIgnoreCase))
-        {
-            return await _githubWebhookService.UpdateWebhookStatus(updatedRepo, true);
-        }
-        if (string.Equals(request.DeploymentType, RepoDeploymentType.Manual, StringComparison.OrdinalIgnoreCase))
-        {
-            return await _githubWebhookService.UpdateWebhookStatus(updatedRepo, false);
-        }
-        return false;
-    }
 
     public async Task<bool> SaveWbhook(string rawJson, Repo repo, string tenantId)
     {

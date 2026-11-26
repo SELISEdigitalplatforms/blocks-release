@@ -40,6 +40,11 @@ import {
 import { DEPLOYMENT_OPTIONS_DETAILS } from "@blocks-deployment/models/deployment-settings";
 import { CustomDomainOnlyTarget } from "@blocks-deployment/components/deployment-details/shared/custom-domain-only-target";
 import { isCustomDomainOnly } from "@blocks-deployment/utils/custom-domain.utils";
+import type { IDeploymentStartResponse } from "@blocks-deployment/models/utils";
+import {
+  webhookRefusalText,
+  webhookWarningText,
+} from "@blocks-deployment/models/webhook-messages";
 import {
   DeploymentFormData,
   IHttpError,
@@ -315,6 +320,20 @@ export default function RepoDetails() {
     setIsSettingsModalOpen(true);
   };
 
+  const repoName: string = repoDetails?.data?.repo?.repoName ?? "";
+
+  // The deploy went through, but the GitHub webhook is not in the state the deployment mode asks for.
+  const showWebhookWarning = (response?: IDeploymentStartResponse) => {
+    const warningText = webhookWarningText(response?.warning, repoName);
+    if (warningText) {
+      toast({
+        title: t("REPO_DETAILS.WEBHOOK_WARNING_TITLE"),
+        description: warningText,
+        variant: "warning",
+      });
+    }
+  };
+
   const handleDeployFromSettings = (deploymentData: DeploymentFormData) => {
     setIsDeploying(true);
 
@@ -357,10 +376,13 @@ export default function RepoDetails() {
               variant: "destructive",
             });
           }
+          showWebhookWarning(deployResponse);
         },
+        // The dialog stays open with the chosen mode and settings, so the user can switch mode or retry.
         onError: (error: CustomError) => {
           setIsDeploying(false);
           const errorMessage =
+            webhookRefusalText(error, repoName, { deploy: true }) ||
             error?.errors?.message ||
             error?.message ||
             t("REPO_DETAILS.START_DEPLOYMENT_FAILED");
@@ -399,6 +421,7 @@ export default function RepoDetails() {
             description: t("REPO_DETAILS.DEPLOYMENT_INITIATED"),
             variant: "success",
           });
+          showWebhookWarning(response);
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onError: (error: any) => {
@@ -406,7 +429,9 @@ export default function RepoDetails() {
 
           toast({
             title: t("REPO_DETAILS.DEPLOYMENT_FAILED_TITLE"),
-            description: error.errors.message,
+            description:
+              webhookRefusalText(error, repoName, { deploy: true }) ??
+              error.errors.message,
             variant: "destructive",
           });
         },

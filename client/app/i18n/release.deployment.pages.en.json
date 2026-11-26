@@ -37,5 +37,6 @@
   "REPO_DETAILS.START_DEPLOYMENT_FAILED": "Failed to start deployment. Please try again.",
   "REPO_DETAILS.TAB_DETAILS": "Details",
   "REPO_DETAILS.TAB_ENVIRONMENT_VARIABLES": "Environment Variables",
-  "REPO_DETAILS.TAB_HISTORY": "History"
+  "REPO_DETAILS.TAB_HISTORY": "History",
+  "REPO_DETAILS.WEBHOOK_WARNING_TITLE": "Git based deployment"
 }

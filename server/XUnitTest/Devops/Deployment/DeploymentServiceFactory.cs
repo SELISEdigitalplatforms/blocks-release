@@ -4,6 +4,7 @@ using Blocks.Secrets;
 using Devops.DomainService.AnalyticsTool.Services.Sca;
 using Devops.DomainService.DataGatewayDeployment.Services;
 using Devops.DomainService.Deployment.Interfaces;
+using Devops.DomainService.Deployment.Models.Dtos;
 using Devops.DomainService.Deployment.Models.Request;
 using Devops.DomainService.Deployment.Services;
 using Devops.DomainService.Shared.Entities;
@@ -96,9 +97,9 @@ namespace XUnitTest.Devops.Deployment
 
         public BuildService BuildService() =>
             new(new Mock<ILogger<BuildService>>().Object,
-                BuildRepo.Object, RepoRepo.Object, Vcs.Object,
+                new BuildAndRepoRepositories(BuildRepo.Object, RepoRepo.Object), Vcs.Object,
                 PipelineRunService(), DeploymentModeService(),
-                DomainValidator.Object, MessageClient.Object, MonitorProvisioning.Object, Notification.Object);
+                DomainValidator.Object, new DeploymentFollowUps(MessageClient.Object, MonitorProvisioning.Object, Notification.Object));
 
         public Mock<ISecretService> SecretService { get; } = new();
 

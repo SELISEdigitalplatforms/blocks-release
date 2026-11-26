@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using Devops.DomainService.VersionControlSystems.Models.Dtos;
 using System.Text.Json;
 using Devops.DomainService.AnalyticsTool.Models;
+using Devops.DomainService.AnalyticsTool.Services.Sca;
 using Devops.DomainService.AnalyticsTool.Services.Capture;
 using Devops.DomainService.Shared.Utilities;
 
@@ -38,26 +39,23 @@ public class BuildService : IBuildService
 
     public BuildService(
                         ILogger<BuildService> logger,
-                        IBuildRepository buildRepository,
-                        IRepoRepository repoRepository,
+                        BuildAndRepoRepositories repositories,
                         IVersionControlService githubService,
                         PipelineRunService pipelineRunService,
                         IDeploymentModeService deploymentModeService,
                         IValidator<RepoDomainUpdateRequest> repoDomainUpdateRequestValidator,
-                        IMessageClient messageClient,
-                        IMonitorProvisioningService monitorProvisioningService,
-                        INotificationService? notificationService = null)
+                        DeploymentFollowUps followUps)
     {
-        _notificationService = notificationService;
-        _monitorProvisioningService = monitorProvisioningService;
+        _notificationService = followUps.Notifications;
+        _monitorProvisioningService = followUps.MonitorProvisioning;
         _logger = logger;
-        _buildRepository = buildRepository;
-        _repoRepository = repoRepository;
+        _buildRepository = repositories.Builds;
+        _repoRepository = repositories.Repos;
         _repoDomainUpdateRequestValidator = repoDomainUpdateRequestValidator;
         _githubService = githubService;
         _pipelineRunService = pipelineRunService;
         _deploymentModeService = deploymentModeService;
-        _messageClient = messageClient;
+        _messageClient = followUps.MessageClient;
     }
 
     /// <summary>Starts a build as it stands, with no deployment-mode step (the push path).</summary>

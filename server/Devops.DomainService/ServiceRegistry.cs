@@ -6,6 +6,7 @@ using Blocks.Genesis.DataAccess;
 using Blocks.Genesis.Notifications;
 using Blocks.Secrets;
 using Devops.DomainService.Deployment.Interfaces;
+using Devops.DomainService.Deployment.Models.Dtos;
 using Devops.DomainService.Deployment.Models.Request;
 using Devops.DomainService.Deployment.RepositoryServices;
 using Devops.DomainService.Deployment.Services;
@@ -53,6 +54,7 @@ public static class ServiceRegistry
         services.AddScoped<IVersionControlService, GithubService>();
         services.AddScoped<IGithubWebhookService,GithubWebhookService>();
         services.AddScoped<IDeploymentModeService, DeploymentModeService>();
+        services.AddScoped<DeploymentFollowUps>();
         services.AddScoped<LogRetrievalService>();
         services.AddScoped<IMonitorProvisioningService, MonitorProvisioningService>();
         services.AddScoped<BuildService>();

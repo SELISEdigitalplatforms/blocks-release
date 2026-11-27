@@ -17,6 +17,8 @@
   "REPO_DETAILS.DEPLOY": "Deploy",
   "REPO_DETAILS.DEPLOYING": "Deploying...",
   "REPO_DETAILS.DEPLOYMENT_FAILED_TITLE": "Deployment Failed",
+  "REPO_DETAILS.DEPLOYMENT_FOLLOW_UP_DESCRIPTION": "Blocks Monitor: {{monitor}} Git based deployment: {{webhook}}",
+  "REPO_DETAILS.DEPLOYMENT_FOLLOW_UP_TITLE": "Deployment started with problems",
   "REPO_DETAILS.DEPLOYMENT_HISTORY": "Deployment History",
   "REPO_DETAILS.DEPLOYMENT_INFORMATION": "Deployment Information",
   "REPO_DETAILS.DEPLOYMENT_INITIATED": "Deployment has been initiated successfully.",

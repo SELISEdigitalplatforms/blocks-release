@@ -334,6 +334,37 @@ export default function RepoDetails() {
     }
   };
 
+  // The deployment itself went through, but the opted-in monitor could not be created, or the
+  // GitHub webhook is not in the state the mode asks for. The toaster shows one toast at a time,
+  // so when both happen they share one toast that names both problems (#279, Q1: B).
+  const showDeployFollowUps = (response?: IDeploymentStartResponse) => {
+    const monitorError = response?.monitorError;
+    const warningText = webhookWarningText(response?.warning, repoName);
+
+    if (monitorError && warningText) {
+      toast({
+        title: t("REPO_DETAILS.DEPLOYMENT_FOLLOW_UP_TITLE"),
+        description: t("REPO_DETAILS.DEPLOYMENT_FOLLOW_UP_DESCRIPTION", {
+          monitor: monitorError,
+          webhook: warningText,
+        }),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (monitorError) {
+      toast({
+        title: t("REPO_DETAILS.BLOCKS_MONITOR_TITLE"),
+        description: monitorError,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    showWebhookWarning(response);
+  };
+
   const handleDeployFromSettings = (deploymentData: DeploymentFormData) => {
     setIsDeploying(true);
 
@@ -368,15 +399,7 @@ export default function RepoDetails() {
             variant: "success",
           });
 
-          // The deployment itself went through; only the opted-in monitor could not be created.
-          if (deployResponse?.monitorError) {
-            toast({
-              title: t("REPO_DETAILS.BLOCKS_MONITOR_TITLE"),
-              description: deployResponse.monitorError,
-              variant: "destructive",
-            });
-          }
-          showWebhookWarning(deployResponse);
+          showDeployFollowUps(deployResponse);
         },
         // The dialog stays open with the chosen mode and settings, so the user can switch mode or retry.
         onError: (error: CustomError) => {

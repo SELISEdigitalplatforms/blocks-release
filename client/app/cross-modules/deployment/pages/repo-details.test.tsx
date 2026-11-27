@@ -286,12 +286,19 @@ describe("RepoDetails page", () => {
     expect(navigateMock).toHaveBeenCalledWith(
       expect.stringContaining("deployment-live/fresh"),
     );
-    expect(vi.mocked(toast)).toHaveBeenCalledWith(
+    expect(vi.mocked(toast)).toHaveBeenLastCalledWith(
       expect.objectContaining({
         title: "Blocks Monitor",
         description: "Failed to add the repository to Blocks Monitor.",
         variant: "destructive",
       }),
+    );
+    // Monitor error only: no webhook warning and no merged toast.
+    expect(vi.mocked(toast)).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Git based deployment" }),
+    );
+    expect(vi.mocked(toast)).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Deployment started with problems" }),
     );
   });
 
@@ -595,8 +602,9 @@ describe("RepoDetails page", () => {
     ).toBeEnabled();
   });
 
-  // S4, H3, H13: Blocks Cloud based chosen in the dialog, deployed with both secondary toasts.
-  it("sends manual and shows the webhook warning next to the monitor error", async () => {
+  // S4, H3, H13 (Q1: B): Blocks Cloud based chosen in the dialog; the monitor error and the webhook
+  // warning share one toast, because the toaster shows one toast at a time.
+  it("sends manual and shows the monitor error and the webhook warning in one toast", async () => {
     const initialDeploy = vi.fn((_vars, opts) => {
       opts.onSuccess({
         buildId: "b-1",
@@ -635,15 +643,64 @@ describe("RepoDetails page", () => {
     expect(navigateMock).toHaveBeenCalledWith(
       expect.stringContaining("deployment-live/b-1"),
     );
-    expect(vi.mocked(toast)).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Blocks Monitor", variant: "destructive" }),
-    );
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      title: "Deployment started with problems",
+      description:
+        "Blocks Monitor: Failed to add the repository to Blocks Monitor. Git based deployment: Push deploys are off. The GitHub webhook on acme/app is still active: Your GitHub account can't manage webhooks on acme/app. Git based deployment needs a repository admin, or a role with the Manage webhooks permission.",
+      variant: "destructive",
+    });
+    // Neither problem gets a toast of its own, so the merged one is the toast left on screen.
+    expect(vi.mocked(toast)).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Blocks Monitor" }),
+    );
+    expect(vi.mocked(toast)).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Git based deployment" }),
+    );
+    expect(vi.mocked(toast)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ title: "Deployment started with problems" }),
+    );
+  });
+
+  // S4, H13: a first deploy with only the webhook warning keeps the warning toast.
+  it("shows only the webhook warning when the monitor was created", async () => {
+    const initialDeploy = vi.fn((_vars, opts) => {
+      opts.onSuccess({
+        buildId: "b-1",
+        warning: {
+          code: "WEBHOOK_STILL_ACTIVE",
+          reason: "GITHUB_WEBHOOK_PERMISSION",
+          message: "server text",
+          detail: null,
+        },
+      });
+    });
+    vi.mocked(useInitialRepoDeployment).mockReturnValue({
+      mutate: initialDeploy,
+      isPending: false,
+    } as never);
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: manualRepoDetails,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    const dialog = await openFirstDeployDialog();
+    await waitForStoredManualMode(dialog);
+    clickDialogDeploy(dialog);
+
+    expect(vi.mocked(toast)).toHaveBeenLastCalledWith({
       title: "Git based deployment",
       description:
         "Push deploys are off. The GitHub webhook on acme/app is still active: Your GitHub account can't manage webhooks on acme/app. Git based deployment needs a repository admin, or a role with the Manage webhooks permission.",
       variant: "warning",
     });
+    expect(vi.mocked(toast)).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Blocks Monitor" }),
+    );
+    expect(vi.mocked(toast)).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Deployment started with problems" }),
+    );
   });
 
   it("keeps today's text for a first deploy that fails without a webhook code", async () => {

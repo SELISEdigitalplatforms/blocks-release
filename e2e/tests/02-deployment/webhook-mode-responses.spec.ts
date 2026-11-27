@@ -477,7 +477,7 @@ test.describe("Git based deployment webhook responses (#279), desktop", () => {
     await expect(confirm).toBeVisible();
   });
 
-  test("[Positive] 6. Deploy with both warning and monitor error shows both secondary toasts (H13)", async ({
+  test("[Positive] 6. Deploy with both warning and monitor error shows both in one toast (H13, Q1: B)", async ({
     page,
   }) => {
     test.setTimeout(180_000);
@@ -509,10 +509,15 @@ test.describe("Git based deployment webhook responses (#279), desktop", () => {
     await expect(page).toHaveURL(/\/deployment-live\/b-2(?:[/?#]|$)/, {
       timeout: 30_000,
     });
-    await expectWarningToast(page, STILL_ACTIVE_TEXT);
-    await expect(toastWith(page, MONITOR_ERROR)).toBeVisible({
-      timeout: 15_000,
-    });
+    // The toaster shows one toast at a time, so both problems share one toast (#279 Q1: B).
+    const toast = await expectDestructiveToast(
+      page,
+      "Deployment started with problems",
+      `Blocks Monitor: ${MONITOR_ERROR}`,
+      `Git based deployment: ${STILL_ACTIVE_TEXT}`,
+    );
+    await expect(page.locator("li[data-state='open']")).toHaveCount(1);
+    await expect(toast).toBeVisible();
   });
 
   test("[Critical] 7. Settings failure without a webhook code keeps today's toast (C15)", async ({

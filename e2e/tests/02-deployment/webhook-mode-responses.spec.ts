@@ -194,7 +194,12 @@ async function installWebhookStubs(page: Page, stubs: WebhookStubs): Promise<Cap
 
 /** Opens the shared project's Deployment area, installs the stubs and lands on the fake repository. */
 async function openStubbedRepo(page: Page, stubs: WebhookStubs): Promise<Captured> {
+  // The shared navigation helper uses the desktop sidebar (behind a menu button on mobile),
+  // so reach the project at desktop width and switch to the test's own viewport afterwards.
+  const viewport = page.viewportSize();
+  await page.setViewportSize(DESKTOP);
   await openReleaseDeployment(page);
+  if (viewport) await page.setViewportSize(viewport);
   const itemId = readReleaseProject()?.itemId;
   test.skip(!itemId, "No shared Release project fixture");
 
@@ -262,12 +267,30 @@ async function setTheme(page: Page, theme: "light" | "dark") {
     document.documentElement.classList.remove("light", "dark");
     document.documentElement.classList.add(t);
   }, theme);
+  await expect(page.locator("html")).toHaveClass(new RegExp(`\\b${theme}\\b`));
 }
 
 /** Light and dark screenshots for the spec's §4 visual check. */
 async function captureThemes(page: Page, testInfo: TestInfo, name: string) {
   for (const theme of ["light", "dark"] as const) {
     await setTheme(page, theme);
+    // Recorded for the §4 visual check: the dialog's computed background in this theme, read once
+    // it has settled (colour transitions run after the theme class changes).
+    const dialog = page.getByRole("dialog").first();
+    const readBackground = () => dialog.evaluate((el) => getComputedStyle(el).backgroundColor);
+    let dialogBackground = await readBackground();
+    await expect
+      .poll(async () => {
+        const previous = dialogBackground;
+        await page.waitForTimeout(250);
+        dialogBackground = await readBackground();
+        return dialogBackground === previous;
+      })
+      .toBe(true);
+    testInfo.annotations.push({
+      type: "visual-check",
+      description: `${name} ${theme}: dialog background ${dialogBackground}`,
+    });
     const path = testInfo.outputPath(`${name}-${theme}.png`);
     await page.screenshot({ path });
     await testInfo.attach(`${name}-${theme}`, {

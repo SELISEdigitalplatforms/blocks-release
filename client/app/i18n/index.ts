@@ -11,8 +11,8 @@
  * - `release.deployment.shared` (33 keys): cross-modules/deployment/components/deployment-steps, models, constants
  * - `release.idp` (46 keys): cross-modules/idp, cross-modules/communication, components/blocks-login-page
  * - `release.launcher` (158 keys): components/blocks-app-launcher, constants/blocks-products
- * - `release.shared` (123 keys): components (all except login/launcher), hooks, layouts, pages, routes, lib, constants, ui-kits
- * Total: 777 keys.
+ * - `release.shared` (157 keys): components (all except login/launcher), hooks, layouts, pages, routes, lib, constants, ui-kits
+ * Total: 811 keys.
  */
 // English text of every module, registered before the first render.
 import { registerTranslations } from "@seliseblocks/genesis-os";

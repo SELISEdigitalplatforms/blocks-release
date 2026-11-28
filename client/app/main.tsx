@@ -18,6 +18,7 @@ import { router } from "@/router";
 import { TooltipProvider } from "@/components/ui-kits/tooltip/tooltip";
 import { SERVICE_NAME } from "@/constants/service.constant";
 import { BlocksAppLayout } from "@seliseblocks/genesis-os";
+import { MergeAnnouncementBanner } from "@/components/merge-announcement/merge-announcement-banner";
 
 // RollbarProvider wires query-error reporting to the query client owned by
 // @seliseblocks/genesis-os. This app keeps its own singleton, so bugs thrown inside its query and
@@ -41,6 +42,8 @@ createRoot(document.getElementById("root")!).render(
                   },
                 }}
               >
+                {/* Temporary: Blocks OS merge announcement (until 20 Dec 2026). */}
+                <MergeAnnouncementBanner />
                 <RouterProvider router={router} />
               </BlocksAppLayout>
               <Toaster />

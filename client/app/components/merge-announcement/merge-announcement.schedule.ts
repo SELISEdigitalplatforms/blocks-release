@@ -21,8 +21,11 @@ const MAX_TIMEOUT_MS = 2_147_483_647;
 
 /** Milliseconds until the phase next changes, or null once the campaign is over. */
 export function msUntilNextPhaseChange(now: number): number | null {
-  const next = now < MERGE_AT ? MERGE_AT : now < FORWARDING_ENDS_AT ? FORWARDING_ENDS_AT : null;
-  return next === null ? null : Math.min(next - now, MAX_TIMEOUT_MS);
+  let next: number;
+  if (now < MERGE_AT) next = MERGE_AT;
+  else if (now < FORWARDING_ENDS_AT) next = FORWARDING_ENDS_AT;
+  else return null;
+  return Math.min(next - now, MAX_TIMEOUT_MS);
 }
 
 /** How long ✕ hides the banner before it comes back. */

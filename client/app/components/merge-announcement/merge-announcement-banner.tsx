@@ -106,7 +106,7 @@ export function MergeAnnouncementBanner() {
   const phase = useMergePhase();
   const { dismissed, dismiss } = useDismissal(phase, isAuthenticated);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const bannerRef = useRef<HTMLDivElement>(null);
+  const bannerRef = useRef<HTMLElement>(null);
 
   const visible = isAuthenticated && phase !== null && !dismissed;
 
@@ -118,12 +118,12 @@ export function MergeAnnouncementBanner() {
     const update = () =>
       root.style.setProperty("--merge-banner-height", `${banner.getBoundingClientRect().height}px`);
     update();
-    root.setAttribute("data-merge-banner", "");
+    root.dataset.mergeBanner = "";
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
     observer?.observe(banner);
     return () => {
       observer?.disconnect();
-      root.removeAttribute("data-merge-banner");
+      delete root.dataset.mergeBanner;
       root.style.removeProperty("--merge-banner-height");
     };
   }, [visible]);
@@ -142,9 +142,8 @@ export function MergeAnnouncementBanner() {
 
   return (
     <>
-      <div
+      <section
         ref={bannerRef}
-        role="region"
         aria-label={t("MERGE_ANNOUNCEMENT.REGION_LABEL")}
         data-testid="merge-announcement-banner"
         className="sticky top-0 z-[45] flex items-start gap-3 border-b border-[#c5d8f2] bg-[#e8f0fb] py-2.5 pl-4 pr-1.5 text-sm leading-5 text-[#12386b] sm:items-center sm:pl-6 sm:pr-4 dark:border-[#24456f] dark:bg-[#0f2440] dark:text-[#cfe0f7]"
@@ -185,7 +184,7 @@ export function MergeAnnouncementBanner() {
         >
           <X aria-hidden="true" className="h-[18px] w-[18px]" />
         </button>
-      </div>
+      </section>
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
         <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-[560px] gap-[18px] overflow-y-auto rounded-xl p-7">
@@ -213,7 +212,7 @@ const noticeClass =
   "flex items-start gap-2.5 rounded-[10px] border border-[#fde68a] bg-[#fffbeb] px-3.5 py-3 text-sm leading-[21px] text-[#78350f] dark:border-[#78350f] dark:bg-[#2a1d06] dark:text-[#fde68a]";
 
 /** "Learn more" content. Bold leads and their sentences are separate keys (no rich-text i18n here). */
-function MergeDetails({ phase }: { phase: MergePhase }) {
+function MergeDetails({ phase }: Readonly<{ phase: MergePhase }>) {
   const { t } = useT("release.shared");
   const k = (key: string) => t(`MERGE_ANNOUNCEMENT.${key}`);
   const before = phase === "before";

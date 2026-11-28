@@ -31,5 +31,14 @@
   "RENDER_REPO_SELECTION.TITLE": "Select your repository and branch",
   "WARNING_BANNER.END": "structure to proceed.",
   "WARNING_BANNER.INTRO": "Only React repositories built with",
-  "WARNING_BANNER.MIDDLE": "are currently supported for deployment. Make sure your project follows the"
+  "WARNING_BANNER.MIDDLE": "are currently supported for deployment. Make sure your project follows the",
+  "WEBHOOK_MESSAGES.DEPLOY_HINT": "To deploy now, switch to Blocks Cloud based deployment in Settings.",
+  "WEBHOOK_MESSAGES.GITHUB_NOT_CONNECTED": "Connect your GitHub account to use Git based deployment.",
+  "WEBHOOK_MESSAGES.GITHUB_REPO_NOT_VISIBLE": "Your GitHub account can't access {{repo}}.",
+  "WEBHOOK_MESSAGES.GITHUB_TOKEN_INVALID": "Your GitHub connection has expired. Reconnect GitHub and try again.",
+  "WEBHOOK_MESSAGES.GITHUB_UNREACHABLE": "GitHub didn't respond. Try again in a moment.",
+  "WEBHOOK_MESSAGES.GITHUB_WEBHOOK_FAILED": "GitHub couldn't set up the webhook on {{repo}}: {{detail}}",
+  "WEBHOOK_MESSAGES.GITHUB_WEBHOOK_PERMISSION": "Your GitHub account can't manage webhooks on {{repo}}. Git based deployment needs a repository admin, or a role with the Manage webhooks permission.",
+  "WEBHOOK_MESSAGES.WEBHOOK_NOT_WORKING": "Settings saved, but Git based deployment isn't working: {{reason}}",
+  "WEBHOOK_MESSAGES.WEBHOOK_STILL_ACTIVE": "Push deploys are off. The GitHub webhook on {{repo}} is still active: {{reason}}"
 }

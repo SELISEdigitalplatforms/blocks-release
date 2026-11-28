@@ -25,6 +25,12 @@ export const RELEASE_FEATURES = [
     enabled: true,
     spec: "tests/02-deployment/env-paste-mode.spec.ts",
   },
+  {
+    id: "webhook-mode",
+    name: "Release – Git based deployment webhook responses (#279)",
+    enabled: true,
+    spec: "tests/02-deployment/webhook-mode-responses.spec.ts",
+  },
 ];
 
 export function resolveEnabledFeatures() {

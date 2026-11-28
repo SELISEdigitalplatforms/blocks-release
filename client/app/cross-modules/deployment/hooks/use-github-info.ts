@@ -5,6 +5,7 @@ import type {
   IChangeRepoSpecs,
   IChangeSettings,
   IManualDeploymentPayload,
+  IRepoSettingsUpdateResponse,
   IUpdateRepoSettingsPayload,
 } from "@blocks-deployment/models/utils";
 import { isLiveBuildStatus } from "@blocks-deployment/utils/deployment-logs.utils";
@@ -328,8 +329,10 @@ export const useUpdateRepoSettings = ({
   onSuccess,
   onError,
 }: {
-  onSuccess?: () => void;
-  onError?: () => void;
+  /** Receives the response, which may carry a `warning`. */
+  onSuccess?: (response: IRepoSettingsUpdateResponse) => void;
+  /** Receives the error, whose `errors.webhook` names a refused switch to Git based deployment. */
+  onError?: (error: unknown) => void;
 }) => {
   const queryClient = useQueryClient();
 
@@ -340,10 +343,10 @@ export const useUpdateRepoSettings = ({
       queryClient.setQueryData(["repo-specs"], data);
       queryClient.invalidateQueries({ queryKey: ["repo-builds"] });
       queryClient.invalidateQueries({ queryKey: ["repo-details"] });
-      onSuccess?.();
+      onSuccess?.(data);
     },
-    onError: () => {
-      onError?.();
+    onError: (error) => {
+      onError?.(error);
     },
   });
 };

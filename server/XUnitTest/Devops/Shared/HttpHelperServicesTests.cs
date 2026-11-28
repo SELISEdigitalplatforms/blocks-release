@@ -301,5 +301,112 @@ namespace XUnitTest.Devops.Shared
             error.Should().BeNull();
             response.Should().NotBeNull();
         }
+
+        // ---- SendWithTimeoutAsync (#279 P7, C6) ----
+
+        /// <summary>Records the request it was sent, then answers, fails or never answers.</summary>
+        private sealed class RecordingHandler : HttpMessageHandler
+        {
+            private readonly Func<CancellationToken, Task<HttpResponseMessage>> _answer;
+            public HttpRequestMessage Request { get; private set; }
+            public string RequestBody { get; private set; }
+
+            public RecordingHandler(Func<CancellationToken, Task<HttpResponseMessage>> answer) => _answer = answer;
+
+            protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                Request = request;
+                RequestBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
+                return await _answer(cancellationToken);
+            }
+        }
+
+        private RecordingHandler UseHandler(Func<CancellationToken, Task<HttpResponseMessage>> answer)
+        {
+            var handler = new RecordingHandler(answer);
+            _clientFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(new HttpClient(handler));
+            return handler;
+        }
+
+        [Fact]
+        public async Task SendWithTimeoutAsync_ADelayedAnswer_IsCancelledAtTheTimeoutAndReportedAsNoAnswer()
+        {
+            var cancelled = false;
+            UseHandler(async token =>
+            {
+                try
+                {
+                    await Task.Delay(Timeout.Infinite, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    cancelled = true;
+                    throw;
+                }
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            });
+
+            var result = await CreateService().SendWithTimeoutAsync(
+                "github", "https://api.example.com/hooks", HttpMethod.Get, null, null, "tok", TimeSpan.FromMilliseconds(50));
+
+            cancelled.Should().BeTrue("the call is cancelled, not left running");
+            result.TransportFailed.Should().BeTrue();
+            result.StatusCode.Should().BeNull("a timeout is never a made-up 200");
+        }
+
+        [Fact]
+        public async Task SendWithTimeoutAsync_ANetworkFailure_IsReportedAsNoAnswer()
+        {
+            UseHandler(_ => throw new HttpRequestException("network down"));
+
+            var result = await CreateService().SendWithTimeoutAsync(
+                "github", "https://api.example.com/hooks", HttpMethod.Get, null, null, "tok", TimeSpan.FromSeconds(10));
+
+            result.TransportFailed.Should().BeTrue();
+        }
+
+        [Theory]
+        [InlineData(HttpStatusCode.NotFound, "{\"message\":\"Not Found\"}")]
+        [InlineData(HttpStatusCode.Created, "{\"id\":42}")]
+        public async Task SendWithTimeoutAsync_ReturnsTheStatusAndBodyAsAnswered(HttpStatusCode status, string body)
+        {
+            UseHandler(_ => Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body) }));
+
+            var result = await CreateService().SendWithTimeoutAsync(
+                "github", "https://api.example.com/hooks", HttpMethod.Post, null, null, "tok", TimeSpan.FromSeconds(10));
+
+            result.TransportFailed.Should().BeFalse();
+            result.StatusCode.Should().Be(status);
+            result.Body.Should().Be(body);
+        }
+
+        [Fact]
+        public async Task SendWithTimeoutAsync_SendsTheTokenHeadersAndPayloadOnTheRequest()
+        {
+            var handler = UseHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") }));
+
+            await CreateService().SendWithTimeoutAsync(
+                "github", "https://api.example.com/hooks/7", HttpMethod.Patch, new { active = true },
+                new Dictionary<string, string> { ["Accept"] = "application/vnd.github.v3+json" }, "tok", TimeSpan.FromSeconds(10));
+
+            handler.Request.Method.Should().Be(HttpMethod.Patch);
+            handler.Request.RequestUri.Should().Be(new Uri("https://api.example.com/hooks/7"));
+            handler.Request.Headers.Authorization.Scheme.Should().Be("Bearer");
+            handler.Request.Headers.Authorization.Parameter.Should().Be("tok");
+            handler.Request.Headers.Accept.ToString().Should().Be("application/vnd.github.v3+json");
+            handler.RequestBody.Should().Be("{\"active\":true}");
+        }
+
+        [Fact]
+        public async Task SendWithTimeoutAsync_SendsNoAuthorizationWithoutAToken()
+        {
+            var handler = UseHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") }));
+
+            await CreateService().SendWithTimeoutAsync(
+                "github", "https://api.example.com/repos/org/web", HttpMethod.Get, null, null, null, TimeSpan.FromSeconds(10));
+
+            handler.Request.Headers.Authorization.Should().BeNull();
+            handler.RequestBody.Should().BeNull();
+        }
 }
 }

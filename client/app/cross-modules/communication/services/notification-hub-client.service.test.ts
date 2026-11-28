@@ -89,11 +89,42 @@ describe("notification-hub-client.service", () => {
     expect(mod.getNotificationHubConnection()).toBe(conn);
   });
 
-  it("returns null when the logic base url is not configured", async () => {
+  it("returns null when neither the logic nor the os base url is configured", async () => {
     (globalThis.window as MutableWindow).__BLOCKS_ENV__ = { BLOCKS_LOGIC_BASE_URL: "" };
     vi.resetModules();
     const fresh = await import("./notification-hub-client.service");
     expect(await fresh.connectNotificationHub()).toBeNull();
+  });
+
+  it("connects to the os host once BLOCKS_LOGIC_BASE_URL is gone", async () => {
+    (globalThis.window as MutableWindow).__BLOCKS_ENV__ = {
+      BLOCKS_OS_BASE_URL: "https://dev-os.blocksdevelopers.com/",
+      BLOCKS_X_BLOCKS_KEY: "key-123",
+    };
+    vi.resetModules();
+    const fresh = await import("./notification-hub-client.service");
+    loaded.push(fresh);
+    await fresh.connectNotificationHub();
+    expect(withUrl).toHaveBeenCalledWith(
+      expect.stringMatching(/^https:\/\/dev-os\.blocksdevelopers\.com\/api\//),
+      expect.anything(),
+    );
+  });
+
+  it("keeps using BLOCKS_LOGIC_BASE_URL while it is set", async () => {
+    (globalThis.window as MutableWindow).__BLOCKS_ENV__ = {
+      BLOCKS_LOGIC_BASE_URL: "https://dev-logic.blocksdevelopers.com",
+      BLOCKS_OS_BASE_URL: "https://dev-os.blocksdevelopers.com",
+      BLOCKS_X_BLOCKS_KEY: "key-123",
+    };
+    vi.resetModules();
+    const fresh = await import("./notification-hub-client.service");
+    loaded.push(fresh);
+    await fresh.connectNotificationHub();
+    expect(withUrl).toHaveBeenCalledWith(
+      expect.stringMatching(/^https:\/\/dev-logic\.blocksdevelopers\.com\//),
+      expect.anything(),
+    );
   });
 
   it("reuses an already-connected connection without starting again", async () => {

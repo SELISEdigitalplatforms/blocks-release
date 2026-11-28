@@ -280,7 +280,7 @@ public class ReleaseWriteRulesTests : IDisposable
         response.Errors.Should().ContainKey("Branch").WhoseValue.Should().Be("Branch must be main or release/*");
         // CreateNamespaceAsync reads the owner's token before anything else; no read means no PipelineRun.
         factory.TokenRepo.Verify(t => t.getToken(It.IsAny<string>()), Times.Never);
-        factory.Webhook.Verify(w => w.CreateWebhook(It.IsAny<Repo>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        factory.Webhook.Verify(w => w.SetActiveAsync(It.IsAny<Repo>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         factory.RepoRepo.Verify(r => r.UpdateRepo(It.IsAny<Repo>(), It.IsAny<string>()), Times.Never);
     }
 
@@ -310,19 +310,18 @@ public class ReleaseWriteRulesTests : IDisposable
     public async Task ARefusedWebhookSave_ReachesTheCaller_NotAQuietFalse()
     {
         var token = new Mock<ITokenRepository>();
-        token.Setup(t => t.getToken()).ReturnsAsync(new RepositoryToken { AccessToken = "token" });
-        using var created = new HttpResponseMessage(HttpStatusCode.Created);
+        token.Setup(t => t.getToken("user-1")).ReturnsAsync("token");
         var http = new Mock<IHttpHelperServices>();
-        http.Setup(h => h.MakeHttpRequest<GithubWebhookSuccessResponse, GithubWebhookErrorResponse>(
-                It.IsAny<string>(), It.IsAny<string>(), HttpMethod.Post, It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
-            .ReturnsAsync((new GithubWebhookSuccessResponse { id = 7, active = true }, null, created));
+        http.Setup(h => h.SendWithTimeoutAsync(
+                It.IsAny<string>(), It.IsAny<string>(), HttpMethod.Post, It.IsAny<object>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<TimeSpan>()))
+            .ReturnsAsync(new HttpCallResult(HttpStatusCode.Created, "{\"id\":7,\"active\":true}"));
         var repos = new Mock<IRepoRepository>();
-        repos.Setup(r => r.UpdateRepo(It.IsAny<Repo>()))
+        repos.Setup(r => r.UpdateRepo(It.IsAny<Repo>(), It.IsAny<string>()))
             .ThrowsAsync(new DataValidationException(Failed("Branch", "Branch must be main or release/*")));
         var service = new GithubWebhookService(NullLogger<GithubWebhookService>.Instance,
             Mock.Of<Microsoft.Extensions.Configuration.IConfiguration>(), http.Object, token.Object, repos.Object, Mock.Of<ICloudBuildSecret>());
 
-        var act = () => service.UpdateWebhookStatus(new Repo { ItemId = "r1", RepoName = "org/web" }, activationStatus: true);
+        var act = () => service.SetActiveAsync(new Repo { ItemId = "r1", RepoName = "org/web" }, true, "t1", "user-1");
 
         await act.Should().ThrowAsync<DataValidationException>();
     }

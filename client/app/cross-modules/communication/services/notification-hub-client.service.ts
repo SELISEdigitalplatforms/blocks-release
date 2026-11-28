@@ -4,6 +4,7 @@ import {
   HubConnectionState,
   HttpTransportType,
 } from "@microsoft/signalr";
+import { getMergedAreaBaseUrl } from "@seliseblocks/genesis-os/lib";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { notificationService } from "./notification.service";
 
@@ -95,8 +96,9 @@ function onVisibility() {
   if (document.visibilityState === "visible") onWake();
 }
 
+// The hub is served by the os host: BLOCKS_LOGIC_BASE_URL while set, else BLOCKS_OS_BASE_URL.
 const hubBaseUrl = (): string =>
-  getRuntimeEnv("BLOCKS_LOGIC_BASE_URL").trim().replace(/\/$/, "");
+  getMergedAreaBaseUrl("BLOCKS_LOGIC_BASE_URL").trim().replace(/\/$/, "");
 
 const buildConnection = (): HubConnection => {
   const blocksKey = getRuntimeEnv("BLOCKS_X_BLOCKS_KEY");
@@ -126,7 +128,9 @@ export const getNotificationHubConnection = (): HubConnection | null => connecti
 
 export const connectNotificationHub = async (): Promise<HubConnection | null> => {
   if (!hubBaseUrl()) {
-    console.error("[NotificationHub] BLOCKS_LOGIC_BASE_URL is not configured; skipping connection.");
+    console.error(
+      "[NotificationHub] Neither BLOCKS_LOGIC_BASE_URL nor BLOCKS_OS_BASE_URL is configured; skipping connection.",
+    );
     return null;
   }
 

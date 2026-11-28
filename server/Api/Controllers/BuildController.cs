@@ -203,7 +203,8 @@ public class BuildController : ControllerBase
     public async Task<IActionResult> RepoSettingsUpdate([FromBody] RepoUpdateRequest request)
     {
         var response =  await _buildService.UpdateRepo(request);
-        return Ok(response);
+        if (response.IsSuccess) return Ok(response);
+        return BadRequest(response);
     }
 
     [HttpGet("settings")]

@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/test-providers/render";
 import {
@@ -8,7 +8,10 @@ import {
 } from "@/cross-modules/deployment/hooks/use-github-info";
 
 const navigateMock = vi.fn();
-let updateOptions: { onSuccess?: () => void; onError?: () => void } = {};
+let updateOptions: {
+  onSuccess?: (response?: unknown) => void;
+  onError?: (error?: unknown) => void;
+} = {};
 const updateMutate = vi.fn();
 
 vi.mock("@/cross-modules/deployment/hooks/use-github-info", () => ({
@@ -163,6 +166,119 @@ describe("DeploymentSettingsModal", () => {
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({ variant: "destructive" }),
     );
+  });
+
+  // ─── #279: GitHub webhook refusals and warnings ─────────────────────────────
+
+  const withManualRepo = () =>
+    vi.mocked(useGetRepoDetails).mockReturnValue({
+      data: {
+        data: {
+          repo: {
+            ...repoDetails.data.repo,
+            repoName: "e2e/webhook-repo",
+            deploymentType: "Manual",
+          },
+        },
+      },
+      isError: false,
+      error: null,
+    } as never);
+
+  // S1, C1, C3, C18: a refused switch to Git based keeps the modal open with the user's choice.
+  it("shows the refusal's text and keeps the modal open with Git based selected", async () => {
+    withManualRepo();
+    const onClose = vi.fn();
+    renderWithProviders(
+      <DeploymentSettingsModal isOpen onClose={onClose} repoId="r1" />,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "Git based deployment" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save Settings" }));
+    expect(updateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ deploymentType: "auto" }),
+    );
+
+    const { toast } = await import("@/hooks/use-toast");
+    act(() => updateOptions.onError?.({ errors: { webhook: "GITHUB_NOT_CONNECTED" } }));
+
+    expect(toast).toHaveBeenCalledWith({
+      title: "Settings",
+      description: "Connect your GitHub account to use Git based deployment.",
+      variant: "destructive",
+    });
+    expect(onClose).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("radio", { name: "Git based deployment" }),
+    ).toBeChecked();
+    expect(screen.getByRole("button", { name: "Save Settings" })).toBeEnabled();
+  });
+
+  it("names the repository in a permission refusal", async () => {
+    withManualRepo();
+    renderWithProviders(
+      <DeploymentSettingsModal isOpen onClose={vi.fn()} repoId="r1" />,
+    );
+    const { toast } = await import("@/hooks/use-toast");
+    updateOptions.onError?.({ errors: { webhook: "GITHUB_WEBHOOK_PERMISSION" } });
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description:
+          "Your GitHub account can't manage webhooks on e2e/webhook-repo. Git based deployment needs a repository admin, or a role with the Manage webhooks permission.",
+      }),
+    );
+  });
+
+  // C15 UI path: any other failure keeps today's text.
+  it("keeps today's failure text for a failure without a webhook code", async () => {
+    renderWithProviders(
+      <DeploymentSettingsModal isOpen onClose={vi.fn()} repoId="r1" />,
+    );
+    const { toast } = await import("@/hooks/use-toast");
+    updateOptions.onError?.({ errors: { message: "Failed to update." } });
+    expect(toast).toHaveBeenCalledWith({
+      title: "Settings",
+      description: "Failed to update settings",
+      variant: "destructive",
+    });
+  });
+
+  // S2, C8, H13: saved with a warning shows the success toast, then the warning, and closes.
+  it("shows the warning after the success toast and closes", async () => {
+    withManualRepo();
+    const onClose = vi.fn();
+    renderWithProviders(
+      <DeploymentSettingsModal isOpen onClose={onClose} repoId="r1" />,
+    );
+    const { toast } = await import("@/hooks/use-toast");
+    updateOptions.onSuccess?.({
+      isSuccess: true,
+      warning: {
+        code: "WEBHOOK_NOT_WORKING",
+        reason: "GITHUB_UNREACHABLE",
+        message: "server text",
+        detail: null,
+      },
+    });
+
+    expect(vi.mocked(toast).mock.calls.map(([options]) => options)).toEqual([
+      expect.objectContaining({ variant: "success" }),
+      {
+        title: "Git based deployment",
+        description:
+          "Settings saved, but Git based deployment isn't working: GitHub didn't respond. Try again in a moment.",
+        variant: "warning",
+      },
+    ]);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("shows no warning toast when the save has none", async () => {
+    renderWithProviders(
+      <DeploymentSettingsModal isOpen onClose={vi.fn()} repoId="r1" />,
+    );
+    const { toast } = await import("@/hooks/use-toast");
+    updateOptions.onSuccess?.({ isSuccess: true });
+    expect(toast).toHaveBeenCalledTimes(1);
   });
 
   it("closes and resets on cancel", () => {
